@@ -24,6 +24,8 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
   bool _corsEnabled = false;
   num _pixelRatio = 1.0;
 
+  static bool _highDpi;
+
   _TextureAtlasLoaderFile(String sourceUrl, BitmapDataLoadOptions options) {
 
     if (options == null) options = BitmapData.defaultLoadOptions;
@@ -38,7 +40,10 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
       var originPixelRatio = int.parse(match.group(1));
       var devicePixelRatio = env.devicePixelRatio;
       var loaderPixelRatio = minNum(devicePixelRatio, maxPixelRatio).round();
+
+      if (_isHighDpi()) loaderPixelRatio = minNum(maxPixelRatio, 2);
       pixelRatio = loaderPixelRatio / originPixelRatio;
+
       sourceUrl = sourceUrl.replaceRange(match.start, match.end, "@${loaderPixelRatio}x");
     }
 
@@ -46,6 +51,19 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
     _webpAvailable = options.webp;
     _corsEnabled = options.corsEnabled;
     _pixelRatio = pixelRatio;
+  }
+
+  bool _isHighDpi()
+  {
+    if (_highDpi != null) return _highDpi;
+
+    final diff = 300 - 56;
+    final xs = new Iterable.generate(diff, (i) => 56 + i);
+    final match = xs.firstWhere((x) => window.matchMedia('(max-resolution: ${x}dpi)').matches, orElse: () => 0);
+    if (match == null) return false;
+
+    _highDpi =  match > 100;
+    return _highDpi;
   }
 
   @override
