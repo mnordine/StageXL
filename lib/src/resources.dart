@@ -11,7 +11,7 @@ library stagexl.resources;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
-import 'dart:html' show HttpRequest;
+import 'dart:html' show HttpRequest, window;
 import 'package:xml/xml.dart';
 
 import 'display.dart';
