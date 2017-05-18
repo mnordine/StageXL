@@ -41,7 +41,7 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
       var devicePixelRatio = env.devicePixelRatio;
       var loaderPixelRatio = minNum(devicePixelRatio, maxPixelRatio).round();
 
-      if (!StageXL.environment.isSafari && _isHighDpi()) loaderPixelRatio = minNum(maxPixelRatio, 2);
+      if (!env.isSafari && _isHighDpi()) loaderPixelRatio = minNum(maxPixelRatio, 2);
       pixelRatio = loaderPixelRatio / originPixelRatio;
 
       sourceUrl = sourceUrl.replaceRange(match.start, match.end, "@${loaderPixelRatio}x");
