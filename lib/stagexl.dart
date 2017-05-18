@@ -195,4 +195,6 @@ class Environment {
   /// which support TouchEvents and therefore has a touch screen.
 
   final bool isTouchEventSupported = env.isTouchEventSupported;
+
+  final bool isSafari = env.isSafari;
 }
