@@ -10,6 +10,7 @@ final Future<bool> isWebpSupported = _checkWebpSupport();
 final bool isMobileDevice = _checkMobileDevice();
 final bool isLittleEndianSystem = _checkLittleEndianSystem();
 final bool isTouchEventSupported = _checkTouchEventSupport();
+final bool isSafari = _isSafari();
 
 //-------------------------------------------------------------------------------------
 
@@ -26,6 +27,8 @@ bool _checkMobileDevice() {
   var identifiers = ["iphone", "ipad", "ipod", "android", "webos", "windows phone"];
   return identifiers.any((id) => ua.indexOf(id) >= 0);
 }
+
+bool _isSafari() => window.navigator.userAgent.contains('Safari') && !window.navigator.userAgent.contains('Chrome');
 
 //-------------------------------------------------------------------------------------
 
