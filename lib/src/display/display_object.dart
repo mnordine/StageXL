@@ -491,32 +491,30 @@ abstract class DisplayObject
 
   /// The width of this display object with the applied transformation.
   ///
-  /// Setting the width may change the [scaleX], [scaleY], [skewX] and [skewY]
-  /// properties, depending on the previously applied transformation.
+  /// The width is calculated based on the bounds of the content of the
+  /// display object. When you set the width property, the [scaleX] property is
+  /// adjusted accordingly.
 
   num get width => this.boundsTransformed.width;
 
   set width(num value) {
-    var bounds = this.bounds;
-    var matrix = this.transformationMatrix;
-    var boundsTransformed = matrix.transformRectangle(bounds, bounds);
-    var scale = value / boundsTransformed.width;
-    _reverseMatrix(matrix.a * scale, matrix.b, matrix.c * scale, matrix.d);
+    this.scaleX = 1.0;
+    num normalWidth = this.width;
+    this.scaleX = (normalWidth != 0.0) ? value / normalWidth : 1.0;
   }
 
   /// The height of this display object with the applied transformation.
   ///
-  /// Setting the height may change the [scaleX], [scaleY], [skewX] and [skewY]
-  /// properties, depending on the previously applied transformation.
+  /// The height is calculated based on the bounds of the content of the
+  /// display object. When you set the width property, the [scaleY] property is
+  /// adjusted accordingly.
 
   num get height => this.boundsTransformed.height;
 
   set height(num value) {
-    var bounds = this.bounds;
-    var matrix = this.transformationMatrix;
-    var boundsTransformed = matrix.transformRectangle(bounds, bounds);
-    var scale = value / boundsTransformed.height;
-    _reverseMatrix(matrix.a, matrix.b * scale, matrix.c, matrix.d * scale);
+    this.scaleY = 1.0;
+    num normalHeight = this.height;
+    this.scaleY = (normalHeight != 0.0) ? value / normalHeight : 1.0;
   }
 
   //----------------------------------------------------------------------------
@@ -1012,16 +1010,5 @@ abstract class DisplayObject
     return obj1;
   }
 
-  void _reverseMatrix(num ma, num mb, num mc, num md) {
-
-    var skewX = atan2(-mc, md), cosX = cos(skewX), sinX = sin(skewX);
-    var skewY = atan2( mb, ma), cosY = cos(skewY), sinY = sin(skewY);
-
-    _transformationMatrixRefresh = true;
-    _scaleX = (cosY * cosY > sinY * sinY) ? ma / cosY :  mb / sinY;
-    _scaleY = (cosX * cosX > sinX * sinX) ? md / cosX : -mc / sinX;
-    _skewX = skewX - _rotation;
-    _skewY = skewY - _rotation;
-  }
 }
 
