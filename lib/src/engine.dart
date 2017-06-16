@@ -21,6 +21,8 @@ import 'dart:typed_data';
 import 'dart:html'
     show window, ImageElement, CanvasElement, CanvasRenderingContext2D, CanvasImageSource, ImageData, VideoElement;
 
+import 'package:byte_array/byte_array.dart';
+
 import 'geom/matrix.dart';
 import 'geom/matrix_3d.dart';
 import 'geom/rectangle.dart';
@@ -48,3 +50,4 @@ part 'engine/render_texture.dart';
 part 'engine/render_texture_filtering.dart';
 part 'engine/render_texture_quad.dart';
 part 'engine/render_texture_wrapping.dart';
+part 'engine/compressed_texture.dart';

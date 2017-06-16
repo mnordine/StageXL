@@ -17,6 +17,8 @@ class RenderTexture {
   gl.RenderingContext _renderingContext;
   gl.Texture _texture;
 
+  CompressedTexture _compressedTexture;
+
   //-----------------------------------------------------------------------------------------------
 
   RenderTexture(int width, int height, int fillColor) {
@@ -58,6 +60,13 @@ class RenderTexture {
   RenderTexture.rawWebGL(int width, int height) {
     _width = ensureInt(width);
     _height = ensureInt(height);
+  }
+
+  RenderTexture.fromCompressedTexture(CompressedTexture texture) {
+    _width = texture.width;
+    _height = texture.height;
+
+    _compressedTexture = texture;
   }
 
   //-----------------------------------------------------------------------------------------------
@@ -154,6 +163,7 @@ class RenderTexture {
     }
 
     _texture = null;
+    _compressedTexture = null;
     _source = null;
     _canvas = null;
     _renderingContext = null;
@@ -255,6 +265,19 @@ class RenderTexture {
       if (_source != null) {
         _renderingContext.texImage2D(target, 0, rgba, rgba, type, _source);
         _textureSourceWorkaround = _renderingContext.getError() == gl.INVALID_VALUE;
+      } else if (_compressedTexture != null) {
+
+        var ext = _renderingContext.getExtension('WEBGL_compressed_texture_pvrtc');
+        ext ??= _renderingContext.getExtension('WEBKIT_WEBGL_compressed_texture_pvrtc');
+
+        print('compressed texture: $_compressedTexture');
+
+        _renderingContext.compressedTexImage2D(target, 0,
+          _compressedTexture.format,
+          _compressedTexture.width,
+          _compressedTexture.height, 0,
+          _compressedTexture.textureData);
+
       } else {
         _renderingContext.texImage2D(target, 0, rgba, width, height, 0, rgba, type, null);
       }
