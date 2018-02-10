@@ -114,6 +114,8 @@ class PvrTexture extends CompressedTexture {
       case PvrFormat.ETC1:  return gl.CompressedTextureETC1.COMPRESSED_RGB_ETC1_WEBGL;
       case PvrFormat.ETC2_RGBA: return 0x9278; //gl.CompressedTextureETC1.COMPRESSED_RGBA_ETC2_WEBGL;
       case PvrFormat.ETC2_RGBA1: return 0x9279; //gl.CompressedTextureETC1.COMPRESSED_SRGB_ETC2_WEBGL;
+
+      default: return -1;
     }
 
     return -1;
