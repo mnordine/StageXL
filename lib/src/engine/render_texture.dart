@@ -269,6 +269,8 @@ class RenderTexture {
 
         var ext = _renderingContext.getExtension('WEBGL_compressed_texture_pvrtc');
         ext ??= _renderingContext.getExtension('WEBKIT_WEBGL_compressed_texture_pvrtc');
+        ext ??= _renderingContext.getExtension('WEBGL_compressed_texture_etc');
+        ext ??= _renderingContext.getExtension('WEBKIT_WEBGL_compressed_texture_etc');
 
         print('compressed texture: $_compressedTexture');
 

@@ -17,10 +17,35 @@ abstract class CompressedTexture {
 }
 
 enum PvrFormat {
-  RGB_2BPP,
-  RGBA_2BPP,
-  RGB_4BPP,
-  RGBA_4BPP
+  PVRTC_RGB_2BPP,
+  PVRTC_RGBA_2BPP,
+  PVRTC_RGB_4BPP,
+  PVRTC_RGBA_4BPP,
+  PVRTC_2_2BPP,
+  PVRTC_2_4BPP,
+  ETC1,
+  DXT1,
+  DXT3,
+  DXT5,
+  BC1,
+  BC2,
+  BC3,
+  BC4,
+  BC5,
+  BC6,
+  UYVY,
+  YUY2,
+  BW1_BPP,
+  R9G9B9E5_SHARED,
+  RGBG8888,
+  GRGB8888,
+  ETC2_RGB,
+  ETC2_RGBA,
+  ETC2_RGBA1,
+  EAC_R11,
+  ASTC_4x4,
+  ASTC_5x4,
+  ASTC_5x5
 }
 
 class PvrTexture extends CompressedTexture {
@@ -50,6 +75,7 @@ class PvrTexture extends CompressedTexture {
 
     final flags = bytes.readUnsignedInt();
     _pvrFormat = PvrFormat.values[bytes.readUnsignedInt()];
+    print(PvrFormat.values[_pvrFormat.index]);
     final order = new List.generate(4, (_) => bytes.readByte());
     final colorSpace = bytes.readUnsignedInt();
     final channelType = bytes.readUnsignedInt();
@@ -61,6 +87,18 @@ class PvrTexture extends CompressedTexture {
     final mipCount = bytes.readUnsignedInt();
     final metaDataSize = bytes.readUnsignedInt();
 
+    print('flags: $flags');
+    print('order: $order');
+    print('color space: $colorSpace');
+    print('channel type: $channelType');
+    print('depth: $depth');
+    print('surface count: $surfaceCount');
+    print('face count: $faceCount');
+    print('mip count: $mipCount');
+    print('meta data size: $metaDataSize');
+    print('width: $width');
+    print('height: $height');
+
     _texDataOffset = bytes.offset + metaDataSize;
   }
 
@@ -68,10 +106,14 @@ class PvrTexture extends CompressedTexture {
   {
     switch (_pvrFormat)
     {
-      case PvrFormat.RGB_2BPP:  return gl.CompressedTexturePvrtc.COMPRESSED_RGB_PVRTC_2BPPV1_IMG;
-      case PvrFormat.RGB_4BPP:  return gl.CompressedTexturePvrtc.COMPRESSED_RGB_PVRTC_4BPPV1_IMG;
-      case PvrFormat.RGBA_2BPP: return gl.CompressedTexturePvrtc.COMPRESSED_RGBA_PVRTC_2BPPV1_IMG;
-      case PvrFormat.RGBA_4BPP: return gl.CompressedTexturePvrtc.COMPRESSED_RGBA_PVRTC_4BPPV1_IMG;
+      case PvrFormat.PVRTC_RGB_2BPP:  return gl.CompressedTexturePvrtc.COMPRESSED_RGB_PVRTC_2BPPV1_IMG;
+      case PvrFormat.PVRTC_RGB_4BPP:  return gl.CompressedTexturePvrtc.COMPRESSED_RGB_PVRTC_4BPPV1_IMG;
+      case PvrFormat.PVRTC_RGBA_2BPP: return gl.CompressedTexturePvrtc.COMPRESSED_RGBA_PVRTC_2BPPV1_IMG;
+      case PvrFormat.PVRTC_RGBA_4BPP: return gl.CompressedTexturePvrtc.COMPRESSED_RGBA_PVRTC_4BPPV1_IMG;
+
+      case PvrFormat.ETC1:  return gl.CompressedTextureETC1.COMPRESSED_RGB_ETC1_WEBGL;
+      case PvrFormat.ETC2_RGBA: return 0x9278; //gl.CompressedTextureETC1.COMPRESSED_RGBA_ETC2_WEBGL;
+      case PvrFormat.ETC2_RGBA1: return 0x9279; //gl.CompressedTextureETC1.COMPRESSED_SRGB_ETC2_WEBGL;
     }
 
     return -1;
