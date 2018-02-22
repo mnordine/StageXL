@@ -14,6 +14,7 @@
 library stagexl.display;
 
 import 'dart:async';
+import 'dart:collection';
 import 'dart:typed_data';
 import 'dart:html' as html;
 
@@ -35,8 +36,9 @@ part 'display/bitmap.dart';
 part 'display/bitmap_container.dart';
 part 'display/bitmap_data.dart';
 part 'display/bitmap_data_channel.dart';
-part 'display/bitmap_data_update_batch.dart';
+part 'display/bitmap_data_load_info.dart';
 part 'display/bitmap_data_load_options.dart';
+part 'display/bitmap_data_update_batch.dart';
 part 'display/bitmap_drawable.dart';
 part 'display/bitmap_filter.dart';
 part 'display/color_transform.dart';
@@ -58,5 +60,4 @@ part 'display/stage_console.dart';
 part 'display/stage_options.dart';
 part 'display/stage_tools.dart';
 
-final Matrix _tmpMatrix = new Matrix.fromIdentity();
 final Matrix _identityMatrix = new Matrix.fromIdentity();

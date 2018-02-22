@@ -7,6 +7,9 @@ part of stagexl.resources;
 
 abstract class TextureAtlasLoader {
 
+  /// Get the pixel ratio of the texture atlas.
+  double getPixelRatio();
+
   /// Get the source of the texture atlas.
   Future<String> getSource();
 
@@ -19,65 +22,46 @@ abstract class TextureAtlasLoader {
 
 class _TextureAtlasLoaderFile extends TextureAtlasLoader {
 
-  String _sourceUrl = "";
-  bool _webpAvailable = false;
-  bool _corsEnabled = false;
-  num _pixelRatio = 1.0;
+  BitmapDataLoadOptions _loadOptions;
+  BitmapDataLoadInfo _loadInfo;
 
   static const compressedTextureFormats = const ['.pvr'];
 
   _TextureAtlasLoaderFile(String url, BitmapDataLoadOptions options) {
-
-    options = options ?? BitmapData.defaultLoadOptions;
-
-    var pixelRatio = 1.0;
-    var pixelRatioRegexp = new RegExp(r"@(\d+(.\d+)?)x");
-    var pixelRatioMatch = pixelRatioRegexp.firstMatch(url);
-
-    if (pixelRatioMatch != null) {
-      var match = pixelRatioMatch;
-      var originPixelRatioFractions = (match.group(2) ?? ".").length - 1;
-      var originPixelRatio = double.parse(match.group(1));
-      var devicePixelRatio = env.devicePixelRatio;
-      var loaderPixelRatio = options.pixelRatios.fold<num>(0.0, (num a, num b) {
-        var aDelta = (a - devicePixelRatio).abs();
-        var bDelta = (b - devicePixelRatio).abs();
-        return aDelta < bDelta && a > 0.0 ? a : b;
-      });
-      var name = loaderPixelRatio.toStringAsFixed(originPixelRatioFractions);
-      url = url.replaceRange(match.start + 1, match.end - 1, name);
-      pixelRatio = loaderPixelRatio / originPixelRatio;
-    }
-
-    _sourceUrl = url;
-    _webpAvailable = options.webp;
-    _corsEnabled = options.corsEnabled;
-    _pixelRatio = pixelRatio;
+    _loadOptions = options ?? BitmapData.defaultLoadOptions;
+    _loadInfo = new BitmapDataLoadInfo(url, _loadOptions.pixelRatios);
   }
 
   @override
-  Future<String> getSource() {
-    return HttpRequest.getString(_sourceUrl);
-  }
+  double getPixelRatio() => _loadInfo.pixelRatio;
+
+  @override
+  Future<String> getSource() => HttpRequest.getString(_loadInfo.loaderUrl);
 
   @override
   Future<RenderTextureQuad> getRenderTextureQuad(String filename) async {
-    var imageUrl = replaceFilename(_sourceUrl, filename);
-
     RenderTexture renderTexture;
 
+    var loaderUrl = _loadInfo.loaderUrl;
+    var pixelRatio = _loadInfo.pixelRatio;
+    var imageUrl = replaceFilename(loaderUrl, filename);
+    imageUrl += '?r=${new Random().nextInt(50000)}';
+
     if (!_isCompressedTexture(filename)) {
-      var imageLoader = new ImageLoader(imageUrl, _webpAvailable, _corsEnabled);
+      var webpAvailable = _loadOptions.webp;
+      var corsEnabled = _loadOptions.corsEnabled;
+      var imageLoader = new ImageLoader(imageUrl, webpAvailable, corsEnabled);
       var imageElement = await imageLoader.done;
       renderTexture = new RenderTexture.fromImageElement(imageElement);
     } else {
+
       if (!_isCompressedTextureFormatSupported(filename))
         throw 'sorry, texture format not supported on this hardware';
 
       renderTexture = await _loadCompressedTexture(imageUrl);
     }
-    var renderTextureQuad = renderTexture.quad.withPixelRatio(_pixelRatio);
-    return renderTextureQuad;
+
+    return renderTexture.quad.withPixelRatio(pixelRatio);
   }
 
   bool _isCompressedTextureFormatSupported(String filename) => true;
@@ -131,9 +115,10 @@ class _TextureAtlasLoaderTextureAtlas extends TextureAtlasLoader {
   _TextureAtlasLoaderTextureAtlas(this.textureAtlas, this.namePrefix, this.source);
 
   @override
-  Future<String> getSource() {
-    return new Future.value(this.source);
-  }
+  double getPixelRatio() => this.textureAtlas.pixelRatio;
+
+  @override
+  Future<String> getSource() => new Future.value(this.source);
 
   @override
   Future<RenderTextureQuad> getRenderTextureQuad(String filename) async {
@@ -154,9 +139,10 @@ class _TextureAtlasLoaderBitmapData extends TextureAtlasLoader {
   _TextureAtlasLoaderBitmapData(this.bitmapData, this.source);
 
   @override
-  Future<String> getSource() {
-    return new Future.value(this.source);
-  }
+  double getPixelRatio() => this.bitmapData.renderTextureQuad.pixelRatio;
+
+  @override
+  Future<String> getSource() => new Future.value(this.source);
 
   @override
   Future<RenderTextureQuad> getRenderTextureQuad(String filename) {
