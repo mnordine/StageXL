@@ -268,11 +268,6 @@ class RenderTexture {
         _textureSourceWorkaround = _renderingContext.getError() == gl.INVALID_VALUE;
       } else if (_compressedTexture != null) {
 
-        var ext = _renderingContext.getExtension('WEBGL_compressed_texture_pvrtc');
-        ext ??= _renderingContext.getExtension('WEBKIT_WEBGL_compressed_texture_pvrtc');
-        ext ??= _renderingContext.getExtension('WEBGL_compressed_texture_etc');
-        ext ??= _renderingContext.getExtension('WEBKIT_WEBGL_compressed_texture_etc');
-
         print('compressed texture: $_compressedTexture');
 
         _renderingContext.compressedTexImage2D(target, 0,

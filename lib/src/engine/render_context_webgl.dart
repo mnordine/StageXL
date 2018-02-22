@@ -61,6 +61,13 @@ class RenderContextWebGL extends RenderContext {
     _contextValid = true;
     _contextIdentifier = ++_globalContextIdentifier;
 
+    var ext = _renderingContext.getExtension('WEBGL_compressed_texture_pvrtc');
+    ext ??= _renderingContext.getExtension('WEBKIT_WEBGL_compressed_texture_pvrtc');
+    ext ??= _renderingContext.getExtension('WEBGL_compressed_texture_etc');
+    ext ??= _renderingContext.getExtension('WEBKIT_WEBGL_compressed_texture_etc');
+    ext ??= _renderingContext.getExtension('WEBGL_compressed_texture_s3tc');
+    ext ??= _renderingContext.getExtension('WEBKIT_WEBGL_compressed_texture_s3tc');
+
     this.reset();
   }
 
