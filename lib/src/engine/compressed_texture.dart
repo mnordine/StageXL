@@ -9,6 +9,40 @@ abstract class CompressedTexture {
 
   CompressedTexture.fromBuffer(this._buffer);
 
+  static bool supportsDxt5(gl.RenderingContext context)
+  {
+    var ext = context.getExtension('WEBGL_compressed_texture_s3tc');
+    ext ??= context.getExtension('WEBKIT_WEBGL_compressed_texture_s3tc');
+
+    print('supports s3tc? ${ext != null}');
+
+    return ext != null;
+  }
+
+  static bool supportsPvrtc(gl.RenderingContext context)
+  {
+    var ext = context.getExtension('WEBGL_compressed_texture_pvrtc');
+    ext ??= context.getExtension('WEBKIT_WEBGL_compressed_texture_pvrtc');
+
+    return ext != null;
+  }
+
+  static bool supportsEtc(gl.RenderingContext context)
+  {
+    var ext = context.getExtension('WEBGL_compressed_texture_etc');
+    ext ??= context.getExtension('WEBKIT_WEBGL_compressed_texture_etc');
+
+    return ext != null;
+  }
+
+  static bool supportsAstc(gl.RenderingContext context)
+  {
+    var ext = context.getExtension('WEBGL_compressed_texture_astc');
+    ext ??= context.getExtension('WEBKIT_WEBGL_compressed_texture_astc');
+
+    return ext != null;
+  }
+
   /// Texture data that can be passed to WebGL functions
   TypedData get textureData;
 
