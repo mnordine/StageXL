@@ -25,7 +25,7 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
   BitmapDataLoadOptions _loadOptions;
   BitmapDataLoadInfo _loadInfo;
 
-  static const compressedTextureFormats = const ['.pvr'];
+  static const compressedTextureFormats = const ['.pvr', '.pvr.gz'];
 
   _TextureAtlasLoaderFile(String url, BitmapDataLoadOptions options) {
     _loadOptions = options ?? BitmapData.defaultLoadOptions;
