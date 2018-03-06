@@ -71,7 +71,7 @@ class PvrTexture extends CompressedTexture {
 
     final magic = bytes.readUnsignedInt();
     if (magic !=  0x03525650) {
-      print('unrecognized magic');
+      print('unrecognized magic, not a pvr header');
       return;
     }
 
