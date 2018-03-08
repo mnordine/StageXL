@@ -36,6 +36,6 @@ part 'resources/texture_atlas_format_starling_xml.dart';
 part 'resources/texture_atlas_frame.dart';
 part 'resources/texture_atlas_loader.dart';
 
-enum CompressedTextureType {
-  PVRTC
+enum CompressedTextureFileTypes {
+  pvr
 }

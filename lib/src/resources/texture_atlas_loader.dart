@@ -77,7 +77,7 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
         if (request.readyState == HttpRequest.DONE && request.status == 200) {
           final buffer = request.response as ByteBuffer;
           print('buffer size: ${buffer.lengthInBytes}');
-          final texture = _decodeCompressedTexture(buffer, CompressedTextureType.PVRTC);
+          final texture = _decodeCompressedTexture(buffer, CompressedTextureFileTypes.pvr);
           completer.complete(texture);
         }
       })
@@ -87,15 +87,15 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
     return completer.future;
   }
 
-  RenderTexture _decodeCompressedTexture(ByteBuffer buffer, CompressedTextureType type) {
+  RenderTexture _decodeCompressedTexture(ByteBuffer buffer, CompressedTextureFileTypes type) {
     switch (type) {
-      case CompressedTextureType.PVRTC: return _decodePvrtc(buffer);
+      case CompressedTextureFileTypes.pvr: return _decodePvr(buffer);
     }
 
     return null;
   }
 
-  RenderTexture _decodePvrtc(ByteBuffer buffer) {
+  RenderTexture _decodePvr(ByteBuffer buffer) {
     final tex = new PvrTexture.fromBuffer(buffer);
     return new RenderTexture.fromCompressedTexture(tex);
   }
