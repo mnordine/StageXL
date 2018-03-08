@@ -54,17 +54,11 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
       var imageElement = await imageLoader.done;
       renderTexture = new RenderTexture.fromImageElement(imageElement);
     } else {
-
-      if (!_isCompressedTextureFormatSupported(filename))
-        throw 'sorry, texture format not supported on this hardware';
-
       renderTexture = await _loadCompressedTexture(imageUrl);
     }
 
     return renderTexture.quad.withPixelRatio(pixelRatio);
   }
-
-  bool _isCompressedTextureFormatSupported(String filename) => true;
 
   Future<RenderTexture> _loadCompressedTexture(String filename) {
 
