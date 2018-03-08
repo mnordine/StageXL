@@ -45,7 +45,6 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
     var loaderUrl = _loadInfo.loaderUrl;
     var pixelRatio = _loadInfo.pixelRatio;
     var imageUrl = replaceFilename(loaderUrl, filename);
-    imageUrl += '?r=${new Random().nextInt(50000)}';
 
     if (!_isCompressedTexture(filename)) {
       var webpAvailable = _loadOptions.webp;
