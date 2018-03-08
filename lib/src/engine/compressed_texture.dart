@@ -9,7 +9,7 @@ abstract class CompressedTexture {
 
   CompressedTexture.fromBuffer(this._buffer);
 
-  static bool supportsDxt5(gl.RenderingContext context)
+  static bool supportsDxt(gl.RenderingContext context)
   {
     var ext = context.getExtension('WEBGL_compressed_texture_s3tc');
     ext ??= context.getExtension('WEBKIT_WEBGL_compressed_texture_s3tc');
