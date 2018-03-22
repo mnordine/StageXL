@@ -116,31 +116,18 @@ class PvrTexture extends CompressedTexture {
       return;
     }
 
-    final flags = bytes.readUnsignedInt();
+    /*final flags = */bytes.readUnsignedInt();
     _pvrFormat = bytes.readUnsignedInt();
-    print('pvr format: $_pvrFormat');
-    final order = new List.generate(4, (_) => bytes.readByte());
-    final colorSpace = bytes.readUnsignedInt();
-    final channelType = bytes.readUnsignedInt();
+    /*final order = */new List.generate(4, (_) => bytes.readByte());
+    /*final colorSpace =*/ bytes.readUnsignedInt();
+    /*final channelType =*/ bytes.readUnsignedInt();
     height = bytes.readUnsignedInt();
     width = bytes.readUnsignedInt();
-    final depth = bytes.readUnsignedInt();
-    final surfaceCount = bytes.readUnsignedInt();
-    final faceCount = bytes.readUnsignedInt();
-    final mipCount = bytes.readUnsignedInt();
+    /*final depth = */bytes.readUnsignedInt();
+    /*final surfaceCount =*/ bytes.readUnsignedInt();
+    /*final faceCount =*/ bytes.readUnsignedInt();
+    /*final mipCount =*/ bytes.readUnsignedInt();
     final metaDataSize = bytes.readUnsignedInt();
-
-    print('flags: $flags');
-    print('order: $order');
-    print('color space: $colorSpace');
-    print('channel type: $channelType');
-    print('depth: $depth');
-    print('surface count: $surfaceCount');
-    print('face count: $faceCount');
-    print('mip count: $mipCount');
-    print('meta data size: $metaDataSize');
-    print('width: $width');
-    print('height: $height');
 
     _texDataOffset = bytes.offset + metaDataSize;
   }
