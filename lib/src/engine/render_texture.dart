@@ -278,8 +278,6 @@ class RenderTexture {
         _textureSourceWorkaround = _renderingContext.getError() == gl.INVALID_VALUE;
       } else if (_compressedTexture != null) {
 
-        print('compressed texture: $_compressedTexture');
-
         _renderingContext.compressedTexImage2D(target, 0,
           _compressedTexture.format,
           _compressedTexture.width,

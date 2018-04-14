@@ -14,8 +14,6 @@ abstract class CompressedTexture {
     var ext = context.getExtension('WEBGL_compressed_texture_s3tc');
     ext ??= context.getExtension('WEBKIT_WEBGL_compressed_texture_s3tc');
 
-    print('supports s3tc? ${ext != null}');
-
     return ext != null;
   }
 
