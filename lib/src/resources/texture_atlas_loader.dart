@@ -25,6 +25,8 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
   BitmapDataLoadOptions _loadOptions;
   BitmapDataLoadInfo _loadInfo;
 
+  static const compressedTextureFormats = const ['.pvr', '.pvr.gz'];
+
   _TextureAtlasLoaderFile(String url, BitmapDataLoadOptions options) {
     _loadOptions = options ?? BitmapData.defaultLoadOptions;
     _loadInfo = new BitmapDataLoadInfo(url, _loadOptions.pixelRatios);
@@ -38,17 +40,59 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
 
   @override
   Future<RenderTextureQuad> getRenderTextureQuad(String filename) async {
+    RenderTexture renderTexture;
+
     var loaderUrl = _loadInfo.loaderUrl;
     var pixelRatio = _loadInfo.pixelRatio;
-    var webpAvailable = _loadOptions.webp;
-    var corsEnabled = _loadOptions.corsEnabled;
     var imageUrl = replaceFilename(loaderUrl, filename);
-    var imageLoader = new ImageLoader(imageUrl, webpAvailable, corsEnabled);
-    var imageElement = await imageLoader.done;
-    var renderTexture = new RenderTexture.fromImageElement(imageElement);
-    var renderTextureQuad = renderTexture.quad.withPixelRatio(pixelRatio);
-    return renderTextureQuad;
+
+    if (!_isCompressedTexture(filename)) {
+      var webpAvailable = _loadOptions.webp;
+      var corsEnabled = _loadOptions.corsEnabled;
+      var imageLoader = new ImageLoader(imageUrl, webpAvailable, corsEnabled);
+      var imageElement = await imageLoader.done;
+      renderTexture = new RenderTexture.fromImageElement(imageElement);
+    } else {
+      renderTexture = await _loadCompressedTexture(imageUrl);
+    }
+
+    return renderTexture.quad.withPixelRatio(pixelRatio);
   }
+
+  Future<RenderTexture> _loadCompressedTexture(String filename) {
+
+    final completer = new Completer<RenderTexture>();
+
+    final request = new HttpRequest();
+    request
+      ..onReadyStateChange.listen((_) {
+        if (request.readyState == HttpRequest.DONE && request.status == 200) {
+          final buffer = request.response as ByteBuffer;
+          final texture = _decodeCompressedTexture(buffer, CompressedTextureFileTypes.pvr);
+          completer.complete(texture);
+        }
+      })
+      ..open('GET', filename, async: true)
+      ..responseType = 'arraybuffer'
+      ..send();
+
+    return completer.future;
+  }
+
+  RenderTexture _decodeCompressedTexture(ByteBuffer buffer, CompressedTextureFileTypes type) {
+    switch (type) {
+      case CompressedTextureFileTypes.pvr: return _decodePvr(buffer);
+    }
+
+    return null;
+  }
+
+  RenderTexture _decodePvr(ByteBuffer buffer) {
+    final tex = new PvrTexture.fromBuffer(buffer);
+    return new RenderTexture.fromCompressedTexture(tex);
+  }
+
+  bool _isCompressedTexture(String filename) => compressedTextureFormats.any((format) => filename.endsWith(format));
 }
 
 //-------------------------------------------------------------------------------------------------

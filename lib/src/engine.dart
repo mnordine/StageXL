@@ -17,9 +17,12 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:web_gl' as gl;
 import 'dart:typed_data';
+import 'internal/jenkins_hash.dart';
 
 import 'dart:html'
     show window, ImageElement, CanvasElement, CanvasRenderingContext2D, CanvasImageSource, ImageData, VideoElement;
+
+import 'package:byte_array/byte_array.dart';
 
 import 'geom/matrix.dart';
 import 'geom/matrix_3d.dart';
@@ -48,3 +51,6 @@ part 'engine/render_texture.dart';
 part 'engine/render_texture_filtering.dart';
 part 'engine/render_texture_quad.dart';
 part 'engine/render_texture_wrapping.dart';
+part 'engine/texture_info.dart';
+part 'engine/compressed_texture.dart';
+

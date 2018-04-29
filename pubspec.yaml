@@ -11,6 +11,7 @@ documentation: http://www.stagexl.org/docs/api/index.html
 
 dependencies:
   xml: any
+  byte_array: any
 
 dev_dependencies:
   browser: any
