@@ -63,8 +63,7 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
 
     final completer = new Completer<RenderTexture>();
 
-    final request = new HttpRequest()..responseType = 'arraybuffer';
-
+    final request = new HttpRequest();
     request
       ..onReadyStateChange.listen((_) {
         if (request.readyState == HttpRequest.DONE && request.status == 200) {
@@ -74,6 +73,7 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
         }
       })
       ..open('GET', filename, async: true)
+      ..responseType = 'arraybuffer'
       ..send();
 
     return completer.future;
