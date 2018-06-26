@@ -36,7 +36,7 @@ class _TextureAtlasFormatStarlingXml  extends TextureAtlasFormat {
           frameX, frameY, frameWidth, frameHeight,
           null, null);
 
-      textureAtlas.frames.add(textureAtlasFrame);
+      textureAtlas.frames[name] = textureAtlasFrame;
     }
 
     return textureAtlas;

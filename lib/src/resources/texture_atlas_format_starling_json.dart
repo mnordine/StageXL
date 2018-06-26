@@ -36,7 +36,7 @@ class _TextureAtlasFormatStarlingJson extends TextureAtlasFormat {
           frameX, frameY, frameWidth, frameHeight,
           null, null);
 
-      textureAtlas.frames.add(textureAtlasFrame);
+      textureAtlas.frames[name] = textureAtlasFrame;
     }
 
     return textureAtlas;

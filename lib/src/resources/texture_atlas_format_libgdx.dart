@@ -83,7 +83,7 @@ class _TextureAtlasFormatLibGDX extends TextureAtlasFormat {
             frameX, frameY, frameWidth, frameHeight,
             null, null);
 
-        textureAtlas.frames.add(textureAtlasFrame);
+        textureAtlas.frames[frameName] = textureAtlasFrame;
       }
     }
 

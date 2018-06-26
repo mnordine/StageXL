@@ -3,7 +3,7 @@ part of stagexl.resources;
 class TextureAtlas {
 
   /// A list with the frames in this texture atlas.
-  final List<TextureAtlasFrame> frames = new List<TextureAtlasFrame>();
+  final frames = <String, TextureAtlasFrame>{};
 
   /// The pixelRatio used for the BitmapDatas in the frames
   final double pixelRatio;
@@ -39,13 +39,11 @@ class TextureAtlas {
 
   /// A list with the frame-names in this texture atlas.
 
-  List<String> get frameNames => frames
-      .map((f) => f.name)
-      .toList();
+  List<String> get frameNames => frames.keys.toList();
 
   /// Get a list of BitmapDatas of frames whose names starts with [namePrefix].
 
-  List<BitmapData> getBitmapDatas(String namePrefix) => frames
+  List<BitmapData> getBitmapDatas(String namePrefix) => frames.values
       .where((f) => f.name.startsWith(namePrefix))
       .map((f) => f.bitmapData)
       .toList();
@@ -56,12 +54,7 @@ class TextureAtlas {
   /// without it's file extension.
 
   BitmapData getBitmapData(String name) {
-    for(int i = 0; i < frames.length; i++) {
-      var frame = frames[i];
-      if (frame.name == name) return frame.bitmapData;
-    }
-    throw new ArgumentError("TextureAtlasFrame not found: '$name'");
+    if (frames[name] != null) return frames[name].bitmapData;
+    return null;
   }
-
-
 }

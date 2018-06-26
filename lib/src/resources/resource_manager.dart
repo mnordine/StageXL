@@ -90,7 +90,7 @@ class ResourceManager {
     var resourceManagerResource = _removeResource("TextureAtlas", name);
     var textureAtlas = resourceManagerResource?.value;
     if (textureAtlas is TextureAtlas && dispose) {
-      for (var textureAtlasFrame in textureAtlas.frames) {
+      for (var textureAtlasFrame in textureAtlas.frames.values) {
         textureAtlasFrame.bitmapData.renderTexture.dispose();
       }
     }
