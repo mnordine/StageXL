@@ -1,7 +1,6 @@
 part of stagexl.display;
 
 class _DisplayObjectCache {
-
   final DisplayObject displayObject;
 
   num pixelRatio = 1.0;
@@ -24,7 +23,6 @@ class _DisplayObjectCache {
   //---------------------------------------------------------------------------
 
   void update() {
-
     var l = (pixelRatio * bounds.left).floor();
     var t = (pixelRatio * bounds.top).floor();
     var r = (pixelRatio * bounds.right).ceil();
@@ -60,7 +58,7 @@ class _DisplayObjectCache {
 
     var filters = this.displayObject.filters;
 
-    if (filters != null && filters.length > 0) {
+    if (filters != null && filters.isNotEmpty) {
       var bitmapData = new BitmapData.fromRenderTextureQuad(renderTextureQuad);
       filters.forEach((filter) => filter.apply(bitmapData));
     }
@@ -79,5 +77,4 @@ class _DisplayObjectCache {
 
     renderTexture.update();
   }
-
 }

@@ -12,20 +12,18 @@ part of stagexl.resources;
 /// https://github.com/realbluesky/soundsprite
 
 class SoundSprite {
-
   final List<SoundSpriteSegment> _segments = new List<SoundSpriteSegment>();
   Sound _sound;
 
   //----------------------------------------------------------------------------
 
-  static Future<SoundSprite> load(
-      String url, [SoundLoadOptions soundLoadOptions]) async {
-
+  static Future<SoundSprite> load(String url,
+      [SoundLoadOptions soundLoadOptions]) async {
     SoundSprite soundSprite = new SoundSprite();
 
     var soundSpriteJson = await HttpRequest.getString(url);
-    var data = JSON.decode(soundSpriteJson);
-    var urls = data['urls'] as List<String>;
+    var data = json.decode(soundSpriteJson);
+    var urls = data['urls'] as List<dynamic>;
     var segments = data["sprite"];
     var soundUrls = new List<String>();
 
@@ -35,12 +33,13 @@ class SoundSprite {
         var startTime = ensureNum(segmentList[0]);
         var duration = ensureNum(segmentList[1]);
         var loop = ensureBool(segmentList.length > 2 && segmentList[2]);
-        var sss = new SoundSpriteSegment(soundSprite, segment, startTime, duration, loop);
+        var sss = new SoundSpriteSegment(
+            soundSprite, segment, startTime, duration, loop);
         soundSprite._segments.add(sss);
       }
     }
 
-    soundUrls.addAll(urls.map((String u) => replaceFilename(url, u)));
+    soundUrls.addAll(urls.map((u) => replaceFilename(url, u)));
     soundLoadOptions = (soundLoadOptions ?? Sound.defaultLoadOptions).clone();
     soundLoadOptions.alternativeUrls = soundUrls.skip(1).toList();
     soundSprite._sound = await Sound.load(soundUrls[0], soundLoadOptions);

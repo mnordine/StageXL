@@ -6,11 +6,11 @@ import 'dart:html';
 import '../errors.dart';
 
 class VideoLoader {
-
   static final List<String> supportedTypes = _getSupportedTypes();
 
   final VideoElement video = new VideoElement();
-  final AggregateError aggregateError = new AggregateError("Error loading video.");
+  final AggregateError aggregateError =
+      new AggregateError("Error loading video.");
   final Completer<VideoElement> _completer = new Completer<VideoElement>();
 
   StreamSubscription _onCanPlaySubscription;
@@ -19,7 +19,6 @@ class VideoLoader {
   bool _loadData = false;
 
   VideoLoader(List<String> urls, bool loadData, bool corsEnabled) {
-
     if (corsEnabled) video.crossOrigin = 'anonymous';
 
     _onCanPlaySubscription = video.onCanPlay.listen(_onVideoCanPlay);
@@ -48,7 +47,7 @@ class VideoLoader {
   }
 
   void _loadNextUrl() {
-    if (_urls.length == 0) {
+    if (_urls.isEmpty) {
       _loadFailed();
     } else if (_loadData) {
       _loadVideoData(_urls.removeAt(0));
@@ -60,7 +59,7 @@ class VideoLoader {
   void _loadFailed() {
     _onCanPlaySubscription.cancel();
     _onErrorSubscription.cancel();
-    if (this.aggregateError.errors.length == 0) {
+    if (this.aggregateError.errors.isEmpty) {
       var loadError = new LoadError("No configured video type is supported.");
       this.aggregateError.errors.add(loadError);
     }
@@ -88,18 +87,19 @@ class VideoLoader {
   //---------------------------------------------------------------------------
 
   static List<String> _getSupportedTypes() {
-
     var supportedTypes = new List<String>();
     var video = new VideoElement();
     var valid = ["maybe", "probably"];
 
-    if (valid.indexOf(video.canPlayType("video/webm")) != -1) supportedTypes.add("webm");
-    if (valid.indexOf(video.canPlayType("video/mp4")) != -1) supportedTypes.add("mp4");
-    if (valid.indexOf(video.canPlayType("video/ogg")) != -1) supportedTypes.add("ogg");
+    if (valid.contains(video.canPlayType("video/webm")))
+      supportedTypes.add("webm");
+    if (valid.contains(video.canPlayType("video/mp4")))
+      supportedTypes.add("mp4");
+    if (valid.contains(video.canPlayType("video/ogg")))
+      supportedTypes.add("ogg");
 
     print("StageXL video types   : $supportedTypes");
 
     return supportedTypes.toList(growable: false);
   }
-
 }

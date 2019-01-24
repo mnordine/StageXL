@@ -1,7 +1,6 @@
 part of stagexl.media;
 
 class SoundMixer {
-
   static SoundEngine _engineDetected;
   static SoundEngine _engineOverride;
   static SoundTransform _soundTransform = new SoundTransform();
@@ -61,7 +60,7 @@ class SoundMixer {
         source.buffer = context.createBuffer(1, 1, 22050);
         source.connectNode(context.destination);
         source.start(0);
-      } catch(e) {
+      } catch (e) {
         // There is nothing we can do :(
       }
     }
@@ -71,7 +70,6 @@ class SoundMixer {
   //---------------------------------------------------------------------------
 
   static void _initEngine() {
-
     if (_engineDetected != null) return;
 
     _engineDetected = SoundEngine.AudioElement;
@@ -96,11 +94,10 @@ class SoundMixer {
       }
     }
 
-    if (AudioLoader.supportedTypes.length == 0) {
+    if (AudioLoader.supportedTypes.isEmpty) {
       _engineDetected = SoundEngine.Mockup;
     }
 
     print("StageXL sound engine  : $engine");
   }
-
 }

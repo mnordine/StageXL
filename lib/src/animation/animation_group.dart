@@ -22,7 +22,6 @@ part of stagexl.animation;
 ///        ..onComplete = () => print("complete");
 ///
 class AnimationGroup implements Animatable {
-
   final List<Animatable> _animatables = new List<Animatable>();
 
   Function _onStart;
@@ -42,7 +41,6 @@ class AnimationGroup implements Animatable {
 
   @override
   bool advanceTime(num time) {
-
     _time += time;
 
     if (_started == false) {
@@ -62,7 +60,7 @@ class AnimationGroup implements Animatable {
       }
     }
 
-    if (_animatables.length == 0) {
+    if (_animatables.isEmpty) {
       _completed = true;
       if (_onComplete != null) _onComplete();
       return false;

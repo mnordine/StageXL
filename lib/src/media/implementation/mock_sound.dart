@@ -1,7 +1,6 @@
 part of stagexl.media;
 
 class MockSound extends Sound {
-
   MockSound._();
 
   //-------------------------------------------------------------------------------------------------
@@ -11,7 +10,8 @@ class MockSound extends Sound {
     return new Future<Sound>.value(new MockSound._());
   }
 
-  static Future<Sound> loadDataUrl(String dataUrl, [SoundLoadOptions soundLoadOptions]) {
+  static Future<Sound> loadDataUrl(String dataUrl,
+      [SoundLoadOptions soundLoadOptions]) {
     return new Future<Sound>.value(new MockSound._());
   }
 
@@ -24,20 +24,18 @@ class MockSound extends Sound {
   @override
   num get length {
     // We could load the WAV-file, parse the header and get the correct length!
-    return double.NAN;
+    return double.nan;
   }
 
   @override
-  SoundChannel play([
-    bool loop = false, SoundTransform soundTransform]) {
-
+  SoundChannel play([bool loop = false, SoundTransform soundTransform]) {
     return new MockSoundChannel(this, 0, this.length, loop, soundTransform);
   }
 
   @override
-  SoundChannel playSegment(num startTime, num duration, [
-    bool loop = false, SoundTransform soundTransform]) {
-
-    return new MockSoundChannel(this, startTime, duration, loop, soundTransform);
+  SoundChannel playSegment(num startTime, num duration,
+      [bool loop = false, SoundTransform soundTransform]) {
+    return new MockSoundChannel(
+        this, startTime, duration, loop, soundTransform);
   }
 }

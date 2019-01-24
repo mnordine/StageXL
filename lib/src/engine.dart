@@ -20,7 +20,14 @@ import 'dart:typed_data';
 import 'internal/jenkins_hash.dart';
 
 import 'dart:html'
-    show window, ImageElement, CanvasElement, CanvasRenderingContext2D, CanvasImageSource, ImageData, VideoElement;
+    show
+        window,
+        ImageElement,
+        CanvasElement,
+        CanvasRenderingContext2D,
+        CanvasImageSource,
+        ImageData,
+        VideoElement;
 
 import 'package:byte_array/byte_array.dart';
 

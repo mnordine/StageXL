@@ -1,7 +1,7 @@
 part of stagexl.engine;
 
 List _globalFrameListeners = new List();
-num _globalFrameTime = double.MAX_FINITE;
+num _globalFrameTime = double.maxFinite;
 int _globalFrameCallbackId = -1;
 
 void _globalFrameRequest() {
@@ -24,7 +24,6 @@ void _globalFrameRequest() {
 //-----------------------------------------------------------------------------
 
 abstract class RenderLoopBase {
-
   bool _running = false;
 
   void advanceTime(num deltaTime);

@@ -1,7 +1,6 @@
 part of stagexl.engine;
 
 class RenderTexture {
-
   int _width = 0;
   int _height = 0;
 
@@ -23,7 +22,6 @@ class RenderTexture {
   //-----------------------------------------------------------------------------------------------
 
   RenderTexture(int width, int height, int fillColor) {
-
     if (width <= 0) throw new ArgumentError("width");
     if (height <= 0) throw new ArgumentError("height");
 
@@ -77,9 +75,12 @@ class RenderTexture {
   CanvasImageSource get source => _source;
 
   RenderTextureQuad get quad {
-    return new RenderTextureQuad(this,
+    return new RenderTextureQuad(
+        this,
         new Rectangle<int>(0, 0, _width, _height),
-        new Rectangle<int>(0, 0, _width, _height), 0, 1.0);
+        new Rectangle<int>(0, 0, _width, _height),
+        0,
+        1.0);
   }
 
   CanvasElement get canvas {
@@ -109,7 +110,6 @@ class RenderTexture {
   RenderTextureFiltering get filtering => _filtering;
 
   set filtering(RenderTextureFiltering filtering) {
-
     if (_filtering == filtering) return;
     _filtering = filtering;
 
@@ -117,8 +117,10 @@ class RenderTexture {
     if (_renderContext.contextIdentifier != contextIdentifier) return;
 
     _renderContext.activateRenderTexture(this);
-    _renderingContext.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, _filtering.value);
-    _renderingContext.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, _filtering.value);
+    _renderingContext.texParameteri(
+        gl.WebGL.TEXTURE_2D, gl.WebGL.TEXTURE_MIN_FILTER, _filtering.value);
+    _renderingContext.texParameteri(
+        gl.WebGL.TEXTURE_2D, gl.WebGL.TEXTURE_MAG_FILTER, _filtering.value);
   }
 
   //-----------------------------------------------------------------------------------------------
@@ -126,7 +128,6 @@ class RenderTexture {
   RenderTextureWrapping get wrappingX => _wrappingX;
 
   set wrappingX(RenderTextureWrapping wrapping) {
-
     if (_wrappingX == wrapping) return;
     _wrappingX = wrapping;
 
@@ -134,7 +135,8 @@ class RenderTexture {
     if (_renderContext.contextIdentifier != contextIdentifier) return;
 
     _renderContext.activateRenderTexture(this);
-    _renderingContext.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, _wrappingX.value);
+    _renderingContext.texParameteri(
+        gl.WebGL.TEXTURE_2D, gl.WebGL.TEXTURE_WRAP_S, _wrappingX.value);
   }
 
   //-----------------------------------------------------------------------------------------------
@@ -142,7 +144,6 @@ class RenderTexture {
   RenderTextureWrapping get wrappingY => _wrappingY;
 
   set wrappingY(RenderTextureWrapping wrapping) {
-
     if (_wrappingY == wrapping) return;
     _wrappingY = wrapping;
 
@@ -150,7 +151,8 @@ class RenderTexture {
     if (_renderContext.contextIdentifier != contextIdentifier) return;
 
     _renderContext.activateRenderTexture(this);
-    _renderingContext.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, _wrappingY.value);
+    _renderingContext.texParameteri(
+        gl.WebGL.TEXTURE_2D, gl.WebGL.TEXTURE_WRAP_T, _wrappingY.value);
   }
 
   TextureInfo get textureInfo => _textureInfo;
@@ -167,7 +169,6 @@ class RenderTexture {
   /// Call the dispose method to release memory allocated by WebGL.
 
   void dispose() {
-
     if (_renderingContext != null && _texture != null) {
       _renderingContext.deleteTexture(_texture);
     }
@@ -184,32 +185,25 @@ class RenderTexture {
   //-----------------------------------------------------------------------------------------------
 
   void resize(int width, int height) {
-
     if (_source is VideoElement) {
-
       throw new StateError("RenderTexture is not resizeable.");
-
     } else if (_width == width && _height == height) {
-
       // there is no need to resize the texture
 
     } else if (_source == null) {
-
       _width = width;
       _height = height;
 
       if (_renderContext == null || _texture == null) return;
       if (_renderContext.contextIdentifier != contextIdentifier) return;
 
-      var target = _textureInfo?.target ?? gl.TEXTURE_2D;
-      var pixelFormat = _textureInfo?.pixelFormat ?? gl.RGBA;
-      var pixelType = _textureInfo?.pixelType ?? gl.UNSIGNED_BYTE;
+      var target = _textureInfo?.target ?? gl.WebGL.TEXTURE_2D;
+      var pixelFormat = _textureInfo?.pixelFormat ?? gl.WebGL.RGBA;
+      var pixelType = _textureInfo?.pixelType ?? gl.WebGL.UNSIGNED_BYTE;
 
       _renderContext.activateRenderTexture(this);
       _renderingContext.texImage2D(target, 0, pixelFormat, _width, _height, 0, pixelFormat, pixelType, null);
-
     } else {
-
       _width = width;
       _height = height;
       _canvas = _source = new CanvasElement(width: _width, height: _height);
@@ -228,19 +222,18 @@ class RenderTexture {
   /// RenderTexture and you don't need to call the [update] method.
 
   void update() {
-
     if (_renderContext == null || _texture == null) return;
     if (_renderContext.contextIdentifier != contextIdentifier) return;
 
-    var target = _textureInfo?.target ?? gl.TEXTURE_2D;
-    var pixelFormat = _textureInfo?.pixelFormat ?? gl.RGBA;
-    var pixelType = _textureInfo?.pixelType ?? gl.UNSIGNED_BYTE;
+    var target = _textureInfo?.target ?? gl.WebGL.TEXTURE_2D;
+    var pixelFormat = _textureInfo?.pixelFormat ?? gl.WebGL.RGBA;
+    var pixelType = _textureInfo?.pixelType ?? gl.WebGL.UNSIGNED_BYTE;
 
     _renderContext.flush();
     _renderContext.activateRenderTexture(this);
 
-    var scissors = _renderingContext.isEnabled(gl.SCISSOR_TEST);
-    if (scissors) _renderingContext.disable(gl.SCISSOR_TEST);
+    var scissors = _renderingContext.isEnabled(gl.WebGL.SCISSOR_TEST);
+    if (scissors) _renderingContext.disable(gl.WebGL.SCISSOR_TEST);
 
     if (_textureSourceWorkaround) {
       _canvas.context2D.drawImage(_source, 0, 0);
@@ -249,18 +242,16 @@ class RenderTexture {
       _renderingContext.texImage2D(target, 0, pixelFormat, pixelFormat, pixelType, _source);
     }
 
-    if (scissors) _renderingContext.enable(gl.SCISSOR_TEST);
+    if (scissors) _renderingContext.enable(gl.WebGL.SCISSOR_TEST);
   }
 
   //-----------------------------------------------------------------------------------------------
 
   void activate(RenderContextWebGL renderContext, int textureSlot) {
-
     if (this.contextIdentifier != renderContext.contextIdentifier) {
-
-      var target = _textureInfo?.target ?? gl.TEXTURE_2D;
-      var pixelFormat = _textureInfo?.pixelFormat ?? gl.RGBA;
-      var pixelType = _textureInfo?.pixelType ?? gl.UNSIGNED_BYTE;
+      var target = _textureInfo?.target ?? gl.WebGL.TEXTURE_2D;
+      var pixelFormat = _textureInfo?.pixelFormat ?? gl.WebGL.RGBA;
+      var pixelType = _textureInfo?.pixelType ?? gl.WebGL.UNSIGNED_BYTE;
 
       _renderContext = renderContext;
       _contextIdentifier = renderContext.contextIdentifier;
@@ -270,12 +261,12 @@ class RenderTexture {
       _renderingContext.activeTexture(textureSlot);
       _renderingContext.bindTexture(target, _texture);
 
-      var scissors = _renderingContext.isEnabled(gl.SCISSOR_TEST);
-      if (scissors) _renderingContext.disable(gl.SCISSOR_TEST);
+      var scissors = _renderingContext.isEnabled(gl.WebGL.SCISSOR_TEST);
+      if (scissors) _renderingContext.disable(gl.WebGL.SCISSOR_TEST);
 
       if (_source != null) {
         _renderingContext.texImage2D(_textureInfo.target, 0, pixelFormat, pixelFormat, pixelType, _source);
-        _textureSourceWorkaround = _renderingContext.getError() == gl.INVALID_VALUE;
+        _textureSourceWorkaround = _renderingContext.getError() == gl.WebGL.INVALID_VALUE;
       } else if (_compressedTexture != null) {
 
         _renderingContext.compressedTexImage2D(target, 0,
@@ -283,7 +274,6 @@ class RenderTexture {
           _compressedTexture.width,
           _compressedTexture.height, 0,
           _compressedTexture.textureData);
-
       } else {
         _renderingContext.texImage2D(target, 0, pixelFormat, width, height, 0, pixelFormat, pixelType, null);
       }
@@ -295,17 +285,19 @@ class RenderTexture {
         _renderingContext.texImage2D(target, 0, pixelFormat, pixelFormat, pixelType, _canvas);
       }
 
-      if (scissors) _renderingContext.enable(gl.SCISSOR_TEST);
+      if (scissors) _renderingContext.enable(gl.WebGL.SCISSOR_TEST);
 
-      _renderingContext.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, _wrappingX.value);
-      _renderingContext.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, _wrappingY.value);
-      _renderingContext.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, _filtering.value);
-      _renderingContext.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, _filtering.value);
-
+      _renderingContext.texParameteri(
+          gl.WebGL.TEXTURE_2D, gl.WebGL.TEXTURE_WRAP_S, _wrappingX.value);
+      _renderingContext.texParameteri(
+          gl.WebGL.TEXTURE_2D, gl.WebGL.TEXTURE_WRAP_T, _wrappingY.value);
+      _renderingContext.texParameteri(
+          gl.WebGL.TEXTURE_2D, gl.WebGL.TEXTURE_MIN_FILTER, _filtering.value);
+      _renderingContext.texParameteri(
+          gl.WebGL.TEXTURE_2D, gl.WebGL.TEXTURE_MAG_FILTER, _filtering.value);
     } else {
-
       _renderingContext.activeTexture(textureSlot);
-      _renderingContext.bindTexture(gl.TEXTURE_2D, _texture);
+      _renderingContext.bindTexture(gl.WebGL.TEXTURE_2D, _texture);
     }
   }
 
@@ -323,5 +315,4 @@ class RenderTexture {
       }
     }
   }
-
 }
