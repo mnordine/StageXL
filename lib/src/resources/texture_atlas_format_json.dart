@@ -140,6 +140,6 @@ class _TextureAtlasFormatJson extends TextureAtlasFormat {
         frameX, frameY, frameWidth, frameHeight,
         vxList, ixList);
 
-    textureAtlas.frames.add(taf);
+    textureAtlas.frames[frameName] = taf;
   }
 }
