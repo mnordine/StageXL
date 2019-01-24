@@ -213,6 +213,8 @@ class Stage extends DisplayObjectContainer {
 
   RenderEngine get renderEngine => _renderContext.renderEngine;
 
+  RenderContext get renderContext => _renderContext;
+
   /// Gets the [RenderLoop] where this Stage was added to, or
   /// NULL in case this Stage is not added to a [RenderLoop].
 
