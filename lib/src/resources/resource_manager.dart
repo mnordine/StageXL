@@ -4,6 +4,8 @@ class ResourceManager {
   final Map<String, ResourceManagerResource> _resourceMap =
       new Map<String, ResourceManagerResource>();
 
+  final _loaders = <String, _TextureAtlasLoaderFile>{};
+
   final _progressEvent = new StreamController<num>.broadcast();
   Stream<num> get onProgress => _progressEvent.stream;
 
@@ -75,15 +77,27 @@ class ResourceManager {
   }
 
   void addTextureAtlas(String name, String url,
-      [TextureAtlasFormat textureAtlasFormat = TextureAtlasFormat.JSONARRAY,
-      BitmapDataLoadOptions options]) {
-    var loader = TextureAtlas.load(url, textureAtlasFormat, options);
-    _addResource("TextureAtlas", name, url, loader);
+      [TextureAtlasFormat textureAtlasFormat, BitmapDataLoadOptions options]) {
+
+    textureAtlasFormat ??= TextureAtlasFormat.JSONARRAY;
+
+    var tuple = TextureAtlas.load(url, textureAtlasFormat, options);
+    _addResource("TextureAtlas", name, url, tuple.atlasFuture);
+
+    _loaders[name] = tuple.loader;
+    tuple.atlasFuture.then((_) => _loaders.remove(name));
   }
 
   void removeTextureAtlas(String name, {bool dispose = true}) {
     var resourceManagerResource = _removeResource("TextureAtlas", name);
     var textureAtlas = resourceManagerResource?.value;
+
+    if (_loaders.containsKey(name)) {
+      print('cancelling loading of $name texture atlas...');
+      _loaders[name].cancel();
+      _loaders.remove(name);
+    }
+
     if (textureAtlas is TextureAtlas && dispose) {
       for (var textureAtlasFrame in textureAtlas.frames.values) {
         textureAtlasFrame.bitmapData.renderTexture.dispose();

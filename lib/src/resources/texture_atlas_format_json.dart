@@ -1,7 +1,7 @@
 part of stagexl.resources;
 
 class _TextureAtlasFormatJson extends TextureAtlasFormat {
-  const _TextureAtlasFormatJson();
+  _TextureAtlasFormatJson();
 
   @override
   Future<TextureAtlas> load(TextureAtlasLoader loader) async {

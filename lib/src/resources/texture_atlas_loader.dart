@@ -14,6 +14,9 @@ abstract class TextureAtlasLoader {
 
   /// Get the RenderTextureQuad for the texture atlas.
   Future<RenderTextureQuad> getRenderTextureQuad(String filename);
+
+  /// Cancels any requests in progress
+  void cancel() {}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -22,6 +25,10 @@ abstract class TextureAtlasLoader {
 class _TextureAtlasLoaderFile extends TextureAtlasLoader {
   BitmapDataLoadOptions _loadOptions;
   BitmapDataLoadInfo _loadInfo;
+
+  Future<HttpRequest> _sourceFuture;
+  ImageLoader _imageLoader;
+  HttpRequest _compressedTextureRequest;
 
   static const compressedTextureFormats = const ['.pvr', '.pvr.gz'];
 
@@ -34,7 +41,28 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
   double getPixelRatio() => _loadInfo.pixelRatio;
 
   @override
-  Future<String> getSource() => HttpRequest.getString(_loadInfo.loaderUrl);
+  Future<String> getSource() async {
+    _sourceFuture = HttpRequest.request(_loadInfo.loaderUrl, method: 'GET');
+
+    final response = await _sourceFuture;
+    _sourceFuture = null;
+
+    return response.response;
+  }
+
+  @override
+  void cancel() {
+    print('aborting request for ${_loadInfo.loaderUrl}');
+
+    _sourceFuture?.then((response) => response.abort());
+    _sourceFuture = null;
+
+    _imageLoader?.cancel();
+    _imageLoader = null;
+
+    _compressedTextureRequest?.abort();
+    _compressedTextureRequest = null;
+  }
 
   @override
   Future<RenderTextureQuad> getRenderTextureQuad(String filename) async {
@@ -47,9 +75,12 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
     if (!_isCompressedTexture(filename)) {
       var webpAvailable = _loadOptions.webp;
       var corsEnabled = _loadOptions.corsEnabled;
-      var imageLoader = new ImageLoader(imageUrl, webpAvailable, corsEnabled);
-      var imageElement = await imageLoader.done;
+      _imageLoader = new ImageLoader(imageUrl, webpAvailable, corsEnabled);
+      var imageElement = await _imageLoader.done;
       renderTexture = new RenderTexture.fromImageElement(imageElement);
+
+      _imageLoader = null;
+
     } else {
       renderTexture = await _loadCompressedTexture(imageUrl);
     }
@@ -61,12 +92,15 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
 
     final completer = new Completer<RenderTexture>();
 
-    final request = new HttpRequest();
+    final request = _compressedTextureRequest = new HttpRequest();
     request
       ..onReadyStateChange.listen((_) {
         if (request.readyState == HttpRequest.DONE && request.status == 200) {
           final buffer = request.response as ByteBuffer;
           final texture = _decodeCompressedTexture(buffer, CompressedTextureFileTypes.pvr);
+
+          _compressedTextureRequest = null;
+
           completer.complete(texture);
         }
       })

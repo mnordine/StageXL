@@ -29,6 +29,8 @@ class ImageLoader {
     }
   }
 
+  void cancel() => image?.src = '';
+
   //---------------------------------------------------------------------------
 
   Future<ImageElement> get done => _completer.future;
