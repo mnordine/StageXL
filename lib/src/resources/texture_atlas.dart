@@ -1,5 +1,12 @@
 part of stagexl.resources;
 
+class LoaderTuple {
+  _TextureAtlasLoaderFile loader;
+  Future<TextureAtlas> atlasFuture;
+
+  LoaderTuple(this.loader, this.atlasFuture);
+}
+
 class TextureAtlas {
 
   /// A list with the frames in this texture atlas.
@@ -12,28 +19,39 @@ class TextureAtlas {
 
   //---------------------------------------------------------------------------
 
-  static Future<TextureAtlas> load(String url, [
-      TextureAtlasFormat textureAtlasFormat = TextureAtlasFormat.JSONARRAY,
-      BitmapDataLoadOptions bitmapDataLoadOptions]) =>
-          textureAtlasFormat.load(new _TextureAtlasLoaderFile(
-              url, bitmapDataLoadOptions));
+  static LoaderTuple load(String url, [
+      TextureAtlasFormat textureAtlasFormat,
+      BitmapDataLoadOptions bitmapDataLoadOptions])
+  {
+    textureAtlasFormat ??= TextureAtlasFormat.JSONARRAY;
+
+    final loader = new _TextureAtlasLoaderFile(url, bitmapDataLoadOptions);
+    return new LoaderTuple(loader, textureAtlasFormat.load(loader));
+  }
+
 
   static Future<TextureAtlas> fromTextureAtlas(
-      TextureAtlas textureAtlas, String namePrefix, String source, [
-      TextureAtlasFormat textureAtlasFormat = TextureAtlasFormat.JSONARRAY]) =>
-          textureAtlasFormat.load(new _TextureAtlasLoaderTextureAtlas(
-              textureAtlas, namePrefix, source));
+      TextureAtlas textureAtlas, String namePrefix, String source, [TextureAtlasFormat textureAtlasFormat])
+  {
+    textureAtlasFormat ??= TextureAtlasFormat.JSONARRAY;
+    return textureAtlasFormat.load(new _TextureAtlasLoaderTextureAtlas(
+      textureAtlas, namePrefix, source));
+  }
 
   static Future<TextureAtlas> fromBitmapData(
-      BitmapData bitmapData, String source, [
-      TextureAtlasFormat textureAtlasFormat = TextureAtlasFormat.JSONARRAY]) =>
-          textureAtlasFormat.load(new _TextureAtlasLoaderBitmapData(
-              bitmapData, source));
+      BitmapData bitmapData, String source, [TextureAtlasFormat textureAtlasFormat])
+  {
+    textureAtlasFormat ??= TextureAtlasFormat.JSONARRAY;
+    return textureAtlasFormat.load(new _TextureAtlasLoaderBitmapData(
+        bitmapData, source));
+  }
 
   static Future<TextureAtlas> withLoader(
-      TextureAtlasLoader textureAtlasLoader, [
-      TextureAtlasFormat textureAtlasFormat = TextureAtlasFormat.JSONARRAY]) =>
-          textureAtlasFormat.load(textureAtlasLoader);
+      TextureAtlasLoader textureAtlasLoader, [TextureAtlasFormat textureAtlasFormat])
+  {
+    textureAtlasFormat ??= TextureAtlasFormat.JSONARRAY;
+    return textureAtlasFormat.load(textureAtlasLoader);
+  }
 
   //---------------------------------------------------------------------------
 
