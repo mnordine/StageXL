@@ -38,18 +38,17 @@ class TextureAtlasFrame {
       this.frameHeight,
       this.vxList,
       this.ixList) {
-    var s = new Rectangle<int>(frameX, frameY, frameWidth, frameHeight);
-    var o =
-        new Rectangle<int>(-offsetX, -offsetY, originalWidth, originalHeight);
-    var q = new RenderTextureQuad.slice(textureAtlasQuad, s, o, rotation);
+    var s = Rectangle<int>(frameX, frameY, frameWidth, frameHeight);
+    var o = Rectangle<int>(-offsetX, -offsetY, originalWidth, originalHeight);
+    var q = RenderTextureQuad.slice(textureAtlasQuad, s, o, rotation);
 
-    if (this.vxList != null && this.ixList != null) {
-      q.setCustomVertices(this.vxList, this.ixList);
+    if (vxList != null && ixList != null) {
+      q.setCustomVertices(vxList, ixList);
     } else {
       q.setQuadVertices();
     }
 
-    _bitmapData = new BitmapData.fromRenderTextureQuad(q);
+    _bitmapData = BitmapData.fromRenderTextureQuad(q);
   }
 
   //---------------------------------------------------------------------------

@@ -42,13 +42,13 @@ class EventDispatcher {
   EventStream<T> on<T extends Event>(String eventType) {
     var eventStreams = _eventStreams;
     if (eventStreams == null) {
-      eventStreams = new Map<String, EventStream<Event>>();
+      eventStreams = <String, EventStream<Event>>{};
       _eventStreams = eventStreams;
     }
 
     EventStream<T> eventStream = eventStreams[eventType];
     if (eventStream == null) {
-      eventStream = new EventStream<T>._(this, eventType);
+      eventStream = EventStream<T>._(this, eventType);
       eventStreams[eventType] = eventStream;
     }
 
@@ -95,7 +95,7 @@ class EventDispatcher {
   StreamSubscription<T> addEventListener<T extends Event>(
       String eventType, EventListener<T> eventListener,
       {bool useCapture = false, int priority = 0}) {
-    var eventStream = this.on<T>(eventType);
+    var eventStream = on<T>(eventType);
     return eventStream._subscribe(eventListener, useCapture, priority);
   }
 
@@ -118,14 +118,14 @@ class EventDispatcher {
   void removeEventListener<T extends Event>(
       String eventType, EventListener<T> eventListener,
       {bool useCapture = false}) {
-    var eventStream = this.on<T>(eventType);
+    var eventStream = on<T>(eventType);
     eventStream._unsubscribe(eventListener, useCapture);
   }
 
   /// Removes all event listeners of a given event type.
 
   void removeEventListeners(String eventType) {
-    this.on(eventType).cancelSubscriptions();
+    on(eventType).cancelSubscriptions();
   }
 
   /// Dispatches the [event] to all listening subscribers.

@@ -16,10 +16,10 @@ class Point<T extends num> implements math.Point<T> {
 
   Point.from(math.Point<T> p) : this(p.x, p.y);
 
-  Point<T> clone() => new Point<T>(x, y);
+  Point<T> clone() => Point<T>(x, y);
 
   @override
-  String toString() => "Point<$T> [x=$x, y=$y]";
+  String toString() => 'Point<$T> [x=$x, y=$y]';
 
   //---------------------------------------------------------------------------
 
@@ -28,10 +28,10 @@ class Point<T extends num> implements math.Point<T> {
 
   static Point<num> interpolate(
           math.Point<num> p1, math.Point<num> p2, num f) =>
-      new Point<num>(p2.x + (p1.x - p2.x) * f, p2.y + (p1.y - p2.y) * f);
+      Point<num>(p2.x + (p1.x - p2.x) * f, p2.y + (p1.y - p2.y) * f);
 
   static Point<num> polar(num len, num angle) =>
-      new Point<num>(len * cos(angle), len * sin(angle));
+      Point<num>(len * cos(angle), len * sin(angle));
 
   //---------------------------------------------------------------------------
 
@@ -42,13 +42,13 @@ class Point<T extends num> implements math.Point<T> {
 
   @override
   bool operator ==(Object other) {
-    return other is math.Point && this.x == other.x && this.y == other.y;
+    return other is math.Point && x == other.x && y == other.y;
   }
 
   @override
   int get hashCode {
-    int a = this.x.hashCode;
-    int b = this.y.hashCode;
+    var a = x.hashCode;
+    var b = y.hashCode;
     return JenkinsHash.hash2(a, b);
   }
 
@@ -58,7 +58,7 @@ class Point<T extends num> implements math.Point<T> {
 
   @override
   Point<T> operator +(math.Point<T> other) {
-    return new Point<T>(x + other.x, y + other.y);
+    return Point<T>(x + other.x, y + other.y);
   }
 
   /// Subtract [other] from `this`, as if both points were vectors.
@@ -67,7 +67,7 @@ class Point<T extends num> implements math.Point<T> {
 
   @override
   Point<T> operator -(math.Point<T> other) {
-    return new Point<T>(x - other.x, y - other.y);
+    return Point<T>(x - other.x, y - other.y);
   }
 
   /// Scale this point by [factor] as if it were a vector.
@@ -80,7 +80,7 @@ class Point<T extends num> implements math.Point<T> {
 
   @override
   Point<T> operator *(num /*T|int*/ factor) {
-    return new Point<T>(x * factor as T, y * factor as T);
+    return Point<T>(x * factor as T, y * factor as T);
   }
 
   //-------------------------------------------------------------------------------------------------

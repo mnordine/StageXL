@@ -10,7 +10,7 @@ class Scale9Bitmap extends Bitmap {
   num _width = 0.0;
   num _height = 0.0;
 
-  final List<RenderTextureQuad> _slices = new List<RenderTextureQuad>(9);
+  final List<RenderTextureQuad> _slices = List<RenderTextureQuad>(9);
 
   Scale9Bitmap(BitmapData bitmapData, Rectangle<num> grid) : super(bitmapData) {
     _grid = grid;
@@ -64,7 +64,7 @@ class Scale9Bitmap extends Bitmap {
 
   @override
   Rectangle<num> get bounds {
-    return new Rectangle<num>(0.0, 0.0, _width, _height);
+    return Rectangle<num>(0.0, 0.0, _width, _height);
   }
 
   @override
@@ -90,11 +90,11 @@ class Scale9Bitmap extends Bitmap {
     var w2 = _slices[8].targetWidth;
     var h2 = _slices[8].targetHeight;
 
-    for (int j = 0; j < 3; j++) {
+    for (var j = 0; j < 3; j++) {
       var sh = j == 0 ? h0 : j == 2 ? h2 : h1;
       var th = j == 0 ? h0 : j == 2 ? h2 : height - h0 - h2;
       var ty = j == 0 ? 0 : j == 1 ? h0 : height - h2;
-      for (int i = 0; i < 3; i++) {
+      for (var i = 0; i < 3; i++) {
         var sw = i == 0 ? w0 : i == 2 ? w2 : w1;
         var tw = i == 0 ? w0 : i == 2 ? w2 : width - w0 - w2;
         var tx = i == 0 ? 0 : i == 1 ? w0 : width - w2;
@@ -122,15 +122,15 @@ class Scale9Bitmap extends Bitmap {
     var y2 = (rtq.pixelRatio * grid.bottom).round();
     var y3 = (rtq.sourceRectangle.height);
 
-    for (int j = 0; j < 3; j++) {
+    for (var j = 0; j < 3; j++) {
       var y = (j == 0 ? y0 : j == 1 ? y1 : y2);
       var h = (j == 0 ? y1 : j == 1 ? y2 : y3) - y;
-      for (int i = 0; i < 3; i++) {
+      for (var i = 0; i < 3; i++) {
         var x = (i == 0 ? x0 : i == 1 ? x1 : x2);
         var w = (i == 0 ? x1 : i == 1 ? x2 : x3) - x;
-        var source = new Rectangle<int>(x, y, w, h);
-        var offset = new Rectangle<int>(0, 0, w, h);
-        var slice = new RenderTextureQuad.slice(rtq, source, offset);
+        var source = Rectangle<int>(x, y, w, h);
+        var offset = Rectangle<int>(0, 0, w, h);
+        var slice = RenderTextureQuad.slice(rtq, source, offset);
         _slices[i + j * 3] = slice;
       }
     }

@@ -6,7 +6,7 @@ class _DisplayObjectCache {
   num pixelRatio = 1.0;
   bool debugBorder = true;
 
-  Rectangle<num> bounds = new Rectangle<num>(0, 0, 256, 256);
+  Rectangle<num> bounds = Rectangle<num>(0, 0, 256, 256);
   RenderTexture renderTexture;
   RenderTextureQuad renderTextureQuad;
 
@@ -33,33 +33,33 @@ class _DisplayObjectCache {
     // adjust size of texture and quad
 
     var pr = pixelRatio;
-    var sr = new Rectangle<int>(0, 0, w, h);
-    var or = new Rectangle<int>(0 - l, 0 - t, w, h);
+    var sr = Rectangle<int>(0, 0, w, h);
+    var or = Rectangle<int>(0 - l, 0 - t, w, h);
 
     if (renderTexture == null) {
-      renderTexture = new RenderTexture(w, h, Color.Transparent);
-      renderTextureQuad = new RenderTextureQuad(renderTexture, sr, or, 0, pr);
+      renderTexture = RenderTexture(w, h, Color.Transparent);
+      renderTextureQuad = RenderTextureQuad(renderTexture, sr, or, 0, pr);
     } else {
       renderTexture.resize(w, h);
-      renderTextureQuad = new RenderTextureQuad(renderTexture, sr, or, 0, pr);
+      renderTextureQuad = RenderTextureQuad(renderTexture, sr, or, 0, pr);
     }
 
     // render display object to texture
 
     var canvas = renderTexture.canvas;
     var matrix = renderTextureQuad.drawMatrix;
-    var renderContext = new RenderContextCanvas(canvas);
-    var renderState = new RenderState(renderContext, matrix);
+    var renderContext = RenderContextCanvas(canvas);
+    var renderState = RenderState(renderContext, matrix);
 
     renderContext.clear(Color.Transparent);
-    this.displayObject.render(renderState);
+    displayObject.render(renderState);
 
     // apply filters
 
-    var filters = this.displayObject.filters;
+    var filters = displayObject.filters;
 
     if (filters != null && filters.isNotEmpty) {
-      var bitmapData = new BitmapData.fromRenderTextureQuad(renderTextureQuad);
+      var bitmapData = BitmapData.fromRenderTextureQuad(renderTextureQuad);
       filters.forEach((filter) => filter.apply(bitmapData));
     }
 
@@ -69,9 +69,9 @@ class _DisplayObjectCache {
       var context = canvas.context2D;
       context.setTransform(1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
       context.lineWidth = 1;
-      context.lineJoin = "miter";
-      context.lineCap = "butt";
-      context.strokeStyle = "#FF00FF";
+      context.lineJoin = 'miter';
+      context.lineCap = 'butt';
+      context.strokeStyle = '#FF00FF';
       context.strokeRect(0.5, 0.5, canvas.width - 1, canvas.height - 1);
     }
 

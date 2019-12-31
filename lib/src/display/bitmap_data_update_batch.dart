@@ -13,56 +13,55 @@ class BitmapDataUpdateBatch {
 
   BitmapDataUpdateBatch(BitmapData bitmapData)
       : bitmapData = bitmapData,
-        _renderContext =
-            new RenderContextCanvas(bitmapData.renderTexture.canvas),
+        _renderContext = RenderContextCanvas(bitmapData.renderTexture.canvas),
         _drawMatrix = bitmapData.renderTextureQuad.drawMatrix;
 
   //---------------------------------------------------------------------------
 
   /// Update the underlying rendering surface.
 
-  void update() => this.bitmapData.renderTexture.update();
+  void update() => bitmapData.renderTexture.update();
 
   //---------------------------------------------------------------------------
 
   void applyFilter(BitmapFilter filter, [Rectangle<num> rectangle]) {
-    filter.apply(this.bitmapData, rectangle);
+    filter.apply(bitmapData, rectangle);
   }
 
   //---------------------------------------------------------------------------
 
   void colorTransform(Rectangle<num> rectangle, ColorTransform transform) {
-    bool isLittleEndianSystem = env.isLittleEndianSystem;
+    var isLittleEndianSystem = env.isLittleEndianSystem;
 
-    int redMultiplier = (1024 * transform.redMultiplier).toInt();
-    int greenMultiplier = (1024 * transform.greenMultiplier).toInt();
-    int blueMultiplier = (1024 * transform.blueMultiplier).toInt();
-    int alphaMultiplier = (1024 * transform.alphaMultiplier).toInt();
+    var redMultiplier = (1024 * transform.redMultiplier).toInt();
+    var greenMultiplier = (1024 * transform.greenMultiplier).toInt();
+    var blueMultiplier = (1024 * transform.blueMultiplier).toInt();
+    var alphaMultiplier = (1024 * transform.alphaMultiplier).toInt();
 
-    int redOffset = transform.redOffset;
-    int greenOffset = transform.greenOffset;
-    int blueOffset = transform.blueOffset;
-    int alphaOffset = transform.alphaOffset;
+    var redOffset = transform.redOffset;
+    var greenOffset = transform.greenOffset;
+    var blueOffset = transform.blueOffset;
+    var alphaOffset = transform.alphaOffset;
 
-    int mulitplier0 = isLittleEndianSystem ? redMultiplier : alphaMultiplier;
-    int mulitplier1 = isLittleEndianSystem ? greenMultiplier : blueMultiplier;
-    int mulitplier2 = isLittleEndianSystem ? blueMultiplier : greenMultiplier;
-    int mulitplier3 = isLittleEndianSystem ? alphaMultiplier : redMultiplier;
+    var mulitplier0 = isLittleEndianSystem ? redMultiplier : alphaMultiplier;
+    var mulitplier1 = isLittleEndianSystem ? greenMultiplier : blueMultiplier;
+    var mulitplier2 = isLittleEndianSystem ? blueMultiplier : greenMultiplier;
+    var mulitplier3 = isLittleEndianSystem ? alphaMultiplier : redMultiplier;
 
-    int offset0 = isLittleEndianSystem ? redOffset : alphaOffset;
-    int offset1 = isLittleEndianSystem ? greenOffset : blueOffset;
-    int offset2 = isLittleEndianSystem ? blueOffset : greenOffset;
-    int offset3 = isLittleEndianSystem ? alphaOffset : redOffset;
+    var offset0 = isLittleEndianSystem ? redOffset : alphaOffset;
+    var offset1 = isLittleEndianSystem ? greenOffset : blueOffset;
+    var offset2 = isLittleEndianSystem ? blueOffset : greenOffset;
+    var offset3 = isLittleEndianSystem ? alphaOffset : redOffset;
 
-    var renderTextureQuad = this.bitmapData.renderTextureQuad.cut(rectangle);
+    var renderTextureQuad = bitmapData.renderTextureQuad.cut(rectangle);
     var imageData = renderTextureQuad.getImageData();
     var data = imageData.data;
 
-    for (int i = 0; i <= data.length - 4; i += 4) {
-      int c0 = data[i + 0];
-      int c1 = data[i + 1];
-      int c2 = data[i + 2];
-      int c3 = data[i + 3];
+    for (var i = 0; i <= data.length - 4; i += 4) {
+      var c0 = data[i + 0];
+      var c1 = data[i + 1];
+      var c2 = data[i + 2];
+      var c3 = data[i + 3];
 
       if (c0 is! num) continue; // dart2js hint
       if (c1 is! num) continue; // dart2js hint
@@ -85,7 +84,7 @@ class BitmapDataUpdateBatch {
   void clear() {
     _renderContext.setTransform(_drawMatrix);
     _renderContext.rawContext
-        .clearRect(0, 0, this.bitmapData.width, this.bitmapData.height);
+        .clearRect(0, 0, bitmapData.width, bitmapData.height);
   }
 
   //---------------------------------------------------------------------------
@@ -100,7 +99,7 @@ class BitmapDataUpdateBatch {
   //---------------------------------------------------------------------------
 
   void draw(BitmapDrawable source, [Matrix matrix]) {
-    var renderState = new RenderState(_renderContext, _drawMatrix);
+    var renderState = RenderState(_renderContext, _drawMatrix);
     if (matrix != null) renderState.globalMatrix.prepend(matrix);
     source.render(renderState);
   }
@@ -112,7 +111,7 @@ class BitmapDataUpdateBatch {
   void copyPixels(
       BitmapData source, Rectangle<num> sourceRect, Point<num> destPoint) {
     var sourceQuad = source.renderTextureQuad.cut(sourceRect);
-    var renderState = new RenderState(_renderContext, _drawMatrix);
+    var renderState = RenderState(_renderContext, _drawMatrix);
     renderState.globalMatrix.prependTranslation(destPoint.x, destPoint.y);
     _renderContext.setTransform(renderState.globalMatrix);
     _renderContext.rawContext
@@ -128,8 +127,7 @@ class BitmapDataUpdateBatch {
       BitmapData source, Rectangle<num> sourceRect, Point<num> destPoint,
       [BlendMode blendMode]) {
     var sourceQuad = source.renderTextureQuad.cut(sourceRect);
-    var renderState =
-        new RenderState(_renderContext, _drawMatrix, 1.0, blendMode);
+    var renderState = RenderState(_renderContext, _drawMatrix, 1.0, blendMode);
     renderState.globalMatrix.prependTranslation(destPoint.x, destPoint.y);
     renderState.renderTextureQuad(sourceQuad);
   }
@@ -139,10 +137,10 @@ class BitmapDataUpdateBatch {
   /// See [BitmapData.getPixel32]
 
   int getPixel32(num x, num y) {
-    int r = 0, g = 0, b = 0, a = 0;
+    var r = 0, g = 0, b = 0, a = 0;
 
-    var rectangle = new Rectangle<num>(x, y, 1, 1);
-    var renderTextureQuad = this.bitmapData.renderTextureQuad.clip(rectangle);
+    var rectangle = Rectangle<num>(x, y, 1, 1);
+    var renderTextureQuad = bitmapData.renderTextureQuad.clip(rectangle);
     if (renderTextureQuad.sourceRectangle.isEmpty) return Color.Transparent;
 
     var isLittleEndianSystem = env.isLittleEndianSystem;
@@ -150,7 +148,7 @@ class BitmapDataUpdateBatch {
     var pixels = imageData.width * imageData.height;
     var data = imageData.data;
 
-    for (int i = 0; i <= data.length - 4; i += 4) {
+    for (var i = 0; i <= data.length - 4; i += 4) {
       r += isLittleEndianSystem ? data[i + 0] : data[i + 3];
       g += isLittleEndianSystem ? data[i + 1] : data[i + 2];
       b += isLittleEndianSystem ? data[i + 2] : data[i + 1];

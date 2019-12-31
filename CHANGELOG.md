@@ -8,6 +8,13 @@ announcements on the StageXL forum or use one of the support links below:
   * StageXL GitHub <https://github.com/bp74/StageXL/issues>
   * StageXL StackOverflow: <http://stackoverflow.com/questions/ask?tags=stagexl>
 
+#### 1.4.2
+  * fixed linter warnings
+  * Require Dart 2.7
+
+#### 1.4.1
+  * Require Dart 2.4
+
 #### 1.4.0
   * Require Dart 2.
   * Support Dart 2 stable.

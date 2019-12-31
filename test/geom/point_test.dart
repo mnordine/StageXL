@@ -1,4 +1,4 @@
-@TestOn("browser")
+@TestOn('browser')
 library point_test;
 
 import 'package:test/test.dart';
@@ -6,13 +6,13 @@ import 'package:stagexl/stagexl.dart';
 
 void main() {
   test('new point', () {
-    Point p = point12();
+    var p = point12();
     testPoint(p, x: 1, y: 2);
   });
 
   test('new from point', () {
-    Point source = point12();
-    Point p = new Point.from(source);
+    var source = point12();
+    var p = Point.from(source);
 
     p.x = 3;
 
@@ -21,8 +21,8 @@ void main() {
   });
 
   test('#clone', () {
-    Point source = point12();
-    Point p = source.clone();
+    var source = point12();
+    var p = source.clone();
 
     p.x = 3;
 
@@ -31,37 +31,37 @@ void main() {
   });
 
   test('#toString', () {
-    Point p = point12();
+    var p = point12();
 
     expect(p.toString(), equals('Point<num> [x=1, y=2]'));
   });
 
-  List<List<num>> distanceTestTable = [
+  var distanceTestTable = [
     [0, 0, 0, 2, 2],
     [0, 0, 2, 0, 2],
     [0, 0, 2, 2, 2.828]
   ];
 
   test('.distance', () {
-    for (List<num> r in distanceTestTable) {
-      Point p1 = new Point(r[0], r[1]);
-      Point p2 = new Point(r[2], r[3]);
+    for (var r in distanceTestTable) {
+      var p1 = Point(r[0], r[1]);
+      var p2 = Point(r[2], r[3]);
 
       expect(Point.distance(p1, p2), closeTo(r[4], 0.001));
     }
   });
 
   test('#distanceTo', () {
-    for (List<num> r in distanceTestTable) {
-      Point p1 = new Point(r[0], r[1]);
-      Point p2 = new Point(r[2], r[3]);
+    for (var r in distanceTestTable) {
+      var p1 = Point(r[0], r[1]);
+      var p2 = Point(r[2], r[3]);
 
       expect(p1.distanceTo(p2), closeTo(r[4], 0.001));
     }
   });
 
   test('.interpolate', () {
-    testPoint(Point.interpolate(point12(), new Point(3, 4), 3), x: -3, y: -2);
+    testPoint(Point.interpolate(point12(), Point(3, 4), 3), x: -3, y: -2);
   });
 
   test('.polar', () {
@@ -85,8 +85,8 @@ void main() {
   });
 
   test('#copyFrom', () {
-    Point source = point12();
-    Point p = point00();
+    var source = point12();
+    var p = point00();
     p.copyFrom(source);
 
     p.x = 3;
@@ -96,7 +96,7 @@ void main() {
   });
 
   test('#setTo', () {
-    Point p = point00();
+    var p = point00();
     p.setTo(1, 2);
 
     testPoint(p, x: 1, y: 2);
@@ -108,15 +108,15 @@ void main() {
   });
 
   test('#offset', () {
-    Point p = point12();
+    var p = point12();
     p.offset(2, 3);
 
     testPoint(p, x: 3, y: 5);
   });
 }
 
-Point point12() => new Point<num>(1, 2);
-Point point00() => new Point<num>(0, 0);
+Point point12() => Point<num>(1, 2);
+Point point00() => Point<num>(0, 0);
 
 void testPoint(Point point, {num x, num y}) {
   if (x != null) expect(point.x, closeTo(x, 0.001));

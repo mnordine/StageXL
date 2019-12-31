@@ -32,8 +32,8 @@ class TextFormat {
       this.bold = false,
       this.italic = false,
       this.underline = false,
-      this.align = "left",
-      this.verticalAlign = "top",
+      this.align = 'left',
+      this.verticalAlign = 'top',
       this.topMargin = 0.0,
       this.bottomMargin = 0.0,
       this.leftMargin = 0.0,
@@ -43,7 +43,7 @@ class TextFormat {
 
   //-------------------------------------------------------------------------------------------------
 
-  TextFormat clone() => new TextFormat(font, size, color,
+  TextFormat clone() => TextFormat(font, size, color,
       strokeWidth: strokeWidth,
       strokeColor: strokeColor,
       fillGradient: fillGradient,
@@ -63,9 +63,9 @@ class TextFormat {
   //-------------------------------------------------------------------------------------------------
 
   String get _cssFontStyle {
-    var fontStyle = "$weight ${size}px $font";
-    if (bold) fontStyle = "bold ${size}px $font";
-    if (italic) fontStyle = "italic $fontStyle";
+    var fontStyle = '$weight ${size}px $font';
+    if (bold) fontStyle = 'bold ${size}px $font';
+    if (italic) fontStyle = 'italic $fontStyle';
     return fontStyle;
   }
 }

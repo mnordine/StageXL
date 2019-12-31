@@ -34,7 +34,7 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
 
   _TextureAtlasLoaderFile(String url, BitmapDataLoadOptions options) {
     _loadOptions = options ?? BitmapData.defaultLoadOptions;
-    _loadInfo = new BitmapDataLoadInfo(url, _loadOptions.pixelRatios);
+    _loadInfo = BitmapDataLoadInfo(url, _loadOptions.pixelRatios);
   }
 
   @override
@@ -75,9 +75,9 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
     if (!_isCompressedTexture(filename)) {
       var webpAvailable = _loadOptions.webp;
       var corsEnabled = _loadOptions.corsEnabled;
-      _imageLoader = new ImageLoader(imageUrl, webpAvailable, corsEnabled);
+      _imageLoader = ImageLoader(imageUrl, webpAvailable, corsEnabled);
       var imageElement = await _imageLoader.done;
-      renderTexture = new RenderTexture.fromImageElement(imageElement);
+      renderTexture = RenderTexture.fromImageElement(imageElement);
 
       _imageLoader = null;
 
@@ -90,9 +90,9 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
 
   Future<RenderTexture> _loadCompressedTexture(String filename) {
 
-    final completer = new Completer<RenderTexture>();
+    final completer = Completer<RenderTexture>();
 
-    final request = _compressedTextureRequest = new HttpRequest();
+    final request = _compressedTextureRequest = HttpRequest();
     request
       ..onReadyStateChange.listen((_) {
         if (request.readyState == HttpRequest.DONE && request.status == 200) {
@@ -120,8 +120,8 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
   }
 
   RenderTexture _decodePvr(ByteBuffer buffer) {
-    final tex = new PvrTexture.fromBuffer(buffer);
-    return new RenderTexture.fromCompressedTexture(tex);
+    final tex = PvrTexture.fromBuffer(buffer);
+    return RenderTexture.fromCompressedTexture(tex);
   }
 
   bool _isCompressedTexture(String filename) => compressedTextureFormats.any((format) => filename.endsWith(format));
@@ -139,15 +139,15 @@ class _TextureAtlasLoaderTextureAtlas extends TextureAtlasLoader {
       this.textureAtlas, this.namePrefix, this.source);
 
   @override
-  double getPixelRatio() => this.textureAtlas.pixelRatio;
+  double getPixelRatio() => textureAtlas.pixelRatio;
 
   @override
-  Future<String> getSource() => new Future.value(this.source);
+  Future<String> getSource() => Future.value(source);
 
   @override
   Future<RenderTextureQuad> getRenderTextureQuad(String filename) async {
-    var name = this.namePrefix + getFilenameWithoutExtension(filename);
-    var bitmapData = this.textureAtlas.getBitmapData(name);
+    var name = namePrefix + getFilenameWithoutExtension(filename);
+    var bitmapData = textureAtlas.getBitmapData(name);
     return bitmapData.renderTextureQuad;
   }
 }
@@ -162,13 +162,13 @@ class _TextureAtlasLoaderBitmapData extends TextureAtlasLoader {
   _TextureAtlasLoaderBitmapData(this.bitmapData, this.source);
 
   @override
-  double getPixelRatio() => this.bitmapData.renderTextureQuad.pixelRatio;
+  double getPixelRatio() => bitmapData.renderTextureQuad.pixelRatio;
 
   @override
-  Future<String> getSource() => new Future.value(this.source);
+  Future<String> getSource() => Future.value(source);
 
   @override
   Future<RenderTextureQuad> getRenderTextureQuad(String filename) {
-    return new Future.value(this.bitmapData.renderTextureQuad);
+    return Future.value(bitmapData.renderTextureQuad);
   }
 }
