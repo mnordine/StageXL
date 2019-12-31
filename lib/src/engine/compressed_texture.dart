@@ -33,6 +33,14 @@ abstract class CompressedTexture {
     return ext != null;
   }
 
+  static bool supportsEtc1(gl.RenderingContext context)
+  {
+    var ext = context.getExtension('WEBGL_compressed_texture_etc1');
+    ext ??= context.getExtension('WEBKIT_WEBGL_compressed_texture_etc1');
+
+    return ext != null;
+  }
+
   static bool supportsAstc(gl.RenderingContext context)
   {
     var ext = context.getExtension('WEBGL_compressed_texture_astc');
@@ -141,6 +149,7 @@ class PvrTexture extends CompressedTexture {
       case PvrFormat.pvrtc_rgba_4bpp: return gl.CompressedTexturePvrtc.COMPRESSED_RGBA_PVRTC_4BPPV1_IMG;
 
       case PvrFormat.etc1: return gl.CompressedTextureETC1.COMPRESSED_RGB_ETC1_WEBGL;
+
       case PvrFormat.etc2_rgb: return gl.CompressedTextureEtc.COMPRESSED_RGB8_ETC2;
       case PvrFormat.etc2_rgba: return gl.CompressedTextureEtc.COMPRESSED_RGBA8_ETC2_EAC;
 
