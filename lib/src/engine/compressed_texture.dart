@@ -99,7 +99,7 @@ class PvrTexture extends CompressedTexture {
   }
 
   void _parseHeader() {
-    final bytes = new ByteArray.fromBuffer(_buffer);
+    final bytes = ByteArray.fromBuffer(_buffer);
 
     final magic = bytes.readUnsignedInt();
     if (magic !=  0x03525650) {
@@ -116,7 +116,7 @@ class PvrTexture extends CompressedTexture {
 
     /*final flags = */bytes.readUnsignedInt();
     _pvrFormat = bytes.readUnsignedInt();
-    /*final order = */new List.generate(4, (_) => bytes.readByte());
+    /*final order = */List.generate(4, (_) => bytes.readByte());
     /*final colorSpace =*/ bytes.readUnsignedInt();
     /*final channelType =*/ bytes.readUnsignedInt();
     height = bytes.readUnsignedInt();

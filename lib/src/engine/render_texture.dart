@@ -15,7 +15,7 @@ class RenderTexture {
   bool _textureSourceWorkaround = false;
   gl.RenderingContext _renderingContext;
   gl.Texture _texture;
-  TextureInfo _textureInfo = new TextureInfo();
+  var _textureInfo = TextureInfo();
 
   CompressedTexture _compressedTexture;
 

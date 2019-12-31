@@ -41,7 +41,7 @@ class _TextureAtlasFormatJson extends TextureAtlasFormat {
   }
 
   TextureInfo _parseTextureFormat(String format) {
-    var textureInfo = new TextureInfo();
+    var textureInfo = TextureInfo();
 
     switch (format) {
       case 'RGBA8888':
