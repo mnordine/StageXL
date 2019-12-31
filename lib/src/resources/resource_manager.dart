@@ -82,7 +82,7 @@ class ResourceManager {
     textureAtlasFormat ??= TextureAtlasFormat.JSONARRAY;
 
     var tuple = TextureAtlas.load(url, textureAtlasFormat, options);
-    _addResource("TextureAtlas", name, url, tuple.atlasFuture);
+    _addResource('TextureAtlas', name, url, tuple.atlasFuture);
 
     _loaders[name] = tuple.loader;
     tuple.atlasFuture.then((_) => _loaders.remove(name));
