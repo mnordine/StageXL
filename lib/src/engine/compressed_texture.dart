@@ -133,26 +133,6 @@ class PvrTexture extends CompressedTexture {
   @override
   int get format
   {
-    // https://www.khronos.org/registry/webgl/extensions/WEBGL_compressed_texture_etc/
-    const rgb8_etc2      = 0x9274;
-    const rgba8_etc2_eac = 0x9278;
-
-    // https://www.khronos.org/registry/webgl/extensions/WEBGL_compressed_texture_astc/
-    const rgba_astc_4x4_khr = 0x93B0;
-    const rgba_astc_5x4_khr = 0x93B1;
-    const rgba_astc_5x5_khr = 0x93B2;
-    const rgba_astc_6x5_khr = 0x93B3;
-    const rgba_astc_6x6_khr = 0x93B4;
-    const rgba_astc_8x5_khr = 0x93B5;
-    const rgba_astc_8x6_khr = 0x93B6;
-    const rgba_astc_8x8_khr = 0x93B7;
-    const rgba_astc_10x5_khr = 0x93B8;
-    const rgba_astc_10x6_khr = 0x93B9;
-    const rgba_astc_10x8_khr = 0x93BA;
-    const rgba_astc_10x10_khr = 0x93BB;
-    const rgba_astc_12x10_khr = 0x93BC;
-    const rgba_astc_12x12_khr = 0x93BD;
-
     switch (_pvrFormat)
     {
       case PvrFormat.pvrtc_rgb_2bpp:  return gl.CompressedTexturePvrtc.COMPRESSED_RGB_PVRTC_2BPPV1_IMG;
@@ -161,26 +141,26 @@ class PvrTexture extends CompressedTexture {
       case PvrFormat.pvrtc_rgba_4bpp: return gl.CompressedTexturePvrtc.COMPRESSED_RGBA_PVRTC_4BPPV1_IMG;
 
       case PvrFormat.etc1: return gl.CompressedTextureETC1.COMPRESSED_RGB_ETC1_WEBGL;
-      case PvrFormat.etc2_rgb: return rgb8_etc2;
-      case PvrFormat.etc2_rgba: return rgba8_etc2_eac;
+      case PvrFormat.etc2_rgb: return gl.CompressedTextureEtc.COMPRESSED_RGB8_ETC2;
+      case PvrFormat.etc2_rgba: return gl.CompressedTextureEtc.COMPRESSED_RGBA8_ETC2_EAC;
 
       case PvrFormat.bc1: return gl.CompressedTextureS3TC.COMPRESSED_RGBA_S3TC_DXT1_EXT;
       case PvrFormat.bc3: return gl.CompressedTextureS3TC.COMPRESSED_RGBA_S3TC_DXT5_EXT;
 
-      case PvrFormat.astc_4x4: return rgba_astc_4x4_khr;
-      case PvrFormat.astc_5x4: return rgba_astc_5x4_khr;
-      case PvrFormat.astc_5x5: return rgba_astc_5x5_khr;
-      case PvrFormat.astc_6x5: return rgba_astc_6x5_khr;
-      case PvrFormat.astc_6x6: return rgba_astc_6x6_khr;
-      case PvrFormat.astc_8x5: return rgba_astc_8x5_khr;
-      case PvrFormat.astc_8x6: return rgba_astc_8x6_khr;
-      case PvrFormat.astc_8x8: return rgba_astc_8x8_khr;
-      case PvrFormat.astc_10x5: return rgba_astc_10x5_khr;
-      case PvrFormat.astc_10x6: return rgba_astc_10x6_khr;
-      case PvrFormat.astc_10x8: return rgba_astc_10x8_khr;
-      case PvrFormat.astc_10x10: return rgba_astc_10x10_khr;
-      case PvrFormat.astc_12x10: return rgba_astc_12x10_khr;
-      case PvrFormat.astc_12x12: return rgba_astc_12x12_khr;
+      case PvrFormat.astc_4x4: return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_4x4_KHR;
+      case PvrFormat.astc_5x4: return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_5x4_KHR;
+      case PvrFormat.astc_5x5: return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_5x5_KHR;
+      case PvrFormat.astc_6x5: return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_6x5_KHR;
+      case PvrFormat.astc_6x6: return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_6x6_KHR;
+      case PvrFormat.astc_8x5: return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_8x5_KHR;
+      case PvrFormat.astc_8x6: return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_8x6_KHR;
+      case PvrFormat.astc_8x8: return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_8x8_KHR;
+      case PvrFormat.astc_10x5: return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_10x5_KHR;
+      case PvrFormat.astc_10x6: return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_10x6_KHR;
+      case PvrFormat.astc_10x8: return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_10x8_KHR;
+      case PvrFormat.astc_10x10: return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_10x10_KHR;
+      case PvrFormat.astc_12x10: return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_12x10_KHR;
+      case PvrFormat.astc_12x12: return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_12x12_KHR;
 
       default: return -1;
     }
