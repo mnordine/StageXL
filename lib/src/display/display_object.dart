@@ -517,7 +517,6 @@ abstract class DisplayObject extends EventDispatcher
   num get width => boundsTransformed.width;
 
   set width(num value) {
-    var bounds = this.bounds;
     var matrix = transformationMatrix;
     var boundsTransformed = matrix.transformRectangle(bounds, bounds);
     var scale = value / boundsTransformed.width;
@@ -535,7 +534,6 @@ abstract class DisplayObject extends EventDispatcher
   num get height => boundsTransformed.height;
 
   set height(num value) {
-    var bounds = this.bounds;
     var matrix = transformationMatrix;
     var boundsTransformed = matrix.transformRectangle(bounds, bounds);
     var scale = value / boundsTransformed.height;
