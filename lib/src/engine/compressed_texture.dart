@@ -130,6 +130,7 @@ class PvrTexture extends CompressedTexture {
     _texDataOffset = bytes.offset + metaDataSize;
   }
 
+  @override
   int get format
   {
     // https://www.khronos.org/registry/webgl/extensions/WEBGL_compressed_texture_etc/
@@ -185,5 +186,6 @@ class PvrTexture extends CompressedTexture {
     }
   }
 
+  @override
   TypedData get textureData => _buffer.asByteData(_texDataOffset);
 }
