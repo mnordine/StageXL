@@ -3,6 +3,8 @@ part of stagexl.media;
 class WebAudioApiSound extends Sound {
   final AudioBuffer _audioBuffer;
 
+  static final _loaders = <String, HttpRequest>{};
+
   WebAudioApiSound._(AudioBuffer audioBuffer) : _audioBuffer = audioBuffer;
 
   //---------------------------------------------------------------------------
@@ -16,11 +18,36 @@ class WebAudioApiSound extends Sound {
 
     for (var audioUrl in audioUrls) {
       try {
-        var httpRequest =
-            await HttpRequest.request(audioUrl, responseType: 'arraybuffer');
-        var audioData = httpRequest.response as ByteBuffer;
-        var audioBuffer = await audioContext.decodeAudioData(audioData);
-        return WebAudioApiSound._(audioBuffer);
+
+        final completer = Completer<Sound>();
+
+        var request = _loaders[url] = HttpRequest();
+        request
+          ..onReadyStateChange.listen((_) async {
+            if (request.readyState == HttpRequest.DONE && request.status == 200) {
+
+              if (!_loaders.containsKey(url)) {
+                throw 'sound already cancelled';
+              }
+
+              var buffer = request.response as ByteBuffer;
+              var audioBuffer = await audioContext.decodeAudioData(buffer);
+
+              if (!_loaders.containsKey(url)) {
+                throw 'sound already cancelled';
+              }
+
+              _loaders.remove(url);
+
+              final sound = WebAudioApiSound._(audioBuffer);
+              completer.complete(sound);
+            }
+          })
+          ..open('GET', url, async: true)
+          ..responseType = 'arraybuffer'
+          ..send();
+
+        return completer.future;
       } catch (e) {
         var loadError = LoadError('Failed to load $audioUrl', e);
         aggregateError.errors.add(loadError);
@@ -32,6 +59,13 @@ class WebAudioApiSound extends Sound {
     } else {
       throw aggregateError;
     }
+  }
+
+  static void cancel(String url) {
+    if (!_loaders.containsKey(url)) return;
+
+    _loaders[url]?.abort();
+    _loaders.remove(url);
   }
 
   //---------------------------------------------------------------------------
