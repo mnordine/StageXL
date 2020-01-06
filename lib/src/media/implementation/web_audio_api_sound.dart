@@ -44,7 +44,7 @@ class WebAudioApiSound extends Sound {
               });
             }
           })
-          ..open('GET', url, async: true)
+          ..open('GET', audioUrl, async: true)
           ..responseType = 'arraybuffer'
           ..send();
 
