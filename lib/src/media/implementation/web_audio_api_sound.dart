@@ -4,11 +4,13 @@ class WebAudioApiSound extends Sound {
 
   AudioBuffer _audioBuffer;
 
+  static final _loaders = <String, HttpRequest>{};
+
   WebAudioApiSound._(AudioBuffer audioBuffer) : _audioBuffer = audioBuffer;
 
   //---------------------------------------------------------------------------
 
-  static Future<Sound> load(String url, [SoundLoadOptions soundLoadOptions]) async {
+  static Future<Sound> load(String url, [SoundLoadOptions soundLoadOptions]) {
 
     var options = soundLoadOptions ?? Sound.defaultLoadOptions;
     var audioUrls = options.getOptimalAudioUrls(url);
@@ -17,10 +19,36 @@ class WebAudioApiSound extends Sound {
 
     for(var audioUrl in audioUrls) {
       try {
-        var httpRequest = await HttpRequest.request(audioUrl, responseType: 'arraybuffer');
-        var audioData = httpRequest.response as ByteBuffer;
-        var audioBuffer = await audioContext.decodeAudioData(audioData);
-        return new WebAudioApiSound._(audioBuffer);
+
+        final completer = new Completer<Sound>();
+
+        var request = _loaders[url] = new HttpRequest();
+        request
+          ..onReadyStateChange.listen((_) {
+            if (request.readyState == HttpRequest.DONE && request.status == 200) {
+
+              if (!_loaders.containsKey(url)) {
+                throw 'sound already cancelled';
+              }
+
+              var buffer = request.response as ByteBuffer;
+              audioContext.decodeAudioData(buffer).then((audioBuffer) {
+                if (!_loaders.containsKey(url)) {
+                  throw 'sound already cancelled';
+                }
+
+                _loaders.remove(url);
+
+                final sound = new WebAudioApiSound._(audioBuffer);
+                completer.complete(sound);
+              });
+            }
+          })
+          ..open('GET', url, async: true)
+          ..responseType = 'arraybuffer'
+          ..send();
+
+        return completer.future;
       } catch (e) {
         var loadError = new LoadError("Failed to load $audioUrl", e);
         aggregateError.errors.add(loadError);
@@ -32,6 +60,13 @@ class WebAudioApiSound extends Sound {
     } else {
       throw aggregateError;
     }
+  }
+
+  static void cancel(String url) {
+    if (!_loaders.containsKey(url)) return;
+
+    _loaders[url]?.abort();
+    _loaders.remove(url);
   }
 
   //---------------------------------------------------------------------------

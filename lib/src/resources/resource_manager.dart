@@ -1,11 +1,19 @@
 part of stagexl.resources;
 
+class _SoundData {
+  String url;
+  SoundEngine engine;
+}
+
 class ResourceManager {
 
   final Map<String, ResourceManagerResource> _resourceMap =
       new Map<String, ResourceManagerResource>();
 
   final _loaders = <String, _TextureAtlasLoaderFile>{};
+
+  // Key is name
+  final _soundDatas = <String, _SoundData>{};
 
   final _progressEvent = new StreamController<num>.broadcast();
   Stream<num> get onProgress => _progressEvent.stream;
@@ -29,6 +37,8 @@ class ResourceManager {
         this.removeBitmapData(resource.name, dispose: true);
       } else if (resource.kind == "TextureAtlas") {
         this.removeTextureAtlas(resource.name, dispose: true);
+      } else if (resource.kind == 'Sound') {
+        removeSound(resource.name);
       } else {
         _removeResource(resource.kind, resource.name);
       }
@@ -141,10 +151,24 @@ class ResourceManager {
   void addSound(String name, String url, [SoundLoadOptions options]) {
     var loader = Sound.load(url, options);
     _addResource("Sound", name, url, loader);
+
+    _soundDatas[name] = new _SoundData()
+      ..url = url
+      ..engine = options?.engine ?? Sound.defaultLoadOptions.engine ?? SoundMixer.engine;
   }
 
   void removeSound(String name) {
     _removeResource("Sound", name);
+
+    if (!_soundDatas.containsKey(name)) return;
+
+    // TODO: Just Web Audio API for now, add support for Audio Element (IE 11)
+    final data = _soundDatas[name];
+    if (data.engine == SoundEngine.WebAudioApi) {
+      WebAudioApiSound.cancel(data.url);
+    }
+
+    _soundDatas.remove(name);
   }
 
   Sound getSound(String name) {
