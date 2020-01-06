@@ -43,7 +43,7 @@ class WebAudioApiSound extends Sound {
               completer.complete(sound);
             }
           })
-          ..open('GET', url, async: true)
+          ..open('GET', audioUrl, async: true)
           ..responseType = 'arraybuffer'
           ..send();
 
