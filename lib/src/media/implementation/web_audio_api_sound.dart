@@ -10,45 +10,16 @@ class WebAudioApiSound extends Sound {
 
   //---------------------------------------------------------------------------
 
-  static Future<Sound> load(String url, [SoundLoadOptions soundLoadOptions]) {
 
+  static Future<Sound> load(String url, [SoundLoadOptions soundLoadOptions]) async {
     var options = soundLoadOptions ?? Sound.defaultLoadOptions;
     var audioUrls = options.getOptimalAudioUrls(url);
-    var audioContext = WebAudioApiMixer.audioContext;
     var aggregateError = new AggregateError("Error loading sound.");
 
     for(var audioUrl in audioUrls) {
       try {
-
-        final completer = new Completer<Sound>();
-
-        var request = _loaders[url] = new HttpRequest();
-        request
-          ..onReadyStateChange.listen((_) {
-            if (request.readyState == HttpRequest.DONE && request.status == 200) {
-
-              if (!_loaders.containsKey(url)) {
-                throw 'sound already cancelled';
-              }
-
-              var buffer = request.response as ByteBuffer;
-              audioContext.decodeAudioData(buffer).then((audioBuffer) {
-                if (!_loaders.containsKey(url)) {
-                  throw 'sound already cancelled';
-                }
-
-                _loaders.remove(url);
-
-                final sound = new WebAudioApiSound._(audioBuffer);
-                completer.complete(sound);
-              });
-            }
-          })
-          ..open('GET', audioUrl, async: true)
-          ..responseType = 'arraybuffer'
-          ..send();
-
-        return completer.future;
+        final sound = await _tryAudioUrl(url, audioUrl);
+        return sound;
       } catch (e) {
         var loadError = new LoadError("Failed to load $audioUrl", e);
         aggregateError.errors.add(loadError);
@@ -60,6 +31,43 @@ class WebAudioApiSound extends Sound {
     } else {
       throw aggregateError;
     }
+  }
+
+  static Future<Sound> _tryAudioUrl(String url, String audioUrl) {
+
+    final completer = new Completer();
+
+    var request = _loaders[url] = new HttpRequest();
+    request
+      ..onReadyStateChange.listen((_) async {
+        if (request.readyState == HttpRequest.DONE && request.status == 200) {
+
+          if (!_loaders.containsKey(url)) {
+            throw 'sound already cancelled';
+          }
+
+          try {
+            var buffer = request.response as ByteBuffer;
+            var audioContext = WebAudioApiMixer.audioContext;
+            var audioBuffer = await audioContext.decodeAudioData(buffer);
+            final sound = new WebAudioApiSound._(audioBuffer);
+            if (!_loaders.containsKey(url)) {
+              throw 'sound already cancelled';
+            }
+
+            _loaders.remove(url);
+            completer.complete(sound);
+
+          } catch (e){
+            completer.completeError('caught error loading $audioUrl');
+          }
+        }
+      })
+      ..open('GET', audioUrl, async: true)
+      ..responseType = 'arraybuffer'
+      ..send();
+
+    return completer.future;
   }
 
   static void cancel(String url) {
