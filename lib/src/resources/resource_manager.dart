@@ -95,7 +95,9 @@ class ResourceManager {
     _addResource('TextureAtlas', name, url, tuple.atlasFuture);
 
     _loaders[name] = tuple.loader;
-    tuple.atlasFuture.then((_) => _loaders.remove(name));
+    tuple.atlasFuture
+      .then((_) => _loaders.remove(name))
+      .catchError((_) => _loaders.remove(name));
   }
 
   void removeTextureAtlas(String name, {bool dispose = true}) {
