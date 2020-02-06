@@ -147,8 +147,10 @@ class ResourceManager {
   }
 
   void addSound(String name, String url, [SoundLoadOptions options]) {
-    var sound = Sound.load(url, options);
-    _addResource('Sound', name, url, sound);
+    var loader = Sound.load(url, options);
+    loader.catchError((_) => _soundDatas.remove(name));
+
+    _addResource('Sound', name, url, loader);
 
     _soundDatas[name] = _SoundData()
       ..url = url
