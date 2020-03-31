@@ -1,16 +1,15 @@
 part of stagexl.display;
 
 class RenderLoop extends RenderLoopBase {
-
-  final Juggler _juggler = new Juggler();
-  final List<Stage> _stages = new List<Stage>();
-  final EnterFrameEvent _enterFrameEvent = new EnterFrameEvent(0);
-  final ExitFrameEvent _exitFrameEvent = new ExitFrameEvent();
+  final Juggler _juggler = Juggler();
+  final List<Stage> _stages = <Stage>[];
+  final EnterFrameEvent _enterFrameEvent = EnterFrameEvent(0);
+  final ExitFrameEvent _exitFrameEvent = ExitFrameEvent();
 
   num _currentTime = 0.0;
 
   RenderLoop() {
-    this.start();
+    start();
   }
 
   Juggler get juggler => _juggler;

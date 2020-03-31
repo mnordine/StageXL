@@ -1,40 +1,47 @@
 part of stagexl.resources;
 
-class _TextureAtlasFormatStarlingXml  extends TextureAtlasFormat {
-
+class _TextureAtlasFormatStarlingXml extends TextureAtlasFormat {
   const _TextureAtlasFormatStarlingXml();
 
   @override
   Future<TextureAtlas> load(TextureAtlasLoader loader) async {
-
     var source = await loader.getSource();
     var pixelRatio = loader.getPixelRatio();
-    var textureAtlas = new TextureAtlas(pixelRatio);
+    var textureAtlas = TextureAtlas(pixelRatio);
 
     var xmlRoot = parse(source).rootElement;
-    var imagePath = _getString(xmlRoot, "imagePath", "");
+    var imagePath = _getString(xmlRoot, 'imagePath', '');
     var renderTextureQuad = await loader.getRenderTextureQuad(imagePath);
 
-    for(var subTextureXml in xmlRoot.findAllElements("SubTexture")) {
+    for (var subTextureXml in xmlRoot.findAllElements('SubTexture')) {
+      var name = _getString(subTextureXml, 'name', '');
+      var rotation = _getBool(subTextureXml, 'rotated', false) ? 1 : 0;
 
-      var name = _getString(subTextureXml, "name", "");
-      var rotation = _getBool(subTextureXml, "rotated", false) ? 1 : 0;
+      var frameX = _getInt(subTextureXml, 'x', 0);
+      var frameY = _getInt(subTextureXml, 'y', 0);
+      var frameWidth = _getInt(subTextureXml, 'width', 0);
+      var frameHeight = _getInt(subTextureXml, 'height', 0);
 
-      var frameX = _getInt(subTextureXml, "x", 0);
-      var frameY = _getInt(subTextureXml, "y", 0);
-      var frameWidth = _getInt(subTextureXml, "width", 0);
-      var frameHeight = _getInt(subTextureXml, "height", 0);
+      var offsetX = 0 - _getInt(subTextureXml, 'frameX', 0);
+      var offsetY = 0 - _getInt(subTextureXml, 'frameY', 0);
+      var originalWidth = _getInt(subTextureXml, 'frameWidth', frameWidth);
+      var originalHeight = _getInt(subTextureXml, 'frameHeight', frameHeight);
 
-      var offsetX = 0 - _getInt(subTextureXml, "frameX", 0);
-      var offsetY = 0 - _getInt(subTextureXml, "frameY", 0);
-      var originalWidth = _getInt(subTextureXml, "frameWidth", frameWidth);
-      var originalHeight = _getInt(subTextureXml, "frameHeight", frameHeight);
-
-      var textureAtlasFrame = new TextureAtlasFrame(
-          textureAtlas, renderTextureQuad, name, rotation,
-          offsetX, offsetY, originalWidth, originalHeight,
-          frameX, frameY, frameWidth, frameHeight,
-          null, null);
+      var textureAtlasFrame = TextureAtlasFrame(
+          textureAtlas,
+          renderTextureQuad,
+          name,
+          rotation,
+          offsetX,
+          offsetY,
+          originalWidth,
+          originalHeight,
+          frameX,
+          frameY,
+          frameWidth,
+          frameHeight,
+          null,
+          null);
 
       textureAtlas.frames.add(textureAtlasFrame);
     }
@@ -45,7 +52,7 @@ class _TextureAtlasFormatStarlingXml  extends TextureAtlasFormat {
   //---------------------------------------------------------------------------
 
   String _getAttributeValue(XmlElement xml, String name) {
-    for(var attribute in xml.attributes) {
+    for (var attribute in xml.attributes) {
       if (attribute.name.local == name) return attribute.value;
     }
     return null;
@@ -64,8 +71,8 @@ class _TextureAtlasFormatStarlingXml  extends TextureAtlasFormat {
   bool _getBool(XmlElement xml, String name, bool defaultValue) {
     var value = _getAttributeValue(xml, name);
     if (value == null) return defaultValue;
-    if (value == "1" || value =="true") return true;
-    if (value == "0" || value =="false") return false;
-    throw new FormatException("Error converting '$name' to bool.");
+    if (value == '1' || value == 'true') return true;
+    if (value == '0' || value == 'false') return false;
+    throw FormatException("Error converting '$name' to bool.");
   }
 }

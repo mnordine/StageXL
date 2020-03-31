@@ -1,7 +1,6 @@
 library stagexl.filters.glow;
 
 import 'dart:math' hide Point, Rectangle;
-import 'dart:html' show ImageData;
 
 import '../display.dart';
 import '../engine.dart';
@@ -10,7 +9,6 @@ import '../internal/filter_helpers.dart';
 import '../internal/tools.dart';
 
 class GlowFilter extends BitmapFilter {
-
   int _color;
   int _blurX;
   int _blurY;
@@ -19,14 +17,16 @@ class GlowFilter extends BitmapFilter {
   bool knockout;
   bool hideObject;
 
-  final List<int> _renderPassSources = new List<int>();
-  final List<int> _renderPassTargets = new List<int>();
+  final List<int> _renderPassSources = <int>[];
+  final List<int> _renderPassTargets = <int>[];
 
-  GlowFilter([
-    int color = 0xFF000000,
-    int blurX = 4, int blurY = 4, int quality = 1,
-    bool knockout = false, bool hideObject = false]) {
-
+  GlowFilter(
+      [int color = 0xFF000000,
+      int blurX = 4,
+      int blurY = 4,
+      int quality = 1,
+      bool knockout = false,
+      bool hideObject = false]) {
     this.color = color;
     this.blurX = blurX;
     this.blurY = blurY;
@@ -39,12 +39,12 @@ class GlowFilter extends BitmapFilter {
 
   @override
   BitmapFilter clone() {
-    return new GlowFilter(color, blurX, blurY, quality, knockout,  hideObject);
+    return GlowFilter(color, blurX, blurY, quality, knockout, hideObject);
   }
 
   @override
   Rectangle<int> get overlap {
-    return new Rectangle<int>(-blurX, -blurY, 2 * blurX, 2 * blurY);
+    return Rectangle<int>(-blurX, -blurY, 2 * blurX, 2 * blurY);
   }
 
   @override
@@ -88,14 +88,13 @@ class GlowFilter extends BitmapFilter {
   int get quality => _quality;
 
   set quality(int value) {
-
     RangeError.checkValueInInterval(value, 1, 5);
 
     _quality = value;
     _renderPassSources.clear();
     _renderPassTargets.clear();
 
-    for(int i = 0; i < value; i++) {
+    for (var i = 0; i < value; i++) {
       _renderPassSources.add(i * 2 + 0);
       _renderPassSources.add(i * 2 + 1);
       _renderPassTargets.add(i * 2 + 1);
@@ -110,39 +109,40 @@ class GlowFilter extends BitmapFilter {
 
   @override
   void apply(BitmapData bitmapData, [Rectangle<num> rectangle]) {
-
-    RenderTextureQuad renderTextureQuad = rectangle == null
+    var renderTextureQuad = rectangle == null
         ? bitmapData.renderTextureQuad
         : bitmapData.renderTextureQuad.cut(rectangle);
 
-    ImageData sourceImageData =
-        this.hideObject == false || this.knockout ? renderTextureQuad.getImageData() : null;
+    var sourceImageData = hideObject == false || knockout
+        ? renderTextureQuad.getImageData()
+        : null;
 
-    ImageData imageData = renderTextureQuad.getImageData();
-    List<int> data = imageData.data;
-    int width = ensureInt(imageData.width);
-    int height = ensureInt(imageData.height);
+    var imageData = renderTextureQuad.getImageData();
+    var data = imageData.data;
+    var width = ensureInt(imageData.width);
+    var height = ensureInt(imageData.height);
 
-    num pixelRatio = renderTextureQuad.pixelRatio;
-    int blurX = (this.blurX * pixelRatio).round();
-    int blurY = (this.blurY * pixelRatio).round();
-    int alphaChannel = BitmapDataChannel.getCanvasIndex(BitmapDataChannel.ALPHA);
-    int stride = width * 4;
+    var pixelRatio = renderTextureQuad.pixelRatio;
+    var blurX = (this.blurX * pixelRatio).round();
+    var blurY = (this.blurY * pixelRatio).round();
+    var alphaChannel =
+        BitmapDataChannel.getCanvasIndex(BitmapDataChannel.ALPHA);
+    var stride = width * 4;
 
-    for (int x = 0; x < width; x++) {
+    for (var x = 0; x < width; x++) {
       blur(data, x * 4 + alphaChannel, height, stride, blurY);
     }
 
-    for (int y = 0; y < height; y++) {
+    for (var y = 0; y < height; y++) {
       blur(data, y * stride + alphaChannel, width, 4, blurX);
     }
 
-    if (this.knockout) {
-      setColorKnockout(data, this.color, sourceImageData.data);
-    } else if (this.hideObject) {
-      setColor(data, this.color);
+    if (knockout) {
+      setColorKnockout(data, color, sourceImageData.data);
+    } else if (hideObject) {
+      setColor(data, color);
     } else {
-      setColorBlend(data, this.color, sourceImageData.data);
+      setColorBlend(data, color, sourceImageData.data);
     }
 
     renderTextureQuad.putImageData(imageData);
@@ -151,35 +151,31 @@ class GlowFilter extends BitmapFilter {
   //---------------------------------------------------------------------------
 
   @override
-  void renderFilter(RenderState renderState,
-                    RenderTextureQuad renderTextureQuad, int pass) {
-
+  void renderFilter(
+      RenderState renderState, RenderTextureQuad renderTextureQuad, int pass) {
     var renderContext = renderState.renderContext as RenderContextWebGL;
-    RenderTexture renderTexture = renderTextureQuad.renderTexture;
-    int passCount = _renderPassSources.length;
-    num passScale = pow(0.5, pass >> 1);
-    num pixelRatio = sqrt(renderState.globalMatrix.det.abs());
-    num pixelRatioScale = pixelRatio * passScale;
+    var renderTexture = renderTextureQuad.renderTexture;
+    var passCount = _renderPassSources.length;
+    var passScale = pow(0.5, pass >> 1);
+    var pixelRatio = sqrt(renderState.globalMatrix.det.abs());
+    var pixelRatioScale = pixelRatio * passScale;
 
     if (pass == passCount - 1) {
-
-      if (!this.knockout && !this.hideObject) {
+      if (!knockout && !hideObject) {
         renderContext.renderTextureQuad(renderState, renderTextureQuad);
       }
-
     } else {
-
       var renderProgram = renderContext.getRenderProgram(
-          r"$GlowFilterProgram", () => new GlowFilterProgram());
+          r'$GlowFilterProgram', () => GlowFilterProgram());
 
       renderContext.activateRenderProgram(renderProgram);
       renderContext.activateRenderTexture(renderTexture);
 
       renderProgram.configure(
-        pass == passCount - 2 ? this.color : this.color | 0xFF000000,
-        pass == passCount - 2 ? renderState.globalAlpha : 1.0,
-        pass.isEven ? pixelRatioScale * blurX / renderTexture.width : 0.0,
-        pass.isEven ? 0.0 : pixelRatioScale * blurY / renderTexture.height);
+          pass == passCount - 2 ? color : color | 0xFF000000,
+          pass == passCount - 2 ? renderState.globalAlpha : 1.0,
+          pass.isEven ? pixelRatioScale * blurX / renderTexture.width : 0.0,
+          pass.isEven ? 0.0 : pixelRatioScale * blurY / renderTexture.height);
 
       renderProgram.renderTextureQuad(renderState, renderTextureQuad);
       renderProgram.flush();
@@ -191,9 +187,8 @@ class GlowFilter extends BitmapFilter {
 //-----------------------------------------------------------------------------
 
 class GlowFilterProgram extends RenderProgramSimple {
-
   @override
-  String get vertexShaderSource => """
+  String get vertexShaderSource => '''
 
     uniform mat4 uProjectionMatrix;
     uniform vec2 uRadius;
@@ -213,11 +208,11 @@ class GlowFilterProgram extends RenderProgramSimple {
       vBlurCoords[6] = aVertexTextCoord + uRadius * 1.2;
       gl_Position = vec4(aVertexPosition, 0.0, 1.0) * uProjectionMatrix;
     }
-    """;
+    ''';
 
   @override
-  String get fragmentShaderSource => """
-    
+  String get fragmentShaderSource => '''
+
     precision mediump float;
 
     uniform sampler2D uSampler;
@@ -237,20 +232,17 @@ class GlowFilterProgram extends RenderProgramSimple {
       alpha *= uColor.a;
       gl_FragColor = vec4(uColor.rgb * alpha, alpha);
     }
-    """;
+    ''';
 
   //---------------------------------------------------------------------------
 
   void configure(int color, num alpha, num radiusX, num radiusY) {
-
     num r = colorGetR(color) / 255.0;
     num g = colorGetG(color) / 255.0;
     num b = colorGetB(color) / 255.0;
     num a = colorGetA(color) / 255.0 * alpha;
 
-    renderingContext.uniform2f(uniforms["uRadius"], radiusX, radiusY);
-    renderingContext.uniform4f(uniforms["uColor"], r, g, b, a);
+    renderingContext.uniform2f(uniforms['uRadius'], radiusX, radiusY);
+    renderingContext.uniform4f(uniforms['uColor'], r, g, b, a);
   }
-
 }
-

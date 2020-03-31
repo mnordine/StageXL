@@ -12,22 +12,20 @@ part of stagexl.resources;
 /// https://github.com/realbluesky/soundsprite
 
 class SoundSprite {
-
-  final List<SoundSpriteSegment> _segments = new List<SoundSpriteSegment>();
+  final List<SoundSpriteSegment> _segments = <SoundSpriteSegment>[];
   Sound _sound;
 
   //----------------------------------------------------------------------------
 
-  static Future<SoundSprite> load(
-      String url, [SoundLoadOptions soundLoadOptions]) async {
-
-    SoundSprite soundSprite = new SoundSprite();
+  static Future<SoundSprite> load(String url,
+      [SoundLoadOptions soundLoadOptions]) async {
+    var soundSprite = SoundSprite();
 
     var soundSpriteJson = await HttpRequest.getString(url);
-    var data = JSON.decode(soundSpriteJson);
-    var urls = data['urls'] as List<String>;
-    var segments = data["sprite"];
-    var soundUrls = new List<String>();
+    var data = json.decode(soundSpriteJson);
+    var urls = data['urls'] as List<dynamic>;
+    var segments = data['sprite'];
+    var soundUrls = <String>[];
 
     if (segments is Map) {
       for (String segment in segments.keys) {
@@ -35,12 +33,13 @@ class SoundSprite {
         var startTime = ensureNum(segmentList[0]);
         var duration = ensureNum(segmentList[1]);
         var loop = ensureBool(segmentList.length > 2 && segmentList[2]);
-        var sss = new SoundSpriteSegment(soundSprite, segment, startTime, duration, loop);
+        var sss =
+            SoundSpriteSegment(soundSprite, segment, startTime, duration, loop);
         soundSprite._segments.add(sss);
       }
     }
 
-    soundUrls.addAll(urls.map((String u) => replaceFilename(url, u)));
+    soundUrls.addAll(urls.map((u) => replaceFilename(url, u)));
     soundLoadOptions = (soundLoadOptions ?? Sound.defaultLoadOptions).clone();
     soundLoadOptions.alternativeUrls = soundUrls.skip(1).toList();
     soundSprite._sound = await Sound.load(soundUrls[0], soundLoadOptions);
@@ -62,15 +61,15 @@ class SoundSprite {
   //----------------------------------------------------------------------------
 
   SoundSpriteSegment getSegment(String name) {
-    var segment = _segments.firstWhere((s) => s.name == name, orElse: null);
+    var segment = _segments.firstWhere((s) => s.name == name);
     if (segment == null) {
-      throw new ArgumentError("SoundSpriteSegment not found: '$name'");
+      throw ArgumentError("SoundSpriteSegment not found: '$name'");
     } else {
       return segment;
     }
   }
 
   SoundChannel play(String name, [bool loop, SoundTransform soundTransform]) {
-    return this.getSegment(name).play(loop, soundTransform);
+    return getSegment(name).play(loop, soundTransform);
   }
 }

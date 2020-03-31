@@ -1,7 +1,6 @@
 library stagexl.filters.color_matrix;
 
 import 'dart:math' hide Point, Rectangle;
-import 'dart:html' show ImageData;
 import 'dart:typed_data';
 
 import '../display.dart';
@@ -11,44 +10,61 @@ import '../internal/environment.dart' as env;
 import '../internal/tools.dart';
 
 class ColorMatrixFilter extends BitmapFilter {
-
-  Float32List _colorMatrixList = new Float32List(16);
-  Float32List _colorOffsetList = new Float32List(4);
+  Float32List _colorMatrixList = Float32List(16);
+  Float32List _colorOffsetList = Float32List(4);
 
   static const num _lumaR = 0.213;
   static const num _lumaG = 0.715;
   static const num _lumaB = 0.072;
 
   ColorMatrixFilter(List<num> colorMatrix, List<num> colorOffset) {
+    if (colorMatrix.length != 16) throw ArgumentError('colorMatrix');
+    if (colorOffset.length != 4) throw ArgumentError('colorOffset');
 
-    if (colorMatrix.length != 16) throw new ArgumentError("colorMatrix");
-    if (colorOffset.length != 4) throw new ArgumentError("colorOffset");
-
-    for(int i = 0; i < colorMatrix.length; i++) {
+    for (var i = 0; i < colorMatrix.length; i++) {
       _colorMatrixList[i] = colorMatrix[i].toDouble();
     }
 
-    for(int i = 0; i < colorOffset.length; i++) {
+    for (var i = 0; i < colorOffset.length; i++) {
       _colorOffsetList[i] = colorOffset[i].toDouble();
     }
   }
 
-  ColorMatrixFilter.grayscale() : this(
-      [0.213, 0.715, 0.072, 0, 0.213, 0.715, 0.072, 0, 0.213, 0.715, 0.072, 0, 0, 0, 0, 1],
-      [0, 0, 0, 0]);
+  ColorMatrixFilter.grayscale()
+      : this([
+          0.213,
+          0.715,
+          0.072,
+          0,
+          0.213,
+          0.715,
+          0.072,
+          0,
+          0.213,
+          0.715,
+          0.072,
+          0,
+          0,
+          0,
+          0,
+          1
+        ], [
+          0,
+          0,
+          0,
+          0
+        ]);
 
-  ColorMatrixFilter.invert() : this(
-      [-1, 0, 0, 0, 0, -1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1],
-      [255, 255, 255, 0]);
+  ColorMatrixFilter.invert()
+      : this([-1, 0, 0, 0, 0, -1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1],
+            [255, 255, 255, 0]);
 
-  ColorMatrixFilter.identity() : this(
-      [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
-      [0, 0, 0, 0]);
+  ColorMatrixFilter.identity()
+      : this([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1], [0, 0, 0, 0]);
 
-  factory ColorMatrixFilter.adjust({
-    num hue: 0, num saturation: 0, num brightness: 0, num contrast: 0}) {
-
-    var colorMatrixFilter = new ColorMatrixFilter.identity();
+  factory ColorMatrixFilter.adjust(
+      {num hue = 0, num saturation = 0, num brightness = 0, num contrast = 0}) {
+    var colorMatrixFilter = ColorMatrixFilter.identity();
     colorMatrixFilter.adjustHue(hue);
     colorMatrixFilter.adjustSaturation(saturation);
     colorMatrixFilter.adjustBrightness(brightness);
@@ -60,95 +76,117 @@ class ColorMatrixFilter extends BitmapFilter {
   //-----------------------------------------------------------------------------------------------
 
   @override
-  BitmapFilter clone() => new ColorMatrixFilter(_colorMatrixList, _colorOffsetList);
+  BitmapFilter clone() => ColorMatrixFilter(_colorMatrixList, _colorOffsetList);
 
   //-----------------------------------------------------------------------------------------------
 
   void adjustInversion(num value) {
-
-    _concat([-1, 0, 0, 0, 0, -1, 0, 0, 0, 0, -1, 0, 0, 0, 0, -1], [255, 255, 255, 0]);
+    _concat([-1, 0, 0, 0, 0, -1, 0, 0, 0, 0, -1, 0, 0, 0, 0, -1],
+        [255, 255, 255, 0]);
   }
 
   void adjustHue(num value) {
-
-    num v = min(max(value, -1), 1) * PI;
-    num cv = cos(v);
-    num sv = sin(v);
+    var v = min(max(value, -1), 1) * pi;
+    var cv = cos(v);
+    var sv = sin(v);
 
     _concat([
-        _lumaR - cv * _lumaR - sv * _lumaR + cv,
-        _lumaG - cv * _lumaG - sv * _lumaG,
-        _lumaB - cv * _lumaB - sv * _lumaB + sv, 0,
-        _lumaR - cv * _lumaR + sv * 0.143,
-        _lumaG - cv * _lumaG + sv * 0.140 + cv,
-        _lumaB - cv * _lumaB - sv * 0.283, 0,
-        _lumaR - cv * _lumaR + sv * _lumaR - sv,
-        _lumaG - cv * _lumaG + sv * _lumaG,
-        _lumaB - cv * _lumaB + sv * _lumaB + cv, 0,
-        0, 0, 0, 1], [0, 0, 0, 0]);
+      _lumaR - cv * _lumaR - sv * _lumaR + cv,
+      _lumaG - cv * _lumaG - sv * _lumaG,
+      _lumaB - cv * _lumaB - sv * _lumaB + sv,
+      0,
+      _lumaR - cv * _lumaR + sv * 0.143,
+      _lumaG - cv * _lumaG + sv * 0.140 + cv,
+      _lumaB - cv * _lumaB - sv * 0.283,
+      0,
+      _lumaR - cv * _lumaR + sv * _lumaR - sv,
+      _lumaG - cv * _lumaG + sv * _lumaG,
+      _lumaB - cv * _lumaB + sv * _lumaB + cv,
+      0,
+      0,
+      0,
+      0,
+      1
+    ], [
+      0,
+      0,
+      0,
+      0
+    ]);
   }
 
   void adjustSaturation(num value) {
+    var v = min(max(value, -1), 1) + 1;
+    var i = 1 - v;
+    var r = i * _lumaR;
+    var g = i * _lumaG;
+    var b = i * _lumaB;
 
-    num v = min(max(value, -1), 1) + 1;
-    num i = 1 - v;
-    num r = i * _lumaR;
-    num g = i * _lumaG;
-    num b = i * _lumaB;
-
-    _concat( [r + v, g, b, 0, r, g + v, b, 0, r, g, b + v, 0, 0, 0, 0, 1], [0, 0, 0, 0]);
+    _concat([r + v, g, b, 0, r, g + v, b, 0, r, g, b + v, 0, 0, 0, 0, 1],
+        [0, 0, 0, 0]);
   }
 
   void adjustContrast(num value) {
-
-    num v = min(max(value, -1), 1) + 1;
-    num o = 128 * (1 - v);
+    var v = min(max(value, -1), 1) + 1;
+    var o = 128 * (1 - v);
 
     _concat([v, 0, 0, 0, 0, v, 0, 0, 0, 0, v, 0, 0, 0, 0, 1], [o, o, o, 0]);
   }
 
   void adjustBrightness(num value) {
-
-    num v = 255 * min(max(value, -1), 1);
+    var v = 255 * min(max(value, -1), 1);
 
     _concat([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1], [v, v, v, 0]);
   }
 
   void adjustColoration(int color, [num strength = 1.0]) {
-
     num r = colorGetR(color) * strength / 255.0;
     num g = colorGetG(color) * strength / 255.0;
     num b = colorGetB(color) * strength / 255.0;
     num i = 1.0 - strength;
 
     _concat([
-        r * _lumaR + i, r * _lumaG, r * _lumaB, 0.0,
-        g * _lumaR, g * _lumaG + i, g * _lumaB, 0.0,
-        b * _lumaR, b * _lumaG, b * _lumaB + i, 0.0,
-        0.0, 0.0, 0.0, 1.0], [0, 0, 0, 0]);
+      r * _lumaR + i,
+      r * _lumaG,
+      r * _lumaB,
+      0.0,
+      g * _lumaR,
+      g * _lumaG + i,
+      g * _lumaB,
+      0.0,
+      b * _lumaR,
+      b * _lumaG,
+      b * _lumaB + i,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ], [
+      0,
+      0,
+      0,
+      0
+    ]);
   }
 
   //-----------------------------------------------------------------------------------------------
 
   void _concat(List<num> colorMatrix, List<num> colorOffset) {
-
-    var newColorMatrix = new Float32List(16);
-    var newColorOffset = new Float32List(4);
+    var newColorMatrix = Float32List(16);
+    var newColorOffset = Float32List(4);
 
     for (var y = 0, i = 0; y < 4; y++, i += 4) {
-
       if (i > 12) continue; // dart2js_hint
 
       for (var x = 0; x < 4; ++x) {
-        newColorMatrix[i + x] =
-          colorMatrix[i + 0] * _colorMatrixList[x +  0] +
-          colorMatrix[i + 1] * _colorMatrixList[x +  4] +
-          colorMatrix[i + 2] * _colorMatrixList[x +  8] +
-          colorMatrix[i + 3] * _colorMatrixList[x + 12];
+        newColorMatrix[i + x] = colorMatrix[i + 0] * _colorMatrixList[x + 0] +
+            colorMatrix[i + 1] * _colorMatrixList[x + 4] +
+            colorMatrix[i + 2] * _colorMatrixList[x + 8] +
+            colorMatrix[i + 3] * _colorMatrixList[x + 12];
       }
 
-      newColorOffset[y] =
-          colorOffset[y    ] +
+      newColorOffset[y] = colorOffset[y] +
           colorMatrix[i + 0] * _colorOffsetList[0] +
           colorMatrix[i + 1] * _colorOffsetList[1] +
           colorMatrix[i + 2] * _colorOffsetList[2] +
@@ -163,13 +201,12 @@ class ColorMatrixFilter extends BitmapFilter {
 
   @override
   void apply(BitmapData bitmapData, [Rectangle<num> rectangle]) {
-
     //dstR = (m[ 0] * srcR) + (m[ 1] * srcG) + (m[ 2] * srcB) + (m[ 3] * srcA) + o[0]
     //dstG = (m[ 4] * srcR) + (m[ 5] * srcG) + (m[ 6] * srcB) + (m[ 7] * srcA) + o[1]
     //dstB = (m[ 8] * srcR) + (m[ 9] * srcG) + (m[10] * srcB) + (m[11] * srcA) + o[2]
     //dstA = (m[12] * srcR) + (m[13] * srcG) + (m[14] * srcB) + (m[15] * srcA) + o[3]
 
-    bool isLittleEndianSystem = env.isLittleEndianSystem;
+    var isLittleEndianSystem = env.isLittleEndianSystem;
 
     num m00 = _colorMatrixList[isLittleEndianSystem ? 00 : 15];
     num m01 = _colorMatrixList[isLittleEndianSystem ? 01 : 14];
@@ -193,18 +230,18 @@ class ColorMatrixFilter extends BitmapFilter {
     num o2 = _colorOffsetList[isLittleEndianSystem ? 02 : 01];
     num o3 = _colorOffsetList[isLittleEndianSystem ? 03 : 00];
 
-    RenderTextureQuad renderTextureQuad = rectangle == null
+    var renderTextureQuad = rectangle == null
         ? bitmapData.renderTextureQuad
         : bitmapData.renderTextureQuad.cut(rectangle);
 
-    ImageData imageData = renderTextureQuad.getImageData();
+    var imageData = renderTextureQuad.getImageData();
     List<int> data = imageData.data;
 
-    for(int i = 0 ; i <= data.length - 4; i += 4) {
-      int c0 = data[i + 0];
-      int c1 = data[i + 1];
-      int c2 = data[i + 2];
-      int c3 = data[i + 3];
+    for (var i = 0; i <= data.length - 4; i += 4) {
+      var c0 = data[i + 0];
+      var c1 = data[i + 1];
+      var c2 = data[i + 2];
+      var c3 = data[i + 3];
       data[i + 0] = (m00 * c0 + m01 * c1 + m02 * c2 + m03 * c3 + o0).round();
       data[i + 1] = (m10 * c0 + m11 * c1 + m12 * c2 + m13 * c3 + o1).round();
       data[i + 2] = (m20 * c0 + m21 * c1 + m22 * c2 + m23 * c3 + o2).round();
@@ -217,17 +254,18 @@ class ColorMatrixFilter extends BitmapFilter {
   //-----------------------------------------------------------------------------------------------
 
   @override
-  void renderFilter(RenderState renderState, RenderTextureQuad renderTextureQuad, int pass) {
+  void renderFilter(
+      RenderState renderState, RenderTextureQuad renderTextureQuad, int pass) {
+    var renderContext = renderState.renderContext as RenderContextWebGL;
+    var renderTexture = renderTextureQuad.renderTexture;
 
-    RenderContextWebGL renderContext = renderState.renderContext;
-    RenderTexture renderTexture = renderTextureQuad.renderTexture;
-
-    ColorMatrixFilterProgram renderProgram = renderContext.getRenderProgram(
-        r"$ColorMatrixFilterProgram", () => new ColorMatrixFilterProgram());
+    var renderProgram = renderContext.getRenderProgram(
+        r'$ColorMatrixFilterProgram', () => ColorMatrixFilterProgram());
 
     renderContext.activateRenderProgram(renderProgram);
     renderContext.activateRenderTexture(renderTexture);
-    renderProgram.renderColorMatrixFilterQuad(renderState, renderTextureQuad, this);
+    renderProgram.renderColorMatrixFilterQuad(
+        renderState, renderTextureQuad, this);
   }
 }
 
@@ -235,7 +273,6 @@ class ColorMatrixFilter extends BitmapFilter {
 //-------------------------------------------------------------------------------------------------
 
 class ColorMatrixFilterProgram extends RenderProgram {
-
   // aPosition:  Float32(x), Float32(y)
   // aTexCoord:  Float32(u), Float32(v)
   // aMatrixR:   Float32(r), Float32(g), Float32(b), Float32(a)
@@ -245,13 +282,13 @@ class ColorMatrixFilterProgram extends RenderProgram {
   // aOffset:    Float32(r), Float32(g), Float32(b), Float32(a)
 
   @override
-  String get vertexShaderSource => """
+  String get vertexShaderSource => '''
 
     uniform mat4 uProjectionMatrix;
 
     attribute vec2 aPosition;
     attribute vec2 aTexCoord;
-    attribute vec4 aMatrixR, aMatrixG, aMatrixB, aMatrixA; 
+    attribute vec4 aMatrixR, aMatrixG, aMatrixB, aMatrixA;
     attribute vec4 aOffset;
 
     varying vec2 vTexCoord;
@@ -259,18 +296,18 @@ class ColorMatrixFilterProgram extends RenderProgram {
     varying vec4 vOffset;
 
     void main() {
-      vTexCoord = aTexCoord; 
-      vMatrixR = aMatrixR; 
+      vTexCoord = aTexCoord;
+      vMatrixR = aMatrixR;
       vMatrixG = aMatrixG;
-      vMatrixB = aMatrixB; 
-      vMatrixA = aMatrixA; 
+      vMatrixB = aMatrixB;
+      vMatrixA = aMatrixA;
       vOffset = aOffset;
       gl_Position = vec4(aPosition, 0.0, 1.0) * uProjectionMatrix;
     }
-    """;
+    ''';
 
   @override
-  String get fragmentShaderSource => """
+  String get fragmentShaderSource => '''
 
     precision mediump float;
     uniform sampler2D uSampler;
@@ -286,24 +323,23 @@ class ColorMatrixFilterProgram extends RenderProgram {
       color = vOffset + color * colorMatrix;
       gl_FragColor = vec4(color.rgb * color.a, color.a);
     }
-    """;
+    ''';
 
   //---------------------------------------------------------------------------
 
   @override
   void activate(RenderContextWebGL renderContext) {
-
     super.activate(renderContext);
 
-    renderingContext.uniform1i(uniforms["uSampler"], 0);
+    renderingContext.uniform1i(uniforms['uSampler'], 0);
 
-    renderBufferVertex.bindAttribute(attributes["aPosition"], 2, 96, 0);
-    renderBufferVertex.bindAttribute(attributes["aTexCoord"], 2, 96, 8);
-    renderBufferVertex.bindAttribute(attributes["aMatrixR"],  4, 96, 16);
-    renderBufferVertex.bindAttribute(attributes["aMatrixG"],  4, 96, 32);
-    renderBufferVertex.bindAttribute(attributes["aMatrixB"],  4, 96, 48);
-    renderBufferVertex.bindAttribute(attributes["aMatrixA"],  4, 96, 64);
-    renderBufferVertex.bindAttribute(attributes["aOffset"],   4, 96, 80);
+    renderBufferVertex.bindAttribute(attributes['aPosition'], 2, 96, 0);
+    renderBufferVertex.bindAttribute(attributes['aTexCoord'], 2, 96, 8);
+    renderBufferVertex.bindAttribute(attributes['aMatrixR'], 4, 96, 16);
+    renderBufferVertex.bindAttribute(attributes['aMatrixG'], 4, 96, 32);
+    renderBufferVertex.bindAttribute(attributes['aMatrixB'], 4, 96, 48);
+    renderBufferVertex.bindAttribute(attributes['aMatrixA'], 4, 96, 64);
+    renderBufferVertex.bindAttribute(attributes['aOffset'], 4, 96, 80);
   }
 
   //---------------------------------------------------------------------------
@@ -312,7 +348,6 @@ class ColorMatrixFilterProgram extends RenderProgram {
       RenderState renderState,
       RenderTextureQuad renderTextureQuad,
       ColorMatrixFilter colorMatrixFilter) {
-
     var alpha = renderState.globalAlpha;
     var matrix = renderState.globalMatrix;
     var ixList = renderTextureQuad.ixList;
@@ -339,7 +374,7 @@ class ColorMatrixFilterProgram extends RenderProgram {
 
     // copy index list
 
-    for(var i = 0; i < indexCount; i++) {
+    for (var i = 0; i < indexCount; i++) {
       ixData[ixIndex + i] = vxCount + ixList[i];
     }
 
@@ -355,7 +390,7 @@ class ColorMatrixFilterProgram extends RenderProgram {
     var mx = matrix.tx;
     var my = matrix.ty;
 
-    for(var i = 0, o = 0; i < vertexCount; i++, o += 4) {
+    for (var i = 0, o = 0; i < vertexCount; i++, o += 4) {
       num x = vxList[o + 0];
       num y = vxList[o + 1];
       vxData[vxIndex + 00] = mx + ma * x + mc * y;
@@ -388,5 +423,4 @@ class ColorMatrixFilterProgram extends RenderProgram {
     renderBufferVertex.position += vertexCount * 24;
     renderBufferVertex.count += vertexCount;
   }
-
 }

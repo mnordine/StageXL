@@ -8,13 +8,12 @@ part of stagexl.display;
 ///
 /// Example:
 ///
-///     var flip = new Sprite3D()
+///     var flip = Sprite3D()
 ///     flip.addChild(bitmap);
 ///     flip.rotationY = PI / 4
 ///     flip.addTo(stage);
 ///
 class Sprite3D extends DisplayObjectContainer3D implements Sprite {
-
   @override
   Graphics _graphics;
 
@@ -23,7 +22,7 @@ class Sprite3D extends DisplayObjectContainer3D implements Sprite {
 
   @override
   Graphics get graphics {
-    return _graphics ??= new Graphics();
+    return _graphics ??= Graphics();
   }
 
   @override
@@ -58,11 +57,10 @@ class Sprite3D extends DisplayObjectContainer3D implements Sprite {
 
   @override
   void startDrag([bool lockCenter = false, Rectangle<num> bounds]) {
-
     var stage = this.stage;
     var inputEvent = InputEvent.current;
-    var globalPoint = new Point<num>(0.0, 0.0);
-    var anchorPoint = new Point<num>(0.0, 0.0);
+    var globalPoint = Point<num>(0.0, 0.0);
+    var anchorPoint = Point<num>(0.0, 0.0);
     var touchPointID = 0;
 
     if (inputEvent == null && stage != null) {
@@ -72,7 +70,9 @@ class Sprite3D extends DisplayObjectContainer3D implements Sprite {
     } else if (inputEvent is TouchEvent) {
       globalPoint.setTo(inputEvent.stageX, inputEvent.stageY);
       touchPointID = inputEvent.touchPointID;
-    } else return;
+    } else {
+      return;
+    }
 
     if (lockCenter) {
       anchorPoint = this.bounds.center;
@@ -112,7 +112,7 @@ class Sprite3D extends DisplayObjectContainer3D implements Sprite {
   /// object.
   ///
   /// You can change the hitArea property at any time; the modified sprite
-  /// immediately uses the new hit area behavior. The sprite designated as the
+  /// immediately uses the hit area behavior. The sprite designated as the
   /// hit area does not need to be visible; its graphical shape, although not
   /// visible, is still detected as the hit area.
   ///
@@ -126,14 +126,13 @@ class Sprite3D extends DisplayObjectContainer3D implements Sprite {
 
   @override
   DisplayObject hitTestInput(num localX, num localY) {
-
     var hitArea = this.hitArea;
     var graphics = _graphics;
     DisplayObject target;
 
     if (hitArea != null) {
-      var point = new Point<num>(localX, localY);
-      this.localToGlobal(point, point);
+      var point = Point<num>(localX, localY);
+      localToGlobal(point, point);
       hitArea.globalToLocal(point, point);
       target = hitArea.hitTestInput(point.x, point.y);
       return target != null ? this : null;
@@ -155,5 +154,4 @@ class Sprite3D extends DisplayObjectContainer3D implements Sprite {
     if (_graphics != null) _graphics.render(renderState);
     super.render(renderState);
   }
-
 }

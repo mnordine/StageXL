@@ -6,14 +6,13 @@ part of stagexl.display;
 /// children.
 
 class Sprite extends DisplayObjectContainer {
-
   Graphics _graphics;
 
   /// Specifies the Graphics object that belongs to this sprite where vector
   /// drawing commands can occur.
 
   Graphics get graphics {
-    return _graphics != null ? _graphics : _graphics = new Graphics();
+    return _graphics ??= Graphics();
   }
 
   set graphics(Graphics value) {
@@ -45,11 +44,10 @@ class Sprite extends DisplayObjectContainer {
   /// parent that specify a constraint rectangle for the Sprite.
 
   void startDrag([bool lockCenter = false, Rectangle<num> bounds]) {
-
     var stage = this.stage;
     var inputEvent = InputEvent.current;
-    var globalPoint = new Point<num>(0.0, 0.0);
-    var anchorPoint = new Point<num>(0.0, 0.0);
+    var globalPoint = Point<num>(0.0, 0.0);
+    var anchorPoint = Point<num>(0.0, 0.0);
     var touchPointID = 0;
 
     if (inputEvent == null && stage != null) {
@@ -59,7 +57,9 @@ class Sprite extends DisplayObjectContainer {
     } else if (inputEvent is TouchEvent) {
       globalPoint.setTo(inputEvent.stageX, inputEvent.stageY);
       touchPointID = inputEvent.touchPointID;
-    } else return;
+    } else {
+      return;
+    }
 
     if (lockCenter) {
       anchorPoint = this.bounds.center;
@@ -127,14 +127,13 @@ class Sprite extends DisplayObjectContainer {
 
   @override
   DisplayObject hitTestInput(num localX, num localY) {
-
     var hitArea = this.hitArea;
     var graphics = _graphics;
     DisplayObject target;
 
     if (hitArea != null) {
-      var point = new Point<num>(localX, localY);
-      this.localToGlobal(point, point);
+      var point = Point<num>(localX, localY);
+      localToGlobal(point, point);
       hitArea.globalToLocal(point, point);
       target = hitArea.hitTestInput(point.x, point.y);
       return target != null ? this : null;

@@ -4,33 +4,32 @@ import 'point.dart';
 import '../internal/jenkins_hash.dart';
 
 class Circle<T extends num> {
-
   T x;
   T y;
   T radius;
 
   Circle(this.x, this.y, this.radius);
 
-  Circle clone() => new Circle(x, y, radius);
+  Circle clone() => Circle(x, y, radius);
 
   @override
-  String toString() => "Circle<$T> [x=$x, y=$y, radius=$radius]";
+  String toString() => 'Circle<$T> [x=$x, y=$y, radius=$radius]';
 
   //---------------------------------------------------------------------------
 
   @override
   bool operator ==(Object other) {
     return other is Circle &&
-        this.x == other.x &&
-        this.y == other.y &&
-        this.radius == other.radius;
+        x == other.x &&
+        y == other.y &&
+        radius == other.radius;
   }
 
   @override
   int get hashCode {
-    int a = this.x.hashCode;
-    int b = this.y.hashCode;
-    int c = this.radius.hashCode;
+    var a = x.hashCode;
+    var b = y.hashCode;
+    var c = radius.hashCode;
     return JenkinsHash.hash3(a, b, c);
   }
 
@@ -43,8 +42,8 @@ class Circle<T extends num> {
   }
 
   bool containsPoint(Point<num> p) {
-    var dx = this.x - p.x;
-    var dy = this.y - p.y;
+    var dx = x - p.x;
+    var dy = y - p.y;
     return dx * dx + dy * dy < radius * radius;
   }
 }

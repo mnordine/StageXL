@@ -1,14 +1,12 @@
 part of stagexl.drawing;
 
 class GraphicsCommandCircle extends GraphicsCommand {
-
   double _x;
   double _y;
   double _radius;
   bool _antiClockwise;
 
   GraphicsCommandCircle(num x, num y, num radius, bool antiClockwise)
-
       : _x = x.toDouble(),
         _y = y.toDouble(),
         _radius = radius.toDouble(),
@@ -49,8 +47,7 @@ class GraphicsCommandCircle extends GraphicsCommand {
   @override
   void updateContext(GraphicsContext context) {
     context.moveTo(x + radius, y);
-    context.arc(x, y, radius, 0.0, 2 * PI, antiClockwise);
+    context.arc(x, y, radius, 0.0, 2 * pi, antiClockwise);
     context.closePath();
   }
-
 }

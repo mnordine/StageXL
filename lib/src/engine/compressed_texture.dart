@@ -99,7 +99,7 @@ class PvrTexture extends CompressedTexture {
   }
 
   void _parseHeader() {
-    final bytes = new ByteArray.fromBuffer(_buffer);
+    final bytes = ByteArray.fromBuffer(_buffer);
 
     final magic = bytes.readUnsignedInt();
     if (magic !=  0x03525650) {
@@ -116,7 +116,7 @@ class PvrTexture extends CompressedTexture {
 
     /*final flags = */bytes.readUnsignedInt();
     _pvrFormat = bytes.readUnsignedInt();
-    /*final order = */new List.generate(4, (_) => bytes.readByte());
+    /*final order = */List.generate(4, (_) => bytes.readByte());
     /*final colorSpace =*/ bytes.readUnsignedInt();
     /*final channelType =*/ bytes.readUnsignedInt();
     height = bytes.readUnsignedInt();
@@ -130,6 +130,7 @@ class PvrTexture extends CompressedTexture {
     _texDataOffset = bytes.offset + metaDataSize;
   }
 
+  @override
   int get format
   {
     // https://www.khronos.org/registry/webgl/extensions/WEBGL_compressed_texture_etc/
@@ -185,5 +186,6 @@ class PvrTexture extends CompressedTexture {
     }
   }
 
+  @override
   TypedData get textureData => _buffer.asByteData(_texDataOffset);
 }

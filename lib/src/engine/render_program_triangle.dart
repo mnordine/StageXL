@@ -1,12 +1,11 @@
 part of stagexl.engine;
 
 class RenderProgramTriangle extends RenderProgram {
-
   // aVertexPosition:   Float32(x), Float32(y)
   // aVertexAlpha:      Float32(r), Float32(g), Float32(b), Float32(a)
 
   @override
-  String get vertexShaderSource => """
+  String get vertexShaderSource => '''
 
     uniform mat4 uProjectionMatrix;
     attribute vec2 aVertexPosition;
@@ -17,10 +16,10 @@ class RenderProgramTriangle extends RenderProgram {
       vColor = aVertexColor;
       gl_Position = vec4(aVertexPosition, 0.0, 1.0) * uProjectionMatrix;
     }
-    """;
+    ''';
 
   @override
-  String get fragmentShaderSource => """
+  String get fragmentShaderSource => '''
 
     precision mediump float;
     varying vec4 vColor;
@@ -28,25 +27,22 @@ class RenderProgramTriangle extends RenderProgram {
     void main() {
       gl_FragColor = vColor;
     }
-    """;
+    ''';
 
   //---------------------------------------------------------------------------
 
   @override
   void activate(RenderContextWebGL renderContext) {
-
     super.activate(renderContext);
 
-    renderBufferVertex.bindAttribute(attributes["aVertexPosition"], 2, 24, 0);
-    renderBufferVertex.bindAttribute(attributes["aVertexColor"], 4, 24, 8);
+    renderBufferVertex.bindAttribute(attributes['aVertexPosition'], 2, 24, 0);
+    renderBufferVertex.bindAttribute(attributes['aVertexColor'], 4, 24, 8);
   }
 
   //---------------------------------------------------------------------------
 
-  void renderTriangle(
-      RenderState renderState,
-      num x1, num y1, num x2, num y2, num x3, num y3, int color) {
-
+  void renderTriangle(RenderState renderState, num x1, num y1, num x2, num y2,
+      num x3, num y3, int color) {
     var matrix = renderState.globalMatrix;
     var alpha = renderState.globalAlpha;
     var indexCount = 3;
@@ -117,10 +113,8 @@ class RenderProgramTriangle extends RenderProgram {
 
   //---------------------------------------------------------------------------
 
-  void renderTriangleMesh(
-      RenderState renderState,
-      Int16List ixList, Float32List vxList, int color) {
-
+  void renderTriangleMesh(RenderState renderState, Int16List ixList,
+      Float32List vxList, int color) {
     var matrix = renderState.globalMatrix;
     var alpha = renderState.globalAlpha;
     var ixListCount = ixList.length;
@@ -164,7 +158,7 @@ class RenderProgramTriangle extends RenderProgram {
     var colorG = colorScale * colorGetG(color) * colorA;
     var colorB = colorScale * colorGetB(color) * colorA;
 
-    for (var i = 0, o = 0 ; i < vxListCount; i++, o += 2) {
+    for (var i = 0, o = 0; i < vxListCount; i++, o += 2) {
       num x = vxList[o + 0];
       num y = vxList[o + 1];
       vxData[vxIndex + 0] = mx + ma * x + mc * y;
@@ -179,5 +173,4 @@ class RenderProgramTriangle extends RenderProgram {
     renderBufferVertex.position += vxListCount * 6;
     renderBufferVertex.count += vxListCount;
   }
-
 }

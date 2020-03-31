@@ -23,14 +23,21 @@ num _checkDevicePixelRatio() {
 
 bool _checkMobileDevice() {
   var ua = window.navigator.userAgent.toLowerCase();
-  var identifiers = ["iphone", "ipad", "ipod", "android", "webos", "windows phone"];
-  return identifiers.any((id) => ua.indexOf(id) >= 0);
+  var identifiers = [
+    'iphone',
+    'ipad',
+    'ipod',
+    'android',
+    'webos',
+    'windows phone'
+  ];
+  return identifiers.any(ua.contains);
 }
 
 //-------------------------------------------------------------------------------------
 
 bool _checkLittleEndianSystem() {
-  var wordList = new Int32List(1);
+  var wordList = Int32List(1);
   var byteList = wordList.buffer.asUint8List();
   wordList[0] = 0x11223344;
   return byteList[0] == 0x44;
@@ -39,7 +46,6 @@ bool _checkLittleEndianSystem() {
 //-------------------------------------------------------------------------------------
 
 bool _checkAutoHiDPI() {
-
   var autoHiDPI = devicePixelRatio > 1.0;
   var screen = window.screen;
 
@@ -55,11 +61,11 @@ bool _checkAutoHiDPI() {
 //-------------------------------------------------------------------------------------
 
 Future<bool> _checkWebpSupport() {
+  var completer = Completer<bool>();
+  var img = ImageElement();
 
-  var completer = new Completer<bool>();
-  var img = new ImageElement();
-
-  img.onLoad.listen((e) => completer.complete(img.width == 2 && img.height == 2));
+  img.onLoad
+      .listen((e) => completer.complete(img.width == 2 && img.height == 2));
   img.onError.listen((e) => completer.complete(false));
 
   img.src = 'data:image/webp;base64,UklGRjoAAABXRUJQVlA4IC4AAACyAg'

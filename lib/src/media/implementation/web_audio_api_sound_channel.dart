@@ -1,7 +1,6 @@
 part of stagexl.media;
 
 class WebAudioApiSoundChannel extends SoundChannel {
-
   WebAudioApiSound _webAudioApiSound;
   SoundTransform _soundTransform;
   WebAudioApiMixer _mixer;
@@ -17,21 +16,18 @@ class WebAudioApiSoundChannel extends SoundChannel {
   num _position = 0.0;
   num _timeOffset = 0.0;
 
-  WebAudioApiSoundChannel(
-      WebAudioApiSound webAudioApiSound,
-      num startTime, num duration, bool loop,
-      SoundTransform soundTransform) {
-
-    _soundTransform = soundTransform ?? new SoundTransform();
+  WebAudioApiSoundChannel(WebAudioApiSound webAudioApiSound, num startTime,
+      num duration, bool loop, SoundTransform soundTransform) {
+    _soundTransform = soundTransform ?? SoundTransform();
     _webAudioApiSound = webAudioApiSound;
     _startTime = startTime.toDouble();
     _duration = duration.toDouble();
     _loop = loop;
 
-    _mixer = new WebAudioApiMixer(SoundMixer._webAudioApiMixer.inputNode);
+    _mixer = WebAudioApiMixer(SoundMixer._webAudioApiMixer.inputNode);
     _mixer.applySoundTransform(_soundTransform);
 
-    this.paused = false;
+    paused = false;
   }
 
   //---------------------------------------------------------------------------
@@ -66,9 +62,9 @@ class WebAudioApiSoundChannel extends SoundChannel {
     } else if (_paused) {
       _position = position;
     } else {
-      this.paused = true;
+      paused = true;
       _position = position;
-      this.paused = false;
+      paused = false;
     }
   }
 
@@ -84,8 +80,8 @@ class WebAudioApiSoundChannel extends SoundChannel {
     } else if (_stopped) {
       // we can't pause/resume the audio playback.
       _paused = _stopped || value;
-    } else if (value){
-      _position = this.position;
+    } else if (value) {
+      _position = position;
       _paused = true;
       _sourceNodeEndedSubscription?.cancel();
       _sourceNode.stop(0);
@@ -116,7 +112,7 @@ class WebAudioApiSoundChannel extends SoundChannel {
 
   @override
   set soundTransform(SoundTransform value) {
-    _soundTransform = value ?? new SoundTransform();
+    _soundTransform = value ?? SoundTransform();
     _mixer.applySoundTransform(_soundTransform);
   }
 
@@ -135,10 +131,10 @@ class WebAudioApiSoundChannel extends SoundChannel {
 
   void _onEnded(html.Event e) {
     if (_paused == false && _stopped == false && _loop == false) {
-      _position = this.position;
+      _position = position;
       _stopped = true;
       _paused = true;
-      this.dispatchEvent(new Event(Event.COMPLETE));
+      dispatchEvent(Event(Event.COMPLETE));
     }
   }
 }

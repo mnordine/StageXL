@@ -8,7 +8,6 @@ part of stagexl.display;
 /// [BitmapData.load] function.
 
 class BitmapDataLoadOptions {
-
   /// The application provides *png* files for lossless images.
 
   bool png = true;
@@ -43,12 +42,12 @@ class BitmapDataLoadOptions {
 
   @deprecated
   int get maxPixelRatio {
-    return pixelRatios.fold(0.0, (a, b) => a > b ? a : b).round();
+    return pixelRatios.fold(0.0, (num a, b) => a > b ? a : b).round();
   }
 
   @deprecated
   set maxPixelRatio(int value) {
-    pixelRatios = new List<double>.generate(value, (v) => 1.0 + v);
+    pixelRatios = List<double>.generate(value, (v) => 1.0 + v);
   }
 
   /// The available pixel ratios for images on HiDPI displays.
@@ -82,12 +81,12 @@ class BitmapDataLoadOptions {
   /// Create a deep clone of this [BitmapDataLoadOptions].
 
   BitmapDataLoadOptions clone() {
-    var options = new BitmapDataLoadOptions();
-    options.png = this.png;
-    options.jpg = this.jpg;
-    options.webp = this.webp;
-    options.pixelRatios = new List<double>.from(this.pixelRatios);
-    options.corsEnabled = this.corsEnabled;
+    var options = BitmapDataLoadOptions();
+    options.png = png;
+    options.jpg = jpg;
+    options.webp = webp;
+    options.pixelRatios = List<double>.from(pixelRatios);
+    options.corsEnabled = corsEnabled;
     return options;
   }
 }

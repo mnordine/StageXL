@@ -10,7 +10,6 @@ part of stagexl.display_ex;
 /// does not need to check for hits on the covered display objects.
 
 class GlassPlate extends InteractiveObject {
-
   @override
   num width;
 
@@ -23,7 +22,7 @@ class GlassPlate extends InteractiveObject {
 
   @override
   Rectangle<num> get bounds {
-    return new Rectangle<num>(0.0, 0.0, width, height);
+    return Rectangle<num>(0.0, 0.0, width, height);
   }
 
   @override

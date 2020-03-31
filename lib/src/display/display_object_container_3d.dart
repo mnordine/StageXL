@@ -7,11 +7,9 @@ part of stagexl.display;
 /// display object in 3D space. Use the [offsetX], [offsetY] and [offsetZ]
 /// properties to move the display object in 3D space.
 ///
-abstract class DisplayObjectContainer3D
-    extends DisplayObjectContainer
+abstract class DisplayObjectContainer3D extends DisplayObjectContainer
     implements TweenObject3D, RenderObject3D {
-
-  PerspectiveProjection perspectiveProjection = new PerspectiveProjection();
+  PerspectiveProjection perspectiveProjection = PerspectiveProjection();
 
   num _offsetX = 0.0;
   num _offsetY = 0.0;
@@ -21,8 +19,8 @@ abstract class DisplayObjectContainer3D
   num _rotationZ = 0.0;
 
   bool _transformationMatrix3DRefresh = false;
-  final Matrix3D _transformationMatrix3D = new Matrix3D.fromIdentity();
-  final Matrix3D _projectionMatrix3D = new Matrix3D.fromIdentity();
+  final Matrix3D _transformationMatrix3D = Matrix3D.fromIdentity();
+  final Matrix3D _projectionMatrix3D = Matrix3D.fromIdentity();
 
   //---------------------------------------------------------------------------
 
@@ -96,7 +94,6 @@ abstract class DisplayObjectContainer3D
 
   @override
   Matrix3D get transformationMatrix3D {
-
     if (_transformationMatrix3DRefresh) {
       _transformationMatrix3DRefresh = false;
       _transformationMatrix3D.setIdentity();
@@ -120,8 +117,7 @@ abstract class DisplayObjectContainer3D
   //---------------------------------------------------------------------------
 
   bool get isForwardFacing {
-
-    var matrix = this.globalTransformationMatrix3D;
+    var matrix = globalTransformationMatrix3D;
 
     num m00 = matrix.m00;
     num m10 = matrix.m10;
@@ -148,7 +144,7 @@ abstract class DisplayObjectContainer3D
 
   @override
   Rectangle<num> get boundsTransformed {
-    var rectangle = this.bounds;
+    var rectangle = bounds;
     _calculateProjectionMatrix(transformationMatrix);
     return _projectionMatrix3D.transformRectangle(rectangle, rectangle);
   }

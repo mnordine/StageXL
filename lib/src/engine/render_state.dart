@@ -1,19 +1,18 @@
 part of stagexl.engine;
 
 class _ContextState {
-
   double alpha = 1.0;
   BlendMode blendMode = BlendMode.NORMAL;
 
-  final Matrix matrix = new Matrix.fromIdentity();
-  final Matrix3D matrix3D = new Matrix3D.fromIdentity();
+  final Matrix matrix = Matrix.fromIdentity();
+  final Matrix3D matrix3D = Matrix3D.fromIdentity();
   final _ContextState previousContextState;
 
   _ContextState(this.previousContextState);
 
   _ContextState _nextContextState;
   _ContextState get nextContextState {
-    return _nextContextState ??= new _ContextState(this);
+    return _nextContextState ??= _ContextState(this);
   }
 }
 
@@ -30,7 +29,6 @@ class _ContextState {
 /// also the method that is used by the display list to draw BitmapData objects.
 
 class RenderState {
-
   num currentTime = 0.0;
   num deltaTime = 0.0;
 
@@ -39,10 +37,10 @@ class RenderState {
 
   _ContextState _currentContextState;
 
-  RenderState(RenderContext renderContext, [Matrix matrix, num alpha, BlendMode blendMode]) :
-    _renderContext = renderContext,
-    _firstContextState = new _ContextState(null) {
-
+  RenderState(RenderContext renderContext,
+      [Matrix matrix, num alpha, BlendMode blendMode])
+      : _renderContext = renderContext,
+        _firstContextState = _ContextState(null) {
     _currentContextState = _firstContextState;
 
     if (matrix is Matrix) _firstContextState.matrix.copyFrom(matrix);
@@ -62,7 +60,6 @@ class RenderState {
   //---------------------------------------------------------------------------
 
   void reset([Matrix matrix, num alpha, BlendMode blendMode]) {
-
     _currentContextState = _firstContextState;
     _currentContextState.matrix.identity();
     _currentContextState.alpha = 1.0;
@@ -74,7 +71,6 @@ class RenderState {
   }
 
   void copyFrom(RenderState renderState) {
-
     _currentContextState = _firstContextState;
     _currentContextState.matrix.copyFrom(renderState.globalMatrix);
     _currentContextState.alpha = renderState.globalAlpha;
@@ -91,15 +87,19 @@ class RenderState {
     _renderContext.renderTextureQuad(this, renderTextureQuad);
   }
 
-  void renderTextureMapping(RenderTexture renderTexture, Matrix mappingMatrix, Int16List ixList, Float32List vxList) {
-    _renderContext.renderTextureMapping(this, renderTexture, mappingMatrix, ixList, vxList);
+  void renderTextureMapping(RenderTexture renderTexture, Matrix mappingMatrix,
+      Int16List ixList, Float32List vxList) {
+    _renderContext.renderTextureMapping(
+        this, renderTexture, mappingMatrix, ixList, vxList);
   }
 
-  void renderTextureMesh(RenderTexture renderTexture, Int16List ixList, Float32List vxList) {
+  void renderTextureMesh(
+      RenderTexture renderTexture, Int16List ixList, Float32List vxList) {
     _renderContext.renderTextureMesh(this, renderTexture, ixList, vxList);
   }
 
-  void renderTriangle(num x1, num y1, num x2, num y2, num x3, num y3, int color) {
+  void renderTriangle(
+      num x1, num y1, num x2, num y2, num x3, num y3, int color) {
     _renderContext.renderTriangle(this, x1, y1, x2, y2, x3, y3, color);
   }
 
@@ -107,8 +107,10 @@ class RenderState {
     _renderContext.renderTriangleMesh(this, ixList, vxList, color);
   }
 
-  void renderTextureQuadFiltered(RenderTextureQuad renderTextureQuad, List<RenderFilter> renderFilters) {
-    _renderContext.renderTextureQuadFiltered(this, renderTextureQuad, renderFilters);
+  void renderTextureQuadFiltered(
+      RenderTextureQuad renderTextureQuad, List<RenderFilter> renderFilters) {
+    _renderContext.renderTextureQuadFiltered(
+        this, renderTextureQuad, renderFilters);
   }
 
   void renderObjectFiltered(RenderObject renderObject) {
@@ -118,7 +120,6 @@ class RenderState {
   //---------------------------------------------------------------------------
 
   void renderObject(RenderObject renderObject) {
-
     var matrix = renderObject.transformationMatrix;
     var blendMode = renderObject.blendMode;
     var alpha = renderObject.alpha;
@@ -140,7 +141,7 @@ class RenderState {
     cs2.alpha = alpha * cs1.alpha;
 
     if (renderObject is RenderObject3D && renderContext is RenderContextWebGL) {
-      RenderObject3D renderObject3D = renderObject;
+      var renderObject3D = renderObject;
       var renderContextWebGL = renderContext as RenderContextWebGL;
       cs1.matrix3D.copyFrom(renderContextWebGL.activeProjectionMatrix);
       cs2.matrix3D.copyFrom2DAndConcat(cs2.matrix, cs1.matrix3D);
@@ -156,8 +157,8 @@ class RenderState {
     if (maskAfter) renderContext.beginRenderMask(this, mask);
 
     if (cache != null) {
-      this.renderTextureQuad(cache);
-    } else if (filters.length > 0) {
+      renderTextureQuad(cache);
+    } else if (filters.isNotEmpty) {
       renderObject.renderFiltered(this);
     } else {
       renderObject.render(this);
@@ -191,9 +192,4 @@ class RenderState {
   void pop() {
     _currentContextState = _currentContextState.previousContextState;
   }
-
 }
-
-
-
-

@@ -12,7 +12,6 @@ part of stagexl.display_ex;
 ///     resourceManager.onProgress.listen((progress) => gauge.ratio = progress);
 
 class Gauge extends DisplayObject {
-
   static const String DIRECTION_UP = 'DIRECTION_UP';
   static const String DIRECTION_RIGHT = 'DIRECTION_RIGHT';
   static const String DIRECTION_DOWN = 'DIRECTION_DOWN';
@@ -24,14 +23,13 @@ class Gauge extends DisplayObject {
   num _ratio = 1.0;
 
   Gauge(this.bitmapData, [this.direction = DIRECTION_LEFT]) {
-
     var validDirection = false;
     validDirection = validDirection || direction == DIRECTION_UP;
     validDirection = validDirection || direction == DIRECTION_DOWN;
     validDirection = validDirection || direction == DIRECTION_LEFT;
     validDirection = validDirection || direction == DIRECTION_RIGHT;
 
-    if (!validDirection) throw new ArgumentError('Invalid Gauge direction!');
+    if (!validDirection) throw ArgumentError('Invalid Gauge direction!');
   }
 
   //---------------------------------------------------------------------------
@@ -49,8 +47,8 @@ class Gauge extends DisplayObject {
   @override
   Rectangle<num> get bounds {
     return bitmapData == null
-        ? new Rectangle<num>(0.0, 0.0, 0.0, 0.0)
-        : new Rectangle<num>(0.0, 0.0, bitmapData.width, bitmapData.height);
+        ? Rectangle<num>(0.0, 0.0, 0.0, 0.0)
+        : Rectangle<num>(0.0, 0.0, bitmapData.width, bitmapData.height);
   }
 
   @override
@@ -73,14 +71,13 @@ class Gauge extends DisplayObject {
   void renderFiltered(RenderState renderState) {
     if (bitmapData != null) {
       var renderTextureQuad = _getRenderTextureQuad();
-      renderState.renderTextureQuadFiltered(renderTextureQuad, this.filters);
+      renderState.renderTextureQuadFiltered(renderTextureQuad, filters);
     }
   }
 
   //---------------------------------------------------------------------------
 
   RenderTextureQuad _getRenderTextureQuad() {
-
     var width = bitmapData.width;
     var height = bitmapData.height;
     var left = 0;
@@ -93,10 +90,9 @@ class Gauge extends DisplayObject {
     if (direction == DIRECTION_RIGHT) right = (_ratio * width).round();
     if (direction == DIRECTION_DOWN) bottom = (_ratio * height).round();
 
-    var rectangle = new Rectangle(left, top, right - left, bottom - top);
+    var rectangle = Rectangle(left, top, right - left, bottom - top);
     var renderTextureQuad = bitmapData.renderTextureQuad.clip(rectangle);
 
     return renderTextureQuad;
   }
-
 }

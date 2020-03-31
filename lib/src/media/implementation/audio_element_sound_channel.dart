@@ -1,7 +1,6 @@
 part of stagexl.media;
 
 class AudioElementSoundChannel extends SoundChannel {
-
   AudioElementSound _audioElementSound;
   SoundTransform _soundTransform;
   AudioElement _audioElement;
@@ -15,12 +14,9 @@ class AudioElementSoundChannel extends SoundChannel {
   num _duration = 0.0;
   num _position = 0.0;
 
-  AudioElementSoundChannel(
-      AudioElementSound audioElementSound,
-      num startTime, num duration, bool loop,
-      SoundTransform soundTransform) {
-
-    _soundTransform = soundTransform ?? new SoundTransform();
+  AudioElementSoundChannel(AudioElementSound audioElementSound, num startTime,
+      num duration, bool loop, SoundTransform soundTransform) {
+    _soundTransform = soundTransform ?? SoundTransform();
     _audioElementSound = audioElementSound;
     _startTime = startTime.toDouble();
     _duration = duration.toDouble();
@@ -83,7 +79,7 @@ class AudioElementSoundChannel extends SoundChannel {
       // we can't pause/resume the audio playback.
       _paused = _stopped || value;
     } else if (value) {
-      _position = this.position;
+      _position = position;
       _paused = true;
       _audioElement.pause();
       _stopCompleteTimer();
@@ -102,7 +98,7 @@ class AudioElementSoundChannel extends SoundChannel {
 
   @override
   set soundTransform(SoundTransform value) {
-    _soundTransform = value != null ? value : new SoundTransform();
+    _soundTransform = value ?? SoundTransform();
     if (_audioElement == null) {
       // we can't set the audio element
     } else {
@@ -117,7 +113,7 @@ class AudioElementSoundChannel extends SoundChannel {
   @override
   void stop() {
     if (_audioElement != null) {
-      _position = this.position;
+      _position = position;
       _audioElement.pause();
       _audioElement.currentTime = 0;
       _audioElementSound._releaseAudioElement(_audioElement);
@@ -131,14 +127,13 @@ class AudioElementSoundChannel extends SoundChannel {
       _stopped = true;
       _paused = true;
       _stopCompleteTimer();
-      this.dispatchEvent(new Event(Event.COMPLETE));
+      dispatchEvent(Event(Event.COMPLETE));
     }
   }
 
   //---------------------------------------------------------------------------
 
   void _onAudioElement(AudioElement audioElement) {
-
     var mixer = SoundMixer._audioElementMixer;
 
     if (_stopped) {
@@ -146,7 +141,8 @@ class AudioElementSoundChannel extends SoundChannel {
     } else {
       _audioElement = audioElement;
       _audioElement.volume = _soundTransform.volume * mixer.volume;
-      _volumeChangedSubscription = mixer.onVolumeChanged.listen(_onVolumeChanged);
+      _volumeChangedSubscription =
+          mixer.onVolumeChanged.listen(_onVolumeChanged);
       if (_paused == false) {
         _audioElement.currentTime = _startTime + _position;
         _audioElement.play();
@@ -159,8 +155,8 @@ class AudioElementSoundChannel extends SoundChannel {
 
   void _startCompleteTimer(num time) {
     time = time.clamp(0.0, _duration) * 1000.0;
-    var duration = new Duration(milliseconds: time.toInt());
-    _completeTimer = new Timer(duration, _onCompleteTimer);
+    var duration = Duration(milliseconds: time.toInt());
+    _completeTimer = Timer(duration, _onCompleteTimer);
   }
 
   void _stopCompleteTimer() {
@@ -169,14 +165,14 @@ class AudioElementSoundChannel extends SoundChannel {
   }
 
   void _onCompleteTimer() {
-    if (this.paused) {
+    if (paused) {
       // called by accident
-    } else if (this.loop) {
+    } else if (loop) {
       _audioElement.currentTime = _startTime;
       _audioElement.play();
       _startCompleteTimer(_duration);
     } else {
-      this.stop();
+      stop();
     }
   }
 
@@ -185,11 +181,10 @@ class AudioElementSoundChannel extends SoundChannel {
   }
 
   void _onAudioEnded() {
-    if (this.loop) {
+    if (loop) {
       // The loop is restarted by the complete timer.
     } else {
-      this.stop();
+      stop();
     }
   }
-
 }

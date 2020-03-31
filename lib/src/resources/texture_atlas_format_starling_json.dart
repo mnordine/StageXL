@@ -1,40 +1,47 @@
 part of stagexl.resources;
 
 class _TextureAtlasFormatStarlingJson extends TextureAtlasFormat {
-
   const _TextureAtlasFormatStarlingJson();
 
   @override
   Future<TextureAtlas> load(TextureAtlasLoader loader) async {
-
     var source = await loader.getSource();
     var pixelRatio = loader.getPixelRatio();
-    var textureAtlas = new TextureAtlas(pixelRatio);
+    var textureAtlas = TextureAtlas(pixelRatio);
 
-    var json = JSON.decode(source) as Map;
-    var imagePath = _getString(json, "imagePath", "");
+    var json = jsonDecode(source) as Map;
+    var imagePath = _getString(json, 'imagePath', '');
     var renderTextureQuad = await loader.getRenderTextureQuad(imagePath);
 
-    for(Map subTextureMap in json["SubTexture"]) {
+    for (Map subTextureMap in json['SubTexture']) {
+      var name = _getString(subTextureMap, 'name', '');
+      var rotation = _getBool(subTextureMap, 'rotated', false) ? 1 : 0;
 
-      var name = _getString(subTextureMap, "name", "");
-      var rotation = _getBool(subTextureMap, "rotated", false) ? 1 : 0;
+      var frameX = _getInt(subTextureMap, 'x', 0);
+      var frameY = _getInt(subTextureMap, 'y', 0);
+      var frameWidth = _getInt(subTextureMap, 'width', 0);
+      var frameHeight = _getInt(subTextureMap, 'height', 0);
 
-      var frameX = _getInt(subTextureMap, "x", 0);
-      var frameY = _getInt(subTextureMap, "y", 0);
-      var frameWidth = _getInt(subTextureMap, "width", 0);
-      var frameHeight = _getInt(subTextureMap, "height", 0);
+      var offsetX = 0 - _getInt(subTextureMap, 'frameX', 0);
+      var offsetY = 0 - _getInt(subTextureMap, 'frameY', 0);
+      var originalWidth = _getInt(subTextureMap, 'frameWidth', frameWidth);
+      var originalHeight = _getInt(subTextureMap, 'frameHeight', frameHeight);
 
-      var offsetX = 0 - _getInt(subTextureMap, "frameX", 0);
-      var offsetY = 0 - _getInt(subTextureMap, "frameY", 0);
-      var originalWidth = _getInt(subTextureMap, "frameWidth", frameWidth);
-      var originalHeight = _getInt(subTextureMap, "frameHeight", frameHeight);
-
-      var textureAtlasFrame = new TextureAtlasFrame(
-          textureAtlas, renderTextureQuad, name, rotation,
-          offsetX, offsetY, originalWidth, originalHeight,
-          frameX, frameY, frameWidth, frameHeight,
-          null, null);
+      var textureAtlasFrame = TextureAtlasFrame(
+          textureAtlas,
+          renderTextureQuad,
+          name,
+          rotation,
+          offsetX,
+          offsetY,
+          originalWidth,
+          originalHeight,
+          frameX,
+          frameY,
+          frameWidth,
+          frameHeight,
+          null,
+          null);
 
       textureAtlas.frames.add(textureAtlasFrame);
     }

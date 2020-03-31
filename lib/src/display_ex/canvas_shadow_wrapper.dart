@@ -24,7 +24,6 @@ part of stagexl.display_ex;
 ///     stage.addChild(shadow);
 ///
 class CanvasShadowWrapper extends DisplayObject {
-
   final DisplayObject displayObject;
 
   int shadowColor;
@@ -32,60 +31,84 @@ class CanvasShadowWrapper extends DisplayObject {
   num shadowOffsetY;
   num shadowBlur;
 
-  CanvasShadowWrapper(this.displayObject, [
-    this.shadowColor = Color.Black,
-    this.shadowOffsetX = 10.0, this.shadowOffsetY = 10.0,
-    this.shadowBlur = 0.0]);
+  CanvasShadowWrapper(this.displayObject,
+      [this.shadowColor = Color.Black,
+      this.shadowOffsetX = 10.0,
+      this.shadowOffsetY = 10.0,
+      this.shadowBlur = 0.0]);
 
   //-----------------------------------------------------------------------------------------------
 
   void _throwUnsupportedError() {
-    throw new UnsupportedError("CanvasShadowWrapper does not implement this property or method.");
+    throw UnsupportedError(
+        'CanvasShadowWrapper does not implement this property or method.');
   }
 
   @override
-  set x(num value) { _throwUnsupportedError(); }
+  set x(num value) {
+    _throwUnsupportedError();
+  }
 
   @override
-  set y(num value) { _throwUnsupportedError(); }
+  set y(num value) {
+    _throwUnsupportedError();
+  }
 
   @override
-  set pivotX(num value) { _throwUnsupportedError(); }
+  set pivotX(num value) {
+    _throwUnsupportedError();
+  }
 
   @override
-  set pivotY(num value) { _throwUnsupportedError(); }
+  set pivotY(num value) {
+    _throwUnsupportedError();
+  }
 
   @override
-  set scaleX(num value) { _throwUnsupportedError(); }
+  set scaleX(num value) {
+    _throwUnsupportedError();
+  }
 
   @override
-  set scaleY(num value) { _throwUnsupportedError(); }
+  set scaleY(num value) {
+    _throwUnsupportedError();
+  }
 
   @override
-  set skewX(num value) { _throwUnsupportedError(); }
+  set skewX(num value) {
+    _throwUnsupportedError();
+  }
 
   @override
-  set skewY(num value) { _throwUnsupportedError(); }
+  set skewY(num value) {
+    _throwUnsupportedError();
+  }
 
   @override
-  set rotation(num value) { _throwUnsupportedError(); }
+  set rotation(num value) {
+    _throwUnsupportedError();
+  }
 
   @override
-  set alpha(num value) { _throwUnsupportedError(); }
+  set alpha(num value) {
+    _throwUnsupportedError();
+  }
 
   @override
-  set mask(Mask mask) { _throwUnsupportedError(); }
+  set mask(Mask mask) {
+    _throwUnsupportedError();
+  }
 
   //-----------------------------------------------------------------------------------------------
 
   @override
   DisplayObject hitTestInput(num localX, num localY) {
-    var matrix = this.displayObject.transformationMatrix;
-    num deltaX = localX - matrix.tx;
-    num deltaY = localY - matrix.ty;
-    num childX = (matrix.d * deltaX - matrix.c * deltaY) / matrix.det;
-    num childY = (matrix.a * deltaY - matrix.b * deltaX) / matrix.det;
-    return this.displayObject.hitTestInput(childX, childY);
+    var matrix = displayObject.transformationMatrix;
+    var deltaX = localX - matrix.tx;
+    var deltaY = localY - matrix.ty;
+    var childX = (matrix.d * deltaX - matrix.c * deltaY) / matrix.det;
+    var childY = (matrix.a * deltaY - matrix.b * deltaX) / matrix.det;
+    return displayObject.hitTestInput(childX, childY);
   }
 
   //-----------------------------------------------------------------------------------------------
@@ -94,17 +117,19 @@ class CanvasShadowWrapper extends DisplayObject {
   void render(RenderState renderState) {
     var renderContext = renderState.renderContext;
     if (renderContext is RenderContextCanvas) {
-      CanvasRenderingContext2D rawContext = renderContext.rawContext;
-      Matrix shadowMatrix = renderState.globalMatrix;
+      var rawContext = renderContext.rawContext;
+      var shadowMatrix = renderState.globalMatrix;
       rawContext.save();
       rawContext.shadowColor = color2rgba(shadowColor);
       rawContext.shadowBlur = sqrt(shadowMatrix.det) * shadowBlur;
-      rawContext.shadowOffsetX = shadowOffsetX * shadowMatrix.a + shadowOffsetY * shadowMatrix.c;
-      rawContext.shadowOffsetY = shadowOffsetX * shadowMatrix.b + shadowOffsetY * shadowMatrix.d;
-      renderState.renderObject(this.displayObject);
+      rawContext.shadowOffsetX =
+          shadowOffsetX * shadowMatrix.a + shadowOffsetY * shadowMatrix.c;
+      rawContext.shadowOffsetY =
+          shadowOffsetX * shadowMatrix.b + shadowOffsetY * shadowMatrix.d;
+      renderState.renderObject(displayObject);
       rawContext.restore();
     } else {
-      renderState.renderObject(this.displayObject);
+      renderState.renderObject(displayObject);
     }
   }
 }

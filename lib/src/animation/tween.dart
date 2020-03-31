@@ -28,10 +28,9 @@ part of stagexl.animation;
 ///       ..animate.alpha.to(0.0);
 
 class Tween implements Animatable {
-
   final TweenObject _tweenObject;
   final TransitionFunction _transition;
-  final List<TweenProperty> _tweenPropertyList = new List<TweenProperty>();
+  final List<TweenProperty> _tweenPropertyList = <TweenProperty>[];
 
   Function _onStart;
   Function _onUpdate;
@@ -50,11 +49,12 @@ class Tween implements Animatable {
   /// additionally objects implements [TweenObject3D]. Therefore all
   /// display objects can be used with with tweens.
 
-  Tween(TweenObject tweenObject, num time, [TransitionFunction transition = Transition.linear])
+  Tween(TweenObject tweenObject, num time,
+      [TransitionFunction transition = Transition.linear])
       : _tweenObject = tweenObject,
         _transition = transition {
     if (_tweenObject is! TweenObject) {
-      throw new ArgumentError("tweenObject");
+      throw ArgumentError('tweenObject');
     }
 
     _totalTime = max(0.0001, time);
@@ -68,9 +68,9 @@ class Tween implements Animatable {
   TweenPropertyAccessor2D get animate {
     var tweenObject = _tweenObject;
     if (tweenObject is TweenObject2D) {
-      return new TweenPropertyAccessor2D._(this, tweenObject);
+      return TweenPropertyAccessor2D._(this, tweenObject);
     } else {
-      throw new StateError("Invalid tween object for 2D animation.");
+      throw StateError('Invalid tween object for 2D animation.');
     }
   }
 
@@ -80,14 +80,15 @@ class Tween implements Animatable {
   TweenPropertyAccessor3D get animate3D {
     var tweenObject = _tweenObject;
     if (tweenObject is TweenObject3D) {
-      return new TweenPropertyAccessor3D._(this, tweenObject);
+      return TweenPropertyAccessor3D._(this, tweenObject);
     } else {
-      throw new StateError("Invalid tween object for 3D animation.");
+      throw StateError('Invalid tween object for 3D animation.');
     }
   }
 
-  TweenProperty _createTweenProperty(TweenPropertyAccessor accessor, int propertyID) {
-    var tweenProperty = new TweenProperty._(accessor, propertyID);
+  TweenProperty _createTweenProperty(
+      TweenPropertyAccessor accessor, int propertyID) {
+    var tweenProperty = TweenProperty._(accessor, propertyID);
     if (_started == false) _tweenPropertyList.add(tweenProperty);
     return tweenProperty;
   }
@@ -96,9 +97,7 @@ class Tween implements Animatable {
 
   @override
   bool advanceTime(num time) {
-
     if (_currentTime < _totalTime || _started == false) {
-
       _currentTime = _currentTime + time;
 
       if (_currentTime > _totalTime) {
@@ -106,14 +105,12 @@ class Tween implements Animatable {
       }
 
       if (_currentTime >= 0.0) {
-
         // set startValues if this is the first start
 
         if (_started == false) {
-
           _started = true;
 
-          for (int i = 0; i < _tweenPropertyList.length; i++) {
+          for (var i = 0; i < _tweenPropertyList.length; i++) {
             _tweenPropertyList[i]._init();
           }
           if (_onStart != null) {
@@ -126,7 +123,7 @@ class Tween implements Animatable {
         num ratio = _currentTime / _totalTime;
         num transition = _transition(ratio).toDouble();
 
-        for (int i = 0; i < _tweenPropertyList.length; i++) {
+        for (var i = 0; i < _tweenPropertyList.length; i++) {
           _tweenPropertyList[i]._update(transition, _roundToInt);
         }
         if (_onUpdate != null) {
@@ -198,15 +195,20 @@ class Tween implements Animatable {
   ///
   /// This happens after the specified [delay].
 
-  set onStart(void function()) { _onStart = function; }
+  set onStart(void Function() function) {
+    _onStart = function;
+  }
 
   /// The function that is called every time this [Tween] updates the
   /// properties of the [TweenObject].
 
-  set onUpdate(void function()) { _onUpdate = function; }
+  set onUpdate(void Function() function) {
+    _onUpdate = function;
+  }
 
   /// The function that is called when this [Tween] is completed.
 
-  set onComplete(void function()) { _onComplete = function; }
+  set onComplete(void Function() function) {
+    _onComplete = function;
+  }
 }
-

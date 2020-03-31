@@ -1,7 +1,5 @@
 part of stagexl.events;
 
-// TODO: We should make BroadcastEvents more generic.
-
 /// An event that has no specific [DisplayObject] as target but rather all
 /// [DisplayObject] instances, including those that are not on the display list.
 ///
@@ -10,7 +8,6 @@ part of stagexl.events;
 /// and there is no bubbling and capturing phase.
 
 abstract class BroadcastEvent extends Event {
-
   BroadcastEvent(String type) : super(type, false);
 
   @override
@@ -19,7 +16,7 @@ abstract class BroadcastEvent extends Event {
   void dispatch();
 }
 
-/// An event that is dispatched when a new frame is entered.
+/// An event that is dispatched when a frame is entered.
 ///
 /// This event is a [BroadcastEvent], which means that it is dispatched by all
 /// [DisplayObject]s with a listener registered for this event.
@@ -29,7 +26,9 @@ class EnterFrameEvent extends BroadcastEvent {
   EnterFrameEvent(this.passedTime) : super(Event.ENTER_FRAME);
 
   @override
-  void dispatch() => _dispatchBroadcastEvent(this, _enterFrameSubscriptions);
+  void dispatch() {
+    _dispatchBroadcastEvent<EnterFrameEvent>(this, _enterFrameSubscriptions);
+  }
 }
 
 /// An event that is dispatched when the current frame is exited.
@@ -41,7 +40,9 @@ class ExitFrameEvent extends BroadcastEvent {
   ExitFrameEvent() : super(Event.EXIT_FRAME);
 
   @override
-  void dispatch() => _dispatchBroadcastEvent(this, _exitFrameSubscriptions);
+  void dispatch() {
+    _dispatchBroadcastEvent<ExitFrameEvent>(this, _exitFrameSubscriptions);
+  }
 }
 
 /// An event that is dispatched when the display list is about to be updated
@@ -57,19 +58,24 @@ class RenderEvent extends BroadcastEvent {
   RenderEvent() : super(Event.RENDER);
 
   @override
-  void dispatch() => _dispatchBroadcastEvent(this, _renderSubscriptions);
+  void dispatch() {
+    _dispatchBroadcastEvent<RenderEvent>(this, _renderSubscriptions);
+  }
 }
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
-final List<EventStreamSubscription> _enterFrameSubscriptions = [];
-final List<EventStreamSubscription> _exitFrameSubscriptions = [];
-final List<EventStreamSubscription> _renderSubscriptions = [];
+final List<EventStreamSubscription<EnterFrameEvent>> _enterFrameSubscriptions =
+    <EventStreamSubscription<EnterFrameEvent>>[];
+final List<EventStreamSubscription<ExitFrameEvent>> _exitFrameSubscriptions =
+    <EventStreamSubscription<ExitFrameEvent>>[];
+final List<EventStreamSubscription<RenderEvent>> _renderSubscriptions =
+    <EventStreamSubscription<RenderEvent>>[];
 
-void _dispatchBroadcastEvent(BroadcastEvent broadcastEvent,
-    List<EventStreamSubscription> subscriptions) {
-
+void _dispatchBroadcastEvent<T extends BroadcastEvent>(
+    BroadcastEvent broadcastEvent,
+    List<EventStreamSubscription<T>> subscriptions) {
   // Dispatch event to current subscriptions.
   // Do not dispatch events to newly added subscriptions.
   // It is guaranteed that this function is not called recursively.
@@ -77,7 +83,7 @@ void _dispatchBroadcastEvent(BroadcastEvent broadcastEvent,
 
   var length = subscriptions.length;
 
-  for (int i = 0; i < length; i++) {
+  for (var i = 0; i < length; i++) {
     var subscription = subscriptions[i];
     if (subscription.isCanceled == false) {
       broadcastEvent._isPropagationStopped = false;

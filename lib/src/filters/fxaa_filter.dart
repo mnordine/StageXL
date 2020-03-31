@@ -20,9 +20,8 @@ import '../geom.dart';
 /// transparency.
 
 class FxaaFilter extends BitmapFilter {
-
   @override
-  BitmapFilter clone() => new FxaaFilter();
+  BitmapFilter clone() => FxaaFilter();
 
   //----------------------------------------------------------------------------
 
@@ -34,13 +33,13 @@ class FxaaFilter extends BitmapFilter {
   //----------------------------------------------------------------------------
 
   @override
-  void renderFilter(RenderState renderState, RenderTextureQuad renderTextureQuad, int pass) {
-
+  void renderFilter(
+      RenderState renderState, RenderTextureQuad renderTextureQuad, int pass) {
     RenderContextWebGL renderContext = renderState.renderContext;
-    RenderTexture renderTexture = renderTextureQuad.renderTexture;
+    var renderTexture = renderTextureQuad.renderTexture;
 
-    FxaaFilterProgram renderProgram = renderContext.getRenderProgram(
-        r"$FxaaFilterProgram", () => new FxaaFilterProgram());
+    var renderProgram = renderContext.getRenderProgram(
+        r'$FxaaFilterProgram', () => FxaaFilterProgram());
 
     renderContext.activateRenderProgram(renderProgram);
     renderContext.activateRenderTexture(renderTexture);
@@ -54,13 +53,12 @@ class FxaaFilter extends BitmapFilter {
 //-------------------------------------------------------------------------------------------------
 
 class FxaaFilterProgram extends RenderProgramSimple {
-
   // aVertexPosition:   Float32(x), Float32(y)
   // aVertexTextCoord:  Float32(u), Float32(v)
   // aVertexAlpha:      Float32(alpha)
 
   @override
-  String get vertexShaderSource => """
+  String get vertexShaderSource => '''
 
     precision mediump float;
 
@@ -87,10 +85,10 @@ class FxaaFilterProgram extends RenderProgramSimple {
       vAlpha = aVertexAlpha;
       gl_Position = vec4(aVertexPosition, 0.0, 1.0) * uProjectionMatrix;
     }
-    """;
+    ''';
 
   @override
-  String get fragmentShaderSource => """
+  String get fragmentShaderSource => '''
 
     precision mediump float;
 
@@ -139,13 +137,13 @@ class FxaaFilterProgram extends RenderProgramSimple {
       float conditionOR = min(conditionLT + conditionGT, 1.0); // OR
       gl_FragColor = vec4((rgbA - rgbB) * conditionOR + rgbB, color.a) * vAlpha;
     }
-    """;
+    ''';
 
   //---------------------------------------------------------------------------
 
   void configure(num textureWidth, num textureHeight) {
-    double texelX = 1.0 / textureWidth;
-    double texelY = 1.0 / textureHeight;
-    renderingContext.uniform2f(uniforms["uTexel"], texelX, texelY);
+    var texelX = 1.0 / textureWidth;
+    var texelY = 1.0 / textureHeight;
+    renderingContext.uniform2f(uniforms['uTexel'], texelX, texelY);
   }
 }

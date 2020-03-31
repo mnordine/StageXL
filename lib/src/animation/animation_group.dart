@@ -22,8 +22,7 @@ part of stagexl.animation;
 ///        ..onComplete = () => print("complete");
 ///
 class AnimationGroup implements Animatable {
-
-  final List<Animatable> _animatables = new List<Animatable>();
+  final List<Animatable> _animatables = <Animatable>[];
 
   Function _onStart;
   Function _onComplete;
@@ -42,7 +41,6 @@ class AnimationGroup implements Animatable {
 
   @override
   bool advanceTime(num time) {
-
     _time += time;
 
     if (_started == false) {
@@ -54,7 +52,7 @@ class AnimationGroup implements Animatable {
       }
     }
 
-    for (int i = 0; i < _animatables.length;) {
+    for (var i = 0; i < _animatables.length;) {
       if (_animatables[i].advanceTime(time) == false) {
         _animatables.removeAt(i);
       } else {
@@ -62,7 +60,7 @@ class AnimationGroup implements Animatable {
       }
     }
 
-    if (_animatables.length == 0) {
+    if (_animatables.isEmpty) {
       _completed = true;
       if (_onComplete != null) _onComplete();
       return false;
@@ -93,12 +91,12 @@ class AnimationGroup implements Animatable {
   /// The function that is called when an [AnimationGroup] starts.
   ///
   /// This happens after the specified [delay].
-  set onStart(void function()) {
+  set onStart(void Function() function) {
     _onStart = function;
   }
 
   /// The function that is called when a [AnimationGroup] is completed.
-  set onComplete(void function()) {
+  set onComplete(void Function() function) {
     _onComplete = function;
   }
 }

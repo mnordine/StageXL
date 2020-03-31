@@ -8,7 +8,6 @@ part of stagexl.display_ex;
 /// time gauges used in games.
 ///
 class TimeGauge extends Gauge implements Animatable {
-
   static const String TIME_OUT = 'TIME_OUT';
   static const String TIME_SHORT = 'TIME_SHORT';
 
@@ -18,10 +17,10 @@ class TimeGauge extends Gauge implements Animatable {
   Map<String, num> _alarms;
   bool _alarmsEnabled = true;
 
-  TimeGauge(num time, BitmapData bitmapData, [String direction =
-      Gauge.DIRECTION_LEFT]) : super(bitmapData, direction) {
-
-    if (time <= 0) throw new ArgumentError('Time must be greater than zero');
+  TimeGauge(num time, BitmapData bitmapData,
+      [String direction = Gauge.DIRECTION_LEFT])
+      : super(bitmapData, direction) {
+    if (time <= 0) throw ArgumentError('Time must be greater than zero');
     _totalTime = time;
     clearAlarms();
   }
@@ -32,6 +31,7 @@ class TimeGauge extends Gauge implements Animatable {
   bool advanceTime(num time) {
     if (_isStarted && ratio > 0.0) {
       ratio = ratio - time / totalTime;
+      // ignore: invariant_booleans
       if (ratio == 0.0) pause();
     }
     return true;
@@ -66,7 +66,7 @@ class TimeGauge extends Gauge implements Animatable {
   }
 
   void clearAlarms() {
-    _alarms = new Map<String, num>();
+    _alarms = <String, num>{};
     addAlarm(TimeGauge.TIME_OUT, 0);
   }
 
@@ -101,12 +101,12 @@ class TimeGauge extends Gauge implements Animatable {
 
   @override
   set ratio(num value) {
-    num oldRatio = ratio;
+    var oldRatio = ratio;
     super.ratio = value;
     if (_alarmsEnabled) {
       _alarms.forEach((alarmName, alarmRatio) {
         if (alarmRatio < oldRatio && alarmRatio >= ratio) {
-          dispatchEvent(new Event(alarmName, true));
+          dispatchEvent(Event(alarmName, true));
         }
       });
     }

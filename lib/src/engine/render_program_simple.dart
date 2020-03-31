@@ -1,13 +1,12 @@
 part of stagexl.engine;
 
 class RenderProgramSimple extends RenderProgram {
-
   // aVertexPosition:   Float32(x), Float32(y)
   // aVertexTextCoord:  Float32(u), Float32(v)
   // aVertexAlpha:      Float32(alpha)
 
   @override
-  String get vertexShaderSource => """
+  String get vertexShaderSource => '''
 
     uniform mat4 uProjectionMatrix;
     attribute vec2 aVertexPosition;
@@ -21,10 +20,10 @@ class RenderProgramSimple extends RenderProgram {
       vAlpha = aVertexAlpha;
       gl_Position = vec4(aVertexPosition, 0.0, 1.0) * uProjectionMatrix;
     }
-    """;
+    ''';
 
   @override
-  String get fragmentShaderSource => """
+  String get fragmentShaderSource => '''
 
     precision mediump float;
     uniform sampler2D uSampler;
@@ -34,32 +33,29 @@ class RenderProgramSimple extends RenderProgram {
     void main() {
       gl_FragColor = texture2D(uSampler, vTextCoord) * vAlpha;
     }
-    """;
+    ''';
 
   //---------------------------------------------------------------------------
 
   @override
   void activate(RenderContextWebGL renderContext) {
-
     super.activate(renderContext);
 
-    renderingContext.uniform1i(uniforms["uSampler"], 0);
+    renderingContext.uniform1i(uniforms['uSampler'], 0);
 
-    renderBufferVertex.bindAttribute(attributes["aVertexPosition"], 2, 20, 0);
-    renderBufferVertex.bindAttribute(attributes["aVertexTextCoord"], 2, 20, 8);
-    renderBufferVertex.bindAttribute(attributes["aVertexAlpha"], 1, 20, 16);
+    renderBufferVertex.bindAttribute(attributes['aVertexPosition'], 2, 20, 0);
+    renderBufferVertex.bindAttribute(attributes['aVertexTextCoord'], 2, 20, 8);
+    renderBufferVertex.bindAttribute(attributes['aVertexAlpha'], 1, 20, 16);
   }
 
   //---------------------------------------------------------------------------
 
   void renderTextureQuad(
-      RenderState renderState,
-      RenderTextureQuad renderTextureQuad) {
-
+      RenderState renderState, RenderTextureQuad renderTextureQuad) {
     if (renderTextureQuad.hasCustomVertices) {
       var ixList = renderTextureQuad.ixList;
       var vxList = renderTextureQuad.vxList;
-      this.renderTextureMesh(renderState, ixList, vxList);
+      renderTextureMesh(renderState, ixList, vxList);
       return;
     }
 
@@ -137,9 +133,7 @@ class RenderProgramSimple extends RenderProgram {
   //---------------------------------------------------------------------------
 
   void renderTextureMesh(
-      RenderState renderState,
-      Int16List ixList, Float32List vxList) {
-
+      RenderState renderState, Int16List ixList, Float32List vxList) {
     var alpha = renderState.globalAlpha;
     var matrix = renderState.globalMatrix;
     var ixListCount = ixList.length;
@@ -194,10 +188,8 @@ class RenderProgramSimple extends RenderProgram {
 
   //---------------------------------------------------------------------------
 
-  void renderTextureMapping(
-      RenderState renderState, Matrix mappingMatrix,
+  void renderTextureMapping(RenderState renderState, Matrix mappingMatrix,
       Int16List ixList, Float32List vxList) {
-
     var alpha = renderState.globalAlpha;
     var globalMatrix = renderState.globalMatrix;
     var ixListCount = ixList.length;
@@ -256,5 +248,4 @@ class RenderProgramSimple extends RenderProgram {
     renderBufferVertex.position += vxListCount * 5;
     renderBufferVertex.count += vxListCount;
   }
-
 }

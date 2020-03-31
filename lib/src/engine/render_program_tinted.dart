@@ -1,66 +1,61 @@
 part of stagexl.engine;
 
 class RenderProgramTinted extends RenderProgram {
-
   // aVertexPosition:   Float32(x), Float32(y)
   // aVertexTextCoord:  Float32(u), Float32(v)
   // aVertextColor:     Float32(r), Float32(g), Float32(b), Float32(a)
 
   @override
-  String get vertexShaderSource => """
+  String get vertexShaderSource => '''
 
     uniform mat4 uProjectionMatrix;
     attribute vec2 aVertexPosition;
     attribute vec2 aVertexTextCoord;
     attribute vec4 aVertexColor;
     varying vec2 vTextCoord;
-    varying vec4 vColor; 
+    varying vec4 vColor;
 
     void main() {
       vTextCoord = aVertexTextCoord;
       vColor = aVertexColor;
       gl_Position = vec4(aVertexPosition, 0.0, 1.0) * uProjectionMatrix;
     }
-    """;
+    ''';
 
   @override
-  String get fragmentShaderSource => """
+  String get fragmentShaderSource => '''
 
     precision mediump float;
     uniform sampler2D uSampler;
     varying vec2 vTextCoord;
-    varying vec4 vColor; 
+    varying vec4 vColor;
 
     void main() {
       gl_FragColor = texture2D(uSampler, vTextCoord) * vColor;
     }
-    """;
+    ''';
 
   //---------------------------------------------------------------------------
 
   @override
   void activate(RenderContextWebGL renderContext) {
-
     super.activate(renderContext);
 
-    renderingContext.uniform1i(uniforms["uSampler"], 0);
+    renderingContext.uniform1i(uniforms['uSampler'], 0);
 
-    renderBufferVertex.bindAttribute(attributes["aVertexPosition"], 2, 32, 0);
-    renderBufferVertex.bindAttribute(attributes["aVertexTextCoord"], 2, 32, 8);
-    renderBufferVertex.bindAttribute(attributes["aVertexColor"], 4, 32, 16);
+    renderBufferVertex.bindAttribute(attributes['aVertexPosition'], 2, 32, 0);
+    renderBufferVertex.bindAttribute(attributes['aVertexTextCoord'], 2, 32, 8);
+    renderBufferVertex.bindAttribute(attributes['aVertexColor'], 4, 32, 16);
   }
 
   //---------------------------------------------------------------------------
 
-  void renderTextureQuad(
-      RenderState renderState,
-      RenderTextureQuad renderTextureQuad,
-      double r, double g, num b, num a) {
-
+  void renderTextureQuad(RenderState renderState,
+      RenderTextureQuad renderTextureQuad, double r, double g, num b, num a) {
     if (renderTextureQuad.hasCustomVertices) {
       var ixList = renderTextureQuad.ixList;
       var vxList = renderTextureQuad.vxList;
-      this.renderTextureMesh(renderState, ixList, vxList, r, g, b, a);
+      renderTextureMesh(renderState, ixList, vxList, r, g, b, a);
       return;
     }
 
@@ -154,11 +149,8 @@ class RenderProgramTinted extends RenderProgram {
 
   //---------------------------------------------------------------------------
 
-  void renderTextureMesh(
-      RenderState renderState,
-      Int16List ixList, Float32List vxList,
-      num r, num g, num b, num a) {
-
+  void renderTextureMesh(RenderState renderState, Int16List ixList,
+      Float32List vxList, num r, num g, num b, num a) {
     var matrix = renderState.globalMatrix;
     var alpha = renderState.globalAlpha;
     var ixListCount = ixList.length;
@@ -218,5 +210,4 @@ class RenderProgramTinted extends RenderProgram {
     renderBufferVertex.position += vxListCount * 8;
     renderBufferVertex.count += vxListCount;
   }
-
 }

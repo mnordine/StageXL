@@ -1,7 +1,6 @@
 part of stagexl.display;
 
 class _MouseButton {
-
   final String mouseDownEventType;
   final String mouseUpEventType;
   final String mouseClickEventType;
@@ -12,27 +11,22 @@ class _MouseButton {
   int clickTime = 0;
   int clickCount = 0;
 
-  _MouseButton(
-      this.mouseDownEventType, this.mouseUpEventType,
+  _MouseButton(this.mouseDownEventType, this.mouseUpEventType,
       this.mouseClickEventType, this.mouseDoubleClickEventType);
 
   static List<_MouseButton> createDefaults() => [
-    new _MouseButton(
-      MouseEvent.MOUSE_DOWN, MouseEvent.MOUSE_UP,
-      MouseEvent.CLICK, MouseEvent.DOUBLE_CLICK),
-    new _MouseButton(
-      MouseEvent.MIDDLE_MOUSE_DOWN, MouseEvent.MIDDLE_MOUSE_UP,
-      MouseEvent.MIDDLE_CLICK, MouseEvent.MIDDLE_CLICK),
-    new _MouseButton(
-      MouseEvent.RIGHT_MOUSE_DOWN, MouseEvent.RIGHT_MOUSE_UP,
-      MouseEvent.RIGHT_CLICK, MouseEvent.RIGHT_CLICK)
-  ];
+        _MouseButton(MouseEvent.MOUSE_DOWN, MouseEvent.MOUSE_UP,
+            MouseEvent.CLICK, MouseEvent.DOUBLE_CLICK),
+        _MouseButton(MouseEvent.MIDDLE_MOUSE_DOWN, MouseEvent.MIDDLE_MOUSE_UP,
+            MouseEvent.MIDDLE_CLICK, MouseEvent.MIDDLE_CLICK),
+        _MouseButton(MouseEvent.RIGHT_MOUSE_DOWN, MouseEvent.RIGHT_MOUSE_UP,
+            MouseEvent.RIGHT_CLICK, MouseEvent.RIGHT_CLICK)
+      ];
 }
 
 //------------------------------------------------------------------------------
 
 class _TouchPoint {
-
   static int _globalTouchPointID = 1;
 
   final int touchPointID = _globalTouchPointID++;
@@ -41,16 +35,15 @@ class _TouchPoint {
 
   InteractiveObject currentTarget;
 
-  _TouchPoint(InteractiveObject target, bool primaryTouchPoint) :
-      this.target = target,
-      this.currentTarget = target,
-      this.primaryTouchPoint = primaryTouchPoint;
+  _TouchPoint(InteractiveObject target, bool primaryTouchPoint)
+      : target = target,
+        currentTarget = target,
+        primaryTouchPoint = primaryTouchPoint;
 }
 
 //------------------------------------------------------------------------------
 
 class _Drag {
-
   final Stage stage;
   final Sprite sprite;
   final Point<num> anchor;
@@ -60,11 +53,10 @@ class _Drag {
   _Drag(this.stage, this.sprite, this.anchor, this.bounds, this.touchPointID);
 
   void update(int touchPointID, Point<num> stagePoint) {
-
     if (touchPointID != this.touchPointID) return;
 
-    var localPoint = new Point<num>(0.0, 0.0);
-    var parentPoint = new Point<num>(0.0, 0.0);
+    var localPoint = Point<num>(0.0, 0.0);
+    var parentPoint = Point<num>(0.0, 0.0);
     var visible = sprite.visible;
 
     sprite.globalToLocal(stagePoint, localPoint);

@@ -1,30 +1,28 @@
 part of stagexl.drawing;
 
 class GraphicsPatternType {
-
   final String value;
   final RenderTextureWrapping wrappingX;
   final RenderTextureWrapping wrappingY;
 
   const GraphicsPatternType(this.value, this.wrappingX, this.wrappingY);
 
-  static const GraphicsPatternType Repeat =
-      const GraphicsPatternType("repeat", RenderTextureWrapping.REPEAT, RenderTextureWrapping.REPEAT);
+  static const GraphicsPatternType Repeat = GraphicsPatternType(
+      'repeat', RenderTextureWrapping.REPEAT, RenderTextureWrapping.REPEAT);
 
-  static const GraphicsPatternType RepeatX  =
-      const GraphicsPatternType("repeat-x", RenderTextureWrapping.REPEAT, RenderTextureWrapping.CLAMP);
+  static const GraphicsPatternType RepeatX = GraphicsPatternType(
+      'repeat-x', RenderTextureWrapping.REPEAT, RenderTextureWrapping.CLAMP);
 
-  static const GraphicsPatternType RepeatY =
-      const GraphicsPatternType("repeat-y", RenderTextureWrapping.CLAMP, RenderTextureWrapping.REPEAT);
+  static const GraphicsPatternType RepeatY = GraphicsPatternType(
+      'repeat-y', RenderTextureWrapping.CLAMP, RenderTextureWrapping.REPEAT);
 
-  static const GraphicsPatternType NoRepeat =
-      const GraphicsPatternType("no-repeat", RenderTextureWrapping.CLAMP, RenderTextureWrapping.CLAMP);
+  static const GraphicsPatternType NoRepeat = GraphicsPatternType(
+      'no-repeat', RenderTextureWrapping.CLAMP, RenderTextureWrapping.CLAMP);
 }
 
 //------------------------------------------------------------------------------
 
 class _CanvasPatternKey {
-
   final RenderTextureQuad renderTextureQuad;
   final GraphicsPatternType type;
 
@@ -38,19 +36,19 @@ class _CanvasPatternKey {
   @override
   bool operator ==(Object other) {
     return other is _CanvasPatternKey &&
-        renderTextureQuad == other.renderTextureQuad && type == other.type;
+        renderTextureQuad == other.renderTextureQuad &&
+        type == other.type;
   }
 }
 
 //------------------------------------------------------------------------------
 
 class GraphicsPattern {
+  static final SharedCache<_CanvasPatternKey, CanvasPattern>
+      _canvasPatternCache = SharedCache<_CanvasPatternKey, CanvasPattern>();
 
-  static SharedCache<_CanvasPatternKey, CanvasPattern> _canvasPatternCache =
-      new SharedCache<_CanvasPatternKey, CanvasPattern>();
-
-  static SharedCache<RenderTextureQuad, RenderTexture> _patternTextureCache =
-      new SharedCache<RenderTextureQuad, RenderTexture>()
+  static final SharedCache<RenderTextureQuad, RenderTexture>
+      _patternTextureCache = SharedCache<RenderTextureQuad, RenderTexture>()
         ..onObjectReleased.listen((e) => e.object.dispose());
 
   /// cached by the canvas2D renderer
@@ -63,10 +61,8 @@ class GraphicsPattern {
   GraphicsPatternType _type;
   Matrix _matrix;
 
-  GraphicsPattern(
-      RenderTextureQuad renderTextureQuad,
-      GraphicsPatternType type, [Matrix matrix]) {
-
+  GraphicsPattern(RenderTextureQuad renderTextureQuad, GraphicsPatternType type,
+      [Matrix matrix]) {
     _renderTextureQuad = renderTextureQuad;
     _matrix = matrix;
     _type = type;
@@ -112,7 +108,7 @@ class GraphicsPattern {
   //----------------------------------------------------------------------------
 
   void disposeCachedRenderObjects(bool patternTextureChanged) {
-    var cacheKey = new _CanvasPatternKey(_renderTextureQuad, _type);
+    var cacheKey = _CanvasPatternKey(_renderTextureQuad, _type);
     _canvasPatternCache.releaseObject(cacheKey);
     _canvasPattern = null;
     if (patternTextureChanged && _patternTexture != null) {
@@ -124,17 +120,17 @@ class GraphicsPattern {
   }
 
   CanvasPattern getCanvasPattern(CanvasRenderingContext2D context) {
-
     // try to get the canvasPattern from the cache
     if (_canvasPattern == null) {
-      var cacheKey = new _CanvasPatternKey(_renderTextureQuad, _type);
+      var cacheKey = _CanvasPatternKey(_renderTextureQuad, _type);
       _canvasPattern = _canvasPatternCache.getObject(cacheKey);
     }
 
-    // create a new canvasPattern and add it to the cache
+    // create a canvasPattern and add it to the cache
     if (_canvasPattern == null) {
-      var cacheKey = new _CanvasPatternKey(_renderTextureQuad, _type);
-      _canvasPattern = context.createPattern(patternTexture.source, _type.value);
+      var cacheKey = _CanvasPatternKey(_renderTextureQuad, _type);
+      _canvasPattern =
+          context.createPattern(patternTexture.source, _type.value);
       _canvasPatternCache.addObject(cacheKey, _canvasPattern);
     }
 
@@ -142,7 +138,6 @@ class GraphicsPattern {
   }
 
   RenderTexture get patternTexture {
-
     // try to get the patternTexture from the texture cache
     if (_patternTexture == null && _renderTextureQuad != null) {
       _patternTexture = _patternTextureCache.getObject(_renderTextureQuad);
@@ -158,10 +153,11 @@ class GraphicsPattern {
       var pixelRatio = _renderTextureQuad.pixelRatio;
       var textureWidth = _renderTextureQuad.offsetRectangle.width;
       var textureHeight = _renderTextureQuad.offsetRectangle.height;
-      var renderTexture = new RenderTexture(textureWidth, textureHeight, 0);
+      var renderTexture = RenderTexture(textureWidth, textureHeight, 0);
       var renderTextureQuad = renderTexture.quad.withPixelRatio(pixelRatio);
-      var renderContext = new RenderContextCanvas(renderTexture.canvas);
-      var renderState = new RenderState(renderContext, renderTextureQuad.drawMatrix);
+      var renderContext = RenderContextCanvas(renderTexture.canvas);
+      var renderState =
+          RenderState(renderContext, renderTextureQuad.drawMatrix);
       renderState.renderTextureQuad(_renderTextureQuad);
       _patternTexture = renderTexture;
       _patternTextureCache.addObject(_renderTextureQuad, _patternTexture);
@@ -169,5 +165,4 @@ class GraphicsPattern {
 
     return _patternTexture;
   }
-
 }

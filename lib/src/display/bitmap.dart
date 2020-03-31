@@ -19,7 +19,6 @@ part of stagexl.display;
 /// input events on the Bitmap's parent display object.
 
 class Bitmap extends DisplayObject {
-
   /// The BitmapData object being referenced.
   BitmapData _bitmapData;
 
@@ -35,8 +34,8 @@ class Bitmap extends DisplayObject {
   @override
   Rectangle<num> get bounds {
     return bitmapData == null
-        ? new Rectangle<num>(0.0, 0.0, 0.0, 0.0)
-        : new Rectangle<num>(0.0, 0.0, bitmapData.width, bitmapData.height);
+        ? Rectangle<num>(0.0, 0.0, 0.0, 0.0)
+        : Rectangle<num>(0.0, 0.0, bitmapData.width, bitmapData.height);
   }
 
   @override
@@ -57,8 +56,7 @@ class Bitmap extends DisplayObject {
   void renderFiltered(RenderState renderState) {
     if (bitmapData != null) {
       var renderTextureQuad = bitmapData.renderTextureQuad;
-      renderState.renderTextureQuadFiltered(renderTextureQuad, this.filters);
+      renderState.renderTextureQuadFiltered(renderTextureQuad, filters);
     }
   }
-
 }
