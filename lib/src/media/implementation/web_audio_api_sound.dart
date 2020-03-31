@@ -34,7 +34,7 @@ class WebAudioApiSound extends Sound {
 
   static Future<Sound> _tryAudioUrl(String url, String audioUrl) {
 
-    final completer = Completer();
+    final completer = Completer<Sound>();
 
     var request = _loaders[url] = HttpRequest();
     request
