@@ -32,8 +32,8 @@ part of stagexl.display_ex;
 ///     htmlObject.y = 300;
 ///     stage.addChild(htmlObject);
 
-class HtmlObject extends DisplayObject {
-  final Element element;
+class HtmlObject<T extends Element> extends DisplayObject {
+  final T element;
 
   CssStyleDeclaration _style;
   String _styleOpacity = '';
