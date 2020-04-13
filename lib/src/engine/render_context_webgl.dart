@@ -38,10 +38,15 @@ class RenderContextWebGL extends RenderContext {
     _canvasElement.onWebGlContextLost.listen(_onContextLost);
     _canvasElement.onWebGlContextRestored.listen(_onContextRestored);
 
-    var renderingContext = _canvasElement.getContext3d(
-        alpha: alpha, antialias: antialias,
-        depth: false, stencil: true,
-        premultipliedAlpha: true, preserveDrawingBuffer: false);
+    var renderingContext = _canvasElement.getContext('webgl', {
+      'alpha': alpha,
+      'antialias': antialias,
+      'depth': false,
+      'stencil': true,
+      'premultipliedAlpha': true,
+      'preserveDrawingBuffer': false,
+      'powerPreference': 'high-performance',
+    }) as gl.RenderingContext;
 
     if (renderingContext is! gl.RenderingContext) {
       throw new StateError("Failed to get WebGL context.");
