@@ -274,7 +274,7 @@ class RenderTexture {
       if (scissors) _renderingContext.disable(gl.SCISSOR_TEST);
 
       if (_source != null) {
-        _renderingContext.texImage2D(_textureInfo.target, 0, pixelFormat, pixelFormat, pixelType, _source);
+        _renderingContext.texImage2D(target, 0, pixelFormat, pixelFormat, pixelType, _source);
         _textureSourceWorkaround = _renderingContext.getError() == gl.INVALID_VALUE;
       } else if (_compressedTexture != null) {
 
