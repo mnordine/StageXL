@@ -42,7 +42,7 @@ class WebAudioApiSound extends Sound {
         if (request.readyState == HttpRequest.DONE && request.status == 200) {
 
           if (!_loaders.containsKey(url)) {
-            throw 'sound already cancelled';
+            completer.completeError('sound already cancelled');
           }
 
           try {
@@ -50,15 +50,16 @@ class WebAudioApiSound extends Sound {
             var audioContext = WebAudioApiMixer.audioContext;
             var audioBuffer = await audioContext.decodeAudioData(buffer);
             final sound = WebAudioApiSound._(audioBuffer);
+
             if (!_loaders.containsKey(url)) {
-              throw 'sound already cancelled';
+              completer.completeError('sound already cancelled');
             }
 
             _loaders.remove(url);
             completer.complete(sound);
 
-          } catch (e){
-            completer.completeError('caught error loading $audioUrl');
+          } catch (e) {
+            if (!completer.isCompleted) completer.completeError('caught error loading $audioUrl');
           }
         }
       })
