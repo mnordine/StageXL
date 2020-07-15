@@ -84,7 +84,7 @@ class WebAudioApiSoundChannel extends SoundChannel {
       _position = position;
       _paused = true;
       _sourceNodeEndedSubscription?.cancel();
-      _sourceNode.stop(0);
+      _sourceNode?.stop(0);
     } else if (_loop) {
       _paused = false;
       _sourceNode = WebAudioApiMixer.audioContext.createBufferSource();
@@ -121,7 +121,7 @@ class WebAudioApiSoundChannel extends SoundChannel {
   @override
   void stop() {
     if (_stopped == false) {
-      _sourceNode.stop(0);
+      _sourceNode?.stop(0);
       _sourceNodeEndedSubscription?.cancel();
       _onEnded(null);
     }
