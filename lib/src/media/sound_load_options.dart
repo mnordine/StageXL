@@ -90,7 +90,8 @@ class SoundLoadOptions {
     var regex =
         RegExp(r'([A-Za-z0-9]+)$', multiLine: false, caseSensitive: true);
     var primaryMatch = regex.firstMatch(primaryUrl);
-    if (primaryMatch == null) return urls;
+    if (primaryMatch == null) return urls.map(getUrlHash).toList();
+
     if (availableTypes.remove(primaryMatch.group(1))) urls.add(primaryUrl);
 
     if (alternativeUrls != null) {
@@ -107,6 +108,7 @@ class SoundLoadOptions {
       }
     }
 
-    return urls;
+    // return urls;
+    return urls.map(getUrlHash).toList();
   }
 }

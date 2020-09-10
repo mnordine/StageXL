@@ -31,6 +31,7 @@ import 'ui.dart';
 import 'internal/tools.dart';
 import 'internal/image_loader.dart';
 import 'internal/environment.dart' as env;
+import 'resources.dart' show getUrlHash;
 
 part 'display/bitmap.dart';
 part 'display/bitmap_container.dart';

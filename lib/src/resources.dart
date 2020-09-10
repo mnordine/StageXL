@@ -10,6 +10,7 @@ library stagexl.resources;
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:js' show JsObject;
 import 'dart:typed_data';
 import 'dart:html' show HttpRequest;
 import 'dart:web_gl' as gl;
@@ -35,6 +36,10 @@ part 'resources/texture_atlas_format_starling_json.dart';
 part 'resources/texture_atlas_format_starling_xml.dart';
 part 'resources/texture_atlas_frame.dart';
 part 'resources/texture_atlas_loader.dart';
+
+JsObject stageXLFileMap;
+
+String getUrlHash(String url) => stageXLFileMap == null ? url : stageXLFileMap[url];
 
 enum CompressedTextureFileTypes {
   pvr
