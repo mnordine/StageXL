@@ -44,7 +44,10 @@ String getUrlHash(String url) {
   if (stageXLFileMap == null) return url;
 
   final key = url.replaceFirst(stageXLStoragePrefix, '');
-  return '$stageXLStoragePrefix${stageXLFileMap[key] as String}';
+  final value = stageXLFileMap[key];
+  final newUrl = '$stageXLStoragePrefix${stageXLFileMap[key] as String}';
+  print('getting url, key: $key, value: $value, new url: $newUrl');
+  return newUrl;
 }
 
 enum CompressedTextureFileTypes {
