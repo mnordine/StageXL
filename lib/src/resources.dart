@@ -38,8 +38,14 @@ part 'resources/texture_atlas_frame.dart';
 part 'resources/texture_atlas_loader.dart';
 
 JsObject stageXLFileMap;
+var stageXLStoragePrefix = '';
 
-String getUrlHash(String url) => stageXLFileMap == null ? url : stageXLFileMap[url];
+String getUrlHash(String url) {
+  if (stageXLFileMap == null) return url;
+
+  final key = url.replaceFirst(stageXLStoragePrefix, '');
+  return '$stageXLStoragePrefix${stageXLFileMap[key] as String}';
+}
 
 enum CompressedTextureFileTypes {
   pvr
