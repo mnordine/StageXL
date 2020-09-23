@@ -32,6 +32,9 @@ class BitmapDataLoadInfo {
       _pixelRatio = loaderPixelRatio / originPixelRatio;
     }
 
+    // Skip data urls
+    if (_loaderUrl.startsWith('data:')) return;
+
     _loaderUrl = getUrlHash(_loaderUrl);
   }
 
