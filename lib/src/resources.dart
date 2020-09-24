@@ -50,6 +50,10 @@ String getUrlHash(String url, {bool webp = false}) {
 
   final key = url.replaceFirst(stageXLStoragePrefix, '');
   final value = stageXLFileMap[key];
+  if (value == null) {
+    throw ArgumentError('$url not found in file map');
+  }
+
   final newUrl = '$stageXLStoragePrefix${stageXLFileMap[key] as String}';
   print('getting url, key: $key, value: $value, new url: $newUrl');
   return newUrl;
