@@ -46,12 +46,13 @@ String getUrlHash(String url, {bool webp = false}) {
   if (webp) {
     var match = RegExp(r'(png|jpg|jpeg)$').firstMatch(url);
     url = url.substring(0, match.start) + 'webp';
+    return getUrlHash(url);
   }
 
   final key = url.replaceFirst(stageXLStoragePrefix, '');
   final value = stageXLFileMap[key];
   if (value == null) {
-    print('$url not found in file map');
+    print('$url not found in file map from key: $key');
     return null;
   }
 
