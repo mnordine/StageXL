@@ -12,12 +12,10 @@ class ImageLoader {
   final Completer<ImageElement> _completer = Completer<ImageElement>();
 
   final String _url;
-  final String _originalUrl;
   StreamSubscription _onLoadSubscription;
   StreamSubscription _onErrorSubscription;
 
-  ImageLoader(String url, bool webpAvailable, bool corsEnabled, {String originalUrl})
-      : _url = url, _originalUrl = originalUrl {
+  ImageLoader(String url, bool webpAvailable, bool corsEnabled) : _url = url {
     _onLoadSubscription = image.onLoad.listen(_onImageLoad);
     _onErrorSubscription = image.onError.listen(_onImageError);
 
@@ -41,12 +39,11 @@ class ImageLoader {
   //---------------------------------------------------------------------------
 
   void _onWebpSupported(bool webpSupported) {
-    final url = _originalUrl ?? _url;
-    var match = RegExp(r'(png|jpg|jpeg)$').firstMatch(url);
+    var match = RegExp(r'(png|jpg|jpeg)$').firstMatch(_url);
     if (webpSupported && match != null) {
-      image.src = getUrlHash(url.substring(0, match.start) + 'webp');
+      image.src = getUrlHash(_url, webp: true);
     } else {
-      image.src = url;
+      image.src = _url;
     }
   }
 

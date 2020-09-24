@@ -40,8 +40,13 @@ part 'resources/texture_atlas_loader.dart';
 JsObject stageXLFileMap;
 var stageXLStoragePrefix = '';
 
-String getUrlHash(String url) {
+String getUrlHash(String url, {bool webp = false}) {
   if (stageXLFileMap == null) return url;
+
+  if (webp) {
+    var match = RegExp(r'(png|jpg|jpeg)$').firstMatch(url);
+    url = url.substring(0, match.start) + 'webp';
+  }
 
   final key = url.replaceFirst(stageXLStoragePrefix, '');
   final value = stageXLFileMap[key];
