@@ -44,8 +44,10 @@ String getUrlHash(String url, {bool webp = false}) {
   if (stageXLFileMap == null) return url;
 
   if (webp) {
+    print('getting webp instead of $url...');
     var match = RegExp(r'(png|jpg|jpeg)$').firstMatch(url);
     url = url.substring(0, match.start) + 'webp';
+    print('new key: $url');
     return getUrlHash(url);
   }
 
