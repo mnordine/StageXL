@@ -68,7 +68,7 @@ class BitmapData implements BitmapDrawable {
     var bitmapDataFileInfo = BitmapDataLoadInfo(url, options.pixelRatios);
     var targetUrl = bitmapDataFileInfo.loaderUrl;
     var pixelRatio = bitmapDataFileInfo.pixelRatio;
-    var loader = ImageLoader(targetUrl, options.webp, options.corsEnabled);
+    var loader = ImageLoader(targetUrl, options.webp, options.corsEnabled, originalUrl: url);
     return loader.done.then((i) => BitmapData.fromImageElement(i, pixelRatio));
   }
 

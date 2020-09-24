@@ -5,16 +5,19 @@ import 'dart:html';
 
 import 'environment.dart' as env;
 import '../errors.dart';
+import '../resources.dart' show getUrlHash;
 
 class ImageLoader {
   final ImageElement image = ImageElement();
   final Completer<ImageElement> _completer = Completer<ImageElement>();
 
   final String _url;
+  final String _originalUrl;
   StreamSubscription _onLoadSubscription;
   StreamSubscription _onErrorSubscription;
 
-  ImageLoader(String url, bool webpAvailable, bool corsEnabled) : _url = url {
+  ImageLoader(String url, bool webpAvailable, bool corsEnabled, {String originalUrl})
+      : _url = url, _originalUrl = originalUrl {
     _onLoadSubscription = image.onLoad.listen(_onImageLoad);
     _onErrorSubscription = image.onError.listen(_onImageError);
 
@@ -38,11 +41,12 @@ class ImageLoader {
   //---------------------------------------------------------------------------
 
   void _onWebpSupported(bool webpSupported) {
-    var match = RegExp(r'(png|jpg|jpeg)$').firstMatch(_url);
+    final url = _originalUrl ?? _url;
+    var match = RegExp(r'(png|jpg|jpeg)$').firstMatch(url);
     if (webpSupported && match != null) {
-      image.src = _url.substring(0, match.start) + 'webp';
+      image.src = getUrlHash(url.substring(0, match.start) + 'webp');
     } else {
-      image.src = _url;
+      image.src = url;
     }
   }
 
