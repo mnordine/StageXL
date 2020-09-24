@@ -108,7 +108,6 @@ class SoundLoadOptions {
       }
     }
 
-    // return urls;
     return urls.map(getUrlHash).toList();
   }
 }
