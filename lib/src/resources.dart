@@ -47,7 +47,7 @@ String getUrlHash(String url, {bool webp = false}) {
     print('getting webp instead of $url...');
 
     // This is a hack, since it will break if the hash format changes.
-    final i = url.indexOf('-');
+    final i = url.lastIndexOf('-');
     final j = url.lastIndexOf('@');
     url = url.substring(0, i) + url.substring(j);
     print('normalized url to $url');
