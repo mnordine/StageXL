@@ -45,6 +45,13 @@ String getUrlHash(String url, {bool webp = false}) {
 
   if (webp) {
     print('getting webp instead of $url...');
+
+    // This is a hack, since it will break if the hash format changes.
+    final i = url.indexOf('-');
+    final j = url.lastIndexOf('@');
+    url = url.substring(0, i) + url.substring(j);
+    print('normalized url to $url');
+
     var match = RegExp(r'(png|jpg|jpeg)$').firstMatch(url);
     url = url.substring(0, match.start) + 'webp';
     print('new key: $url');
