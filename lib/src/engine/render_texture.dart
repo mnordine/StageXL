@@ -270,8 +270,6 @@ class RenderTexture {
           _compressedTexture.width,
           _compressedTexture.height, 0,
           _compressedTexture.textureData);
-
-        _compressedTexture.clear();
       } else {
         _renderingContext.texImage2D(target, 0, pixelFormat, width, height, 0, pixelFormat, pixelType, null);
       }

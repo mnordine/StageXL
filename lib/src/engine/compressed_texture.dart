@@ -52,9 +52,6 @@ abstract class CompressedTexture {
   /// Texture data that can be passed to WebGL functions
   TypedData get textureData;
 
-  /// After texture upload, buffer should be cleared to allow for GC
-  void clear() => _buffer = null;
-
   /// Translates internal texture format to WebGL texture format enum
   int get format;
 }
