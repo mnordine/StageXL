@@ -27,8 +27,8 @@ abstract class _GraphicsGradientProgram extends RenderProgram {
   @override
   void activate(RenderContextWebGL renderContext) {
     super.activate(renderContext);
-    renderBufferVertex.bindAttribute(attributes['aVertexPosition'] as int, 2, 12, 0);
-    renderBufferVertex.bindAttribute(attributes['aVertexAlpha'] as int, 1, 12, 8);
+    renderBufferVertex.bindAttribute(attributes['aVertexPosition'], 2, 12, 0);
+    renderBufferVertex.bindAttribute(attributes['aVertexAlpha'], 1, 12, 8);
   }
 
   void configure(RenderState renderState, GraphicsGradient gradient);

@@ -43,9 +43,9 @@ class RenderProgramTinted extends RenderProgram {
 
     renderingContext.uniform1i(uniforms['uSampler'], 0);
 
-    renderBufferVertex.bindAttribute(attributes['aVertexPosition'] as int, 2, 32, 0);
-    renderBufferVertex.bindAttribute(attributes['aVertexTextCoord'] as int, 2, 32, 8);
-    renderBufferVertex.bindAttribute(attributes['aVertexColor'] as int, 4, 32, 16);
+    renderBufferVertex.bindAttribute(attributes['aVertexPosition'], 2, 32, 0);
+    renderBufferVertex.bindAttribute(attributes['aVertexTextCoord'], 2, 32, 8);
+    renderBufferVertex.bindAttribute(attributes['aVertexColor'], 4, 32, 16);
   }
 
   //---------------------------------------------------------------------------

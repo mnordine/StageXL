@@ -50,7 +50,9 @@ class RenderBufferVertex {
     _renderStatistics.vertexCount += count;
   }
 
-  void bindAttribute(int index, int size, int stride, int offset) {
+  void bindAttribute(int? index, int size, int stride, int offset) {
+    if (index == null) return;
+
     _renderingContext!.vertexAttribPointer(
         index, size, gl.WebGL.FLOAT, false, stride, offset);
   }

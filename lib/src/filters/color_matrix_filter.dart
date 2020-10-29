@@ -333,13 +333,13 @@ class ColorMatrixFilterProgram extends RenderProgram {
 
     renderingContext.uniform1i(uniforms['uSampler'], 0);
 
-    renderBufferVertex.bindAttribute(attributes['aPosition'] as int, 2, 96, 0);
-    renderBufferVertex.bindAttribute(attributes['aTexCoord'] as int, 2, 96, 8);
-    renderBufferVertex.bindAttribute(attributes['aMatrixR'] as int, 4, 96, 16);
-    renderBufferVertex.bindAttribute(attributes['aMatrixG'] as int, 4, 96, 32);
-    renderBufferVertex.bindAttribute(attributes['aMatrixB'] as int, 4, 96, 48);
-    renderBufferVertex.bindAttribute(attributes['aMatrixA'] as int, 4, 96, 64);
-    renderBufferVertex.bindAttribute(attributes['aOffset'] as int, 4, 96, 80);
+    renderBufferVertex.bindAttribute(attributes['aPosition'], 2, 96, 0);
+    renderBufferVertex.bindAttribute(attributes['aTexCoord'], 2, 96, 8);
+    renderBufferVertex.bindAttribute(attributes['aMatrixR'], 4, 96, 16);
+    renderBufferVertex.bindAttribute(attributes['aMatrixG'], 4, 96, 32);
+    renderBufferVertex.bindAttribute(attributes['aMatrixB'], 4, 96, 48);
+    renderBufferVertex.bindAttribute(attributes['aMatrixA'], 4, 96, 64);
+    renderBufferVertex.bindAttribute(attributes['aOffset'], 4, 96, 80);
   }
 
   //---------------------------------------------------------------------------
