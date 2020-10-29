@@ -23,16 +23,16 @@ abstract class TextureAtlasLoader {
 //-------------------------------------------------------------------------------------------------
 
 class _TextureAtlasLoaderFile extends TextureAtlasLoader {
-  BitmapDataLoadOptions _loadOptions;
-  BitmapDataLoadInfo _loadInfo;
+  late BitmapDataLoadOptions _loadOptions;
+  late BitmapDataLoadInfo _loadInfo;
 
-  Future<HttpRequest> _sourceFuture;
-  ImageLoader _imageLoader;
-  HttpRequest _compressedTextureRequest;
+  Future<HttpRequest>? _sourceFuture;
+  ImageLoader? _imageLoader;
+  HttpRequest? _compressedTextureRequest;
 
   static const compressedTextureFormats = {'.pvr', '.pvr.gz'};
 
-  _TextureAtlasLoaderFile(String url, BitmapDataLoadOptions options) {
+  _TextureAtlasLoaderFile(String url, [BitmapDataLoadOptions? options]) {
     _loadOptions = options ?? BitmapData.defaultLoadOptions;
     _loadInfo = BitmapDataLoadInfo(url, _loadOptions.pixelRatios);
   }
@@ -44,7 +44,7 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
   Future<String> getSource() async {
     _sourceFuture = HttpRequest.request(_loadInfo.loaderUrl, method: 'GET');
 
-    final response = await _sourceFuture;
+    final response = await _sourceFuture!;
     _sourceFuture = null;
 
     return response.response;
@@ -76,7 +76,7 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
       var webpAvailable = _loadOptions.webp;
       var corsEnabled = _loadOptions.corsEnabled;
       _imageLoader = ImageLoader(imageUrl, webpAvailable, corsEnabled);
-      var imageElement = await _imageLoader.done;
+      var imageElement = await _imageLoader!.done;
       renderTexture = RenderTexture.fromImageElement(imageElement);
 
       _imageLoader = null;
@@ -115,12 +115,10 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
     switch (type) {
       case CompressedTextureFileTypes.pvr: return _decodePvr(buffer);
     }
-
-    return null;
   }
 
   RenderTexture _decodePvr(ByteBuffer buffer) {
-    final tex = PvrTexture.fromBuffer(buffer);
+    final tex = PvrTexture(buffer);
     return RenderTexture.fromCompressedTexture(tex);
   }
 
@@ -162,7 +160,7 @@ class _TextureAtlasLoaderBitmapData extends TextureAtlasLoader {
   _TextureAtlasLoaderBitmapData(this.bitmapData, this.source);
 
   @override
-  double getPixelRatio() => bitmapData.renderTextureQuad.pixelRatio;
+  double getPixelRatio() => bitmapData.renderTextureQuad.pixelRatio.toDouble();
 
   @override
   Future<String> getSource() => Future.value(source);

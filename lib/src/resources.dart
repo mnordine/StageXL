@@ -37,7 +37,7 @@ part 'resources/texture_atlas_format_starling_xml.dart';
 part 'resources/texture_atlas_frame.dart';
 part 'resources/texture_atlas_loader.dart';
 
-JsObject stageXLFileMap;
+JsObject? stageXLFileMap;
 var stageXLStoragePrefix = '';
 
 String getUrlHash(String url, {bool webp = false}) {
@@ -50,17 +50,17 @@ String getUrlHash(String url, {bool webp = false}) {
     url = url.substring(0, i) + url.substring(j);
 
     var match = RegExp(r'(png|jpg|jpeg)$').firstMatch(url);
-    url = url.substring(0, match.start) + 'webp';
+    url = url.substring(0, match!.start) + 'webp';
     return getUrlHash(url);
   }
 
   final key = url.replaceFirst(stageXLStoragePrefix, '');
-  final value = stageXLFileMap[key];
+  final value = stageXLFileMap![key];
   if (value == null) {
-    return null;
+    throw ArgumentError('cannot find $url in file map');
   }
 
-  final newUrl = '$stageXLStoragePrefix${stageXLFileMap[key] as String}';
+  final newUrl = '$stageXLStoragePrefix${stageXLFileMap![key] as String}';
   return newUrl;
 }
 

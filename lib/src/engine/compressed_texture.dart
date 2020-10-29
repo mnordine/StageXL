@@ -1,13 +1,11 @@
 part of stagexl.engine;
 
 abstract class CompressedTexture {
-  int width;
-  int height;
-  ByteBuffer _buffer;
+  late final int width;
+  late final int height;
+  final ByteBuffer _buffer;
 
-  CompressedTexture();
-
-  CompressedTexture.fromBuffer(this._buffer);
+  CompressedTexture(this._buffer);
 
   static bool supportsDxt(gl.RenderingContext context)
   {
@@ -99,10 +97,10 @@ class PvrFormat {
 
 class PvrTexture extends CompressedTexture {
 
-  int _texDataOffset;
-  int _pvrFormat;
+  late final int _texDataOffset;
+  late final int _pvrFormat;
 
-  PvrTexture.fromBuffer(ByteBuffer buffer) : super.fromBuffer(buffer) {
+  PvrTexture(ByteBuffer buffer) : super(buffer) {
     _parseHeader();
   }
 

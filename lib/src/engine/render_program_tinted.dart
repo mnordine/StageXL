@@ -43,9 +43,9 @@ class RenderProgramTinted extends RenderProgram {
 
     renderingContext.uniform1i(uniforms['uSampler'], 0);
 
-    renderBufferVertex.bindAttribute(attributes['aVertexPosition'], 2, 32, 0);
-    renderBufferVertex.bindAttribute(attributes['aVertexTextCoord'], 2, 32, 8);
-    renderBufferVertex.bindAttribute(attributes['aVertexColor'], 4, 32, 16);
+    renderBufferVertex.bindAttribute(attributes['aVertexPosition'] as int, 2, 32, 0);
+    renderBufferVertex.bindAttribute(attributes['aVertexTextCoord'] as int, 2, 32, 8);
+    renderBufferVertex.bindAttribute(attributes['aVertexColor'] as int, 4, 32, 16);
   }
 
   //---------------------------------------------------------------------------
@@ -194,8 +194,8 @@ class RenderProgramTinted extends RenderProgram {
     var colorB = b * colorA;
 
     for (var i = 0, o = 0; i < vxListCount; i++, o += 4) {
-      num x = vxList[o + 0];
-      num y = vxList[o + 1];
+      var x = vxList[o + 0];
+      var y = vxList[o + 1];
       vxData[vxIndex + 0] = mx + ma * x + mc * y;
       vxData[vxIndex + 1] = my + mb * x + md * y;
       vxData[vxIndex + 2] = vxList[o + 2];

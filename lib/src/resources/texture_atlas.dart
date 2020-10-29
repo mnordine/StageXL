@@ -19,8 +19,8 @@ class TextureAtlas {
   //---------------------------------------------------------------------------
 
   static LoaderTuple load(String url, [
-      TextureAtlasFormat textureAtlasFormat,
-      BitmapDataLoadOptions bitmapDataLoadOptions])
+      TextureAtlasFormat? textureAtlasFormat,
+      BitmapDataLoadOptions? bitmapDataLoadOptions])
   {
     textureAtlasFormat ??= TextureAtlasFormat.JSONARRAY;
 
@@ -28,23 +28,22 @@ class TextureAtlas {
     return LoaderTuple(loader, textureAtlasFormat.load(loader));
   }
 
-
   static Future<TextureAtlas> fromTextureAtlas(
-      TextureAtlas textureAtlas, String namePrefix, String source, [TextureAtlasFormat textureAtlasFormat])
+      TextureAtlas textureAtlas, String namePrefix, String source, [TextureAtlasFormat? textureAtlasFormat])
   {
     textureAtlasFormat ??= TextureAtlasFormat.JSONARRAY;
     return textureAtlasFormat.load(_TextureAtlasLoaderTextureAtlas(textureAtlas, namePrefix, source));
   }
 
   static Future<TextureAtlas> fromBitmapData(
-      BitmapData bitmapData, String source, [TextureAtlasFormat textureAtlasFormat])
+      BitmapData bitmapData, String source, [TextureAtlasFormat? textureAtlasFormat])
   {
     textureAtlasFormat ??= TextureAtlasFormat.JSONARRAY;
     return textureAtlasFormat.load(_TextureAtlasLoaderBitmapData(bitmapData, source));
   }
 
   static Future<TextureAtlas> withLoader(
-      TextureAtlasLoader textureAtlasLoader, [TextureAtlasFormat textureAtlasFormat])
+      TextureAtlasLoader textureAtlasLoader, [TextureAtlasFormat? textureAtlasFormat])
   {
     textureAtlasFormat ??= TextureAtlasFormat.JSONARRAY;
     return textureAtlasFormat.load(textureAtlasLoader);
@@ -66,7 +65,7 @@ class TextureAtlas {
   /// The name of a frame is the original file name of the image
   /// without it's file extension.
   BitmapData getBitmapData(String name) {
-    if (frames[name] != null) return frames[name].bitmapData;
-    return null;
+    if (frames[name] != null) return frames[name]!.bitmapData;
+    throw ArgumentError('cannot find bitmapdata $name');
   }
 }

@@ -27,7 +27,7 @@ class NormalMapFilter extends BitmapFilter {
   //-----------------------------------------------------------------------------------------------
 
   @override
-  void apply(BitmapData bitmapData, [Rectangle<num> rectangle]) {}
+  void apply(BitmapData bitmapData, [Rectangle<num>? rectangle]) {}
 
   //-----------------------------------------------------------------------------------------------
 
@@ -142,16 +142,16 @@ class NormalMapFilterProgram extends RenderProgram {
     renderingContext.uniform1i(uniforms['uTexSampler'], 0);
     renderingContext.uniform1i(uniforms['uMapSampler'], 1);
 
-    renderBufferVertex.bindAttribute(attributes['aVertexPosition'], 2, 76, 0);
-    renderBufferVertex.bindAttribute(attributes['aVertexTexCoord'], 2, 76, 8);
-    renderBufferVertex.bindAttribute(attributes['aVertexMapCoord'], 2, 76, 16);
+    renderBufferVertex.bindAttribute(attributes['aVertexPosition'] as int, 2, 76, 0);
+    renderBufferVertex.bindAttribute(attributes['aVertexTexCoord'] as int, 2, 76, 8);
+    renderBufferVertex.bindAttribute(attributes['aVertexMapCoord'] as int, 2, 76, 16);
     renderBufferVertex.bindAttribute(
-        attributes['aVertexAmbientColor'], 4, 76, 24);
+        attributes['aVertexAmbientColor'] as int, 4, 76, 24);
     renderBufferVertex.bindAttribute(
-        attributes['aVertexLightColor'], 4, 76, 40);
+        attributes['aVertexLightColor'] as int, 4, 76, 40);
     renderBufferVertex.bindAttribute(
-        attributes['aVertexLightCoord'], 4, 76, 56);
-    renderBufferVertex.bindAttribute(attributes['aVertexAlpha'], 1, 76, 72);
+        attributes['aVertexLightCoord'] as int, 4, 76, 56);
+    renderBufferVertex.bindAttribute(attributes['aVertexAlpha'] as int, 1, 76, 72);
   }
 
   //-----------------------------------------------------------------------------------------------

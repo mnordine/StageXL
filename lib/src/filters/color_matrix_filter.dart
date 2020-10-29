@@ -200,7 +200,7 @@ class ColorMatrixFilter extends BitmapFilter {
   //-----------------------------------------------------------------------------------------------
 
   @override
-  void apply(BitmapData bitmapData, [Rectangle<num> rectangle]) {
+  void apply(BitmapData bitmapData, [Rectangle<num>? rectangle]) {
     //dstR = (m[ 0] * srcR) + (m[ 1] * srcG) + (m[ 2] * srcB) + (m[ 3] * srcA) + o[0]
     //dstG = (m[ 4] * srcR) + (m[ 5] * srcG) + (m[ 6] * srcB) + (m[ 7] * srcA) + o[1]
     //dstB = (m[ 8] * srcR) + (m[ 9] * srcG) + (m[10] * srcB) + (m[11] * srcA) + o[2]
@@ -333,13 +333,13 @@ class ColorMatrixFilterProgram extends RenderProgram {
 
     renderingContext.uniform1i(uniforms['uSampler'], 0);
 
-    renderBufferVertex.bindAttribute(attributes['aPosition'], 2, 96, 0);
-    renderBufferVertex.bindAttribute(attributes['aTexCoord'], 2, 96, 8);
-    renderBufferVertex.bindAttribute(attributes['aMatrixR'], 4, 96, 16);
-    renderBufferVertex.bindAttribute(attributes['aMatrixG'], 4, 96, 32);
-    renderBufferVertex.bindAttribute(attributes['aMatrixB'], 4, 96, 48);
-    renderBufferVertex.bindAttribute(attributes['aMatrixA'], 4, 96, 64);
-    renderBufferVertex.bindAttribute(attributes['aOffset'], 4, 96, 80);
+    renderBufferVertex.bindAttribute(attributes['aPosition'] as int, 2, 96, 0);
+    renderBufferVertex.bindAttribute(attributes['aTexCoord'] as int, 2, 96, 8);
+    renderBufferVertex.bindAttribute(attributes['aMatrixR'] as int, 4, 96, 16);
+    renderBufferVertex.bindAttribute(attributes['aMatrixG'] as int, 4, 96, 32);
+    renderBufferVertex.bindAttribute(attributes['aMatrixB'] as int, 4, 96, 48);
+    renderBufferVertex.bindAttribute(attributes['aMatrixA'] as int, 4, 96, 64);
+    renderBufferVertex.bindAttribute(attributes['aOffset'] as int, 4, 96, 80);
   }
 
   //---------------------------------------------------------------------------
@@ -391,8 +391,8 @@ class ColorMatrixFilterProgram extends RenderProgram {
     var my = matrix.ty;
 
     for (var i = 0, o = 0; i < vertexCount; i++, o += 4) {
-      num x = vxList[o + 0];
-      num y = vxList[o + 1];
+      var x = vxList[o + 0];
+      var y = vxList[o + 1];
       vxData[vxIndex + 00] = mx + ma * x + mc * y;
       vxData[vxIndex + 01] = my + mb * x + md * y;
       vxData[vxIndex + 02] = vxList[o + 2];

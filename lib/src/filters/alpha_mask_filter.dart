@@ -8,7 +8,7 @@ class AlphaMaskFilter extends BitmapFilter {
   final BitmapData bitmapData;
   final Matrix matrix;
 
-  AlphaMaskFilter(this.bitmapData, [Matrix matrix])
+  AlphaMaskFilter(this.bitmapData, [Matrix? matrix])
       : matrix = matrix ?? Matrix.fromIdentity();
 
   @override
@@ -17,7 +17,7 @@ class AlphaMaskFilter extends BitmapFilter {
   //---------------------------------------------------------------------------
 
   @override
-  void apply(BitmapData bitmapData, [Rectangle<num> rectangle]) {
+  void apply(BitmapData bitmapData, [Rectangle<num>? rectangle]) {
     var renderTextureQuad = rectangle == null
         ? bitmapData.renderTextureQuad
         : bitmapData.renderTextureQuad.cut(rectangle);
@@ -127,11 +127,11 @@ class AlphaMaskFilterProgram extends RenderProgram {
     renderingContext.uniform1i(uniforms['uTexSampler'], 0);
     renderingContext.uniform1i(uniforms['uMskSampler'], 1);
 
-    renderBufferVertex.bindAttribute(attributes['aVertexPosition'], 2, 44, 0);
-    renderBufferVertex.bindAttribute(attributes['aVertexTexCoord'], 2, 44, 8);
-    renderBufferVertex.bindAttribute(attributes['aVertexMskCoord'], 2, 44, 16);
-    renderBufferVertex.bindAttribute(attributes['aVertexMskLimit'], 4, 44, 24);
-    renderBufferVertex.bindAttribute(attributes['aVertexAlpha'], 1, 44, 40);
+    renderBufferVertex.bindAttribute(attributes['aVertexPosition'] as int, 2, 44, 0);
+    renderBufferVertex.bindAttribute(attributes['aVertexTexCoord'] as int, 2, 44, 8);
+    renderBufferVertex.bindAttribute(attributes['aVertexMskCoord'] as int, 2, 44, 16);
+    renderBufferVertex.bindAttribute(attributes['aVertexMskLimit'] as int, 4, 44, 24);
+    renderBufferVertex.bindAttribute(attributes['aVertexAlpha'] as int, 1, 44, 40);
   }
 
   //---------------------------------------------------------------------------

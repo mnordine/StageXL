@@ -1,8 +1,8 @@
 part of stagexl.resources;
 
 class _SoundData {
-  String url;
-  SoundEngine engine;
+  late final String url;
+  late final SoundEngine engine;
 }
 
 class ResourceManager {
@@ -64,7 +64,7 @@ class ResourceManager {
     return _containsResource('BitmapData', name);
   }
 
-  void addBitmapData(String name, String url, [BitmapDataLoadOptions options]) {
+  void addBitmapData(String name, String url, [BitmapDataLoadOptions? options]) {
     var loader = BitmapData.load(url, options);
     _addResource('BitmapData', name, url, loader);
   }
@@ -87,7 +87,7 @@ class ResourceManager {
   }
 
   void addTextureAtlas(String name, String url,
-      [TextureAtlasFormat textureAtlasFormat, BitmapDataLoadOptions options]) {
+      [TextureAtlasFormat? textureAtlasFormat, BitmapDataLoadOptions? options]) {
 
     textureAtlasFormat ??= TextureAtlasFormat.JSONARRAY;
 
@@ -106,7 +106,7 @@ class ResourceManager {
 
     if (_loaders.containsKey(name)) {
       print('cancelling loading of $name texture atlas...');
-      _loaders[name].cancel();
+      _loaders[name]!.cancel();
       _loaders.remove(name);
     }
 
@@ -127,7 +127,7 @@ class ResourceManager {
     return _containsResource('Video', name);
   }
 
-  void addVideo(String name, String url, [VideoLoadOptions options]) {
+  void addVideo(String name, String url, [VideoLoadOptions? options]) {
     var loader = Video.load(url, options);
     _addResource('Video', name, url, loader);
   }
@@ -146,7 +146,7 @@ class ResourceManager {
     return _containsResource('Sound', name);
   }
 
-  void addSound(String name, String url, [SoundLoadOptions options]) {
+  void addSound(String name, String url, [SoundLoadOptions? options]) {
     var loader = Sound.load(url, options);
     loader.catchError((_) => _soundDatas.remove(name));
 
@@ -163,7 +163,7 @@ class ResourceManager {
     if (!_soundDatas.containsKey(name)) return;
 
     // TODO: Just Web Audio API for now, add support for Audio Element (IE 11)
-    final data = _soundDatas[name];
+    final data = _soundDatas[name]!;
     if (data.engine == SoundEngine.WebAudioApi) {
       WebAudioApiSound.cancel(data.url);
     }
@@ -181,7 +181,7 @@ class ResourceManager {
     return _containsResource('SoundSprite', name);
   }
 
-  void addSoundSprite(String name, String url, [SoundLoadOptions options]) {
+  void addSoundSprite(String name, String url, [SoundLoadOptions? options]) {
     var loader = SoundSprite.load(url, options);
     _addResource('SoundSprite', name, url, loader);
   }
@@ -259,7 +259,7 @@ class ResourceManager {
     return _resourceMap.containsKey(key);
   }
 
-  ResourceManagerResource _removeResource(String kind, String name) {
+  ResourceManagerResource? _removeResource(String kind, String name) {
     var key = '$kind.$name';
     return _resourceMap.remove(key);
   }
