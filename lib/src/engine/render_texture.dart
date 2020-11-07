@@ -4,7 +4,10 @@ class RenderTexture {
   int _width = 0;
   int _height = 0;
 
-  CanvasImageSource? _source;
+  // TODO: Make CanvasImageSource again once
+  // https://github.com/dart-lang/sdk/issues/12379#issuecomment-572239799
+  // is addressed
+  /*CanvasImageSource*/dynamic? _source;
   CanvasElement? _canvas;
   RenderTextureFiltering _filtering = RenderTextureFiltering.LINEAR;
   RenderTextureWrapping _wrappingX = RenderTextureWrapping.CLAMP;
@@ -40,6 +43,12 @@ class RenderTexture {
     _width = imageElement.width!;
     _height = imageElement.height!;
     _source = imageElement;
+  }
+
+  RenderTexture.fromImageBitmap(ImageBitmap image) {
+    _width = image.width!;
+    _height = image.height!;
+    _source = image;
   }
 
   RenderTexture.fromCanvasElement(CanvasElement canvasElement) {
@@ -166,6 +175,10 @@ class RenderTexture {
   void dispose() {
     if (_texture != null) {
       _renderingContext?.deleteTexture(_texture);
+    }
+
+    if (_source is ImageBitmap) {
+      _source.close();
     }
 
     _texture = null;

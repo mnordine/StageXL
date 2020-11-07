@@ -21,6 +21,7 @@ import 'engine.dart';
 import 'geom.dart';
 import 'media.dart';
 import 'internal/tools.dart';
+import 'internal/image_bitmap_loader.dart';
 import 'internal/image_loader.dart';
 
 part 'resources/resource_manager.dart';
