@@ -74,13 +74,19 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
 
     if (!_isCompressedTexture(filename)) {
       var webpAvailable = _loadOptions.webp;
-      var corsEnabled = _loadOptions.corsEnabled;
-      _imageLoader = ImageLoader(imageUrl, webpAvailable, corsEnabled);
-      var imageElement = await _imageLoader.done;
-      renderTexture = RenderTexture.fromImageElement(imageElement);
 
-      _imageLoader = null;
+      if (_loadOptions.imageBitmap) {
+        final loader = ImageBitmapLoader(imageUrl, webpAvailable);
+        final imageBitmap = await loader.done;
+        renderTexture = RenderTexture.fromImageBitmap(imageBitmap);
+      } else {
+        var corsEnabled = _loadOptions.corsEnabled;
+        _imageLoader = ImageLoader(imageUrl, webpAvailable, corsEnabled);
+        var imageElement = await _imageLoader.done;
+        renderTexture = RenderTexture.fromImageElement(imageElement);
 
+        _imageLoader = null;
+      }
     } else {
       renderTexture = await _loadCompressedTexture(imageUrl);
     }

@@ -19,7 +19,7 @@ import 'dart:typed_data';
 import 'dart:html' as html;
 
 import 'dart:math' hide Point, Rectangle;
-import 'dart:html' show ImageElement, VideoElement;
+import 'dart:html' show ImageElement, VideoElement, ImageBitmap;
 import 'dart:html' show CanvasElement;
 
 import 'animation.dart';
@@ -30,6 +30,7 @@ import 'events.dart';
 import 'ui.dart';
 import 'internal/tools.dart';
 import 'internal/image_loader.dart';
+import 'internal/image_bitmap_loader.dart';
 import 'internal/environment.dart' as env;
 import 'resources.dart' show getUrlHash;
 

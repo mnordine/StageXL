@@ -27,6 +27,7 @@ import 'dart:html'
         CanvasRenderingContext2D,
         CanvasImageSource,
         ImageData,
+        ImageBitmap,
         VideoElement;
 
 import 'package:byte_array/byte_array.dart';
