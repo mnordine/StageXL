@@ -27,7 +27,7 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
   BitmapDataLoadInfo _loadInfo;
 
   Future<HttpRequest> _sourceFuture;
-  ImageLoader _imageLoader;
+  BaseImageLoader _imageLoader;
   HttpRequest _compressedTextureRequest;
 
   static const compressedTextureFormats = {'.pvr', '.pvr.gz'};
@@ -76,17 +76,17 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
       var webpAvailable = _loadOptions.webp;
 
       if (_loadOptions.imageBitmap) {
-        final loader = ImageBitmapLoader(imageUrl, webpAvailable);
-        final imageBitmap = await loader.done;
-        renderTexture = RenderTexture.fromImageBitmap(imageBitmap);
+        _imageLoader = ImageBitmapLoader(imageUrl, webpAvailable);
+        final image = await _imageLoader.done;
+        renderTexture = RenderTexture.fromImageBitmap(image);
       } else {
         var corsEnabled = _loadOptions.corsEnabled;
         _imageLoader = ImageLoader(imageUrl, webpAvailable, corsEnabled);
-        var imageElement = await _imageLoader.done;
-        renderTexture = RenderTexture.fromImageElement(imageElement);
-
-        _imageLoader = null;
+        var image = await _imageLoader.done;
+        renderTexture = RenderTexture.fromImageElement(image);
       }
+
+      _imageLoader = null;
     } else {
       renderTexture = await _loadCompressedTexture(imageUrl);
     }
