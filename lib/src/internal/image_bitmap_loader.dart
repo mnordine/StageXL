@@ -9,16 +9,16 @@ import 'package:stagexl/src/internal/image_loader.dart';
 import 'environment.dart' as env;
 import '../resources.dart' show getUrlHash;
 
-class ImageBitmapLoader extends BaseImageLoader<ImageBitmap> {
+class ImageBitmapLoader implements BaseImageLoader<ImageBitmap> {
   String _url;
   final _completer = Completer<ImageBitmap>();
   HttpRequest _request;
 
-  ImageBitmapLoader(String url, bool webpAvailable) : super(url) {
+  ImageBitmapLoader(this._url, bool webpAvailable) {
     if (webpAvailable) {
       env.isWebpSupported.then(_onWebpSupported);
     } else {
-      _load(url);
+      _load(_url);
     }
   }
 
