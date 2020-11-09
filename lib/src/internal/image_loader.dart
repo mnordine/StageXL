@@ -7,15 +7,23 @@ import 'environment.dart' as env;
 import '../errors.dart';
 import '../resources.dart' show getUrlHash;
 
-class ImageLoader {
-  final ImageElement image = ImageElement();
-  final Completer<ImageElement> _completer = Completer<ImageElement>();
-
+abstract class BaseImageLoader<T> {
   final String _url;
-  late StreamSubscription _onLoadSubscription;
-  late StreamSubscription _onErrorSubscription;
 
-  ImageLoader(String url, bool webpAvailable, bool corsEnabled) : _url = url {
+  BaseImageLoader(this._url);
+
+  void cancel();
+
+  Future<T> get done;
+}
+
+class ImageLoader extends BaseImageLoader<ImageElement> {
+  final ImageElement image = ImageElement();
+  final _completer = Completer<ImageElement>();
+  late final StreamSubscription _onLoadSubscription;
+  late final StreamSubscription _onErrorSubscription;
+
+  ImageLoader(String url, bool webpAvailable, bool corsEnabled) : super(url) {
     _onLoadSubscription = image.onLoad.listen(_onImageLoad);
     _onErrorSubscription = image.onError.listen(_onImageError);
 
@@ -30,13 +38,13 @@ class ImageLoader {
     }
   }
 
+  @override
   void cancel() => image.src = '';
 
   //---------------------------------------------------------------------------
 
+  @override
   Future<ImageElement> get done => _completer.future;
-
-  //---------------------------------------------------------------------------
 
   void _onWebpSupported(bool webpSupported) {
     var match = RegExp(r'(png|jpg|jpeg)$').firstMatch(_url);

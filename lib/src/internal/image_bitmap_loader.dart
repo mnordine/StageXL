@@ -4,15 +4,17 @@ import 'dart:async';
 import 'dart:html';
 import 'dart:js_util';
 
+import 'package:stagexl/src/internal/image_loader.dart';
+
 import 'environment.dart' as env;
 import '../resources.dart' show getUrlHash;
 
-class ImageBitmapLoader {
+class ImageBitmapLoader extends BaseImageLoader<ImageBitmap> {
   String _url;
   final _completer = Completer<ImageBitmap>();
   HttpRequest? _request;
 
-  ImageBitmapLoader(String url, bool webpAvailable) : _url = url {
+  ImageBitmapLoader(String url, bool webpAvailable) : super(url) {
     if (webpAvailable) {
       env.isWebpSupported.then(_onWebpSupported);
     } else {
@@ -43,13 +45,11 @@ class ImageBitmapLoader {
       ..send();
   }
 
-  void cancel() => _request?.abort();
-
-  //---------------------------------------------------------------------------
-
+  @override
   Future<ImageBitmap> get done => _completer.future;
 
-  //---------------------------------------------------------------------------
+  @override
+  void cancel() => _request?.abort();
 
   void _onWebpSupported(bool webpSupported) {
     var match = RegExp(r'(png|jpg|jpeg)$').firstMatch(_url);
