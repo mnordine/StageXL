@@ -10,6 +10,7 @@ library stagexl.animation;
 
 import 'dart:math';
 import 'dart:async';
+import 'package:tuple/tuple.dart' show Tuple2;
 
 part 'animation/animatable.dart';
 part 'animation/animation_chain.dart';

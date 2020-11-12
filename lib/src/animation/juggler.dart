@@ -161,6 +161,38 @@ class Juggler implements Animatable {
     }
   }
 
+  /// Returns a Stream of translated values which fires for [time] seconds.
+  ///
+  /// The stream returns the translated values based on the [transition] and
+  /// the time elapsed since the start of the method. The stream ends
+  /// automatically after [time] seconds.
+  ///
+  /// This method is based on the [onElapsedTimeChange] stream and
+  /// is therefore executed before all other animatables.
+  ///
+  ///     var transition = Transition.easeInSine;
+  ///     await for (var tuple in juggler.translationWithDelta(0.0, 10.0, 5.0, transition)) {
+  ///       final delta = tuple.item1;
+  ///       final value = tuple.item2;
+  ///       print('delta: $delta, value: $value');
+  ///     }
+
+  Stream<Tuple2<num, num>> translationWithDelta(num startValue, num targetValue, num time,
+      [TransitionFunction transition = Transition.linear]) async* {
+    var startTime = elapsedTime;
+    var deltaValue = targetValue - startValue;
+    var last = startValue;
+    await for (var elapsedTime in onElapsedTimeChange) {
+      var currentTime = elapsedTime - startTime;
+      var clampedTime = currentTime < time ? currentTime : time;
+      final value = startValue + deltaValue * transition(clampedTime / time);
+      final diff = value - last;
+      last = value;
+      yield Tuple2(diff, value);
+      if (currentTime >= time) break;
+    }
+  }
+
   //----------------------------------------------------------------------------
   //----------------------------------------------------------------------------
 
