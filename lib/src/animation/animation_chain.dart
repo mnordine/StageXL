@@ -32,6 +32,9 @@ class AnimationChain implements Animatable {
   num _delay = 0.0;
   bool _started = false;
   bool _completed = false;
+  final _completer = Completer<AnimationChain>();
+
+  Future<AnimationChain> get done => _completer.future;
 
   //----------------------------------------------------------------------------
 
@@ -62,6 +65,7 @@ class AnimationChain implements Animatable {
     if (_animatables.isEmpty) {
       _completed = true;
       if (_onComplete != null) _onComplete!();
+      if (!_completer.isCompleted) _completer.complete(this);
       return false;
     } else {
       return true;

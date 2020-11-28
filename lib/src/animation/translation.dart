@@ -31,6 +31,7 @@ class Translation implements Animatable {
   VoidFunction? _onStart;
   NumUpdateFunction? _onUpdate;
   VoidFunction? _onComplete;
+  final _completer = Completer<Translation>();
 
   double _totalTime = 0.0;
   double _currentTime = 0.0;
@@ -47,6 +48,8 @@ class Translation implements Animatable {
     _currentValue = startValue;
     _totalTime = max(0.0001, time.toDouble());
   }
+
+  Future<Translation> get done => _completer.future;
 
   //----------------------------------------------------------------------------
   //----------------------------------------------------------------------------
@@ -74,6 +77,7 @@ class Translation implements Animatable {
         }
         if (_onComplete != null && _currentTime == _totalTime) {
           _onComplete!();
+          if (!_completer.isCompleted) _completer.complete(this);
         }
       }
     }
