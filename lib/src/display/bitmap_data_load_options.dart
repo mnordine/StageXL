@@ -91,6 +91,7 @@ class BitmapDataLoadOptions {
     options.webp = webp;
     options.pixelRatios = List<double>.from(pixelRatios);
     options.corsEnabled = corsEnabled;
+    options.imageBitmap = imageBitmap;
     return options;
   }
 }
