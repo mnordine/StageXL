@@ -126,6 +126,9 @@ class FlipBook extends InteractiveObject implements Animatable {
     if (stopOnRemove) {
       onRemovedFromStage.first.then((_) {
         subscription.cancel();
+        juggler.remove(this);
+        _play = false;
+        _frameTime = null;
       });
     }
 
