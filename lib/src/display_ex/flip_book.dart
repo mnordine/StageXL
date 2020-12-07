@@ -110,7 +110,7 @@ class FlipBook extends InteractiveObject implements Animatable {
   ///  * the [stop] method was called.
 
   Future playWith(Juggler juggler, {int gotoFrame, int stopFrame,
-    bool removeWhenDone = false}) {
+    bool removeWhenDone = false, stopOnRemove = true}) {
     _play = true;
     _frameTime = null;
     _currentFrame = gotoFrame ?? currentFrame;
@@ -122,6 +122,12 @@ class FlipBook extends InteractiveObject implements Animatable {
       currentTime = elapsedTime;
       if (currentFrame == stopFrame) stop();
     });
+
+    if (stopOnRemove) {
+      onRemovedFromStage.first.then((_) {
+        subscription.cancel();
+      });
+    }
 
     completed.then((_) {
       subscription.cancel();
