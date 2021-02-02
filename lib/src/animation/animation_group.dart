@@ -30,7 +30,10 @@ class AnimationGroup implements Animatable {
   num _time = 0.0;
   num _delay = 0.0;
   bool _started = false;
-  bool _completed = false;
+  
+  final _done = Completer<void>();
+  
+  Future<void> get done => _done.future;
 
   //----------------------------------------------------------------------------
 
@@ -61,8 +64,8 @@ class AnimationGroup implements Animatable {
     }
 
     if (_animatables.isEmpty) {
-      _completed = true;
       if (_onComplete != null) _onComplete!();
+      _done.complete();
       return false;
     } else {
       return true;
@@ -84,7 +87,7 @@ class AnimationGroup implements Animatable {
   }
 
   /// Indicates if this [AnimatableGroup] is completed.
-  bool get isComplete => _completed;
+  bool get isComplete => _done.isCompleted;
 
   //----------------------------------------------------------------------------
 

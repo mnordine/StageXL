@@ -42,6 +42,8 @@ class Tween implements Animatable {
   bool _roundToInt = false;
   bool _started = false;
 
+  final _completer = Completer<Tween>();
+
   /// Creates a new [Tween] for the specified [TweenObject] with a duration
   /// of [time] seconds.
   ///
@@ -59,6 +61,8 @@ class Tween implements Animatable {
 
     _totalTime = max(0.0001, time);
   }
+
+  Future<Tween> get done => _completer.future;
 
   //---------------------------------------------------------------------------
 
@@ -131,6 +135,7 @@ class Tween implements Animatable {
         }
         if (_onComplete != null && _currentTime == _totalTime) {
           _onComplete!();
+          _completer.complete(this);
         }
       }
     }
