@@ -30,6 +30,8 @@ class Translation implements Animatable {
   Function _onComplete;
   final _completer = Completer<Translation>();
 
+  final _updateStream = StreamController<num>.broadcast();
+
   num _totalTime = 0.0;
   num _currentTime = 0.0;
   num _delay = 0.0;
@@ -47,6 +49,8 @@ class Translation implements Animatable {
   }
 
   Future<Translation> get done => _completer.future;
+
+  Stream<num> get updates => _updateStream.stream;
 
   //----------------------------------------------------------------------------
   //----------------------------------------------------------------------------
@@ -70,11 +74,14 @@ class Translation implements Animatable {
         _currentValue = _startValue + transition * (_targetValue - _startValue);
 
         if (_onUpdate != null) {
-          _onUpdate(_roundToInt ? _currentValue.round() : _currentValue);
+          final value = _roundToInt ? _currentValue.round() : _currentValue;
+          _onUpdate(value);
+          _updateStream.add(value);
         }
         if (_onComplete != null && _currentTime == _totalTime) {
           _onComplete();
           if (!_completer.isCompleted) _completer.complete(this);
+          _updateStream.close();
         }
       }
     }
