@@ -338,8 +338,8 @@ class Juggler implements Animatable {
   ///     });
 
   Translation addTranslation(num startValue, num targetValue, num time,
-      TransitionFunction transition, {void Function(num value) onUpdate,
-      void Function() onComplete}) {
+      TransitionFunction transition, void Function(num value) onUpdate,
+      {void Function() onComplete}) {
     var translation = Translation(startValue, targetValue, time, transition);
     translation.onUpdate = onUpdate;
     translation.onComplete = onComplete;
