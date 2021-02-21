@@ -102,7 +102,7 @@ class WebAudioApiSoundChannel extends SoundChannel {
       _sourceNode.loop = false;
       _sourceNode.connectNode(_mixer.inputNode);
       _sourceNode.start(0, _startTime + _position, _duration - _position);
-      _sourceNodeEndedSubscription = _sourceNode.onEnded?.listen(_onEnded);
+      _sourceNodeEndedSubscription = _sourceNode.onEnded.listen(_onEnded);
       _timeOffset = WebAudioApiMixer.audioContext.currentTime - _position;
     }
   }
