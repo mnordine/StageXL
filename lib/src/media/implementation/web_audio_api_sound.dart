@@ -113,8 +113,7 @@ class WebAudioApiSound extends Sound {
     // On, Safari, sometimes this throws
     try {
       return WebAudioApiSoundChannel(this, 0, length, loop, soundTransform);
-    } catch (e) {
-      print('error playing sound: $e');
+    } catch (_) {
       return null;
     }
   }
