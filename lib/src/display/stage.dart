@@ -135,7 +135,7 @@ class Stage extends DisplayObjectContainer {
 
   //----------------------------------------------------------------------------
 
-  Stage(CanvasElement canvas, {int width, int height, StageOptions options}) {
+  Stage(CanvasElement canvas, {int width, int height, StageOptions options, bool console = false}) {
     if (canvas.tabIndex <= 0) canvas.tabIndex = 1;
     if (canvas.style.outline == '') canvas.style.outline = 'none';
     options ??= Stage.defaultOptions;
@@ -159,7 +159,8 @@ class Stage extends DisplayObjectContainer {
     _pixelRatio = minNum(options.maxPixelRatio, env.devicePixelRatio);
     _renderContext = _createRenderContext(canvas, options);
     _renderState = RenderState(_renderContext);
-    _console = StageConsole()..visible = false;
+
+    if (console) _console = StageConsole()..visible = false;
 
     print('StageXL render engine : ${_renderContext.renderEngine}');
 
@@ -414,7 +415,7 @@ class Stage extends DisplayObjectContainer {
       _avgIdexCount = _avgIdexCount * 0.75 + stats.indexCount * 0.25;
       _avgFrameTime = _avgFrameTime * 0.95 + frameTime * 0.05;
 
-      if (_console.visible && _console.off == false) {
+      if (_console != null && _console.visible && _console.off == false) {
         _console.clear();
         _console
             .print('FRAMETIME${_avgFrameTime.round().toString().padLeft(6)}');
