@@ -21,7 +21,9 @@ class StageConsole extends DisplayObject {
   int _consoleHeight = 0;
 
   StageConsole() {
-    BitmapData.load(_fontImage).then(_calculateGlyphs);
+    BitmapData.load(_fontImage)
+        .then(_calculateGlyphs)
+        .catchError((e) => print('cannot load png: $e'));
   }
 
   //----------------------------------------------------------------------------
