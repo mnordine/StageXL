@@ -61,6 +61,7 @@ class SoundMixer {
         source.connectNode(context.destination);
         source.start(0);
       } catch (e) {
+        print('could not unlock mobile audio: $e');
         // There is nothing we can do :(
       }
     }
