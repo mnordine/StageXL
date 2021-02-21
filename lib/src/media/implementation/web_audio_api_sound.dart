@@ -109,7 +109,14 @@ class WebAudioApiSound extends Sound {
 
   @override
   SoundChannel play([bool loop = false, SoundTransform soundTransform]) {
-    return WebAudioApiSoundChannel(this, 0, length, loop, soundTransform);
+
+    // On, Safari, sometimes this throws
+    try {
+      return WebAudioApiSoundChannel(this, 0, length, loop, soundTransform);
+    } catch (e) {
+      print('error playing sound: $e');
+      return null;
+    }
   }
 
   @override
