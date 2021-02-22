@@ -24,7 +24,7 @@ class AudioElementSoundChannel extends SoundChannel {
 
     audioElementSound._requestAudioElement(this)
       .then(_onAudioElement)
-      .onError((e, stack) => print('error getting audio element: $e, $stack'));
+      .catchError((e, stack) => print('error getting audio element: $e, $stack'));
   }
 
   //---------------------------------------------------------------------------
