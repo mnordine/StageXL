@@ -22,7 +22,9 @@ class AudioElementSoundChannel extends SoundChannel {
     _duration = duration.toDouble();
     _loop = loop;
 
-    audioElementSound._requestAudioElement(this).then(_onAudioElement);
+    audioElementSound._requestAudioElement(this)
+      .then(_onAudioElement)
+      .onError((e, stack) => print('error getting audio element: $e, $stack'));
   }
 
   //---------------------------------------------------------------------------
