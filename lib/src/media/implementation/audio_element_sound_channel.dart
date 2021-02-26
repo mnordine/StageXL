@@ -87,8 +87,10 @@ class AudioElementSoundChannel extends SoundChannel {
       _stopCompleteTimer();
     } else {
       _paused = false;
-      _audioElement.currentTime = _startTime + _position;
-      _audioElement.play();
+      if (_audioElement != null) {
+        _audioElement.currentTime = _startTime + _position;
+        _audioElement.play();
+      }
       _startCompleteTimer(_duration - _position);
     }
   }
