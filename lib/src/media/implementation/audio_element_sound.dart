@@ -60,11 +60,15 @@ class AudioElementSound extends Sound {
 
   @override
   SoundChannel play([bool loop = false, SoundTransform soundTransform]) {
-    var startTime = 0.0;
-    var duration = _audioElement.duration;
-    if (duration.isInfinite) duration = 3600.0;
-    return AudioElementSoundChannel(
-        this, startTime, duration, loop, soundTransform);
+    try {
+      var startTime = 0.0;
+      var duration = _audioElement.duration;
+      if (duration.isInfinite) duration = 3600.0;
+      return AudioElementSoundChannel(
+          this, startTime, duration, loop, soundTransform);
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
