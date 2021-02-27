@@ -83,7 +83,7 @@ class AudioElementSoundChannel extends SoundChannel {
     } else if (value) {
       _position = position;
       _paused = true;
-      _audioElement.pause();
+      _audioElement?.pause();
       _stopCompleteTimer();
     } else {
       _paused = false;
