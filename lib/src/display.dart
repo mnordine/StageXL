@@ -19,6 +19,7 @@ import 'dart:typed_data';
 import 'dart:html' as html;
 
 import 'dart:math' hide Point, Rectangle;
+import 'dart:math' as math show Point;
 import 'dart:html' show ImageElement, VideoElement, ImageBitmap;
 import 'dart:html' show CanvasElement;
 
