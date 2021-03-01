@@ -102,6 +102,11 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
     request
       ..onReadyStateChange.listen((_) {
         if (request.readyState == HttpRequest.DONE && request.status == 200) {
+          if (request.response is! ByteBuffer) {
+            completer.completeError(Exception('$filename is not an arraybuffer'));
+            return;
+          }
+
           final buffer = request.response as ByteBuffer;
           final texture = _decodeCompressedTexture(buffer, CompressedTextureFileTypes.pvr);
 

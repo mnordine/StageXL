@@ -16,6 +16,7 @@ class FlipBook extends InteractiveObject implements Animatable {
   bool _loop;
   Event _progressEvent;
   Event _completeEvent;
+  bool stopOnRemove = true;
 
   //---------------------------------------------------------------------------
 
@@ -114,6 +115,7 @@ class FlipBook extends InteractiveObject implements Animatable {
     _play = true;
     _frameTime = null;
     _currentFrame = gotoFrame ?? currentFrame;
+    this.stopOnRemove = stopOnRemove;
 
     var completed = onComplete.first;
     var currentTime = juggler.elapsedTime;
@@ -123,14 +125,14 @@ class FlipBook extends InteractiveObject implements Animatable {
       if (currentFrame == stopFrame) stop();
     });
 
-    if (stopOnRemove) {
-      onRemovedFromStage.first.then((_) {
-        subscription.cancel();
-        juggler.remove(this);
-        _play = false;
-        _frameTime = null;
-      });
-    }
+    onRemovedFromStage.first.then((_) {
+      if (!this.stopOnRemove) return;
+
+      subscription.cancel();
+      juggler.remove(this);
+      _play = false;
+      _frameTime = null;
+    });
 
     completed.then((_) {
       subscription.cancel();
