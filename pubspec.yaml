@@ -4,17 +4,17 @@ description: A fast and universal 2D rendering engine for HTML5 and Dart.
 homepage: http://www.stagexl.org
 
 environment:
-  sdk: '>=2.12.0-edge.dd8401ac1626a7beeabdbd4fe041060ce2f6a256 <3.0.0'
+  sdk: '>=2.12.0 <3.0.0'
 
 documentation: http://www.stagexl.org/docs/api/index.html
 
 dependencies:
   byte_array: ^1.0.0-nullsafety.0
-  xml: ^5.0.0-nullsafety.1
+  xml: ^5.0.0
 
 dev_dependencies:
-  test: ^1.16.0-nullsafety.13
-  pedantic: ^1.10.0-nullsafety.3
+  test: any
+  pedantic: any
   build_test: any
   build_runner: any
   build_web_compilers: any
