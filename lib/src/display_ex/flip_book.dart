@@ -17,6 +17,7 @@ class FlipBook extends InteractiveObject implements Animatable {
   Event _progressEvent;
   Event _completeEvent;
   bool stopOnRemove = true;
+  bool removeWhenDone = false;
 
   //---------------------------------------------------------------------------
 
@@ -134,9 +135,11 @@ class FlipBook extends InteractiveObject implements Animatable {
       _frameTime = null;
     });
 
+    this.removeWhenDone = removeWhenDone;
+
     completed.then((_) {
       subscription.cancel();
-      if (removeWhenDone) removeFromParent();
+      if (this.removeWhenDone) removeFromParent();
     });
     return completed;
   }
