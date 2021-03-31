@@ -610,7 +610,7 @@ class Stage extends DisplayObjectContainer {
     }
   }
 
-  Point<num> transformPoint(math.Point<num> pt, [Point<num> returnPoint]) =>
+  Point<num> transformPoint(math.Point<num> pt, [Point<num>? returnPoint]) =>
       _clientTransformation.transformPoint(pt, returnPoint);
 
   //----------------------------------------------------------------------------
