@@ -68,4 +68,6 @@ class TextureAtlas {
     if (frames[name] != null) return frames[name]!.bitmapData;
     throw ArgumentError('cannot find bitmapdata $name');
   }
+
+  BitmapData? tryGetBitmapData(String name) => frames[name]?.bitmapData;
 }
