@@ -5,8 +5,6 @@ class RenderProgramSimple extends RenderProgram {
   // aVertexTextCoord:  Float32(u), Float32(v)
   // aVertexAlpha:      Float32(alpha)
 
-  static var fragmentPrecision = 'mediump';
-
   @override
   String get vertexShaderSource => '''
 
@@ -27,7 +25,7 @@ class RenderProgramSimple extends RenderProgram {
   @override
   String get fragmentShaderSource => '''
 
-    precision $fragmentPrecision float;
+    precision ${RenderProgram.fragmentPrecision} float;
     uniform sampler2D uSampler;
     varying vec2 vTextCoord;
     varying float vAlpha;

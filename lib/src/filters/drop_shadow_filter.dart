@@ -255,7 +255,7 @@ class DropShadowFilterProgram extends RenderProgramSimple {
   @override
   String get fragmentShaderSource => '''
 
-    precision mediump float;
+    precision ${RenderProgram.fragmentPrecision} float;
 
     uniform sampler2D uSampler;
     uniform vec4 uColor;

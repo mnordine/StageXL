@@ -25,7 +25,7 @@ class RenderProgramTinted extends RenderProgram {
   @override
   String get fragmentShaderSource => '''
 
-    precision mediump float;
+    precision ${RenderProgram.fragmentPrecision} float;
     uniform sampler2D uSampler;
     varying vec2 vTextCoord;
     varying vec4 vColor;

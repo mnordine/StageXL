@@ -133,7 +133,7 @@ class StageOptions {
       case ShaderPrecision.high: _shaderPrecision = 'highp'; break;
     }
 
-    RenderProgramSimple.fragmentPrecision = _shaderPrecision;
+    RenderProgram.fragmentPrecision = _shaderPrecision;
   }
 
   //---------------------------------------------------------------------------

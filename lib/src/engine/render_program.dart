@@ -13,6 +13,8 @@ abstract class RenderProgram {
   RenderBufferVertex _renderBufferVertex;
   RenderStatistics _renderStatistics;
 
+  static var fragmentPrecision = 'mediump';
+
   RenderProgram()
       : _attributes = <String, int>{},
         _uniforms = <String, gl.UniformLocation>{},

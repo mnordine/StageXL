@@ -95,7 +95,7 @@ class _LinearGraphicsGradientProgram extends _GraphicsGradientProgram {
   @override
   String get fragmentShaderSource => '''
 
-    precision mediump float;
+    precision ${RenderProgram.fragmentPrecision} float;
     uniform sampler2D uSampler;
     uniform vec2 uvGradientStart;
     uniform vec2 uvGradientVector;
@@ -136,7 +136,7 @@ class _RadialGraphicsGradientProgram extends _GraphicsGradientProgram {
   @override
   String get fragmentShaderSource => '''
 
-    precision mediump float;
+    precision ${RenderProgram.fragmentPrecision} float;
     uniform sampler2D uSampler;
     uniform vec2 uvA;
     uniform vec3 uvB;

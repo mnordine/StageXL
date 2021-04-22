@@ -309,7 +309,7 @@ class ColorMatrixFilterProgram extends RenderProgram {
   @override
   String get fragmentShaderSource => '''
 
-    precision mediump float;
+    precision ${RenderProgram.fragmentPrecision} float;
     uniform sampler2D uSampler;
 
     varying vec2 vTexCoord;

@@ -21,7 +21,7 @@ class RenderProgramTriangle extends RenderProgram {
   @override
   String get fragmentShaderSource => '''
 
-    precision mediump float;
+    precision ${RenderProgram.fragmentPrecision} float;
     varying vec4 vColor;
 
     void main() {
