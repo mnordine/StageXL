@@ -1,5 +1,10 @@
 part of stagexl.display;
 
+enum ShaderPrecision {
+  medium,
+  high,
+}
+
 /// The options used by the [Stage] constructor to setup the stage.
 
 class StageOptions {
@@ -111,6 +116,26 @@ class StageOptions {
 
   bool preventDefaultOnKeyboard = false;
 
+  String _shaderPrecision = 'mediump';
+
+  ShaderPrecision get shaderPrecision {
+    switch (_shaderPrecision) {
+      case 'mediump': return ShaderPrecision.medium;
+      case 'highp': return ShaderPrecision.high;
+    }
+
+    throw ArgumentError('cannot get here');
+  }
+
+  set shaderPrecision(ShaderPrecision value) {
+    switch (value) {
+      case ShaderPrecision.medium: _shaderPrecision = 'mediump'; break;
+      case ShaderPrecision.high: _shaderPrecision = 'highp'; break;
+    }
+
+    RenderProgramSimple.fragmentPrecision = _shaderPrecision;
+  }
+
   //---------------------------------------------------------------------------
 
   /// Create a deep clone of this [StageOptions].
@@ -130,6 +155,7 @@ class StageOptions {
     options.preventDefaultOnMouse = preventDefaultOnMouse;
     options.preventDefaultOnWheel = preventDefaultOnWheel;
     options.preventDefaultOnKeyboard = preventDefaultOnKeyboard;
+    options.shaderPrecision = shaderPrecision;
     return options;
   }
 }
