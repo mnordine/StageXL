@@ -17,6 +17,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:typed_data';
 import 'dart:html' as html;
+import 'dart:web_gl';
 
 import 'dart:math' hide Point, Rectangle;
 import 'dart:math' as math show Point;
