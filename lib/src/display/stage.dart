@@ -442,8 +442,21 @@ class Stage extends DisplayObjectContainer {
       CanvasElement canvas, StageOptions options) {
     if (options.renderEngine == RenderEngine.WebGL) {
       try {
-        return RenderContextWebGL(canvas,
+        final context =  RenderContextWebGL(canvas,
             alpha: options.transparent, antialias: options.antialias);
+
+        // Override to medium precision if high is not supported
+        if (options.shaderPrecision == ShaderPrecision.high) {
+          try {
+            final gl = context.rawContext;
+            final high = gl.getShaderPrecisionFormat(WebGL.FRAGMENT_SHADER, WebGL.HIGH_FLOAT);
+            if (high.precision <= 0) options.shaderPrecision = ShaderPrecision.medium;
+          } catch (e) {
+            options.shaderPrecision = ShaderPrecision.medium;
+          }
+        }
+
+        return context;
       } catch (e) {
         return RenderContextCanvas(canvas);
       }
