@@ -133,8 +133,8 @@ class Tween implements Animatable {
         if (_onUpdate != null) {
           _onUpdate!();
         }
-        if (_onComplete != null && _currentTime == _totalTime) {
-          _onComplete!();
+        if (_currentTime == _totalTime) {
+          _onComplete?.call();
           _completer.complete(this);
         }
       }
