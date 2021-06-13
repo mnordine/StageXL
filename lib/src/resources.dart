@@ -41,7 +41,7 @@ part 'resources/texture_atlas_loader.dart';
 JsObject? stageXLFileMap;
 var stageXLStoragePrefix = '';
 
-String getUrlHash(String url, {bool webp = false}) {
+String? getUrlHash(String url, {bool webp = false}) {
   if (stageXLFileMap == null) return url;
 
   if (webp) {
@@ -57,9 +57,7 @@ String getUrlHash(String url, {bool webp = false}) {
 
   final key = url.replaceFirst(stageXLStoragePrefix, '');
   final value = stageXLFileMap![key];
-  if (value == null) {
-    throw ArgumentError('cannot find $url in file map');
-  }
+  if (value == null) return null;
 
   final newUrl = '$stageXLStoragePrefix${stageXLFileMap![key] as String}';
   return newUrl;

@@ -54,9 +54,11 @@ class ImageBitmapLoader implements BaseImageLoader<ImageBitmap> {
   void _onWebpSupported(bool webpSupported) {
     var match = RegExp(r'(png|jpg|jpeg)$').firstMatch(_url);
     if (webpSupported && match != null) {
-      _url = getUrlHash(_url, webp: true);
-    }
+      final url = getUrlHash(_url, webp: true);
+      if (url == null) return;
 
-    _load(_url);
+      _url = url;
+      _load(_url);
+    }
   }
 }

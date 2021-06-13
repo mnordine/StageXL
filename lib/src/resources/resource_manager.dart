@@ -219,8 +219,10 @@ class ResourceManager {
   }
 
   void addTextFile(String name, String url) {
+    final urlHash = getUrlHash(url);
+    if (urlHash == null) throw StateError('Failed to load text file: $url');
     var loader =
-        HttpRequest.getString(getUrlHash(url)).then((text) => text, onError: (error) {
+        HttpRequest.getString(urlHash).then((text) => text, onError: (error) {
       throw StateError('Failed to load text file.');
     });
     _addResource('TextFile', name, url, loader);
