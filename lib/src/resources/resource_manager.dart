@@ -148,7 +148,7 @@ class ResourceManager {
 
   void addSound(String name, String url, [SoundLoadOptions? options]) {
     var loader = Sound.load(url, options);
-    loader.catchError((_) => _soundDatas.remove(name));
+    loader.catchError((_) { _soundDatas.remove(name); });
 
     _addResource('Sound', name, url, loader);
 
