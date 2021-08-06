@@ -46,6 +46,8 @@ class StageConsole extends DisplayObject {
 
   @override
   void render(RenderState renderState) {
+    if (_glyphs.isEmpty) return;
+
     dispatchEvent(Event('Update'));
     for (var y = 0; y < _consoleHeight; y++) {
       for (var x = 0; x < _consoleWidth; x++) {
