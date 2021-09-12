@@ -15,7 +15,7 @@ class WebAudioApiMixer {
   void applySoundTransform(SoundTransform soundTransform) {
     var time = audioContext.currentTime!;
     var value = pow(soundTransform.volume, 2);
-    _volumeNode.gain!.setValueAtTime(value, time);
+    _volumeNode.gain?.setValueAtTime(value, time);
   }
 
   AudioNode get inputNode => _volumeNode;
