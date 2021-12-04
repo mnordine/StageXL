@@ -10,19 +10,19 @@ library stagexl.resources;
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:html' show HttpRequest, ImageBitmap, ImageElement;
 import 'dart:js' show JsObject;
 import 'dart:typed_data';
-import 'dart:html' show HttpRequest;
 import 'dart:web_gl' as gl;
 import 'package:xml/xml.dart';
 
 import 'display.dart';
 import 'engine.dart';
 import 'geom.dart';
-import 'media.dart';
-import 'internal/tools.dart';
 import 'internal/image_bitmap_loader.dart';
 import 'internal/image_loader.dart';
+import 'internal/tools.dart';
+import 'media.dart';
 
 part 'resources/resource_manager.dart';
 part 'resources/resource_manager_resource.dart';
@@ -50,7 +50,7 @@ String? getUrlHash(String url, {bool webp = false}) {
     final j = url.lastIndexOf('@');
     url = url.substring(0, i) + url.substring(j);
 
-    var match = RegExp(r'(png|jpg|jpeg)$').firstMatch(url);
+    final match = RegExp(r'(png|jpg|jpeg)$').firstMatch(url);
     url = url.substring(0, match!.start) + 'webp';
     return getUrlHash(url);
   }

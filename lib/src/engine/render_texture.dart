@@ -7,7 +7,7 @@ class RenderTexture {
   // TODO: Make CanvasImageSource again once
   // https://github.com/dart-lang/sdk/issues/12379#issuecomment-572239799
   // is addressed
-  /*CanvasImageSource*/dynamic? _source;
+  /*CanvasImageSource*/dynamic _source;
   CanvasElement? _canvas;
   RenderTextureFiltering _filtering = RenderTextureFiltering.LINEAR;
   RenderTextureWrapping _wrappingX = RenderTextureWrapping.CLAMP;
@@ -33,7 +33,7 @@ class RenderTexture {
     _source = _canvas = CanvasElement(width: _width, height: _height);
 
     if (fillColor != 0) {
-      var context = _canvas!.context2D;
+      final context = _canvas!.context2D;
       context.fillStyle = color2rgba(fillColor);
       context.fillRect(0, 0, _width, _height);
     }
@@ -65,9 +65,9 @@ class RenderTexture {
     _globalFrameListeners.insert(0, _onGlobalFrame);
   }
 
-  RenderTexture.rawWebGL(int width, int height) :
-    _width = width,
-    _height = height;
+  RenderTexture.rawWebGL(int width, int height)
+      : _width = width,
+        _height = height;
 
   RenderTexture.fromCompressedTexture(CompressedTexture texture) {
     _width = texture.width;
@@ -80,18 +80,20 @@ class RenderTexture {
 
   int get width => _width;
   int get height => _height;
-  CanvasImageSource? get source => _source;
+  CanvasImageSource? get source => _source as CanvasImageSource?;
 
-  RenderTextureQuad get quad {
-    return RenderTextureQuad(this, Rectangle<int>(0, 0, _width, _height),
-        Rectangle<int>(0, 0, _width, _height), 0, 1.0);
-  }
+  RenderTextureQuad get quad => RenderTextureQuad(
+      this,
+      Rectangle<int>(0, 0, _width, _height),
+      Rectangle<int>(0, 0, _width, _height),
+      0,
+      1.0);
 
   CanvasElement get canvas {
     if (_source is CanvasElement) {
       return _source as CanvasElement;
     } else if (_source is ImageElement) {
-      var imageElement = _source as ImageElement;
+      final imageElement = _source as ImageElement;
       _canvas = _source = CanvasElement(width: _width, height: _height);
       _canvas!.context2D.drawImageScaled(imageElement, 0, 0, _width, _height);
       return _canvas!;
@@ -178,7 +180,7 @@ class RenderTexture {
     }
 
     if (_source is ImageBitmap) {
-      _source.close();
+      (_source as ImageBitmap).close();
     }
 
     _texture = null;
@@ -205,12 +207,13 @@ class RenderTexture {
       if (_renderContext == null || _texture == null) return;
       if (_renderContext!.contextIdentifier != contextIdentifier) return;
 
-      var target = _textureInfo?.target ?? gl.WebGL.TEXTURE_2D;
-      var pixelFormat = _textureInfo?.pixelFormat ?? gl.WebGL.RGBA;
-      var pixelType = _textureInfo?.pixelType ?? gl.WebGL.UNSIGNED_BYTE;
+      final target = _textureInfo?.target ?? gl.WebGL.TEXTURE_2D;
+      final pixelFormat = _textureInfo?.pixelFormat ?? gl.WebGL.RGBA;
+      final pixelType = _textureInfo?.pixelType ?? gl.WebGL.UNSIGNED_BYTE;
 
       _renderContext!.activateRenderTexture(this);
-      _renderingContext!.texImage2D(target, 0, pixelFormat, _width, _height, 0, pixelFormat, pixelType, null);
+      _renderingContext!
+          .texImage2D(target, 0, pixelFormat, _width, _height, 0, pixelFormat, pixelType);
     } else {
       _width = width;
       _height = height;
@@ -233,18 +236,18 @@ class RenderTexture {
     if (_renderContext == null || _texture == null) return;
     if (_renderContext!.contextIdentifier != contextIdentifier) return;
 
-    var target = _textureInfo?.target ?? gl.WebGL.TEXTURE_2D;
-    var pixelFormat = _textureInfo?.pixelFormat ?? gl.WebGL.RGBA;
-    var pixelType = _textureInfo?.pixelType ?? gl.WebGL.UNSIGNED_BYTE;
+    final target = _textureInfo?.target ?? gl.WebGL.TEXTURE_2D;
+    final pixelFormat = _textureInfo?.pixelFormat ?? gl.WebGL.RGBA;
+    final pixelType = _textureInfo?.pixelType ?? gl.WebGL.UNSIGNED_BYTE;
 
     _renderContext!.flush();
     _renderContext!.activateRenderTexture(this);
 
-    var scissors = _renderingContext!.isEnabled(gl.WebGL.SCISSOR_TEST);
+    final scissors = _renderingContext!.isEnabled(gl.WebGL.SCISSOR_TEST);
     if (scissors) _renderingContext!.disable(gl.WebGL.SCISSOR_TEST);
 
     if (_textureSourceWorkaround) {
-      _canvas!.context2D.drawImage(_source!, 0, 0);
+      _canvas!.context2D.drawImage(source!, 0, 0);
       _renderingContext!.texImage2D(target, 0, pixelFormat, pixelFormat, pixelType, _canvas);
     } else {
       _renderingContext!.texImage2D(target, 0, pixelFormat, pixelFormat, pixelType, _source);
@@ -257,9 +260,9 @@ class RenderTexture {
 
   void activate(RenderContextWebGL renderContext, int textureSlot) {
     if (contextIdentifier != renderContext.contextIdentifier) {
-      var target = _textureInfo?.target ?? gl.WebGL.TEXTURE_2D;
-      var pixelFormat = _textureInfo?.pixelFormat ?? gl.WebGL.RGBA;
-      var pixelType = _textureInfo?.pixelType ?? gl.WebGL.UNSIGNED_BYTE;
+      final target = _textureInfo?.target ?? gl.WebGL.TEXTURE_2D;
+      final pixelFormat = _textureInfo?.pixelFormat ?? gl.WebGL.RGBA;
+      final pixelType = _textureInfo?.pixelType ?? gl.WebGL.UNSIGNED_BYTE;
 
       _renderContext = renderContext;
       _contextIdentifier = renderContext.contextIdentifier;
@@ -269,7 +272,7 @@ class RenderTexture {
       renderingContext.activeTexture(textureSlot);
       renderingContext.bindTexture(target, _texture);
 
-      var scissors = renderingContext.isEnabled(gl.WebGL.SCISSOR_TEST);
+      final scissors = renderingContext.isEnabled(gl.WebGL.SCISSOR_TEST);
       if (scissors) renderingContext.disable(gl.WebGL.SCISSOR_TEST);
 
       if (_source != null) {
@@ -279,13 +282,13 @@ class RenderTexture {
         final tex = _compressedTexture!;
         renderingContext.compressedTexImage2D(target, 0, tex.format, tex.width, tex.height, 0, tex.textureData);
       } else {
-        renderingContext.texImage2D(target, 0, pixelFormat, width, height, 0, pixelFormat, pixelType, null);
+        renderingContext.texImage2D(target, 0, pixelFormat, width, height, 0, pixelFormat, pixelType);
       }
 
       if (_textureSourceWorkaround) {
         // WEBGL11072: INVALID_VALUE: texImage2D: This texture source is not supported
         _canvas = CanvasElement(width: width, height: height);
-        _canvas!.context2D.drawImage(_source!, 0, 0);
+        _canvas!.context2D.drawImage(source!, 0, 0);
         renderingContext.texImage2D(target, 0, pixelFormat, pixelFormat, pixelType, _canvas);
       }
 
@@ -311,8 +314,8 @@ class RenderTexture {
 
   void _onGlobalFrame(num deltaTime) {
     if (source is VideoElement) {
-      var videoElement = source as VideoElement;
-      var currentTime = videoElement.currentTime;
+      final videoElement = source as VideoElement;
+      final currentTime = videoElement.currentTime;
       if (_videoUpdateTime != currentTime) {
         _videoUpdateTime = currentTime;
         update();

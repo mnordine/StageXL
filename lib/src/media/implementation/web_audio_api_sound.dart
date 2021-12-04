@@ -11,16 +11,16 @@ class WebAudioApiSound extends Sound {
 
   static Future<Sound> load(String url,
       [SoundLoadOptions? soundLoadOptions]) async {
-    var options = soundLoadOptions ?? Sound.defaultLoadOptions;
-    var audioUrls = options.getOptimalAudioUrls(url);
-    var aggregateError = AggregateError('Error loading sound.');
+    final options = soundLoadOptions ?? Sound.defaultLoadOptions;
+    final audioUrls = options.getOptimalAudioUrls(url);
+    final aggregateError = AggregateError('Error loading sound.');
 
     for (var audioUrl in audioUrls) {
       try {
         final sound = await _tryAudioUrl(url, audioUrl);
         return sound;
       } catch (e) {
-        var loadError = LoadError('Failed to load $audioUrl', e);
+        final loadError = LoadError('Failed to load $audioUrl', e);
         aggregateError.errors.add(loadError);
       }
     }
@@ -36,7 +36,7 @@ class WebAudioApiSound extends Sound {
 
     final completer = Completer<Sound>();
 
-    var request = _loaders[url] = HttpRequest();
+    final request = _loaders[url] = HttpRequest();
     request
       ..onReadyStateChange.listen((_) async {
         if (request.readyState == HttpRequest.DONE && request.status == 200) {
@@ -46,9 +46,9 @@ class WebAudioApiSound extends Sound {
           }
 
           try {
-            var buffer = request.response as ByteBuffer;
-            var audioContext = WebAudioApiMixer.audioContext;
-            var audioBuffer = await audioContext.decodeAudioData(buffer);
+            final buffer = request.response as ByteBuffer;
+            final audioContext = WebAudioApiMixer.audioContext;
+            final audioBuffer = await audioContext.decodeAudioData(buffer);
             final sound = WebAudioApiSound._(audioBuffer);
 
             if (!_loaders.containsKey(url)) {
@@ -81,14 +81,14 @@ class WebAudioApiSound extends Sound {
 
   static Future<Sound> loadDataUrl(String dataUrl,
       [SoundLoadOptions? soundLoadOptions]) async {
-    var options = soundLoadOptions ?? Sound.defaultLoadOptions;
-    var audioContext = WebAudioApiMixer.audioContext;
-    var start = dataUrl.indexOf(',') + 1;
-    var bytes = base64.decoder.convert(dataUrl, start);
+    final options = soundLoadOptions ?? Sound.defaultLoadOptions;
+    final audioContext = WebAudioApiMixer.audioContext;
+    final start = dataUrl.indexOf(',') + 1;
+    final bytes = base64.decoder.convert(dataUrl, start);
 
     try {
-      var audioData = bytes.buffer;
-      var audioBuffer = await audioContext.decodeAudioData(audioData);
+      final audioData = bytes.buffer;
+      final audioBuffer = await audioContext.decodeAudioData(audioData);
       return WebAudioApiSound._(audioBuffer);
     } catch (e) {
       if (options.ignoreErrors) {
@@ -108,14 +108,11 @@ class WebAudioApiSound extends Sound {
   num get length => _audioBuffer.duration!;
 
   @override
-  SoundChannel play([bool loop = false, SoundTransform? soundTransform]) {
-    return WebAudioApiSoundChannel(this, 0, length, loop, soundTransform);
-  }
+  SoundChannel play([bool loop = false, SoundTransform? soundTransform]) =>
+      WebAudioApiSoundChannel(this, 0, length, loop, soundTransform);
 
   @override
   SoundChannel playSegment(num startTime, num duration,
-      [bool loop = false, SoundTransform? soundTransform]) {
-    return WebAudioApiSoundChannel(
-        this, startTime, duration, loop, soundTransform);
-  }
+          [bool loop = false, SoundTransform? soundTransform]) =>
+      WebAudioApiSoundChannel(this, startTime, duration, loop, soundTransform);
 }

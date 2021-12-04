@@ -4,10 +4,9 @@ import 'dart:async';
 import 'dart:html';
 import 'dart:js_util';
 
-import 'package:stagexl/src/internal/image_loader.dart';
-
-import 'environment.dart' as env;
+import '../internal/image_loader.dart';
 import '../resources.dart' show getUrlHash;
+import 'environment.dart' as env;
 
 class ImageBitmapLoader implements BaseImageLoader<ImageBitmap> {
   String _url;
@@ -30,16 +29,14 @@ class ImageBitmapLoader implements BaseImageLoader<ImageBitmap> {
           try {
             final blob = request.response as Blob;
             final promise = callMethod(window, 'createImageBitmap', [blob]);
-            final imageBitmap = await promiseToFuture<ImageBitmap>(promise);
+            final imageBitmap = await promiseToFuture<ImageBitmap>(promise as Object);
             _completer.complete(imageBitmap);
           } catch (e) {
             _completer.completeError(e);
           }
         }
       })
-      ..onError.listen((e) {
-        _completer.completeError(e);
-      })
+      ..onError.listen(_completer.completeError)
       ..open('GET', url, async: true)
       ..responseType = 'blob'
       ..send();
@@ -52,7 +49,7 @@ class ImageBitmapLoader implements BaseImageLoader<ImageBitmap> {
   void cancel() => _request?.abort();
 
   void _onWebpSupported(bool webpSupported) {
-    var match = RegExp(r'(png|jpg|jpeg)$').firstMatch(_url);
+    final match = RegExp(r'(png|jpg|jpeg)$').firstMatch(_url);
     if (webpSupported && match != null) {
       final url = getUrlHash(_url, webp: true);
       if (url == null) return;

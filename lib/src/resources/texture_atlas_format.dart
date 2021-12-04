@@ -1,11 +1,11 @@
 part of stagexl.resources;
 
 abstract class TextureAtlasFormat {
-  static TextureAtlasFormat JSON = _TextureAtlasFormatJson();
-  static TextureAtlasFormat JSONARRAY = _TextureAtlasFormatJson();
-  static const TextureAtlasFormat LIBGDX = _TextureAtlasFormatLibGDX();
-  static const TextureAtlasFormat STARLINGXML = _TextureAtlasFormatStarlingXml();
-  static const TextureAtlasFormat STARLINGJSON = _TextureAtlasFormatStarlingJson();
+  static TextureAtlasFormat json = _TextureAtlasFormatJson();
+  static TextureAtlasFormat jsonArray = _TextureAtlasFormatJson();
+  static const TextureAtlasFormat libGdx = _TextureAtlasFormatLibGDX();
+  static const TextureAtlasFormat starlingXml = _TextureAtlasFormatStarlingXml();
+  static const TextureAtlasFormat starlingJson = _TextureAtlasFormatStarlingJson();
 
   const TextureAtlasFormat();
 

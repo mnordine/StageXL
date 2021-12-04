@@ -45,14 +45,13 @@ class RenderBufferVertex {
   }
 
   void update() {
-    var update = Float32List.view(data.buffer, 0, position);
+    final update = Float32List.view(data.buffer, 0, position);
     _renderingContext!.bufferSubData(gl.WebGL.ARRAY_BUFFER, 0, update);
     _renderStatistics.vertexCount += count;
   }
 
   void bindAttribute(int? index, int size, int stride, int offset) {
     if (index == null) return;
-
     _renderingContext!.vertexAttribPointer(
         index, size, gl.WebGL.FLOAT, false, stride, offset);
   }

@@ -3,9 +3,9 @@ library stagexl.internal.image_loader;
 import 'dart:async';
 import 'dart:html';
 
-import 'environment.dart' as env;
 import '../errors.dart';
 import '../resources.dart' show getUrlHash;
+import 'environment.dart' as env;
 
 abstract class BaseImageLoader<T> {
   void cancel();
@@ -44,7 +44,7 @@ class ImageLoader implements BaseImageLoader<ImageElement> {
   Future<ImageElement> get done => _completer.future;
 
   void _onWebpSupported(bool webpSupported) {
-    var match = RegExp(r'(png|jpg|jpeg)$').firstMatch(_url);
+    final match = RegExp(r'(png|jpg|jpeg)$').firstMatch(_url);
     if (webpSupported && match != null) {
       image.src = getUrlHash(_url, webp: true);
     } else {

@@ -14,6 +14,6 @@ class TextureInfo {
         && other.pixelType == pixelType;
 
   @override
-  int get hashCode => JenkinsHash.hash3(target, pixelFormat, pixelType);
+  int get hashCode => Object.hash(target, pixelFormat, pixelType);
 }
 

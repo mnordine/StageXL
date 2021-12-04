@@ -15,26 +15,25 @@ library stagexl.display;
 
 import 'dart:async';
 import 'dart:collection';
-import 'dart:typed_data';
 import 'dart:html' as html;
-import 'dart:web_gl';
-
-import 'dart:math' hide Point, Rectangle;
-import 'dart:math' as math show Point;
 import 'dart:html' show ImageElement, VideoElement, ImageBitmap;
 import 'dart:html' show CanvasElement;
+import 'dart:math' hide Point, Rectangle;
+import 'dart:math' as math show Point;
+import 'dart:typed_data';
+import 'dart:web_gl';
 
 import 'animation.dart';
 import 'drawing.dart';
-import 'geom.dart';
 import 'engine.dart';
 import 'events.dart';
-import 'ui.dart';
-import 'internal/tools.dart';
-import 'internal/image_loader.dart';
-import 'internal/image_bitmap_loader.dart';
+import 'geom.dart';
 import 'internal/environment.dart' as env;
+import 'internal/image_bitmap_loader.dart';
+import 'internal/image_loader.dart';
+import 'internal/tools.dart';
 import 'resources.dart' show getUrlHash;
+import 'ui.dart';
 
 part 'display/bitmap.dart';
 part 'display/bitmap_container.dart';

@@ -5,24 +5,24 @@ class _TextureAtlasFormatJson extends TextureAtlasFormat {
 
   @override
   Future<TextureAtlas> load(TextureAtlasLoader loader) async {
-    var source = await loader.getSource();
-    var pixelRatio = loader.getPixelRatio();
-    var textureAtlas = TextureAtlas(pixelRatio);
+    final source = await loader.getSource();
+    final pixelRatio = loader.getPixelRatio();
+    final textureAtlas = TextureAtlas(pixelRatio);
 
-    var json = jsonDecode(source);
-    var frames = json['frames'];
-    var meta = json['meta'] as Map;
-    var image = meta['image'] as String;
-    var renderTextureQuad = await loader.getRenderTextureQuad(image);
+    final json = jsonDecode(source) as Map;
+    final frames = json['frames'];
+    final meta = json['meta'] as Map;
+    final image = meta['image'] as String;
+    final renderTextureQuad = await loader.getRenderTextureQuad(image);
 
     //  Set texture info based on meta format
-    renderTextureQuad.renderTexture.textureInfo = _parseTextureFormat(meta['format']);
+    renderTextureQuad.renderTexture.textureInfo = _parseTextureFormat(meta['format'] as String);
 
     if (frames is List) {
       for (var frame in frames) {
-        var frameMap = frame as Map;
-        var fileName = frameMap['filename'] as String;
-        var frameName = getFilenameWithoutExtension(fileName);
+        final frameMap = frame as Map;
+        final fileName = frameMap['filename'] as String;
+        final frameName = getFilenameWithoutExtension(fileName);
         _createFrame(
             textureAtlas, renderTextureQuad, frameName, frameMap, meta);
       }
@@ -30,8 +30,8 @@ class _TextureAtlasFormatJson extends TextureAtlasFormat {
 
     if (frames is Map) {
       for (var fileName in frames.keys as Iterable<String>) {
-        var frameMap = frames[fileName] as Map;
-        var frameName = getFilenameWithoutExtension(fileName);
+        final frameMap = frames[fileName] as Map;
+        final frameName = getFilenameWithoutExtension(fileName);
         _createFrame(
             textureAtlas, renderTextureQuad, frameName, frameMap, meta);
       }
@@ -41,7 +41,7 @@ class _TextureAtlasFormatJson extends TextureAtlasFormat {
   }
 
   TextureInfo _parseTextureFormat(String format) {
-    var textureInfo = TextureInfo();
+    final textureInfo = TextureInfo();
 
     switch (format) {
       case 'RGBA8888':
@@ -97,44 +97,56 @@ class _TextureAtlasFormatJson extends TextureAtlasFormat {
       String frameName,
       Map frameMap,
       Map metaMap) {
-    var rotation = (frameMap['rotated'] as bool? ?? false) ? 1 : 0;
-    var offsetX = frameMap['spriteSourceSize']['x'] as int;
-    var offsetY = frameMap['spriteSourceSize']['y'] as int;
-    var originalWidth = frameMap['sourceSize']['w'] as int;
-    var originalHeight = frameMap['sourceSize']['h'] as int;
-    var frameX = frameMap['frame']['x'] as int;
-    var frameY = frameMap['frame']['y'] as int;
-    var frameWidth = frameMap['frame'][rotation == 0 ? 'w' : 'h'] as int;
-    var frameHeight = frameMap['frame'][rotation == 0 ? 'h' : 'w'] as int;
+    final rotation = (frameMap['rotated'] as bool? ?? false) ? 1 : 0;
+
+    final spriteSourceSize = frameMap['spriteSourceSize'] as Map;
+    final offsetX = spriteSourceSize['x'] as int;
+    final offsetY = spriteSourceSize['y'] as int;
+
+    final sourceSize = frameMap['sourceSize'] as Map;
+    final originalWidth = sourceSize['w'] as int;
+    final originalHeight = sourceSize['h'] as int;
+
+    final frame = frameMap['frame'] as Map;
+    final frameX = frame['x'] as int;
+    final frameY = frame['y'] as int;
+    final frameWidth = frame[rotation == 0 ? 'w' : 'h'] as int;
+    final frameHeight = frame[rotation == 0 ? 'h' : 'w'] as int;
 
     Float32List? vxList;
     Int16List? ixList;
 
     if (frameMap.containsKey('vertices')) {
-      var vertices = frameMap['vertices'] as List;
-      var verticesUV = frameMap['verticesUV'] as List;
-      var triangles = frameMap['triangles'] as List;
-      var width = metaMap['size']['w'].toInt();
-      var height = metaMap['size']['h'].toInt();
+      final vertices = frameMap['vertices'] as List;
+      final verticesUV = frameMap['verticesUV'] as List;
+      final triangles = frameMap['triangles'] as List;
+
+      final size = metaMap['size'] as Map;
+      final width = (size['w'] as num).toInt();
+      final height = (size['h'] as num).toInt();
 
       vxList = Float32List(vertices.length * 4);
       ixList = Int16List(triangles.length * 3);
 
       for (var i = 0, j = 0; i <= vxList.length - 4; i += 4, j += 1) {
-        vxList[i + 0] = vertices[j][0] * 1.0;
-        vxList[i + 1] = vertices[j][1] * 1.0;
-        vxList[i + 2] = verticesUV[j][0] / width;
-        vxList[i + 3] = verticesUV[j][1] / height;
+        final vj = vertices[j] as List;
+        vxList[i + 0] = (vj[0] as num).toDouble();
+        vxList[i + 1] = (vj[1] as num).toDouble();
+
+        final vuvj = verticesUV[j] as List;
+        vxList[i + 2] = (vuvj[0] as num) / width;
+        vxList[i + 3] = (vuvj[1] as num) / height;
       }
 
       for (var i = 0, j = 0; i <= ixList.length - 3; i += 3, j += 1) {
-        ixList[i + 0] = triangles[j][0];
-        ixList[i + 1] = triangles[j][1];
-        ixList[i + 2] = triangles[j][2];
+        final tj = triangles[j] as List;
+        ixList[i + 0] = tj[0] as int;
+        ixList[i + 1] = tj[1] as int;
+        ixList[i + 2] = tj[2] as int;
       }
     }
 
-    var taf = TextureAtlasFrame(
+    final taf = TextureAtlasFrame(
         textureAtlas,
         renderTextureQuad,
         frameName,

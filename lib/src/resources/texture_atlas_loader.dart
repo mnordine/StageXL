@@ -47,7 +47,7 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
     final response = await _sourceFuture!;
     _sourceFuture = null;
 
-    return response.response;
+    return response.response as String;
   }
 
   @override
@@ -68,22 +68,22 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
   Future<RenderTextureQuad> getRenderTextureQuad(String filename) async {
     RenderTexture renderTexture;
 
-    var loaderUrl = _loadInfo.loaderUrl;
-    var pixelRatio = _loadInfo.pixelRatio;
-    var imageUrl = replaceFilename(loaderUrl, filename);
+    final loaderUrl = _loadInfo.loaderUrl;
+    final pixelRatio = _loadInfo.pixelRatio;
+    final imageUrl = replaceFilename(loaderUrl, filename);
 
     if (!_isCompressedTexture(filename)) {
-      var webpAvailable = _loadOptions.webp;
+      final webpAvailable = _loadOptions.webp;
 
       if (_loadOptions.imageBitmap) {
         _imageLoader = ImageBitmapLoader(imageUrl, webpAvailable);
         final image = await _imageLoader!.done;
-        renderTexture = RenderTexture.fromImageBitmap(image);
+        renderTexture = RenderTexture.fromImageBitmap(image as ImageBitmap);
       } else {
-        var corsEnabled = _loadOptions.corsEnabled;
+        final corsEnabled = _loadOptions.corsEnabled;
         _imageLoader = ImageLoader(imageUrl, webpAvailable, corsEnabled);
-        var imageElement = await _imageLoader!.done;
-        renderTexture = RenderTexture.fromImageElement(imageElement);
+        final imageElement = await _imageLoader!.done;
+        renderTexture = RenderTexture.fromImageElement(imageElement as ImageElement);
       }
 
       _imageLoader = null;
@@ -150,8 +150,8 @@ class _TextureAtlasLoaderTextureAtlas extends TextureAtlasLoader {
 
   @override
   Future<RenderTextureQuad> getRenderTextureQuad(String filename) async {
-    var name = namePrefix + getFilenameWithoutExtension(filename);
-    var bitmapData = textureAtlas.getBitmapData(name);
+    final name = namePrefix + getFilenameWithoutExtension(filename);
+    final bitmapData = textureAtlas.getBitmapData(name);
     return bitmapData.renderTextureQuad;
   }
 }
@@ -172,7 +172,6 @@ class _TextureAtlasLoaderBitmapData extends TextureAtlasLoader {
   Future<String> getSource() => Future.value(source);
 
   @override
-  Future<RenderTextureQuad> getRenderTextureQuad(String filename) {
-    return Future.value(bitmapData.renderTextureQuad);
-  }
+  Future<RenderTextureQuad> getRenderTextureQuad(String filename) =>
+      Future.value(bitmapData.renderTextureQuad);
 }
