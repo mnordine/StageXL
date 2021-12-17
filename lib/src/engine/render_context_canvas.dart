@@ -97,7 +97,9 @@ class RenderContextCanvas extends RenderContext {
     }
 
     final context = _renderingContext;
-    final source = renderTextureQuad.renderTexture.source;
+    final source = renderTextureQuad.renderTexture.source
+      ?? renderTextureQuad.renderTexture.imageBitmap;
+
     final rotation = renderTextureQuad.rotation;
     final sourceRect = renderTextureQuad.sourceRectangle;
     final vxList = renderTextureQuad.vxListQuad;
@@ -115,58 +117,65 @@ class RenderContextCanvas extends RenderContext {
       context.globalCompositeOperation = blendMode.compositeOperation;
     }
 
+    // Note: We need to use js_util.callMethod, because Dart SDK will
+    // erroneously throw an error if we try to drawImage with an ImageBitmap.
+
     if (rotation == 0) {
       context.setTransform(
           matrix.a, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
-      context.drawImageScaledFromSource(
-          source!,
-          sourceRect.left,
-          sourceRect.top,
-          sourceRect.width,
-          sourceRect.height,
-          vxList[0],
-          vxList[1],
-          vxList[8] - vxList[0],
-          vxList[9] - vxList[1]);
+      js_util.callMethod(context, 'drawImage', [
+        source,
+        sourceRect.left,
+        sourceRect.top,
+        sourceRect.width,
+        sourceRect.height,
+        vxList[0],
+        vxList[1],
+        vxList[8] - vxList[0],
+        vxList[9] - vxList[1]
+      ]);
     } else if (rotation == 1) {
       context.setTransform(
           -matrix.c, -matrix.d, matrix.a, matrix.b, matrix.tx, matrix.ty);
-      context.drawImageScaledFromSource(
-          source!,
-          sourceRect.left,
-          sourceRect.top,
-          sourceRect.width,
-          sourceRect.height,
-          0.0 - vxList[13],
-          vxList[12],
-          vxList[9] - vxList[1],
-          vxList[8] - vxList[0]);
+      js_util.callMethod(context, 'drawImage', [
+        source,
+        sourceRect.left,
+        sourceRect.top,
+        sourceRect.width,
+        sourceRect.height,
+        0.0 - vxList[13],
+        vxList[12],
+        vxList[9] - vxList[1],
+        vxList[8] - vxList[0]
+      ]);
     } else if (rotation == 2) {
       context.setTransform(
           -matrix.a, -matrix.b, -matrix.c, -matrix.d, matrix.tx, matrix.ty);
-      context.drawImageScaledFromSource(
-          source!,
-          sourceRect.left,
-          sourceRect.top,
-          sourceRect.width,
-          sourceRect.height,
-          0.0 - vxList[8],
-          0.0 - vxList[9],
-          vxList[8] - vxList[0],
-          vxList[9] - vxList[1]);
+      js_util.callMethod(context, 'drawImage', [
+        source,
+        sourceRect.left,
+        sourceRect.top,
+        sourceRect.width,
+        sourceRect.height,
+        0.0 - vxList[8],
+        0.0 - vxList[9],
+        vxList[8] - vxList[0],
+        vxList[9] - vxList[1]
+      ]);
     } else if (rotation == 3) {
       context.setTransform(
           matrix.c, matrix.d, -matrix.a, -matrix.b, matrix.tx, matrix.ty);
-      context.drawImageScaledFromSource(
-          source!,
-          sourceRect.left,
-          sourceRect.top,
-          sourceRect.width,
-          sourceRect.height,
-          vxList[5],
-          0.0 - vxList[4],
-          vxList[9] - vxList[1],
-          vxList[8] - vxList[0]);
+      js_util.callMethod(context, 'drawImage', [
+        source,
+        sourceRect.left,
+        sourceRect.top,
+        sourceRect.width,
+        sourceRect.height,
+        vxList[5],
+        0.0 - vxList[4],
+        vxList[9] - vxList[1],
+        vxList[8] - vxList[0]
+      ]);
     }
   }
 
@@ -176,7 +185,7 @@ class RenderContextCanvas extends RenderContext {
   void renderTextureMesh(RenderState renderState, RenderTexture renderTexture,
       Int16List ixList, Float32List vxList) {
     final context = _renderingContext;
-    final source = renderTexture.source;
+    final source = renderTexture.source ?? renderTexture.imageBitmap;
     final matrix = renderState.globalMatrix;
     final alpha = renderState.globalAlpha;
     final blendMode = renderState.globalBlendMode;
@@ -242,7 +251,7 @@ class RenderContextCanvas extends RenderContext {
       final my = y1 - mb * u1 - md * v1;
 
       context.transform(ma * iw, mb * iw, mc * ih, md * ih, mx, my);
-      context.drawImage(source!, 0, 0);
+      js_util.callMethod(context, 'drawImage', [source, 0, 0]);
       context.restore();
     }
   }

@@ -80,7 +80,13 @@ class RenderTexture {
 
   int get width => _width;
   int get height => _height;
-  CanvasImageSource? get source => _source as CanvasImageSource?;
+
+  CanvasImageSource? get source {
+    if (_source is CanvasImageSource) return _source as CanvasImageSource?;
+    return null;
+  }
+
+  ImageBitmap? get imageBitmap => _source as ImageBitmap?;
 
   RenderTextureQuad get quad => RenderTextureQuad(
       this,
