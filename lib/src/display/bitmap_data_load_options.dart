@@ -75,10 +75,6 @@ class BitmapDataLoadOptions {
 
   bool corsEnabled = false;
 
-  /// Load images via imageBitmap. Does decoding off main thread,
-  /// but not supported on all browsers
-  bool imageBitmap = false;
-
   //---------------------------------------------------------------------------
 
   /// Create a deep clone of this [BitmapDataLoadOptions].
@@ -90,7 +86,6 @@ class BitmapDataLoadOptions {
     options.webp = webp;
     options.pixelRatios = List<double>.from(pixelRatios);
     options.corsEnabled = corsEnabled;
-    options.imageBitmap = imageBitmap;
     return options;
   }
 }
