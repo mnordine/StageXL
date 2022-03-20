@@ -33,6 +33,7 @@ import 'geom/matrix.dart';
 import 'geom/matrix_3d.dart';
 import 'geom/rectangle.dart';
 import 'internal/tools.dart';
+import 'internal/jenkins_hash.dart';
 
 part 'engine/blend_mode.dart';
 part 'engine/render_buffer_index.dart';
@@ -56,3 +57,4 @@ part 'engine/render_texture.dart';
 part 'engine/render_texture_filtering.dart';
 part 'engine/render_texture_quad.dart';
 part 'engine/render_texture_wrapping.dart';
+part 'engine/texture_info.dart';

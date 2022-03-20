@@ -18,6 +18,7 @@ class RenderTexture {
   bool _textureSourceWorkaround = false;
   gl.RenderingContext? _renderingContext;
   gl.Texture? _texture;
+  TextureInfo? _textureInfo;
 
   //-----------------------------------------------------------------------------------------------
 
@@ -175,6 +176,15 @@ class RenderTexture {
         gl.WebGL.TEXTURE_2D, gl.WebGL.TEXTURE_WRAP_T, _wrappingY.value);
   }
 
+  TextureInfo? get textureInfo => _textureInfo;
+
+  set textureInfo(TextureInfo? value) {
+    if (value == _textureInfo) return;
+    _textureInfo = value;
+
+    update();
+  }
+
   //-----------------------------------------------------------------------------------------------
 
   /// Call the dispose method to release memory allocated by WebGL.
@@ -211,13 +221,9 @@ class RenderTexture {
       if (_renderContext == null || _texture == null) return;
       if (_renderContext!.contextIdentifier != contextIdentifier) return;
 
-      const target = gl.WebGL.TEXTURE_2D;
-      const rgba = gl.WebGL.RGBA;
-      const type = gl.WebGL.UNSIGNED_BYTE;
-
       _renderContext!.activateRenderTexture(this);
       _renderingContext!
-          .texImage2D(target, 0, rgba, _width, _height, 0, rgba, type);
+          .texImage2D(target, 0, pixelFormat, _width, _height, 0, pixelFormat, pixelType);
     } else {
       _width = width;
       _height = height;
@@ -240,10 +246,6 @@ class RenderTexture {
     if (_renderContext == null || _texture == null) return;
     if (_renderContext!.contextIdentifier != contextIdentifier) return;
 
-    const target = gl.WebGL.TEXTURE_2D;
-    const rgba = gl.WebGL.RGBA;
-    const type = gl.WebGL.UNSIGNED_BYTE;
-
     _renderContext!.flush();
     _renderContext!.activateRenderTexture(this);
 
@@ -252,9 +254,9 @@ class RenderTexture {
 
     if (_textureSourceWorkaround) {
       _canvas!.context2D.drawImage(source!, 0, 0);
-      _renderingContext!.texImage2D(target, 0, rgba, rgba, type, _canvas);
+      _renderingContext!.texImage2D(target, 0, pixelFormat, pixelFormat, pixelType, _canvas);
     } else {
-      _renderingContext!.texImage2D(target, 0, rgba, rgba, type, _source);
+      _renderingContext!.texImage2D(target, 0, pixelFormat, pixelFormat, pixelType, _source);
     }
 
     if (scissors) _renderingContext!.enable(gl.WebGL.SCISSOR_TEST);
@@ -264,10 +266,6 @@ class RenderTexture {
 
   void activate(RenderContextWebGL renderContext, int textureSlot) {
     if (contextIdentifier != renderContext.contextIdentifier) {
-      const target = gl.WebGL.TEXTURE_2D;
-      const rgba = gl.WebGL.RGBA;
-      const type = gl.WebGL.UNSIGNED_BYTE;
-
       _renderContext = renderContext;
       _contextIdentifier = renderContext.contextIdentifier;
       final renderingContext = _renderingContext = renderContext.rawContext;
@@ -280,19 +278,18 @@ class RenderTexture {
       if (scissors) renderingContext.disable(gl.WebGL.SCISSOR_TEST);
 
       if (_source != null) {
-        renderingContext.texImage2D(target, 0, rgba, rgba, type, _source);
+        renderingContext.texImage2D(target, 0, pixelFormat, pixelFormat, pixelType, _source);
         _textureSourceWorkaround =
             renderingContext.getError() == gl.WebGL.INVALID_VALUE;
       } else {
-        renderingContext.texImage2D(
-            target, 0, rgba, width, height, 0, rgba, type);
+        renderingContext.texImage2D(target, 0, pixelFormat, width, height, 0, pixelFormat, pixelType);
       }
 
       if (_textureSourceWorkaround) {
         // WEBGL11072: INVALID_VALUE: texImage2D: This texture source is not supported
         _canvas = CanvasElement(width: width, height: height);
         _canvas!.context2D.drawImage(source!, 0, 0);
-        renderingContext.texImage2D(target, 0, rgba, rgba, type, _canvas);
+        renderingContext.texImage2D(target, 0, pixelFormat, pixelFormat, pixelType, _canvas);
       }
 
       if (scissors) renderingContext.enable(gl.WebGL.SCISSOR_TEST);
@@ -310,6 +307,10 @@ class RenderTexture {
       _renderingContext!.bindTexture(gl.WebGL.TEXTURE_2D, _texture);
     }
   }
+
+  int get target => _textureInfo?.target ?? gl.WebGL.TEXTURE_2D;
+  int get pixelFormat => _textureInfo?.pixelFormat ?? gl.WebGL.RGBA;
+  int get pixelType => _textureInfo?.pixelType ?? gl.WebGL.UNSIGNED_BYTE;
 
   //-----------------------------------------------------------------------------------------------
 
