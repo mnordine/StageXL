@@ -85,7 +85,10 @@ class RenderTexture {
     return null;
   }
 
-  ImageBitmap? get imageBitmap => _source as ImageBitmap?;
+  ImageBitmap? get imageBitmap {
+    if (_source is ImageBitmap) return _source as ImageBitmap?;
+    return null;
+  }
 
   RenderTextureQuad get quad => RenderTextureQuad(
       this,
@@ -101,6 +104,21 @@ class RenderTexture {
       final imageElement = _source as ImageElement;
       _canvas = _source = CanvasElement(width: _width, height: _height);
       _canvas!.context2D.drawImageScaled(imageElement, 0, 0, _width, _height);
+      return _canvas!;
+    } else if (_source is ImageBitmap) {
+      final image = _source as ImageBitmap;
+      _canvas = _source = CanvasElement(width: _width, height: _height);
+
+      // Note: We need to use js_util.callMethod, because Dart SDK
+      // does not support ImageBitmap as a CanvasImageSource
+      js_util.callMethod(_canvas!.context2D, 'drawImage', [
+        image,
+        0,
+        0,
+        _width,
+        _height,
+      ]);
+
       return _canvas!;
     } else {
       throw StateError('RenderTexture is read only.');
