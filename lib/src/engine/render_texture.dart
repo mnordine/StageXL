@@ -241,11 +241,8 @@ class RenderTexture {
       if (_renderContext == null || _texture == null) return;
       if (_renderContext!.contextIdentifier != contextIdentifier) return;
 
-      const target = gl.WebGL.TEXTURE_2D;
-
       _renderContext!.activateRenderTexture(this);
-      _renderingContext!
-          .texImage2D(target, 0, pixelFormat, _width, _height, 0, pixelFormat, pixelType);
+      _updateTexture(_renderContext!);
     } else {
       _width = width;
       _height = height;
@@ -274,10 +271,24 @@ class RenderTexture {
     final scissors = _renderingContext!.isEnabled(gl.WebGL.SCISSOR_TEST);
     if (scissors) _renderingContext!.disable(gl.WebGL.SCISSOR_TEST);
 
-    const target = gl.WebGL.TEXTURE_2D;
-    _renderingContext!.texImage2D(target, 0, pixelFormat, pixelFormat, pixelType, _source);
+    _updateTexture(_renderContext!);
 
     if (scissors) _renderingContext!.enable(gl.WebGL.SCISSOR_TEST);
+  }
+
+  void _updateTexture(RenderContextWebGL renderContext) {
+    final renderingContext = renderContext.rawContext;
+
+    const target = gl.WebGL.TEXTURE_2D;
+
+    if (_source != null) {
+      renderingContext.texImage2D(target, 0, pixelFormat, pixelFormat, pixelType, _source);
+    } else if (_compressedTexture != null) {
+      final tex = _compressedTexture!;
+      renderingContext.compressedTexImage2D(target, 0, tex.format, tex.width, tex.height, 0, tex.textureData);
+    } else {
+      renderingContext.texImage2D(target, 0, pixelFormat, width, height, 0, pixelFormat, pixelType);
+    }
   }
 
   //-----------------------------------------------------------------------------------------------
@@ -297,14 +308,7 @@ class RenderTexture {
       final scissors = renderingContext.isEnabled(gl.WebGL.SCISSOR_TEST);
       if (scissors) renderingContext.disable(gl.WebGL.SCISSOR_TEST);
 
-      if (_source != null) {
-        renderingContext.texImage2D(target, 0, pixelFormat, pixelFormat, pixelType, _source);
-      } else if (_compressedTexture != null) {
-        final tex = _compressedTexture!;
-        renderingContext.compressedTexImage2D(target, 0, tex.format, tex.width, tex.height, 0, tex.textureData);
-      } else {
-        renderingContext.texImage2D(target, 0, pixelFormat, width, height, 0, pixelFormat, pixelType);
-      }
+      _updateTexture(renderContext);
 
       if (scissors) renderingContext.enable(gl.WebGL.SCISSOR_TEST);
 
