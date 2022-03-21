@@ -18,7 +18,9 @@ class RenderTexture {
   bool _textureSourceWorkaround = false;
   gl.RenderingContext? _renderingContext;
   gl.Texture? _texture;
-  TextureInfo? _textureInfo;
+
+  int _pixelFormat = gl.WebGL.RGBA;
+  int _pixelType = gl.WebGL.UNSIGNED_BYTE;
 
   //-----------------------------------------------------------------------------------------------
 
@@ -176,12 +178,21 @@ class RenderTexture {
         gl.WebGL.TEXTURE_2D, gl.WebGL.TEXTURE_WRAP_T, _wrappingY.value);
   }
 
-  TextureInfo? get textureInfo => _textureInfo;
+  int get pixelFormat => _pixelFormat;
 
-  set textureInfo(TextureInfo? value) {
-    if (value == _textureInfo) return;
-    _textureInfo = value;
+  set pixelFormat(int value) {
+    if (pixelFormat == value) return;
 
+    _pixelFormat = value;
+    update();
+  }
+
+  int get pixelType => _pixelType;
+
+  set pixelType(int value) {
+    if (pixelType == value) return;
+
+    _pixelType = value;
     update();
   }
 
@@ -221,6 +232,8 @@ class RenderTexture {
       if (_renderContext == null || _texture == null) return;
       if (_renderContext!.contextIdentifier != contextIdentifier) return;
 
+      const target = gl.WebGL.TEXTURE_2D;
+
       _renderContext!.activateRenderTexture(this);
       _renderingContext!
           .texImage2D(target, 0, pixelFormat, _width, _height, 0, pixelFormat, pixelType);
@@ -252,6 +265,8 @@ class RenderTexture {
     final scissors = _renderingContext!.isEnabled(gl.WebGL.SCISSOR_TEST);
     if (scissors) _renderingContext!.disable(gl.WebGL.SCISSOR_TEST);
 
+    const target = gl.WebGL.TEXTURE_2D;
+
     if (_textureSourceWorkaround) {
       _canvas!.context2D.drawImage(source!, 0, 0);
       _renderingContext!.texImage2D(target, 0, pixelFormat, pixelFormat, pixelType, _canvas);
@@ -270,6 +285,8 @@ class RenderTexture {
       _contextIdentifier = renderContext.contextIdentifier;
       final renderingContext = _renderingContext = renderContext.rawContext;
       _texture = renderingContext.createTexture();
+
+      const target = gl.WebGL.TEXTURE_2D;
 
       renderingContext.activeTexture(textureSlot);
       renderingContext.bindTexture(target, _texture);
@@ -307,10 +324,6 @@ class RenderTexture {
       _renderingContext!.bindTexture(gl.WebGL.TEXTURE_2D, _texture);
     }
   }
-
-  int get target => _textureInfo?.target ?? gl.WebGL.TEXTURE_2D;
-  int get pixelFormat => _textureInfo?.pixelFormat ?? gl.WebGL.RGBA;
-  int get pixelType => _textureInfo?.pixelType ?? gl.WebGL.UNSIGNED_BYTE;
 
   //-----------------------------------------------------------------------------------------------
 
