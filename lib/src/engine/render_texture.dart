@@ -15,7 +15,6 @@ class RenderTexture {
   RenderContextWebGL? _renderContext;
 
   int _contextIdentifier = -1;
-  bool _textureSourceWorkaround = false;
   TextureInfo? _textureInfo;
 
   CompressedTexture? _compressedTexture;
@@ -246,12 +245,7 @@ class RenderTexture {
     final scissors = _renderingContext!.isEnabled(gl.WebGL.SCISSOR_TEST);
     if (scissors) _renderingContext!.disable(gl.WebGL.SCISSOR_TEST);
 
-    if (_textureSourceWorkaround) {
-      _canvas!.context2D.drawImage(source!, 0, 0);
-      _renderingContext!.texImage2D(target, 0, pixelFormat, pixelFormat, pixelType, _canvas);
-    } else {
-      _renderingContext!.texImage2D(target, 0, pixelFormat, pixelFormat, pixelType, _source);
-    }
+    _renderingContext!.texImage2D(target, 0, pixelFormat, pixelFormat, pixelType, _source);
 
     if (scissors) _renderingContext!.enable(gl.WebGL.SCISSOR_TEST);
   }
@@ -277,19 +271,11 @@ class RenderTexture {
 
       if (_source != null) {
         renderingContext.texImage2D(target, 0, pixelFormat, pixelFormat, pixelType, _source);
-        _textureSourceWorkaround = renderingContext.getError() == gl.WebGL.INVALID_VALUE;
       } else if (_compressedTexture != null) {
         final tex = _compressedTexture!;
         renderingContext.compressedTexImage2D(target, 0, tex.format, tex.width, tex.height, 0, tex.textureData);
       } else {
         renderingContext.texImage2D(target, 0, pixelFormat, width, height, 0, pixelFormat, pixelType);
-      }
-
-      if (_textureSourceWorkaround) {
-        // WEBGL11072: INVALID_VALUE: texImage2D: This texture source is not supported
-        _canvas = CanvasElement(width: width, height: height);
-        _canvas!.context2D.drawImage(source!, 0, 0);
-        renderingContext.texImage2D(target, 0, pixelFormat, pixelFormat, pixelType, _canvas);
       }
 
       if (scissors) renderingContext.enable(gl.WebGL.SCISSOR_TEST);
