@@ -15,11 +15,13 @@ class RenderTexture {
   RenderContextWebGL? _renderContext;
 
   int _contextIdentifier = -1;
-  TextureInfo? _textureInfo;
 
   CompressedTexture? _compressedTexture;
   gl.RenderingContext? _renderingContext;
   gl.Texture? _texture;
+
+  int _pixelFormat = gl.WebGL.RGBA;
+  int _pixelType = gl.WebGL.UNSIGNED_BYTE;
 
   //-----------------------------------------------------------------------------------------------
 
@@ -184,12 +186,21 @@ class RenderTexture {
         gl.WebGL.TEXTURE_2D, gl.WebGL.TEXTURE_WRAP_T, _wrappingY.value);
   }
 
-  TextureInfo? get textureInfo => _textureInfo;
+  int get pixelFormat => _pixelFormat;
 
-  set textureInfo(TextureInfo? info) {
-    if (info == _textureInfo) return;
-    _textureInfo = info;
+  set pixelFormat(int value) {
+    if (pixelFormat == value) return;
 
+    _pixelFormat = value;
+    update();
+  }
+
+  int get pixelType => _pixelType;
+
+  set pixelType(int value) {
+    if (pixelType == value) return;
+
+    _pixelType = value;
     update();
   }
 
@@ -230,9 +241,7 @@ class RenderTexture {
       if (_renderContext == null || _texture == null) return;
       if (_renderContext!.contextIdentifier != contextIdentifier) return;
 
-      final target = _textureInfo?.target ?? gl.WebGL.TEXTURE_2D;
-      final pixelFormat = _textureInfo?.pixelFormat ?? gl.WebGL.RGBA;
-      final pixelType = _textureInfo?.pixelType ?? gl.WebGL.UNSIGNED_BYTE;
+      const target = gl.WebGL.TEXTURE_2D;
 
       _renderContext!.activateRenderTexture(this);
       _renderingContext!
@@ -259,16 +268,13 @@ class RenderTexture {
     if (_renderContext == null || _texture == null) return;
     if (_renderContext!.contextIdentifier != contextIdentifier) return;
 
-    final target = _textureInfo?.target ?? gl.WebGL.TEXTURE_2D;
-    final pixelFormat = _textureInfo?.pixelFormat ?? gl.WebGL.RGBA;
-    final pixelType = _textureInfo?.pixelType ?? gl.WebGL.UNSIGNED_BYTE;
-
     _renderContext!.flush();
     _renderContext!.activateRenderTexture(this);
 
     final scissors = _renderingContext!.isEnabled(gl.WebGL.SCISSOR_TEST);
     if (scissors) _renderingContext!.disable(gl.WebGL.SCISSOR_TEST);
 
+    const target = gl.WebGL.TEXTURE_2D;
     _renderingContext!.texImage2D(target, 0, pixelFormat, pixelFormat, pixelType, _source);
 
     if (scissors) _renderingContext!.enable(gl.WebGL.SCISSOR_TEST);
@@ -278,14 +284,12 @@ class RenderTexture {
 
   void activate(RenderContextWebGL renderContext, int textureSlot) {
     if (contextIdentifier != renderContext.contextIdentifier) {
-      final target = _textureInfo?.target ?? gl.WebGL.TEXTURE_2D;
-      final pixelFormat = _textureInfo?.pixelFormat ?? gl.WebGL.RGBA;
-      final pixelType = _textureInfo?.pixelType ?? gl.WebGL.UNSIGNED_BYTE;
-
       _renderContext = renderContext;
       _contextIdentifier = renderContext.contextIdentifier;
       final renderingContext = _renderingContext = renderContext.rawContext;
       _texture = renderingContext.createTexture();
+
+      const target = gl.WebGL.TEXTURE_2D;
 
       renderingContext.activeTexture(textureSlot);
       renderingContext.bindTexture(target, _texture);
