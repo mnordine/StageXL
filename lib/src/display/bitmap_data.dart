@@ -23,12 +23,6 @@ class BitmapData implements BitmapDrawable {
 
   static BitmapDataLoadOptions defaultLoadOptions = BitmapDataLoadOptions();
 
-  BitmapData.fromRenderTextureQuad(this.renderTextureQuad)
-      : width = renderTextureQuad.targetWidth,
-        height = renderTextureQuad.targetHeight;
-
-  //----------------------------------------------------------------------------
-
   factory BitmapData(num width, num height,
       [int fillColor = 0xFFFFFFFF, num pixelRatio = 1.0]) {
     final textureWidth = (width * pixelRatio).round();
@@ -37,6 +31,10 @@ class BitmapData implements BitmapDrawable {
     final renderTextureQuad = renderTexture.quad.withPixelRatio(pixelRatio);
     return BitmapData.fromRenderTextureQuad(renderTextureQuad);
   }
+
+  BitmapData.fromRenderTextureQuad(this.renderTextureQuad)
+      : width = renderTextureQuad.targetWidth,
+        height = renderTextureQuad.targetHeight;
 
   factory BitmapData.fromImageElement(ImageElement imageElement,
       [num pixelRatio = 1.0]) {
@@ -47,8 +45,8 @@ class BitmapData implements BitmapDrawable {
 
   factory BitmapData.fromImageBitmap(ImageBitmap imageBitmap,
       [num pixelRatio = 1.0]) {
-    final renderTexture = RenderTexture.fromImageBitmap(imageBitmap);
-    final renderTextureQuad = renderTexture.quad.withPixelRatio(pixelRatio);
+    var renderTexture = RenderTexture.fromImageBitmap(imageBitmap);
+    var renderTextureQuad = renderTexture.quad.withPixelRatio(pixelRatio);
     return BitmapData.fromRenderTextureQuad(renderTextureQuad);
   }
 
@@ -69,7 +67,8 @@ class BitmapData implements BitmapDrawable {
 
   /// Loads a BitmapData from the given url.
 
-  static Future<BitmapData> load(String url, [BitmapDataLoadOptions? options]) async {
+  static Future<BitmapData> load(String url,
+      [BitmapDataLoadOptions? options]) async {
     options = options ?? BitmapData.defaultLoadOptions;
     final bitmapDataFileInfo = BitmapDataLoadInfo(url, options.pixelRatios);
     final targetUrl = bitmapDataFileInfo.loaderUrl;

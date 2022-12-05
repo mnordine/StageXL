@@ -28,8 +28,14 @@ class ImageBitmapLoader implements BaseImageLoader<ImageBitmap> {
         if (request.readyState == HttpRequest.DONE && request.status == 200) {
           try {
             final blob = request.response as Blob;
+
+            // Note: Dart SDK does not support createImageBitmap, so
+            // use callMethod and convert from promise to future.
+            // See https://github.com/dart-lang/sdk/issues/12379
             final promise = callMethod(window, 'createImageBitmap', [blob]);
-            final imageBitmap = await promiseToFuture<ImageBitmap>(promise as Object);
+            final imageBitmap =
+                await promiseToFuture<ImageBitmap>(promise as Object);
+
             _completer.complete(imageBitmap);
           } catch (e) {
             _completer.completeError(e);

@@ -6,7 +6,7 @@ class RenderContextCanvas extends RenderContext {
 
   final Matrix _identityMatrix = Matrix.fromIdentity();
   BlendMode _activeBlendMode = BlendMode.NORMAL;
-  double _activeAlpha = 1.0;
+  double _activeAlpha = 1;
 
   RenderContextCanvas(CanvasElement canvasElement)
       : _canvasElement = canvasElement,
@@ -22,19 +22,21 @@ class RenderContextCanvas extends RenderContext {
   RenderEngine get renderEngine => RenderEngine.Canvas2D;
 
   //---------------------------------------------------------------------------
+  @override
+  Object? getParameter(int parameter) => null;
 
   @override
   void reset() {
     setTransform(_identityMatrix);
     setBlendMode(BlendMode.NORMAL);
-    setAlpha(1.0);
+    setAlpha(1);
   }
 
   @override
   void clear(int color) {
     setTransform(_identityMatrix);
     setBlendMode(BlendMode.NORMAL);
-    setAlpha(1.0);
+    setAlpha(1);
 
     final alpha = colorGetA(color);
 
@@ -97,8 +99,8 @@ class RenderContextCanvas extends RenderContext {
     }
 
     final context = _renderingContext;
-    final source = renderTextureQuad.renderTexture.source
-      ?? renderTextureQuad.renderTexture.imageBitmap;
+    final source = renderTextureQuad.renderTexture.source ??
+        renderTextureQuad.renderTexture.imageBitmap;
 
     final rotation = renderTextureQuad.rotation;
     final sourceRect = renderTextureQuad.sourceRectangle;
@@ -117,8 +119,8 @@ class RenderContextCanvas extends RenderContext {
       context.globalCompositeOperation = blendMode.compositeOperation;
     }
 
-    // Note: We need to use js_util.callMethod, because Dart SDK will
-    // erroneously throw an error if we try to drawImage with an ImageBitmap.
+    // Note: We need to use js_util.callMethod for the drawImage calls,
+    // since Dart SDK does not support ImageBitmap as a CanvasImageSource
 
     if (rotation == 0) {
       context.setTransform(

@@ -14,6 +14,7 @@ import 'dart:html' show HttpRequest, ImageBitmap, ImageElement;
 import 'dart:js' show JsObject;
 import 'dart:typed_data';
 import 'dart:web_gl' as gl;
+
 import 'package:xml/xml.dart';
 
 import 'display.dart';
@@ -52,7 +53,7 @@ String? getUrlHash(String url, {bool webp = false}) {
     url = url.substring(0, i) + url.substring(j);
 
     final match = RegExp(r'(png|jpg|jpeg)$').firstMatch(url);
-    url = url.substring(0, match!.start) + 'webp';
+    url = url.substring(0, match!.start) + 'webp'; // ignore: prefer_interpolation_to_compose_strings
     return getUrlHash(url);
   }
 

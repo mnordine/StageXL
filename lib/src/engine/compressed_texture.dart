@@ -100,7 +100,7 @@ class PvrTexture extends CompressedTexture {
   late final int _texDataOffset;
   late final int _pvrFormat;
 
-  PvrTexture(ByteBuffer buffer) : super(buffer) {
+  PvrTexture(super.buffer) : super() {
     _parseHeader();
   }
 

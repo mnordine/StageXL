@@ -39,7 +39,12 @@ class Tween implements Animatable {
   num _totalTime = 0.0;
   num _currentTime = 0.0;
   num _delay = 0.0;
-  bool _roundToInt = false;
+
+  /// Specifies if the values should be rounded to an integer.
+  ///
+  /// Default is false.
+  bool roundToInt = false;
+
   bool _started = false;
 
   final _completer = Completer<Tween>();
@@ -124,7 +129,7 @@ class Tween implements Animatable {
         final num transition = _transition(ratio).toDouble();
 
         for (var i = 0; i < _tweenPropertyList.length; i++) {
-          _tweenPropertyList[i]._update(transition, _roundToInt);
+          _tweenPropertyList[i]._update(transition, roundToInt);
         }
         if (_onUpdate != null) {
           _onUpdate!();
@@ -174,16 +179,6 @@ class Tween implements Animatable {
       _currentTime = _currentTime + _delay - value;
       _delay = value;
     }
-  }
-
-  /// Specifies if the values should be rounded to an integer.
-  ///
-  /// Default is false.
-
-  bool get roundToInt => _roundToInt;
-
-  set roundToInt(bool value) {
-    _roundToInt = value;
   }
 
   /// Indicates if this [Tween] is completed.

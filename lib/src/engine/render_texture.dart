@@ -7,7 +7,7 @@ class RenderTexture {
   // TODO: Make CanvasImageSource again once
   // https://github.com/dart-lang/sdk/issues/12379#issuecomment-572239799
   // is addressed
-  /*CanvasImageSource*/dynamic _source;
+  /*CanvasImageSource*/ dynamic _source;
   CanvasElement? _canvas;
   RenderTextureFiltering _filtering = RenderTextureFiltering.LINEAR;
   RenderTextureWrapping _wrappingX = RenderTextureWrapping.CLAMP;

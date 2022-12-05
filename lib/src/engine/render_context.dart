@@ -1,3 +1,5 @@
+// ignore_for_file: close_sinks
+
 part of stagexl.engine;
 
 /// The implementation kind of the render context.
@@ -22,6 +24,9 @@ abstract class RenderContext {
       _contextRestoredEvent.stream;
 
   RenderEngine get renderEngine;
+
+  Object? maxTextureSize;
+  Object? getParameter(int parameter);
 
   void reset();
   void clear(int color);

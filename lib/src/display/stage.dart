@@ -65,10 +65,10 @@ class Stage extends DisplayObjectContainer {
   num _pixelRatio = 1.0;
   bool _invalid = false;
 
-  double _avgFrameTime = 0.0;
-  double _avgDrawCalls = 0.0;
-  double _avgVertexCount = 0.0;
-  double _avgIdexCount = 0.0;
+  double _avgFrameTime = 0;
+  double _avgDrawCalls = 0;
+  double _avgVertexCount = 0;
+  double _avgIdexCount = 0;
 
   final Rectangle<num> _contentRectangle = Rectangle<num>(0.0, 0.0, 0.0, 0.0);
   final Matrix _clientTransformation = Matrix.fromIdentity();
@@ -78,7 +78,11 @@ class Stage extends DisplayObjectContainer {
 
   late RenderState _renderState;
   InputEventMode _inputEventMode = InputEventMode.MouseOnly;
-  StageRenderMode _stageRenderMode = StageRenderMode.AUTO;
+
+  /// Gets and sets the render mode of this Stage. You can choose between
+  /// three different modes defined in [StageRenderMode].
+  StageRenderMode stageRenderMode = StageRenderMode.AUTO;
+
   StageScaleMode _stageScaleMode = StageScaleMode.SHOW_ALL;
   StageAlign _stageAlign = StageAlign.NONE;
 
@@ -153,7 +157,7 @@ class Stage extends DisplayObjectContainer {
     _canvas = canvas;
     _stageAlign = options.stageAlign;
     _stageScaleMode = options.stageScaleMode;
-    _stageRenderMode = options.stageRenderMode;
+    stageRenderMode = options.stageRenderMode;
     _inputEventMode = options.inputEventMode;
 
     _sourceWidth = width;
@@ -252,6 +256,14 @@ class Stage extends DisplayObjectContainer {
     _updateCanvasSize();
   }
 
+  /// Get the max texture size from the current WebGL canvas.
+  /// Will return null if called on Canvas2D
+  int? get maxTextureSize => _renderContext.maxTextureSize as int?;
+
+  /// Access WebGL parameters, you need to get the int's for access through
+  /// dart:web_gl. Will return null if called on Canvas2D
+  Object? getParameter(int parameter) => _renderContext.getParameter(parameter);
+
   /// Gets and sets the height of the Stage in world coordinates.
   /// The initial value of [sourceHeight] is the height of the canvas
   /// element or the height provided in the constructor of the Stage.
@@ -270,15 +282,6 @@ class Stage extends DisplayObjectContainer {
   set pixelRatio(num value) {
     _pixelRatio = value;
     _updateCanvasSize();
-  }
-
-  /// Gets and sets the render mode of this Stage. You can choose between
-  /// three different modes defined in [StageRenderMode].
-
-  StageRenderMode get renderMode => _stageRenderMode;
-
-  set renderMode(StageRenderMode value) {
-    _stageRenderMode = value;
   }
 
   /// Gets and sets the scale mode of this Stage. You can choose between
@@ -393,9 +396,9 @@ class Stage extends DisplayObjectContainer {
   /// on your own and therefore get full control of the rendering of this Stage.
 
   void materialize(num currentTime, num deltaTime) {
-    if (_stageRenderMode == StageRenderMode.AUTO ||
-        _stageRenderMode == StageRenderMode.AUTO_INVALID && _invalid ||
-        _stageRenderMode == StageRenderMode.ONCE) {
+    if (stageRenderMode == StageRenderMode.AUTO ||
+        stageRenderMode == StageRenderMode.AUTO_INVALID && _invalid ||
+        stageRenderMode == StageRenderMode.ONCE) {
       final stopwatch = Stopwatch()..start();
 
       _updateCanvasSize();
@@ -437,8 +440,8 @@ class Stage extends DisplayObjectContainer {
 
     }
 
-    if (_stageRenderMode == StageRenderMode.ONCE) {
-      _stageRenderMode = StageRenderMode.STOP;
+    if (stageRenderMode == StageRenderMode.ONCE) {
+      stageRenderMode = StageRenderMode.STOP;
     }
   }
 
