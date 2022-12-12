@@ -214,7 +214,11 @@ class RenderTexture {
     }
 
     if (_source is ImageBitmap) {
-      (_source as ImageBitmap).close();
+      try {
+        (_source as ImageBitmap).close();
+      } catch (_) {
+        // Some browsers don't support ImageBitmap.close(). Ignore.
+      }
     }
 
     _texture = null;
