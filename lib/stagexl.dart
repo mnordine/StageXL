@@ -189,4 +189,6 @@ class Environment {
   /// This flag indicates whether bitmaps will be uploaded efficiently
 
   final bool isImageBitmapSupported = env.isImageBitmapSupported;
+
+  final Future<bool> isWebpSupported = env.isWebpSupported;
 }
