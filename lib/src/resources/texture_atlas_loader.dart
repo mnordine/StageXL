@@ -114,11 +114,17 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
   RenderTexture _decodeCompressedTexture(ByteBuffer buffer, CompressedTextureFileTypes type) {
     switch (type) {
       case CompressedTextureFileTypes.pvr: return _decodePvr(buffer);
+      case CompressedTextureFileTypes.ktx: return _decodeKtx(buffer);
     }
   }
 
   RenderTexture _decodePvr(ByteBuffer buffer) {
     final tex = PvrTexture(buffer);
+    return RenderTexture.fromCompressedTexture(tex);
+  }
+
+  RenderTexture _decodeKtx(ByteBuffer buffer) {
+    final tex = KtxTexture(buffer);
     return RenderTexture.fromCompressedTexture(tex);
   }
 

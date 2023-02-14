@@ -66,5 +66,6 @@ String? getUrlHash(String url, {bool webp = false}) {
 }
 
 enum CompressedTextureFileTypes {
-  pvr
+  pvr,
+  ktx
 }
