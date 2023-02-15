@@ -30,7 +30,7 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
   BaseImageLoader? _imageLoader;
   HttpRequest? _compressedTextureRequest;
 
-  static const compressedTextureFormats = {'.pvr', '.pvr.gz'};
+  static const compressedTextureFormats = {'.pvr', '.pvr.gz', '.ktx'};
 
   _TextureAtlasLoaderFile(String url, [BitmapDataLoadOptions? options]) {
     _loadOptions = options ?? BitmapData.defaultLoadOptions;
@@ -116,6 +116,7 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
       ..onReadyStateChange.listen((_) {
         if (request.readyState == HttpRequest.DONE && request.status == 200) {
           final buffer = request.response as ByteBuffer;
+          print('decoding texture $filename...');
           final texture = _decodeCompressedTexture(buffer, type);
 
           _compressedTextureRequest = null;
