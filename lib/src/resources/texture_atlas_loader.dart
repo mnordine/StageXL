@@ -98,7 +98,7 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
 
     CompressedTextureFileTypes type;
 
-    switch(ext) {
+    switch (ext) {
       case 'pvr':
         type = CompressedTextureFileTypes.pvr;
         break;

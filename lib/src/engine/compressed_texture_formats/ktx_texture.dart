@@ -22,8 +22,7 @@ class KtxTexture extends CompressedTexture {
 
     for (final entry in magic.asMap().entries) {
       if (entry.value != KtxFormat.ktx_magic[entry.key]) {
-        print('unrecognized magic, not a ktx header');
-        return;
+        throw LoadError('compressed texture has unrecognized magic, not a ktx header');
       }
     }
 
@@ -34,12 +33,12 @@ class KtxTexture extends CompressedTexture {
         break;
       case KtxFormat.ktx_end_be:
         // Switch the ByteArray to reading in big endian
+        // TODO(CEksal): Test on big endian files to make sure they work as expected.
         print('warning: ktx file is big endian, this is untested');
         bytes.endian = Endian.big;
         break;
       default:
-        print('unrecognized endianness, not a ktx header');
-        return;
+        throw LoadError('compressed texture has unrecognized endianness, not a ktx header');
     }
 
     /*final glType = */ bytes.readUnsignedInt();

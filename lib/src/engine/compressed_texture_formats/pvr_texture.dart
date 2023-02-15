@@ -54,15 +54,13 @@ class PvrTexture extends CompressedTexture {
 
     final magic = bytes.readUnsignedInt();
     if (magic != 0x03525650) {
-      print('unrecognized magic, not a pvr header');
-      return;
+      throw LoadError('compressed texture has unrecognized magic, not a pvr header');
     }
 
     const headerSize = 52;
 
     if (bytes.length <= headerSize) {
-      print('not enough data to decode pvr');
-      return;
+      throw LoadError('compressed texture does not have enough data to decode pvr');
     }
 
     /*final flags = */ bytes.readUnsignedInt();
