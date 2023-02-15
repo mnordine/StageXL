@@ -48,8 +48,8 @@ class KtxTexture extends CompressedTexture {
     /*final glFormat = */ bytes.readUnsignedInt();
     _glInternalFormat = bytes.readUnsignedInt();
     /*final glBaseInternalFormat = */ bytes.readUnsignedInt();
-    /*final pixelWidth = */ bytes.readUnsignedInt();
-    /*final pixelHeight = */ bytes.readUnsignedInt();
+    width = bytes.readUnsignedInt();
+    height = bytes.readUnsignedInt();
     /*final pixelDepth = */ bytes.readUnsignedInt();
     /*final numberOfArrayElements = */ bytes.readUnsignedInt();
     /*final numberOfFaces = */ bytes.readUnsignedInt();
