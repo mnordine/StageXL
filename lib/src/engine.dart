@@ -60,4 +60,5 @@ part 'engine/render_texture_quad.dart';
 part 'engine/render_texture_wrapping.dart';
 part 'engine/texture_info.dart';
 part 'engine/compressed_texture.dart';
-
+part 'engine/compressed_texture_formats/pvr_texture.dart';
+part 'engine/compressed_texture_formats/ktx_texture.dart';

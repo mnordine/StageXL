@@ -30,7 +30,7 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
   BaseImageLoader? _imageLoader;
   HttpRequest? _compressedTextureRequest;
 
-  static const compressedTextureFormats = {'.pvr', '.pvr.gz'};
+  static const compressedTextureFormats = {'.pvr', '.pvr.gz', '.ktx'};
 
   _TextureAtlasLoaderFile(String url, [BitmapDataLoadOptions? options]) {
     _loadOptions = options ?? BitmapData.defaultLoadOptions;
@@ -89,6 +89,25 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
   }
 
   Future<RenderTexture> _loadCompressedTexture(String filename) {
+    final filenameParts = filename.split('.');
+    var ext = filenameParts.last;
+
+    if (ext == 'gz') {
+      ext = filenameParts[filenameParts.length - 2];
+    }
+
+    CompressedTextureFileTypes type;
+
+    switch (ext) {
+      case 'pvr':
+        type = CompressedTextureFileTypes.pvr;
+        break;
+      case 'ktx':
+        type = CompressedTextureFileTypes.ktx;
+        break;
+      default:
+        throw LoadError('unknown extension $ext');
+    }
 
     final completer = Completer<RenderTexture>();
 
@@ -97,7 +116,7 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
       ..onReadyStateChange.listen((_) {
         if (request.readyState == HttpRequest.DONE && request.status == 200) {
           final buffer = request.response as ByteBuffer;
-          final texture = _decodeCompressedTexture(buffer, CompressedTextureFileTypes.pvr);
+          final texture = _decodeCompressedTexture(buffer, type);
 
           _compressedTextureRequest = null;
 
@@ -114,11 +133,17 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
   RenderTexture _decodeCompressedTexture(ByteBuffer buffer, CompressedTextureFileTypes type) {
     switch (type) {
       case CompressedTextureFileTypes.pvr: return _decodePvr(buffer);
+      case CompressedTextureFileTypes.ktx: return _decodeKtx(buffer);
     }
   }
 
   RenderTexture _decodePvr(ByteBuffer buffer) {
     final tex = PvrTexture(buffer);
+    return RenderTexture.fromCompressedTexture(tex);
+  }
+
+  RenderTexture _decodeKtx(ByteBuffer buffer) {
+    final tex = KtxTexture(buffer);
     return RenderTexture.fromCompressedTexture(tex);
   }
 

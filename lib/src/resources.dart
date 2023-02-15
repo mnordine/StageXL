@@ -19,6 +19,7 @@ import 'package:xml/xml.dart';
 
 import 'display.dart';
 import 'engine.dart';
+import 'errors.dart';
 import 'geom.dart';
 import 'internal/environment.dart' as env;
 import 'internal/image_bitmap_loader.dart';
@@ -66,5 +67,6 @@ String? getUrlHash(String url, {bool webp = false}) {
 }
 
 enum CompressedTextureFileTypes {
-  pvr
+  pvr,
+  ktx
 }
