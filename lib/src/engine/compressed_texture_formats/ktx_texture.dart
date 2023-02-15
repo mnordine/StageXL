@@ -31,11 +31,10 @@ class KtxTexture extends CompressedTexture {
     switch (endianness) {
       case KtxFormat.ktx_end_le:
         // We're already reading in little endian
-        print('ktx file is little endian');
         break;
       case KtxFormat.ktx_end_be:
         // Switch the ByteArray to reading in big endian
-        print('ktx file is big endian');
+        print('warning: ktx file is big endian, this is untested');
         bytes.endian = Endian.big;
         break;
       default:
@@ -51,7 +50,6 @@ class KtxTexture extends CompressedTexture {
     width = bytes.readUnsignedInt();
     height = bytes.readUnsignedInt();
 
-    print('ktx size: $width x $height');
     /*final pixelDepth = */ bytes.readUnsignedInt();
     /*final numberOfArrayElements = */ bytes.readUnsignedInt();
     /*final numberOfFaces = */ bytes.readUnsignedInt();
