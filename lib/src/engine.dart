@@ -31,6 +31,7 @@ import 'dart:web_gl' as gl;
 
 import 'package:byte_array/byte_array.dart';
 
+import 'errors.dart';
 import 'geom/matrix.dart';
 import 'geom/matrix_3d.dart';
 import 'geom/rectangle.dart';
