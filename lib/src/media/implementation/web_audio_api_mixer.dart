@@ -21,7 +21,11 @@ class WebAudioApiMixer {
     if (time == null) return;
 
     final value = pow(soundTransform.volume, 2);
-    _volumeNode.gain?.setValueAtTime(value, time);
+
+    // Safari sometimes throws here.
+    try {
+      _volumeNode.gain?.setValueAtTime(value, time);
+    } catch (_) {}
   }
 
   AudioNode get inputNode => _volumeNode;
