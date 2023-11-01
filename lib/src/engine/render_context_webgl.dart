@@ -58,16 +58,22 @@ class RenderContextWebGL extends RenderContext {
     _contextValid = true;
     _contextIdentifier = ++_globalContextIdentifier;
 
-    // TODO: Check for extension before getting it, 
-    // and maybe try registering more than 1
-    final _ = _renderingContext.getExtension('WEBGL_compressed_texture_pvrtc')
-    ?? _renderingContext.getExtension('WEBKIT_WEBGL_compressed_texture_pvrtc')
-    ?? _renderingContext.getExtension('WEBGL_compressed_texture_etc')
-    ?? _renderingContext.getExtension('WEBKIT_WEBGL_compressed_texture_etc')
-    ?? _renderingContext.getExtension('WEBGL_compressed_texture_s3tc')
-    ?? _renderingContext.getExtension('WEBKIT_WEBGL_compressed_texture_s3tc');
+    // TODO: maybe try registering more than 1
+    _tryGetExtension('WEBGL_compressed_texture_etc')
+    || _tryGetExtension('WEBKIT_WEBGL_compressed_texture_etc')
+    || _tryGetExtension('WEBGL_compressed_texture_s3tc')
+    || _tryGetExtension('WEBKIT_WEBGL_compressed_texture_s3tc');
 
     reset();
+  }
+
+  bool _tryGetExtension(String name) {
+    final extensionSupported = _renderingContext.getSupportedExtensions()?.contains(name) ?? true;
+    if (!extensionSupported) {
+      return false;
+    }
+
+    return _renderingContext.getExtension(name) != null;
   }
 
   //---------------------------------------------------------------------------
