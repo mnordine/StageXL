@@ -1,54 +1,62 @@
 part of stagexl.engine;
 
+class CompressedExtensions {
+  final WebGLCompressedTextureS3tc? s3tc;
+  final WebGLCompressedTextureAstc? astc;
+  final WebGLCompressedTexturePvrtc? pvrtc;
+  final WebGLCompressedTextureEtc? etc;
+  final WebGLCompressedTextureEtc1? etc1;
+
+  CompressedExtensions(WebGL context)
+      : s3tc = CompressedTexture.dxtExtension(context),
+        astc = CompressedTexture.astcExtension(context),
+        pvrtc = CompressedTexture.pvrtcExtension(context),
+        etc = CompressedTexture.etcExtension(context),
+        etc1 = CompressedTexture.etc1Extension(context);
+}
+
 abstract class CompressedTexture {
   late final int width;
   late final int height;
   final ByteBuffer _buffer;
+  static CompressedExtensions? extensions;
 
   CompressedTexture(this._buffer);
 
-  static bool supportsDxt(gl.RenderingContext context)
-  {
-    var ext = context.getExtension('WEBGL_compressed_texture_s3tc');
-    ext ??= context.getExtension('WEBKIT_WEBGL_compressed_texture_s3tc');
+  static WebGLCompressedTextureS3tc? dxtExtension(WebGL context) =>
+      (context.getExtension('WEBGL_compressed_texture_s3tc') ??
+          context.getExtension('WEBKIT_WEBGL_compressed_texture_s3tc')) as WebGLCompressedTextureS3tc?;
 
-    return ext != null;
-  }
+  static bool get supportsDxt => extensions?.s3tc != null;
 
-  static bool supportsPvrtc(gl.RenderingContext context)
-  {
-    var ext = context.getExtension('WEBGL_compressed_texture_pvrtc');
-    ext ??= context.getExtension('WEBKIT_WEBGL_compressed_texture_pvrtc');
+  static WebGLCompressedTexturePvrtc? pvrtcExtension(WebGL context) =>
+      (context.getExtension('WEBGL_compressed_texture_pvrtc') ??
+          context.getExtension('WEBKIT_WEBGL_compressed_texture_pvrtc')) as WebGLCompressedTexturePvrtc?;
 
-    return ext != null;
-  }
+  static bool get supportsPvrtc => extensions?.pvrtc != null;
 
-  static bool supportsEtc(gl.RenderingContext context)
-  {
-    var ext = context.getExtension('WEBGL_compressed_texture_etc');
-    ext ??= context.getExtension('WEBKIT_WEBGL_compressed_texture_etc');
+  static WebGLCompressedTextureEtc? etcExtension(WebGL context) =>
+      (context.getExtension('WEBGL_compressed_texture_etc') ?? context.getExtension('WEBGL_compressed_texture_etc'))
+          as WebGLCompressedTextureEtc?;
 
-    return ext != null;
-  }
+  static bool get supportsEtc => extensions?.etc != null;
 
-  static bool supportsEtc1(gl.RenderingContext context)
-  {
-    var ext = context.getExtension('WEBGL_compressed_texture_etc1');
-    ext ??= context.getExtension('WEBKIT_WEBGL_compressed_texture_etc1');
+  static WebGLCompressedTextureEtc1? etc1Extension(WebGL context) =>
+      (context.getExtension('WEBGL_compressed_texture_etc1') ??
+          context.getExtension('WEBKIT_WEBGL_compressed_texture_etc1')) as WebGLCompressedTextureEtc1?;
 
-    return ext != null;
-  }
+  static bool get supportsEtc1 => extensions?.etc1 != null;
 
-  static bool supportsAstc(gl.RenderingContext context)
-  {
-    var ext = context.getExtension('WEBGL_compressed_texture_astc');
-    ext ??= context.getExtension('WEBKIT_WEBGL_compressed_texture_astc');
+  static WebGLCompressedTextureAstc? astcExtension(WebGL context) =>
+      (context.getExtension('WEBGL_compressed_texture_astc') ??
+          context.getExtension('WEBKIT_WEBGL_compressed_texture_astc')) as WebGLCompressedTextureAstc?;
 
-    return ext != null;
-  }
+  static bool get supportsAstc => extensions?.astc != null;
+
+  static void initExtensions(WebGL context) => extensions = CompressedExtensions(context);
 
   /// Texture data that can be passed to WebGL functions
-  TypedData get textureData;
+  ByteData get textureData;
 
   /// Translates internal texture format to WebGL texture format enum
   int get format;

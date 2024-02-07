@@ -3,7 +3,7 @@ part of stagexl.media;
 class WebAudioApiSound extends Sound {
   final AudioBuffer _audioBuffer;
 
-  static final _loaders = <String, HttpRequest>{};
+  static final _loaders = <String, Future<void>>{};
 
   WebAudioApiSound._(this._audioBuffer);
 
@@ -32,49 +32,42 @@ class WebAudioApiSound extends Sound {
     }
   }
 
-  static Future<Sound> _tryAudioUrl(String url, String audioUrl) {
-
+  static Future<Sound> _tryAudioUrl(String key, String audioUrl) {
     final completer = Completer<Sound>();
 
-    final request = _loaders[url] = HttpRequest();
-    request
-      ..onReadyStateChange.listen((_) async {
-        if (request.readyState == HttpRequest.DONE && request.status == 200) {
+    _loaders[key] = http.get(Uri.parse(audioUrl)).then((response) async {
+      if (response.statusCode == 200) {
 
-          if (!_loaders.containsKey(url)) {
+        if (!_loaders.containsKey(key)) {
+          completer.completeError('sound already cancelled');
+        }
+
+        try {
+          final buffer = response.bodyBytes.buffer;
+          final audioContext = WebAudioApiMixer.audioContext;
+          final audioBuffer = await audioContext.decodeAudioData(buffer.toJS).toDart;
+          final sound = WebAudioApiSound._(audioBuffer);
+
+          if (!_loaders.containsKey(key)) {
             completer.completeError('sound already cancelled');
           }
 
-          try {
-            final buffer = request.response as ByteBuffer;
-            final audioContext = WebAudioApiMixer.audioContext;
-            final audioBuffer = await audioContext.decodeAudioData(buffer);
-            final sound = WebAudioApiSound._(audioBuffer);
+          unawaited(_loaders.remove(key));
+          completer.complete(sound);
 
-            if (!_loaders.containsKey(url)) {
-              completer.completeError('sound already cancelled');
-            }
-
-            _loaders.remove(url);
-            completer.complete(sound);
-
-          } catch (e) {
-            if (!completer.isCompleted) completer.completeError('caught error loading $audioUrl');
-          }
+        } catch (e) {
+          if (!completer.isCompleted) completer.completeError('caught error loading $audioUrl');
         }
-      })
-      ..open('GET', audioUrl, async: true)
-      ..responseType = 'arraybuffer'
-      ..send();
+      }
+    });
 
     return completer.future;
   }
 
-  static void cancel(String url) {
-    if (!_loaders.containsKey(url)) return;
+  static void cancel(String key) {
+    if (!_loaders.containsKey(key)) return;
 
-    _loaders[url]?.abort();
-    _loaders.remove(url);
+    _loaders.remove(key);
   }
 
   //---------------------------------------------------------------------------
@@ -88,7 +81,7 @@ class WebAudioApiSound extends Sound {
 
     try {
       final audioData = bytes.buffer;
-      final audioBuffer = await audioContext.decodeAudioData(audioData);
+      final audioBuffer = await audioContext.decodeAudioData(audioData.toJS).toDart;
       return WebAudioApiSound._(audioBuffer);
     } catch (e) {
       if (options.ignoreErrors) {
@@ -105,7 +98,7 @@ class WebAudioApiSound extends Sound {
   SoundEngine get engine => SoundEngine.WebAudioApi;
 
   @override
-  num get length => _audioBuffer.duration!;
+  num get length => _audioBuffer.duration;
 
   @override
   SoundChannel play([bool loop = false, SoundTransform? soundTransform]) =>
