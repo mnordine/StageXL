@@ -4,10 +4,7 @@ class RenderTexture {
   int _width = 0;
   int _height = 0;
 
-  // TODO: Make CanvasImageSource again once
-  // https://github.com/dart-lang/sdk/issues/12379#issuecomment-572239799
-  // is addressed
-  /*CanvasImageSource*/ dynamic _source;
+  CanvasImageSource? _source;
   CanvasElement? _canvas;
   RenderTextureFiltering _filtering = RenderTextureFiltering.LINEAR;
   RenderTextureWrapping _wrappingX = RenderTextureWrapping.CLAMP;
@@ -17,11 +14,11 @@ class RenderTexture {
   int _contextIdentifier = -1;
 
   CompressedTexture? _compressedTexture;
-  gl.RenderingContext? _renderingContext;
-  gl.Texture? _texture;
+  WebGL? _renderingContext;
+  WebGLTexture? _texture;
 
-  int _pixelFormat = gl.WebGL.RGBA;
-  int _pixelType = gl.WebGL.UNSIGNED_BYTE;
+  int _pixelFormat = WebGL.RGBA;
+  int _pixelType = WebGL.UNSIGNED_BYTE;
 
   //-----------------------------------------------------------------------------------------------
 
@@ -31,30 +28,32 @@ class RenderTexture {
 
     _width = width;
     _height = height;
-    _source = _canvas = CanvasElement(width: _width, height: _height);
+    _source = _canvas = (document.createElement('canvas') as CanvasElement)
+      ..width = _width
+      ..height = _height;
 
     if (fillColor != 0) {
       final context = _canvas!.context2D;
-      context.fillStyle = color2rgba(fillColor);
+      context.fillStyle = color2rgba(fillColor).toJS;
       context.fillRect(0, 0, _width, _height);
     }
   }
 
   RenderTexture.fromImageElement(ImageElement imageElement) {
-    _width = imageElement.width!;
-    _height = imageElement.height!;
+    _width = imageElement.width;
+    _height = imageElement.height;
     _source = imageElement;
   }
 
   RenderTexture.fromImageBitmap(ImageBitmap image) {
-    _width = image.width!;
-    _height = image.height!;
+    _width = image.width;
+    _height = image.height;
     _source = image;
   }
 
   RenderTexture.fromCanvasElement(CanvasElement canvasElement) {
-    _width = canvasElement.width!;
-    _height = canvasElement.height!;
+    _width = canvasElement.width;
+    _height = canvasElement.height;
     _source = _canvas = canvasElement;
   }
 
@@ -82,15 +81,9 @@ class RenderTexture {
   int get width => _width;
   int get height => _height;
 
-  CanvasImageSource? get source {
-    if (_source is CanvasImageSource) return _source as CanvasImageSource?;
-    return null;
-  }
+  CanvasImageSource? get source => _source;
 
-  ImageBitmap? get imageBitmap {
-    if (_source is ImageBitmap) return _source as ImageBitmap?;
-    return null;
-  }
+  ImageBitmap? get imageBitmap => _source.instanceOfString('ImageBitmap') ? _source as ImageBitmap : null;
 
   RenderTextureQuad get quad => RenderTextureQuad(
       this,
@@ -100,26 +93,31 @@ class RenderTexture {
       1.0);
 
   CanvasElement get canvas {
-    if (_source is CanvasElement) {
+    if (_source.instanceOfString('HTMLCanvasElement')) {
       return _source as CanvasElement;
-    } else if (_source is ImageElement) {
+    } else if (_source.instanceOfString('HTMLImageElement')) {
       final imageElement = _source as ImageElement;
-      _canvas = _source = CanvasElement(width: _width, height: _height);
-      _canvas!.context2D.drawImageScaled(imageElement, 0, 0, _width, _height);
+      _source = _canvas = (document.createElement('canvas') as CanvasElement)
+        ..width = _width
+        ..height = _height;
+      
+      _canvas!.context2D.drawImageScaled(imageElement, 0, 0, _width.toDouble(), _height.toDouble());
       return _canvas!;
-    } else if (_source is ImageBitmap) {
+    } else if (_source.instanceOfString('ImageBitmap')) {
       final image = _source as ImageBitmap;
-      _canvas = _source = CanvasElement(width: _width, height: _height);
+      _source = _canvas = (document.createElement('canvas') as CanvasElement)
+        ..width = _width
+        ..height = _height;
 
       // Note: We need to use js_util.callMethod, because Dart SDK
       // does not support ImageBitmap as a CanvasImageSource
-      js_util.callMethod(_canvas!.context2D, 'drawImage', [
+      _canvas!.context2D.drawImage(
         image,
         0,
         0,
         _width,
         _height,
-      ]);
+      );
 
       return _canvas!;
     } else {
@@ -127,7 +125,7 @@ class RenderTexture {
     }
   }
 
-  gl.Texture? get texture => _texture;
+  WebGLTexture? get texture => _texture;
   int get contextIdentifier => _contextIdentifier;
 
   //-----------------------------------------------------------------------------------------------
@@ -149,9 +147,9 @@ class RenderTexture {
 
     _renderContext!.activateRenderTexture(this);
     _renderingContext!.texParameteri(
-        gl.WebGL.TEXTURE_2D, gl.WebGL.TEXTURE_MIN_FILTER, _filtering.value);
+        WebGL.TEXTURE_2D, WebGL.TEXTURE_MIN_FILTER, _filtering.value);
     _renderingContext!.texParameteri(
-        gl.WebGL.TEXTURE_2D, gl.WebGL.TEXTURE_MAG_FILTER, _filtering.value);
+        WebGL.TEXTURE_2D, WebGL.TEXTURE_MAG_FILTER, _filtering.value);
   }
 
   //-----------------------------------------------------------------------------------------------
@@ -167,7 +165,7 @@ class RenderTexture {
 
     _renderContext!.activateRenderTexture(this);
     _renderingContext!.texParameteri(
-        gl.WebGL.TEXTURE_2D, gl.WebGL.TEXTURE_WRAP_S, _wrappingX.value);
+        WebGL.TEXTURE_2D, WebGL.TEXTURE_WRAP_S, _wrappingX.value);
   }
 
   //-----------------------------------------------------------------------------------------------
@@ -183,7 +181,7 @@ class RenderTexture {
 
     _renderContext!.activateRenderTexture(this);
     _renderingContext!.texParameteri(
-        gl.WebGL.TEXTURE_2D, gl.WebGL.TEXTURE_WRAP_T, _wrappingY.value);
+        WebGL.TEXTURE_2D, WebGL.TEXTURE_WRAP_T, _wrappingY.value);
   }
 
   int get pixelFormat => _pixelFormat;
@@ -250,7 +248,9 @@ class RenderTexture {
     } else {
       _width = width;
       _height = height;
-      _canvas = _source = CanvasElement(width: _width, height: _height);
+      _source = _canvas = (document.createElement('canvas') as CanvasElement)
+        ..width = _width
+        ..height = _height;
     }
   }
 
@@ -272,26 +272,26 @@ class RenderTexture {
     _renderContext!.flush();
     _renderContext!.activateRenderTexture(this);
 
-    final scissors = _renderingContext!.isEnabled(gl.WebGL.SCISSOR_TEST);
-    if (scissors) _renderingContext!.disable(gl.WebGL.SCISSOR_TEST);
+    final scissors = _renderingContext!.isEnabled(WebGL.SCISSOR_TEST);
+    if (scissors) _renderingContext!.disable(WebGL.SCISSOR_TEST);
 
     _updateTexture(_renderContext!);
 
-    if (scissors) _renderingContext!.enable(gl.WebGL.SCISSOR_TEST);
+    if (scissors) _renderingContext!.enable(WebGL.SCISSOR_TEST);
   }
 
   void _updateTexture(RenderContextWebGL renderContext) {
     final renderingContext = renderContext.rawContext;
 
-    const target = gl.WebGL.TEXTURE_2D;
+    final target = WebGL2RenderingContext.TEXTURE_2D;
 
     if (_source != null) {
-      renderingContext.texImage2D(target, 0, pixelFormat, pixelFormat, pixelType, _source);
+      renderingContext.texImage2D(target, 0, pixelFormat, pixelFormat.toJS, pixelType.toJS, _source!);
     } else if (_compressedTexture != null) {
       final tex = _compressedTexture!;
-      renderingContext.compressedTexImage2D(target, 0, tex.format, tex.width, tex.height, 0, tex.textureData);
+      renderingContext.compressedTexImage2D(target, 0, tex.format, tex.width, tex.height, 0, tex.textureData.toJS);
     } else {
-      renderingContext.texImage2D(target, 0, pixelFormat, width, height, 0, pixelFormat, pixelType);
+      renderingContext.texImage2D(target, 0, pixelFormat, width.toJS, height.toJS, 0.toJS, pixelFormat, pixelType);
     }
   }
 
@@ -304,29 +304,29 @@ class RenderTexture {
       final renderingContext = _renderingContext = renderContext.rawContext;
       _texture = renderingContext.createTexture();
 
-      const target = gl.WebGL.TEXTURE_2D;
+      final target = WebGL.TEXTURE_2D;
 
       renderingContext.activeTexture(textureSlot);
       renderingContext.bindTexture(target, _texture);
 
-      final scissors = renderingContext.isEnabled(gl.WebGL.SCISSOR_TEST);
-      if (scissors) renderingContext.disable(gl.WebGL.SCISSOR_TEST);
+      final scissors = renderingContext.isEnabled(WebGL.SCISSOR_TEST);
+      if (scissors) renderingContext.disable(WebGL.SCISSOR_TEST);
 
       _updateTexture(renderContext);
 
-      if (scissors) renderingContext.enable(gl.WebGL.SCISSOR_TEST);
+      if (scissors) renderingContext.enable(WebGL.SCISSOR_TEST);
 
       renderingContext.texParameteri(
-          gl.WebGL.TEXTURE_2D, gl.WebGL.TEXTURE_WRAP_S, _wrappingX.value);
+          WebGL.TEXTURE_2D, WebGL.TEXTURE_WRAP_S, _wrappingX.value);
       renderingContext.texParameteri(
-          gl.WebGL.TEXTURE_2D, gl.WebGL.TEXTURE_WRAP_T, _wrappingY.value);
+          WebGL.TEXTURE_2D, WebGL.TEXTURE_WRAP_T, _wrappingY.value);
       renderingContext.texParameteri(
-          gl.WebGL.TEXTURE_2D, gl.WebGL.TEXTURE_MIN_FILTER, _filtering.value);
+          WebGL.TEXTURE_2D, WebGL.TEXTURE_MIN_FILTER, _filtering.value);
       renderingContext.texParameteri(
-          gl.WebGL.TEXTURE_2D, gl.WebGL.TEXTURE_MAG_FILTER, _filtering.value);
+          WebGL.TEXTURE_2D, WebGL.TEXTURE_MAG_FILTER, _filtering.value);
     } else {
       _renderingContext!.activeTexture(textureSlot);
-      _renderingContext!.bindTexture(gl.WebGL.TEXTURE_2D, _texture);
+      _renderingContext!.bindTexture(WebGL.TEXTURE_2D, _texture);
     }
   }
 

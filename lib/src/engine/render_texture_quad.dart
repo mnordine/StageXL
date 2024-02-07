@@ -322,7 +322,7 @@ class RenderTextureQuad {
   ImageData createImageData() {
     final rect = sourceRectangle;
     final context = renderTexture.canvas.context2D;
-    return context.createImageData(rect.width, rect.height);
+    return context.createImageData(rect.width.toJS, rect.height);
   }
 
   ImageData getImageData() {

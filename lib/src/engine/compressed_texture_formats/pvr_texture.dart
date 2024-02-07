@@ -82,56 +82,47 @@ class PvrTexture extends CompressedTexture {
   @override
   int get format {
     switch (_pvrFormat) {
-      case PvrFormat.pvrtc_rgb_2bpp:
-        return gl.CompressedTexturePvrtc.COMPRESSED_RGB_PVRTC_2BPPV1_IMG;
-      case PvrFormat.pvrtc_rgb_4bpp:
-        return gl.CompressedTexturePvrtc.COMPRESSED_RGB_PVRTC_4BPPV1_IMG;
-      case PvrFormat.pvrtc_rgba_2bpp:
-        return gl.CompressedTexturePvrtc.COMPRESSED_RGBA_PVRTC_2BPPV1_IMG;
-      case PvrFormat.pvrtc_rgba_4bpp:
-        return gl.CompressedTexturePvrtc.COMPRESSED_RGBA_PVRTC_4BPPV1_IMG;
-
-      case PvrFormat.etc1:
-        return gl.CompressedTextureETC1.COMPRESSED_RGB_ETC1_WEBGL;
-
+      // NOTE(CEksal): These formats aren't exposed by `package:web`, so we instead import
+      // from `dart:web_gl`. These could be replaced with the GLenum values directly.
       case PvrFormat.etc2_rgb:
-        return gl.CompressedTextureEtc.COMPRESSED_RGB8_ETC2;
+        return CompressedTextureEtc.COMPRESSED_RGB8_ETC2;
       case PvrFormat.etc2_rgba:
-        return gl.CompressedTextureEtc.COMPRESSED_RGBA8_ETC2_EAC;
+        return CompressedTextureEtc.COMPRESSED_RGBA8_ETC2_EAC;
 
+      // NOTE(CEksal): These are exported from `package:web`, so we'll use them instead.
       case PvrFormat.bc1:
-        return gl.CompressedTextureS3TC.COMPRESSED_RGBA_S3TC_DXT1_EXT;
+        return WEBGL_compressed_texture_s3tc.COMPRESSED_RGBA_S3TC_DXT1_EXT;
       case PvrFormat.bc3:
-        return gl.CompressedTextureS3TC.COMPRESSED_RGBA_S3TC_DXT5_EXT;
+        return WEBGL_compressed_texture_s3tc.COMPRESSED_RGBA_S3TC_DXT5_EXT;
 
       case PvrFormat.astc_4x4:
-        return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_4x4_KHR;
+        return WEBGL_compressed_texture_astc.COMPRESSED_RGBA_ASTC_4x4_KHR;
       case PvrFormat.astc_5x4:
-        return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_5x4_KHR;
+        return WEBGL_compressed_texture_astc.COMPRESSED_RGBA_ASTC_5x4_KHR;
       case PvrFormat.astc_5x5:
-        return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_5x5_KHR;
+        return WEBGL_compressed_texture_astc.COMPRESSED_RGBA_ASTC_5x5_KHR;
       case PvrFormat.astc_6x5:
-        return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_6x5_KHR;
+        return WEBGL_compressed_texture_astc.COMPRESSED_RGBA_ASTC_6x5_KHR;
       case PvrFormat.astc_6x6:
-        return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_6x6_KHR;
+        return WEBGL_compressed_texture_astc.COMPRESSED_RGBA_ASTC_6x6_KHR;
       case PvrFormat.astc_8x5:
-        return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_8x5_KHR;
+        return WEBGL_compressed_texture_astc.COMPRESSED_RGBA_ASTC_8x5_KHR;
       case PvrFormat.astc_8x6:
-        return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_8x6_KHR;
+        return WEBGL_compressed_texture_astc.COMPRESSED_RGBA_ASTC_8x6_KHR;
       case PvrFormat.astc_8x8:
-        return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_8x8_KHR;
+        return WEBGL_compressed_texture_astc.COMPRESSED_RGBA_ASTC_8x8_KHR;
       case PvrFormat.astc_10x5:
-        return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_10x5_KHR;
+        return WEBGL_compressed_texture_astc.COMPRESSED_RGBA_ASTC_10x5_KHR;
       case PvrFormat.astc_10x6:
-        return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_10x6_KHR;
+        return WEBGL_compressed_texture_astc.COMPRESSED_RGBA_ASTC_10x6_KHR;
       case PvrFormat.astc_10x8:
-        return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_10x8_KHR;
+        return WEBGL_compressed_texture_astc.COMPRESSED_RGBA_ASTC_10x8_KHR;
       case PvrFormat.astc_10x10:
-        return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_10x10_KHR;
+        return WEBGL_compressed_texture_astc.COMPRESSED_RGBA_ASTC_10x10_KHR;
       case PvrFormat.astc_12x10:
-        return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_12x10_KHR;
+        return WEBGL_compressed_texture_astc.COMPRESSED_RGBA_ASTC_12x10_KHR;
       case PvrFormat.astc_12x12:
-        return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_12x12_KHR;
+        return WEBGL_compressed_texture_astc.COMPRESSED_RGBA_ASTC_12x12_KHR;
 
       default:
         return -1;
@@ -139,5 +130,5 @@ class PvrTexture extends CompressedTexture {
   }
 
   @override
-  TypedData get textureData => _buffer.asByteData(_texDataOffset);
+  ByteData get textureData => _buffer.asByteData(_texDataOffset);
 }

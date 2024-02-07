@@ -1,8 +1,8 @@
 library stagexl.internal.image_bitmap_loader;
 
 import 'dart:async';
-import 'dart:html';
-import 'dart:js_util';
+import 'dart:js_interop';
+import 'package:web/web.dart';
 
 import '../internal/image_loader.dart';
 import '../resources.dart' show getUrlHash;
@@ -11,7 +11,7 @@ import 'environment.dart' as env;
 class ImageBitmapLoader implements BaseImageLoader<ImageBitmap> {
   String _url;
   final _completer = Completer<ImageBitmap>();
-  HttpRequest? _request;
+  XMLHttpRequest? _request;
 
   ImageBitmapLoader(this._url, bool webpAvailable) {
     if (webpAvailable) {
@@ -22,20 +22,14 @@ class ImageBitmapLoader implements BaseImageLoader<ImageBitmap> {
   }
 
   void _load(String url) {
-    final request = _request = HttpRequest();
+    final request = _request = XMLHttpRequest();
     request
       ..onReadyStateChange.listen((_) async {
         if (request.readyState == HttpRequest.DONE && request.status == 200) {
           try {
             final blob = request.response as Blob;
 
-            // Note: Dart SDK does not support createImageBitmap, so
-            // use callMethod and convert from promise to future.
-            // See https://github.com/dart-lang/sdk/issues/12379
-            final promise = callMethod(window, 'createImageBitmap', [blob]);
-            final imageBitmap =
-                await promiseToFuture<ImageBitmap>(promise as Object);
-
+            final imageBitmap = window.createImageBitmap(blob).toDart;
             _completer.complete(imageBitmap);
           } catch (e) {
             _completer.completeError(e);
@@ -43,7 +37,7 @@ class ImageBitmapLoader implements BaseImageLoader<ImageBitmap> {
         }
       })
       ..onError.listen(_completer.completeError)
-      ..open('GET', url, async: true)
+      ..open('GET', url, true)
       ..responseType = 'blob'
       ..send();
   }

@@ -82,7 +82,7 @@ class AudioElementSound extends Sound {
       }
     }
 
-    final audioElement = _audioElement.clone(true) as AudioElement;
+    final audioElement = _audioElement.cloneNode(true) as AudioElement;
     final audioCanPlay = audioElement.onCanPlay.first;
     if (audioElement.readyState == 0) await audioCanPlay;
     audioElement.onEnded.listen(_onAudioEnded);

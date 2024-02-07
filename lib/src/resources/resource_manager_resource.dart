@@ -12,7 +12,7 @@ class ResourceManagerResource {
   ResourceManagerResource(this.kind, this.name, this.url, Future loader) {
     loader.then((resource) {
       _value = resource;
-    }).catchError((error) {
+    }).catchError((Object error) {
       _error = error;
     }).whenComplete(() {
       _completer.complete(this);

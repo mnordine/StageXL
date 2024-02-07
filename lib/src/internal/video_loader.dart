@@ -1,7 +1,7 @@
 library stagexl.internal.video_loader;
 
 import 'dart:async';
-import 'dart:html';
+import 'package:web/web.dart';
 
 import '../errors.dart';
 
@@ -68,10 +68,10 @@ class VideoLoader {
   void _loadVideoData(String url) {
     HttpRequest.request(url, responseType: 'blob').then((request) {
       final reader = FileReader();
-      reader.readAsDataUrl(request.response as Blob);
+      reader.readAsDataURL(request.response as Blob);
       reader.onLoadEnd.first
           .then((e) => _loadVideoSource(reader.result as String));
-    }).catchError((error) {
+    }).catchError((Object error) {
       final loadError = LoadError('Failed to load $url.', error);
       aggregateError.errors.add(loadError);
       _loadNextUrl();

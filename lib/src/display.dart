@@ -15,12 +15,12 @@ library stagexl.display;
 
 import 'dart:async';
 import 'dart:collection';
-import 'dart:html' as html;
-import 'dart:html' show CanvasElement, ImageElement, VideoElement, ImageBitmap;
+import 'dart:js_interop';
+import 'package:web/web.dart' as html;
+import 'package:web/web.dart' show CanvasElement, ImageElement, VideoElement, ImageBitmap;
 import 'dart:math' hide Point, Rectangle;
 import 'dart:math' as math show Point;
 import 'dart:typed_data';
-import 'dart:web_gl';
 
 import 'animation.dart';
 import 'drawing.dart';

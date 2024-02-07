@@ -3,7 +3,7 @@ part of stagexl.media;
 class WebAudioApiSound extends Sound {
   final AudioBuffer _audioBuffer;
 
-  static final _loaders = <String, HttpRequest>{};
+  static final _loaders = <String, XMLHttpRequest>{};
 
   WebAudioApiSound._(this._audioBuffer);
 
@@ -36,7 +36,7 @@ class WebAudioApiSound extends Sound {
 
     final completer = Completer<Sound>();
 
-    final request = _loaders[url] = HttpRequest();
+    final request = _loaders[url] = XMLHttpRequest();
     request
       ..onReadyStateChange.listen((_) async {
         if (request.readyState == HttpRequest.DONE && request.status == 200) {
@@ -48,7 +48,7 @@ class WebAudioApiSound extends Sound {
           try {
             final buffer = request.response as ByteBuffer;
             final audioContext = WebAudioApiMixer.audioContext;
-            final audioBuffer = await audioContext.decodeAudioData(buffer);
+            final audioBuffer = await audioContext.decodeAudioData(buffer.toJS).toDart;
             final sound = WebAudioApiSound._(audioBuffer);
 
             if (!_loaders.containsKey(url)) {
@@ -63,7 +63,7 @@ class WebAudioApiSound extends Sound {
           }
         }
       })
-      ..open('GET', audioUrl, async: true)
+      ..open('GET', audioUrl, true)
       ..responseType = 'arraybuffer'
       ..send();
 
@@ -88,7 +88,7 @@ class WebAudioApiSound extends Sound {
 
     try {
       final audioData = bytes.buffer;
-      final audioBuffer = await audioContext.decodeAudioData(audioData);
+      final audioBuffer = await audioContext.decodeAudioData(audioData.toJS).toDart;
       return WebAudioApiSound._(audioBuffer);
     } catch (e) {
       if (options.ignoreErrors) {
@@ -105,7 +105,7 @@ class WebAudioApiSound extends Sound {
   SoundEngine get engine => SoundEngine.WebAudioApi;
 
   @override
-  num get length => _audioBuffer.duration!;
+  num get length => _audioBuffer.duration;
 
   @override
   SoundChannel play([bool loop = false, SoundTransform? soundTransform]) =>

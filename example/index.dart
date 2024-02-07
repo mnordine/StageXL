@@ -1,4 +1,4 @@
-import 'dart:html' as html;
+import 'package:web/web.dart' as html;
 import 'dart:math' as math;
 
 import 'package:stagexl/stagexl.dart';

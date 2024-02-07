@@ -10,10 +10,9 @@ library stagexl.resources;
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:html' show HttpRequest, ImageBitmap, ImageElement;
+import 'package:web/web.dart' show HttpRequest, ImageBitmap, ImageElement, XHRGetters, XMLHttpRequest;
 import 'dart:js' show JsObject;
 import 'dart:typed_data';
-import 'dart:web_gl' as gl;
 
 import 'package:xml/xml.dart';
 

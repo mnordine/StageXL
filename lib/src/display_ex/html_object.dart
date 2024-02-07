@@ -32,7 +32,7 @@ part of stagexl.display_ex;
 ///     htmlObject.y = 300;
 ///     stage.addChild(htmlObject);
 
-class HtmlObject<T extends Element> extends DisplayObject {
+class HtmlObject<T extends HtmlElement> extends DisplayObject {
   final T element;
 
   late final CssStyleDeclaration _style;

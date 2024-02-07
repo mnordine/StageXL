@@ -2,7 +2,7 @@ library stagexl.internal.environment;
 
 import 'dart:async';
 import 'dart:js' as js;
-import 'dart:html';
+import 'package:web/web.dart' hide Int32List;
 import 'dart:typed_data';
 
 final bool autoHiDPI = _checkAutoHiDPI();
@@ -49,8 +49,8 @@ bool _checkAutoHiDPI() {
 
   // only recent devices (> iPhone4) and hi-dpi desktops
 
-  if (isMobileDevice && screen != null) {
-    autoHiDPI = autoHiDPI && (screen.width! > 480 || screen.height! > 480);
+  if (isMobileDevice) {
+    autoHiDPI = autoHiDPI && (screen.width > 480 || screen.height > 480);
   }
 
   return autoHiDPI;
@@ -60,7 +60,7 @@ bool _checkAutoHiDPI() {
 
 Future<bool> _checkWebpSupport() {
   final completer = Completer<bool>();
-  final img = ImageElement();
+  final img = document.createElement('image') as ImageElement;
 
   img.onLoad
       .listen((e) => completer.complete(img.width == 2 && img.height == 2));
@@ -74,10 +74,12 @@ Future<bool> _checkWebpSupport() {
 
 //-------------------------------------------------------------------------------------
 
+// NOTE(CEksal): This is basically `TouchEvent.supported` from `dart:html`
 bool _checkTouchEventSupport() {
-  try {
-    return TouchEvent.supported;
-  } catch (e) {
-    return false;
-  }
+    try {
+      final _ = TouchEvent('touches');
+      return true;
+    } catch (_) {
+      return false;
+    }
 }

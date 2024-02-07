@@ -21,7 +21,7 @@ You can use the standard Web application template from the Dart Editor to get st
 
 The following code shows how to initialize the main drawing area (Stage) and how to put an image (BitmapData) to the screen. The image will be rotated, scaled and placed in the coordinate system of the Stage.
 
-    import 'dart:html' as html;    
+    import 'package:web/web.dart' as html;    
     import 'package:stagexl/stagexl.dart';
 
     void main() {

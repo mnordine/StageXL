@@ -26,9 +26,9 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
   late BitmapDataLoadOptions _loadOptions;
   late BitmapDataLoadInfo _loadInfo;
 
-  Future<HttpRequest>? _sourceFuture;
+  Future<XMLHttpRequest>? _sourceFuture;
   BaseImageLoader? _imageLoader;
-  HttpRequest? _compressedTextureRequest;
+  XMLHttpRequest? _compressedTextureRequest;
 
   static const compressedTextureFormats = {'.pvr', '.pvr.gz', '.ktx'};
 
@@ -111,7 +111,7 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
 
     final completer = Completer<RenderTexture>();
 
-    final request = _compressedTextureRequest = HttpRequest();
+    final request = _compressedTextureRequest = XMLHttpRequest();
     request
       ..onReadyStateChange.listen((_) {
         if (request.readyState == HttpRequest.DONE && request.status == 200) {
@@ -123,7 +123,7 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
           completer.complete(texture);
         }
       })
-      ..open('GET', filename, async: true)
+      ..open('GET', filename, true)
       ..responseType = 'arraybuffer'
       ..send();
 

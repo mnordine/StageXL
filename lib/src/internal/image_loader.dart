@@ -1,7 +1,7 @@
 library stagexl.internal.image_loader;
 
 import 'dart:async';
-import 'dart:html';
+import 'package:web/web.dart';
 
 import '../errors.dart';
 import '../resources.dart' show getUrlHash;
@@ -46,7 +46,7 @@ class ImageLoader implements BaseImageLoader<ImageElement> {
   void _onWebpSupported(bool webpSupported) {
     final match = RegExp(r'(png|jpg|jpeg)$').firstMatch(_url);
     if (webpSupported && match != null) {
-      image.src = getUrlHash(_url, webp: true);
+      image.src = getUrlHash(_url, webp: true) ?? '';
     } else {
       image.src = _url;
     }

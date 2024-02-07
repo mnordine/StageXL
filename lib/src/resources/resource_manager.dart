@@ -92,7 +92,7 @@ class ResourceManager {
     final tuple = TextureAtlas.load(url, textureAtlasFormat, options);
     _addResource('TextureAtlas', name, url, tuple.atlasFuture);
 
-    _loaders[name] = tuple.loader;
+    _loaders[name] = tuple._loader;
     tuple.atlasFuture
       .then((_) => _loaders.remove(name))
       .catchError((_) => _loaders.remove(name));
@@ -138,8 +138,8 @@ class ResourceManager {
   bool containsSound(String name) => _containsResource('Sound', name);
 
   void addSound(String name, String url, [SoundLoadOptions? options]) {
-    final loader = Sound.load(url, options);
-    loader.catchError((_) { _soundDatas.remove(name); });
+    final loader = Sound.load(url, options) as Future<Sound?>;
+    loader.catchError((_) { _soundDatas.remove(name); return null; });
 
     _addResource('Sound', name, url, loader);
 

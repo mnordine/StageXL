@@ -4,7 +4,7 @@
 library stagexl.display_ex;
 
 import 'dart:async';
-import 'dart:html' show CssStyleDeclaration, Element;
+import 'package:web/web.dart' show CssStyleDeclaration, ElementEventGetters, HtmlElement;
 import 'dart:math' hide Point, Rectangle;
 import 'dart:typed_data';
 

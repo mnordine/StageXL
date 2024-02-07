@@ -1,7 +1,7 @@
 library stagexl.internal.audio_loader;
 
 import 'dart:async';
-import 'dart:html';
+import 'package:web/web.dart';
 
 import '../errors.dart';
 
@@ -21,7 +21,7 @@ class AudioLoader {
     // we have to add the AudioElement to the document,
     // otherwise some browser won't start loading :(
 
-    document.body!.children.add(audio);
+    document.body!.appendChild(audio);
 
     if (corsEnabled) audio.crossOrigin = 'anonymous';
 
@@ -72,7 +72,7 @@ class AudioLoader {
   void _loadAudioData(String url) {
     HttpRequest.request(url, responseType: 'blob').then((request) {
       final reader = FileReader();
-      reader.readAsDataUrl(request.response as Blob);
+      reader.readAsDataURL(request.response as Blob);
       reader.onLoadEnd.first
           .then((e) => _loadAudioSource(reader.result as String));
     }).catchError((error) {
