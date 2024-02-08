@@ -16,7 +16,7 @@ library stagexl.engine;
 import 'dart:async';
 import 'dart:js_interop';
 import 'package:web/web.dart' hide Float32List;
-import 'dart:web_gl' show CompressedTextureEtc;
+import 'dart:web_gl' show CompressedTextureEtc, CompressedTextureETC1;
 import 'dart:math' as math;
 import 'dart:typed_data';
 
