@@ -26,9 +26,8 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
   late BitmapDataLoadOptions _loadOptions;
   late BitmapDataLoadInfo _loadInfo;
 
-  Future<XMLHttpRequest>? _sourceFuture;
   BaseImageLoader? _imageLoader;
-  XMLHttpRequest? _compressedTextureRequest;
+  bool _cancelled = false;
 
   static const compressedTextureFormats = {'.pvr', '.pvr.gz', '.ktx'};
 
@@ -42,26 +41,18 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
 
   @override
   Future<String> getSource() async {
-    _sourceFuture = HttpRequest.request(_loadInfo.loaderUrl, method: 'GET');
-
-    final response = await _sourceFuture!;
-    _sourceFuture = null;
-
-    return response.response as String;
+    final response = await http.get(Uri.parse(_loadInfo.loaderUrl));
+    return response.body;
   }
 
   @override
   void cancel() {
     print('aborting request for ${_loadInfo.loaderUrl}');
 
-    _sourceFuture?.then((response) => response.abort());
-    _sourceFuture = null;
+    _cancelled = true;
 
     _imageLoader?.cancel();
     _imageLoader = null;
-
-    _compressedTextureRequest?.abort();
-    _compressedTextureRequest = null;
   }
 
   @override
@@ -82,7 +73,7 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
       final corsEnabled = _loadOptions.corsEnabled;
       _imageLoader = ImageLoader(imageUrl, _loadOptions.webp, corsEnabled);
       final imageElement = await _imageLoader!.done;
-      renderTexture = RenderTexture.fromImageElement(imageElement as ImageElement);
+      renderTexture = RenderTexture.fromImageElement(imageElement as HTMLImageElement);
     }
 
     return renderTexture.quad.withPixelRatio(pixelRatio);
@@ -109,31 +100,28 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
         throw LoadError('unknown extension $ext');
     }
 
-    final completer = Completer<RenderTexture>();
-
-    final request = _compressedTextureRequest = XMLHttpRequest();
-    request
-      ..onReadyStateChange.listen((_) {
-        if (request.readyState == HttpRequest.DONE && request.status == 200) {
-          final buffer = request.response as ByteBuffer;
+    return http.get(Uri.parse(filename))
+      .then((response) {
+        if (_cancelled) {
+          throw LoadError('compressed texture load cancelled');
+        }
+        if (response.statusCode == 200) {
+          final buffer = response.bodyBytes.buffer;
           final texture = _decodeCompressedTexture(buffer, type);
 
-          _compressedTextureRequest = null;
-
-          completer.complete(texture);
+          return texture;
+        } else {
+          throw LoadError('failed to GET $filename');
         }
-      })
-      ..open('GET', filename, true)
-      ..responseType = 'arraybuffer'
-      ..send();
-
-    return completer.future;
+      });
   }
 
   RenderTexture _decodeCompressedTexture(ByteBuffer buffer, CompressedTextureFileTypes type) {
     switch (type) {
-      case CompressedTextureFileTypes.pvr: return _decodePvr(buffer);
-      case CompressedTextureFileTypes.ktx: return _decodeKtx(buffer);
+      case CompressedTextureFileTypes.pvr:
+        return _decodePvr(buffer);
+      case CompressedTextureFileTypes.ktx:
+        return _decodeKtx(buffer);
     }
   }
 

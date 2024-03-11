@@ -16,7 +16,6 @@ library stagexl.engine;
 import 'dart:async';
 import 'dart:js_interop';
 import 'package:web/web.dart' hide Float32List;
-import 'dart:web_gl' show CompressedTextureEtc, CompressedTextureETC1;
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -27,6 +26,7 @@ import 'geom/matrix.dart';
 import 'geom/matrix_3d.dart';
 import 'geom/rectangle.dart';
 import 'internal/tools.dart';
+import 'internal/webgl_extensions.dart';
 
 part 'engine/blend_mode.dart';
 part 'engine/render_buffer_index.dart';

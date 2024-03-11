@@ -5,7 +5,7 @@ class RenderTexture {
   int _height = 0;
 
   CanvasImageSource? _source;
-  CanvasElement? _canvas;
+  HTMLCanvasElement? _canvas;
   RenderTextureFiltering _filtering = RenderTextureFiltering.LINEAR;
   RenderTextureWrapping _wrappingX = RenderTextureWrapping.CLAMP;
   RenderTextureWrapping _wrappingY = RenderTextureWrapping.CLAMP;
@@ -28,7 +28,7 @@ class RenderTexture {
 
     _width = width;
     _height = height;
-    _source = _canvas = (document.createElement('canvas') as CanvasElement)
+    _source = _canvas = HTMLCanvasElement()
       ..width = _width
       ..height = _height;
 
@@ -39,7 +39,7 @@ class RenderTexture {
     }
   }
 
-  RenderTexture.fromImageElement(ImageElement imageElement) {
+  RenderTexture.fromImageElement(HTMLImageElement imageElement) {
     _width = imageElement.width;
     _height = imageElement.height;
     _source = imageElement;
@@ -51,13 +51,13 @@ class RenderTexture {
     _source = image;
   }
 
-  RenderTexture.fromCanvasElement(CanvasElement canvasElement) {
+  RenderTexture.fromCanvasElement(HTMLCanvasElement canvasElement) {
     _width = canvasElement.width;
     _height = canvasElement.height;
     _source = _canvas = canvasElement;
   }
 
-  RenderTexture.fromVideoElement(VideoElement videoElement) {
+  RenderTexture.fromVideoElement(HTMLVideoElement videoElement) {
     if (videoElement.readyState < 3) throw ArgumentError('videoElement');
     _width = videoElement.videoWidth;
     _height = videoElement.videoHeight;
@@ -92,12 +92,12 @@ class RenderTexture {
       0,
       1.0);
 
-  CanvasElement get canvas {
+  HTMLCanvasElement get canvas {
     if (_source.instanceOfString('HTMLCanvasElement')) {
-      return _source as CanvasElement;
+      return _source as HTMLCanvasElement;
     } else if (_source.instanceOfString('HTMLImageElement')) {
-      final imageElement = _source as ImageElement;
-      _source = _canvas = (document.createElement('canvas') as CanvasElement)
+      final imageElement = _source as HTMLImageElement;
+      _source = _canvas = HTMLCanvasElement()
         ..width = _width
         ..height = _height;
       
@@ -105,7 +105,7 @@ class RenderTexture {
       return _canvas!;
     } else if (_source.instanceOfString('ImageBitmap')) {
       final image = _source as ImageBitmap;
-      _source = _canvas = (document.createElement('canvas') as CanvasElement)
+      _source = _canvas = HTMLCanvasElement()
         ..width = _width
         ..height = _height;
 
@@ -231,7 +231,7 @@ class RenderTexture {
   //-----------------------------------------------------------------------------------------------
 
   void resize(int width, int height) {
-    if (_source is VideoElement) {
+    if (_source.isA<HTMLVideoElement>()) {
       throw StateError('RenderTexture is not resizeable.');
     } else if (_width == width && _height == height) {
       // there is no need to resize the texture
@@ -248,7 +248,7 @@ class RenderTexture {
     } else {
       _width = width;
       _height = height;
-      _source = _canvas = (document.createElement('canvas') as CanvasElement)
+      _source = _canvas = HTMLCanvasElement()
         ..width = _width
         ..height = _height;
     }
@@ -258,7 +258,7 @@ class RenderTexture {
 
   /// Update the underlying WebGL texture with the source of this RenderTexture.
   ///
-  /// The source of the RenderTexture is an ImageElement, CanvasElement or
+  /// The source of the RenderTexture is an ImageElement, HTMLCanvasElement or
   /// VideoElement. If changes are made to the source you have to call the
   /// [update] method to apply those changes to the WebGL texture.
   ///
@@ -283,7 +283,7 @@ class RenderTexture {
   void _updateTexture(RenderContextWebGL renderContext) {
     final renderingContext = renderContext.rawContext;
 
-    final target = WebGL2RenderingContext.TEXTURE_2D;
+    final target = WebGL.TEXTURE_2D;
 
     if (_source != null) {
       renderingContext.texImage2D(target, 0, pixelFormat, pixelFormat.toJS, pixelType.toJS, _source!);
@@ -291,7 +291,8 @@ class RenderTexture {
       final tex = _compressedTexture!;
       renderingContext.compressedTexImage2D(target, 0, tex.format, tex.width, tex.height, 0, tex.textureData.toJS);
     } else {
-      renderingContext.texImage2D(target, 0, pixelFormat, width.toJS, height.toJS, 0.toJS, pixelFormat, pixelType);
+      // ignore: avoid_redundant_argument_values
+      renderingContext.texImage2D(target, 0, pixelFormat, width.toJS, height.toJS, 0.toJS, pixelFormat, pixelType, null);
     }
   }
 
@@ -335,8 +336,8 @@ class RenderTexture {
   num _videoUpdateTime = -1.0;
 
   void _onGlobalFrame(num deltaTime) {
-    if (source is VideoElement) {
-      final videoElement = source as VideoElement;
+    if (source.isA<HTMLVideoElement>()) {
+      final videoElement = source as HTMLVideoElement;
       final currentTime = videoElement.currentTime;
       if (_videoUpdateTime != currentTime) {
         _videoUpdateTime = currentTime;

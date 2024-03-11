@@ -174,7 +174,7 @@ class GraphicsGradient {
     }
 
     if (_gradientTexture == null) {
-      final canvas = CanvasElement()
+      final canvas = HTMLCanvasElement()
         ..width = 1
         ..height = GRADIENT_TEXTURE_SIZE;
       final canvasGradient =

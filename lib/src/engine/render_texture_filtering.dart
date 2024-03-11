@@ -13,6 +13,8 @@ class RenderTextureFiltering {
 
   const RenderTextureFiltering(this.value);
 
+  // NOTE(CEksal): These are `static final` because the associated `WebGL` constants are not
+  // `const`.
   static final RenderTextureFiltering NEAREST =
       RenderTextureFiltering(WebGL.NEAREST);
   static final RenderTextureFiltering LINEAR =

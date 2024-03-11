@@ -3,7 +3,7 @@ part of stagexl.media;
 class WebAudioApiSound extends Sound {
   final AudioBuffer _audioBuffer;
 
-  static final _loaders = <String, XMLHttpRequest>{};
+  static final _loaders = <String, Future<void>>{};
 
   WebAudioApiSound._(this._audioBuffer);
 
@@ -33,39 +33,33 @@ class WebAudioApiSound extends Sound {
   }
 
   static Future<Sound> _tryAudioUrl(String url, String audioUrl) {
-
     final completer = Completer<Sound>();
 
-    final request = _loaders[url] = XMLHttpRequest();
-    request
-      ..onReadyStateChange.listen((_) async {
-        if (request.readyState == HttpRequest.DONE && request.status == 200) {
+    _loaders[url] = http.get(Uri.parse(url)).then((response) async {
+      if (response.statusCode == 200) {
+
+        if (!_loaders.containsKey(url)) {
+          completer.completeError('sound already cancelled');
+        }
+
+        try {
+          final buffer = response.bodyBytes.buffer;
+          final audioContext = WebAudioApiMixer.audioContext;
+          final audioBuffer = await audioContext.decodeAudioData(buffer.toJS).toDart;
+          final sound = WebAudioApiSound._(audioBuffer);
 
           if (!_loaders.containsKey(url)) {
             completer.completeError('sound already cancelled');
           }
 
-          try {
-            final buffer = request.response as ByteBuffer;
-            final audioContext = WebAudioApiMixer.audioContext;
-            final audioBuffer = await audioContext.decodeAudioData(buffer.toJS).toDart;
-            final sound = WebAudioApiSound._(audioBuffer);
+          unawaited(_loaders.remove(url));
+          completer.complete(sound);
 
-            if (!_loaders.containsKey(url)) {
-              completer.completeError('sound already cancelled');
-            }
-
-            _loaders.remove(url);
-            completer.complete(sound);
-
-          } catch (e) {
-            if (!completer.isCompleted) completer.completeError('caught error loading $audioUrl');
-          }
+        } catch (e) {
+          if (!completer.isCompleted) completer.completeError('caught error loading $audioUrl');
         }
-      })
-      ..open('GET', audioUrl, true)
-      ..responseType = 'arraybuffer'
-      ..send();
+      }
+    });
 
     return completer.future;
   }
@@ -73,7 +67,6 @@ class WebAudioApiSound extends Sound {
   static void cancel(String url) {
     if (!_loaders.containsKey(url)) return;
 
-    _loaders[url]?.abort();
     _loaders.remove(url);
   }
 

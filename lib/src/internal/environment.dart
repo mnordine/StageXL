@@ -1,7 +1,7 @@
 library stagexl.internal.environment;
 
 import 'dart:async';
-import 'dart:js' as js;
+import 'dart:js_interop_unsafe';
 import 'package:web/web.dart' hide Int32List;
 import 'dart:typed_data';
 
@@ -11,7 +11,7 @@ final Future<bool> isWebpSupported = _checkWebpSupport();
 final bool isMobileDevice = _checkMobileDevice();
 final bool isLittleEndianSystem = _checkLittleEndianSystem();
 final bool isTouchEventSupported = _checkTouchEventSupport();
-bool get isImageBitmapSupported => js.context['createImageBitmap'] != null;
+bool get isImageBitmapSupported => window.has('createImageBitmap');
 
 //-------------------------------------------------------------------------------------
 
@@ -60,7 +60,7 @@ bool _checkAutoHiDPI() {
 
 Future<bool> _checkWebpSupport() {
   final completer = Completer<bool>();
-  final img = document.createElement('image') as ImageElement;
+  final img = HTMLImageElement();
 
   img.onLoad
       .listen((e) => completer.complete(img.width == 2 && img.height == 2));

@@ -2,15 +2,16 @@ library stagexl.internal.video_loader;
 
 import 'dart:async';
 import 'package:web/web.dart';
+import 'package:http/http.dart' as http;
 
 import '../errors.dart';
 
 class VideoLoader {
   static final List<String> supportedTypes = _getSupportedTypes();
 
-  final VideoElement video = VideoElement();
+  final HTMLVideoElement video = HTMLVideoElement();
   final AggregateError aggregateError = AggregateError('Error loading video.');
-  final Completer<VideoElement> _completer = Completer<VideoElement>();
+  final Completer<HTMLVideoElement> _completer = Completer<HTMLVideoElement>();
 
   late StreamSubscription<Event> _onCanPlaySubscription;
   late StreamSubscription<Event> _onErrorSubscription;
@@ -28,7 +29,7 @@ class VideoLoader {
     _loadNextUrl();
   }
 
-  Future<VideoElement> get done => _completer.future;
+  Future<HTMLVideoElement> get done => _completer.future;
 
   //---------------------------------------------------------------------------
 
@@ -39,7 +40,7 @@ class VideoLoader {
   }
 
   void _onVideoError(Event event) {
-    final ve = event.target as VideoElement;
+    final ve = event.target as HTMLVideoElement;
     final loadError = LoadError('Failed to load ${ve.src}.', ve.error);
     aggregateError.errors.add(loadError);
     _loadNextUrl();
@@ -66,11 +67,8 @@ class VideoLoader {
   }
 
   void _loadVideoData(String url) {
-    HttpRequest.request(url, responseType: 'blob').then((request) {
-      final reader = FileReader();
-      reader.readAsDataURL(request.response as Blob);
-      reader.onLoadEnd.first
-          .then((e) => _loadVideoSource(reader.result as String));
+    http.get(Uri.parse(url)).then((response) {
+      _loadVideoSource(Uri.dataFromBytes(response.bodyBytes).toString());
     }).catchError((Object error) {
       final loadError = LoadError('Failed to load $url.', error);
       aggregateError.errors.add(loadError);
@@ -88,7 +86,7 @@ class VideoLoader {
 
   static List<String> _getSupportedTypes() {
     final supportedTypes = <String>[];
-    final video = VideoElement();
+    final video = HTMLVideoElement();
     final valid = ['maybe', 'probably'];
 
     if (valid.contains(video.canPlayType('video/webm'))) {

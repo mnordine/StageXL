@@ -203,7 +203,7 @@ class ResourceManager {
     final urlHash = getUrlHash(url);
     if (urlHash == null) throw StateError('Failed to load text file: $url');
     final loader =
-        HttpRequest.getString(urlHash).then((text) => text, onError: (error) {
+        http.get(Uri.parse(urlHash)).then((text) => text.body, onError: (error) {
       throw StateError('Failed to load text file.');
     });
     _addResource('TextFile', name, url, loader);

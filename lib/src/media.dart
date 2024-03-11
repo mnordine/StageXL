@@ -27,8 +27,8 @@ import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
 import 'package:web/web.dart' as html;
 import 'package:web/web.dart' hide Event;
+import 'package:http/http.dart' as http;
 import 'dart:math';
-import 'dart:typed_data';
 
 import 'errors.dart';
 import 'events.dart';

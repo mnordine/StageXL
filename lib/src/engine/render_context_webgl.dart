@@ -2,7 +2,7 @@ part of stagexl.engine;
 
 class RenderContextWebGL extends RenderContext {
   static int _globalContextIdentifier = 0;
-  final CanvasElement _canvasElement;
+  final HTMLCanvasElement _canvasElement;
 
   late final WebGL _renderingContext;
   final Matrix3D _projectionMatrix = Matrix3D.fromIdentity();
@@ -31,14 +31,14 @@ class RenderContextWebGL extends RenderContext {
 
   //---------------------------------------------------------------------------
 
-  RenderContextWebGL(CanvasElement canvasElement,
+  RenderContextWebGL(HTMLCanvasElement canvasElement,
       {bool alpha = false, bool antialias = false})
       : _canvasElement = canvasElement {
     _canvasElement.onWebGlContextLost.listen(_onContextLost);
     _canvasElement.onWebGlContextRestored.listen(_onContextRestored);
 
     final renderingContext = _canvasElement.getContext3d(
-        alpha: alpha, antialias: antialias, depth: false, stencil: true) as WebGL?;
+      alpha: alpha, antialias: antialias, depth: false, stencil: true) as WebGL?;
 
     if (renderingContext == null) {
       throw StateError('Failed to get WebGL context.');
@@ -58,22 +58,11 @@ class RenderContextWebGL extends RenderContext {
     _contextValid = true;
     _contextIdentifier = ++_globalContextIdentifier;
 
-    // TODO: maybe try registering more than 1
-    _tryGetExtension('WEBGL_compressed_texture_etc')
-    || _tryGetExtension('WEBKIT_WEBGL_compressed_texture_etc')
-    || _tryGetExtension('WEBGL_compressed_texture_s3tc')
-    || _tryGetExtension('WEBKIT_WEBGL_compressed_texture_s3tc');
+    // TODO: Check for extension before getting it,
+    // and maybe try registering more than 1
+    CompressedTexture.initExtensions(_renderingContext);
 
     reset();
-  }
-
-  bool _tryGetExtension(String name) {
-    final extensionSupported = _renderingContext.getSupportedExtensions()?.contains(name) ?? true;
-    if (!extensionSupported) {
-      return false;
-    }
-
-    return _renderingContext.getExtension(name) != null;
   }
 
   //---------------------------------------------------------------------------
@@ -85,7 +74,7 @@ class RenderContextWebGL extends RenderContext {
 
   @override
   Object? get maxTextureSize =>
-      _renderingContext.getParameter(WebGL.MAX_TEXTURE_SIZE);
+    _renderingContext.getParameter(WebGL.MAX_TEXTURE_SIZE);
 
   RenderTexture? get activeRenderTexture => _activeRenderTextures[0];
   RenderProgram get activeRenderProgram => _activeRenderProgram;
@@ -223,7 +212,7 @@ class RenderContextWebGL extends RenderContext {
     activateBlendMode(renderState.globalBlendMode);
     activateRenderTexture(renderTexture);
     renderProgramSimple.renderTextureMapping(
-        renderState, mappingMatrix, ixList, vxList);
+      renderState, mappingMatrix, ixList, vxList);
   }
 
   //---------------------------------------------------------------------------
@@ -234,7 +223,7 @@ class RenderContextWebGL extends RenderContext {
     activateRenderProgram(renderProgramTriangle);
     activateBlendMode(renderState.globalBlendMode);
     renderProgramTriangle.renderTriangle(
-        renderState, x1, y1, x2, y2, x3, y3, color);
+      renderState, x1, y1, x2, y2, x3, y3, color);
   }
 
   //---------------------------------------------------------------------------
@@ -245,7 +234,7 @@ class RenderContextWebGL extends RenderContext {
     activateRenderProgram(renderProgramTriangle);
     activateBlendMode(renderState.globalBlendMode);
     renderProgramTriangle.renderTriangleMesh(
-        renderState, ixList, vxList, color);
+      renderState, ixList, vxList, color);
   }
 
   //---------------------------------------------------------------------------
@@ -571,13 +560,13 @@ class RenderContextWebGL extends RenderContext {
 
   //---------------------------------------------------------------------------
 
-  void _onContextLost(ContextEvent contextEvent) {
+  void _onContextLost(WebGLContextEvent contextEvent) {
     contextEvent.preventDefault();
     _contextValid = false;
     _contextLostEvent.add(RenderContextEvent());
   }
 
-  void _onContextRestored(ContextEvent contextEvent) {
+  void _onContextRestored(WebGLContextEvent contextEvent) {
     _contextValid = true;
     _contextIdentifier = ++_globalContextIdentifier;
     _contextRestoredEvent.add(RenderContextEvent());

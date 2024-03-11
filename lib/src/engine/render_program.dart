@@ -120,7 +120,7 @@ abstract class RenderProgram {
   void _updateAttributes(WebGL rc, WebGLProgram program) {
     _attributes.clear();
     final count =
-        rc.getProgramParameter(program, WebGL.ACTIVE_ATTRIBUTES) as int;
+        (rc.getProgramParameter(program, WebGL.ACTIVE_ATTRIBUTES)! as JSNumber).toDartInt;
 
     for (var i = 0; i < count; i++) {
       final activeInfo = rc.getActiveAttrib(program, i)!;
@@ -135,7 +135,7 @@ abstract class RenderProgram {
   void _updateUniforms(WebGL rc, WebGLProgram program) {
     _uniforms.clear();
     final count =
-        rc.getProgramParameter(program, WebGL.ACTIVE_UNIFORMS) as int;
+        (rc.getProgramParameter(program, WebGL.ACTIVE_UNIFORMS)! as JSNumber).toDartInt;
 
     for (var i = 0; i < count; i++) {
       final activeInfo = rc.getActiveUniform(program, i)!;

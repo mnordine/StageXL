@@ -3,7 +3,7 @@ library stagexl.drawing;
 import 'dart:js_interop';
 
 import 'package:web/web.dart'
-    show CanvasElement, CanvasGradient, CanvasPattern, CanvasRenderingContext2D, HTMLCanvasElementGlue;
+    show HTMLCanvasElement, CanvasGradient, CanvasPattern, CanvasRenderingContext2D, HTMLCanvasElementGlue;
 import 'dart:math' show pi, sqrt, sin, cos, tan, atan2, pow;
 import 'dart:typed_data';
 

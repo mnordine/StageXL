@@ -22,6 +22,9 @@ analyzer:
     avoid_positional_boolean_parameters: ignore
     constant_identifier_names: ignore
 
+    # TODO(CEksal): Should probably switch at some point
+    use_string_in_part_of_directives: ignore
+
 linter:
   rules:
     - always_put_required_named_parameters_first

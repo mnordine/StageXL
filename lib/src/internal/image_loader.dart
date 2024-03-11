@@ -13,10 +13,10 @@ abstract class BaseImageLoader<T> {
   Future<T> get done;
 }
 
-class ImageLoader implements BaseImageLoader<ImageElement> {
+class ImageLoader implements BaseImageLoader<HTMLImageElement> {
   final String _url;
-  final ImageElement image = ImageElement();
-  final _completer = Completer<ImageElement>();
+  final HTMLImageElement image = HTMLImageElement();
+  final _completer = Completer<HTMLImageElement>();
   late final StreamSubscription _onLoadSubscription;
   late final StreamSubscription _onErrorSubscription;
 
@@ -41,7 +41,7 @@ class ImageLoader implements BaseImageLoader<ImageElement> {
   //---------------------------------------------------------------------------
 
   @override
-  Future<ImageElement> get done => _completer.future;
+  Future<HTMLImageElement> get done => _completer.future;
 
   void _onWebpSupported(bool webpSupported) {
     final match = RegExp(r'(png|jpg|jpeg)$').firstMatch(_url);

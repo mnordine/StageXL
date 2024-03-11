@@ -38,7 +38,7 @@ part of stagexl.media;
 /// codecs are webm, mp4 and ogg.
 
 class Video {
-  final VideoElement videoElement;
+  final HTMLVideoElement videoElement;
   bool loop = false;
 
   final _endedEvent = StreamController<Video>.broadcast();
@@ -89,7 +89,7 @@ class Video {
   /// the video independantly from this video.
 
   Future<Video> clone() {
-    final videoElement = this.videoElement.cloneNode(true) as VideoElement;
+    final videoElement = this.videoElement.cloneNode(true) as HTMLVideoElement;
     final completer = Completer<Video>();
     late StreamSubscription<html.Event> onCanPlaySubscription;
     late StreamSubscription<html.Event> onErrorSubscription;

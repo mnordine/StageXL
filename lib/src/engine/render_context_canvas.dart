@@ -1,14 +1,14 @@
 part of stagexl.engine;
 
 class RenderContextCanvas extends RenderContext {
-  final CanvasElement _canvasElement;
+  final HTMLCanvasElement _canvasElement;
   final CanvasRenderingContext2D _renderingContext;
 
   final Matrix _identityMatrix = Matrix.fromIdentity();
   BlendMode _activeBlendMode = BlendMode.NORMAL;
   double _activeAlpha = 1;
 
-  RenderContextCanvas(CanvasElement canvasElement)
+  RenderContextCanvas(HTMLCanvasElement canvasElement)
       : _canvasElement = canvasElement,
         _renderingContext = canvasElement.context2D {
     reset();

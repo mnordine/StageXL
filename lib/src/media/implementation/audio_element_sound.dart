@@ -1,10 +1,10 @@
 part of stagexl.media;
 
 class AudioElementSound extends Sound {
-  final AudioElement _audioElement;
-  final Map<AudioElement, AudioElementSoundChannel?> _soundChannels = {};
+  final HTMLAudioElement _audioElement;
+  final Map<HTMLAudioElement, AudioElementSoundChannel?> _soundChannels = {};
 
-  AudioElementSound._(AudioElement audioElement)
+  AudioElementSound._(HTMLAudioElement audioElement)
       : _audioElement = audioElement {
     _audioElement.onEnded.listen(_onAudioEnded);
     _soundChannels[audioElement] = null;
@@ -73,7 +73,7 @@ class AudioElementSound extends Sound {
 
   //---------------------------------------------------------------------------
 
-  Future<AudioElement> _requestAudioElement(
+  Future<HTMLAudioElement> _requestAudioElement(
       AudioElementSoundChannel soundChannel) async {
     for (var audioElement in _soundChannels.keys) {
       if (_soundChannels[audioElement] == null) {
@@ -82,7 +82,7 @@ class AudioElementSound extends Sound {
       }
     }
 
-    final audioElement = _audioElement.cloneNode(true) as AudioElement;
+    final audioElement = _audioElement.cloneNode(true) as HTMLAudioElement;
     final audioCanPlay = audioElement.onCanPlay.first;
     if (audioElement.readyState == 0) await audioCanPlay;
     audioElement.onEnded.listen(_onAudioEnded);
@@ -91,13 +91,13 @@ class AudioElementSound extends Sound {
     return audioElement;
   }
 
-  void _releaseAudioElement(AudioElement audioElement) {
+  void _releaseAudioElement(HTMLAudioElement audioElement) {
     _soundChannels[audioElement] = null;
   }
 
   void _onAudioEnded(html.Event event) {
     final audioElement = event.target;
-    if (audioElement is! AudioElement) return;
+    if (audioElement is! HTMLAudioElement) return;
 
     _soundChannels[audioElement]?._onAudioEnded();
   }
