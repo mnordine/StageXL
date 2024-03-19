@@ -11,7 +11,7 @@ part of stagexl.engine;
 class RenderTextureFiltering {
   final int value;
 
-  const RenderTextureFiltering(this.value);
+  RenderTextureFiltering(this.value);
 
   // NOTE(CEksal): These are `static final` because the associated `WebGL` constants are not
   // `const`.

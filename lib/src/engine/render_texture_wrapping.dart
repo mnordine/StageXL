@@ -5,7 +5,7 @@ part of stagexl.engine;
 class RenderTextureWrapping {
   final int value;
 
-  const RenderTextureWrapping(this.value);
+  RenderTextureWrapping(this.value);
 
   static final RenderTextureWrapping REPEAT =
       RenderTextureWrapping(WebGL.REPEAT);

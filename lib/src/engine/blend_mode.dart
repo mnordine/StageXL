@@ -8,7 +8,7 @@ class BlendMode {
   final int dstFactor;
   final String compositeOperation;
 
-  const BlendMode(this.srcFactor, this.dstFactor, this.compositeOperation);
+  BlendMode(this.srcFactor, this.dstFactor, this.compositeOperation);
 
   void blend(WebGL renderingContext) {
     renderingContext.blendFunc(srcFactor, dstFactor);
