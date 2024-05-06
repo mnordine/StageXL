@@ -83,7 +83,7 @@ class RenderTexture {
 
   CanvasImageSource? get source => _source;
 
-  ImageBitmap? get imageBitmap => _source.instanceOfString('ImageBitmap') ? _source as ImageBitmap : null;
+  ImageBitmap? get imageBitmap => _source.isA<ImageBitmap>() ? _source as ImageBitmap : null;
 
   RenderTextureQuad get quad => RenderTextureQuad(
       this,
@@ -93,9 +93,9 @@ class RenderTexture {
       1.0);
 
   HTMLCanvasElement get canvas {
-    if (_source.instanceOfString('HTMLCanvasElement')) {
+    if (_source.isA<HTMLCanvasElement>()) {
       return _source as HTMLCanvasElement;
-    } else if (_source.instanceOfString('HTMLImageElement')) {
+    } else if (_source.isA<HTMLImageElement>()) {
       final imageElement = _source as HTMLImageElement;
       _source = _canvas = HTMLCanvasElement()
         ..width = _width
@@ -103,7 +103,7 @@ class RenderTexture {
       
       _canvas!.context2D.drawImageScaled(imageElement, 0, 0, _width.toDouble(), _height.toDouble());
       return _canvas!;
-    } else if (_source.instanceOfString('ImageBitmap')) {
+    } else if (_source.isA<ImageBitmap>()) {
       final image = _source as ImageBitmap;
       _source = _canvas = HTMLCanvasElement()
         ..width = _width
