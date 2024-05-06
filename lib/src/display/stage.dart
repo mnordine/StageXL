@@ -735,37 +735,37 @@ class Stage extends DisplayObjectContainer {
         final target = newTargetList[i];
         target.globalToLocal(stagePoint, localPoint);
         target.dispatchEvent(MouseEvent(
-          MouseEvent.ROLL_OVER,
-          false,
-          localPoint.x,
-          localPoint.y,
-          stagePoint.x,
-          stagePoint.y,
-          event.altKey,
-          event.ctrlKey,
-          event.shiftKey,
-          0.0,
-          0.0,
-          mouseButton.buttonDown,
-          0));
+            MouseEvent.ROLL_OVER,
+            false,
+            localPoint.x,
+            localPoint.y,
+            stagePoint.x,
+            stagePoint.y,
+            event.altKey,
+            event.ctrlKey,
+            event.shiftKey,
+            0.0,
+            0.0,
+            mouseButton.buttonDown,
+            0));
       }
 
       if (newTarget != null) {
         newTarget.globalToLocal(stagePoint, localPoint);
         newTarget.dispatchEvent(MouseEvent(
-          MouseEvent.MOUSE_OVER,
-          true,
-          localPoint.x,
-          localPoint.y,
-          stagePoint.x,
-          stagePoint.y,
-          event.altKey,
-          event.ctrlKey,
-          event.shiftKey,
-          0.0,
-          0.0,
-          mouseButton.buttonDown,
-          0));
+            MouseEvent.MOUSE_OVER,
+            true,
+            localPoint.x,
+            localPoint.y,
+            stagePoint.x,
+            stagePoint.y,
+            event.altKey,
+            event.ctrlKey,
+            event.shiftKey,
+            0.0,
+            0.0,
+            mouseButton.buttonDown,
+            0));
       }
 
       _mouseTarget = newTarget;
@@ -836,19 +836,19 @@ class Stage extends DisplayObjectContainer {
             : mouseButton.mouseClickEventType;
 
         target.dispatchEvent(MouseEvent(
-          mouseEventType,
-          true,
-          localPoint.x,
-          localPoint.y,
-          stagePoint.x,
-          stagePoint.y,
-          event.altKey,
-          event.ctrlKey,
-          event.shiftKey,
-          0.0,
-          0.0,
-          mouseButton.buttonDown,
-          0));
+            mouseEventType,
+            true,
+            localPoint.x,
+            localPoint.y,
+            stagePoint.x,
+            stagePoint.y,
+            event.altKey,
+            event.ctrlKey,
+            event.shiftKey,
+            0.0,
+            0.0,
+            mouseButton.buttonDown,
+            0));
       }
     }
   }
