@@ -58,8 +58,6 @@ class RenderContextWebGL extends RenderContext {
     _contextValid = true;
     _contextIdentifier = ++_globalContextIdentifier;
 
-    // TODO: Check for extension before getting it,
-    // and maybe try registering more than 1
     CompressedTexture.initExtensions(_renderingContext);
 
     reset();
