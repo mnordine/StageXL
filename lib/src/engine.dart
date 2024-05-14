@@ -14,20 +14,10 @@
 library stagexl.engine;
 
 import 'dart:async';
-import 'dart:html'
-    show
-        window,
-        ImageElement,
-        CanvasElement,
-        CanvasRenderingContext2D,
-        CanvasImageSource,
-        ImageData,
-        ImageBitmap,
-        VideoElement;
-import 'dart:js_util' as js_util;
+import 'dart:js_interop';
+import 'package:web/web.dart' hide Float32List;
 import 'dart:math' as math;
 import 'dart:typed_data';
-import 'dart:web_gl' as gl;
 
 import 'package:byte_array/byte_array.dart';
 
@@ -36,6 +26,7 @@ import 'geom/matrix.dart';
 import 'geom/matrix_3d.dart';
 import 'geom/rectangle.dart';
 import 'internal/tools.dart';
+import 'internal/webgl_extensions.dart';
 
 part 'engine/blend_mode.dart';
 part 'engine/render_buffer_index.dart';
@@ -63,3 +54,5 @@ part 'engine/texture_info.dart';
 part 'engine/compressed_texture.dart';
 part 'engine/compressed_texture_formats/pvr_texture.dart';
 part 'engine/compressed_texture_formats/ktx_texture.dart';
+
+typedef WebGL = WebGLRenderingContext;

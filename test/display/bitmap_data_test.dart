@@ -3,6 +3,7 @@ library bitmap_data_test;
 
 import 'package:stagexl/stagexl.dart';
 import 'package:test/test.dart';
+import 'package:web/web.dart';
 
 void main() {
   late ResourceManager resourceManager;

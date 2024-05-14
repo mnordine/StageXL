@@ -3,7 +3,7 @@ part of stagexl.media;
 class AudioElementSoundChannel extends SoundChannel {
   final AudioElementSound _audioElementSound;
   late SoundTransform _soundTransform;
-  AudioElement? _audioElement;
+  HTMLAudioElement? _audioElement;
   StreamSubscription<num>? _volumeChangedSubscription;
   Timer? _completeTimer;
 
@@ -130,7 +130,7 @@ class AudioElementSoundChannel extends SoundChannel {
 
   //---------------------------------------------------------------------------
 
-  void _onAudioElement(AudioElement audioElement) {
+  void _onAudioElement(HTMLAudioElement audioElement) {
     final mixer = SoundMixer._audioElementMixer;
 
     if (_stopped) {

@@ -9,11 +9,11 @@ class WebAudioApiMixer {
   WebAudioApiMixer([AudioNode? inputNode]) {
     _inputNode = inputNode ?? audioContext.destination;
     _volumeNode = audioContext.createGain();
-    _volumeNode.connectNode(_inputNode!);
+    _volumeNode.connect(_inputNode!);
   }
 
   void applySoundTransform(SoundTransform soundTransform) {
-    final time = audioContext.currentTime;
+    final time = audioContext.currentTime as num?;
 
     // Sometimes in Safari the current time is null.
     // Unfortunately, I don't think there is any
@@ -24,7 +24,7 @@ class WebAudioApiMixer {
 
     // Safari sometimes throws here.
     try {
-      _volumeNode.gain?.setValueAtTime(value, time);
+      (_volumeNode.gain as AudioParam?)?.setValueAtTime(value, time);
     } catch (_) {}
   }
 

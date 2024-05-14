@@ -21,8 +21,8 @@ class SoundSprite {
       [SoundLoadOptions? soundLoadOptions]) async {
     final soundSprite = SoundSprite();
 
-    final soundSpriteJson = await HttpRequest.getString(url);
-    final data = json.decode(soundSpriteJson) as Map;
+    final soundSpriteJson = await http.get(Uri.parse(url));
+    final data = json.decode(soundSpriteJson.body) as Map;
     final urls = (data['urls'] as List).cast<String>();
     final segments = data['sprite'];
     final soundUrls = <String>[];

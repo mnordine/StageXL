@@ -53,7 +53,7 @@ enum StageAlign {
 class Stage extends DisplayObjectContainer {
   static StageOptions defaultOptions = StageOptions();
 
-  late CanvasElement _canvas;
+  late HTMLCanvasElement _canvas;
   late final RenderContext _renderContext;
   RenderLoop? _renderLoop;
   StageConsole? _console;
@@ -129,10 +129,10 @@ class Stage extends DisplayObjectContainer {
   //----------------------------------------------------------------------------
 
   static const EventStreamProvider<Event> resizeEvent =
-      EventStreamProvider<Event>(Event.RESIZE);
+    EventStreamProvider<Event>(Event.RESIZE);
 
   static const EventStreamProvider<Event> mouseLeaveEvent =
-      EventStreamProvider<Event>(Event.MOUSE_LEAVE);
+    EventStreamProvider<Event>(Event.MOUSE_LEAVE);
 
   EventStream<Event> get onResize => Stage.resizeEvent.forTarget(this);
 
@@ -140,13 +140,13 @@ class Stage extends DisplayObjectContainer {
 
   //----------------------------------------------------------------------------
 
-  Stage(CanvasElement canvas,
+  Stage(HTMLCanvasElement canvas,
       {int? width, int? height, StageOptions? options, bool console = false}) {
-    if (canvas.tabIndex! <= 0) canvas.tabIndex = 1;
+    if (canvas.tabIndex <= 0) canvas.tabIndex = 1;
     if (canvas.style.outline == '') canvas.style.outline = 'none';
     options ??= Stage.defaultOptions;
-    width ??= canvas.width!;
-    height ??= canvas.height!;
+    width ??= canvas.width;
+    height ??= canvas.height;
 
     backgroundColor = options.backgroundColor;
     preventDefaultOnTouch = options.preventDefaultOnTouch;
@@ -437,7 +437,6 @@ class Stage extends DisplayObjectContainer {
           _renderState.flush();
         }
       }
-
     }
 
     if (renderMode == StageRenderMode.ONCE) {
@@ -449,27 +448,37 @@ class Stage extends DisplayObjectContainer {
   //----------------------------------------------------------------------------
 
   RenderContext _createRenderContext(
-      CanvasElement canvas, StageOptions options) {
+      HTMLCanvasElement canvas, StageOptions options) {
     if (options.renderEngine == RenderEngine.WebGL) {
+      final RenderContextWebGL context;
+
+      // NOTE(CEksal): Prior behavior was to try and create a new context no matter what
+      // However, once the WebGL context is created, this isn't possible; we'll get `null` from `getContext2D`.
+      // Thus, we only fall back if we fail to get the WebGL context in the first place.
       try {
-        final context =  RenderContextWebGL(canvas,
-            alpha: options.transparent, antialias: options.antialias);
+        context = RenderContextWebGL(canvas,
+          alpha: options.transparent, antialias: options.antialias);
 
-        // Override to medium precision if high is not supported
-        if (options.shaderPrecision == ShaderPrecision.high) {
-          try {
-            final gl = context.rawContext;
-            final high = gl.getShaderPrecisionFormat(WebGL.FRAGMENT_SHADER, WebGL.HIGH_FLOAT);
-            if (high.precision <= 0) options.shaderPrecision = ShaderPrecision.medium;
-          } catch (e) {
-            options.shaderPrecision = ShaderPrecision.medium;
-          }
+        // ignore: avoid_catching_errors
+      } on StateError catch (e) {
+        if (e.message == 'Failed to get WebGL context.') {
+          return RenderContextCanvas(canvas);
         }
-
-        return context;
-      } catch (e) {
-        return RenderContextCanvas(canvas);
+        rethrow;
       }
+
+      // Override to medium precision if high is not supported
+      if (options.shaderPrecision == ShaderPrecision.high) {
+        try {
+          final gl = context.rawContext;
+          final high = gl.getShaderPrecisionFormat(WebGL.FRAGMENT_SHADER, WebGL.HIGH_FLOAT);
+          if (high!.precision <= 0) options.shaderPrecision = ShaderPrecision.medium;
+        } catch (e) {
+          options.shaderPrecision = ShaderPrecision.medium;
+        }
+      }
+
+      return context;
     } else if (options.renderEngine == RenderEngine.Canvas2D) {
       return RenderContextCanvas(canvas);
     } else {
@@ -502,8 +511,8 @@ class Stage extends DisplayObjectContainer {
     final sourceHeight = _sourceHeight;
 
     final clientRectangle = _canvas.getBoundingClientRect();
-    clientLeft = _canvas.clientLeft! + clientRectangle.left.round();
-    clientTop = _canvas.clientTop! + clientRectangle.top.round();
+    clientLeft = _canvas.clientLeft + clientRectangle.left.round();
+    clientTop = _canvas.clientTop + clientRectangle.top.round();
     clientWidth = _canvas.clientWidth;
     clientHeight = _canvas.clientHeight;
 
@@ -643,7 +652,7 @@ class Stage extends DisplayObjectContainer {
     final button = event.button;
 
     InteractiveObject? target;
-    final stagePoint = _clientTransformation.transformPoint(event.client);
+    final stagePoint = _clientTransformation.transformPoint(Point(event.clientX, event.clientY));
     final localPoint = Point<num>(0.0, 0.0);
 
     if (button < 0 || button > 2) return;
@@ -849,7 +858,7 @@ class Stage extends DisplayObjectContainer {
   void _onMouseWheelEvent(html.WheelEvent event) {
     if (preventDefaultOnWheel) event.preventDefault();
 
-    final stagePoint = _clientTransformation.transformPoint(event.client);
+    final stagePoint = _clientTransformation.transformPoint(Point(event.clientX, event.clientY));
     final localPoint = Point<num>(0.0, 0.0);
 
     final target =
@@ -895,14 +904,12 @@ class Stage extends DisplayObjectContainer {
     final ctrlKey = event.ctrlKey;
     final shiftKey = event.shiftKey;
 
-    if (event.changedTouches == null) return;
-
     final touches =
-        event.changedTouches!.where((touch) => touch.identifier != null);
+        event.changedTouches.toList();
     for (var changedTouch in touches) {
-      final identifier = changedTouch.identifier!;
+      final identifier = changedTouch.identifier;
 
-      final clientPoint = changedTouch.client;
+      final clientPoint = Point(changedTouch.clientX, changedTouch.clientY);
       final stagePoint = _clientTransformation.transformPoint(clientPoint);
       final localPoint = Point<num>(0.0, 0.0);
       final target =

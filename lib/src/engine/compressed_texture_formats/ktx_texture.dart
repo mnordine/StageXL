@@ -67,5 +67,5 @@ class KtxTexture extends CompressedTexture {
   int get format => _glInternalFormat;
 
   @override
-  TypedData get textureData => _buffer.asByteData(_texDataOffset, _imageSize);
+  ByteData get textureData => _buffer.asByteData(_texDataOffset, _imageSize);
 }
