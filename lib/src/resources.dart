@@ -47,9 +47,16 @@ external JSObject? stageXLFileMap;
 var stageXLStoragePrefix = '';
 
 String? getUrlHash(String url, {bool webp = false}) {
-  if (stageXLFileMap == null) return url;
+  print('mapping $url to url hash');
+  final map = stageXLFileMap;
+  if (map == null) {
+    print('no file map');
+    return url;
+  }
 
   if (webp) {
+    print('overriding for webp');
+
     // This is a hack, since it will break if the hash format changes.
     final i = url.lastIndexOf('-');
     final j = url.lastIndexOf('@');
@@ -61,10 +68,13 @@ String? getUrlHash(String url, {bool webp = false}) {
   }
 
   final key = url.replaceFirst(stageXLStoragePrefix, '');
-  final value = stageXLFileMap![key] as JSString?;
+  print('$url key: $key');
+  final value = map[key] as JSString?;
+  print('$url value: $value');
   if (value == null) return null;
 
   final newUrl = '$stageXLStoragePrefix${value.toDart}';
+  print('new url: $newUrl');
   return newUrl;
 }
 
