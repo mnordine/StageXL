@@ -13,6 +13,8 @@ class WebAudioApiSound extends Sound {
       [SoundLoadOptions? soundLoadOptions]) async {
     final options = soundLoadOptions ?? Sound.defaultLoadOptions;
     final audioUrls = options.getOptimalAudioUrls(url);
+    print('audio urls for $url:');
+    audioUrls.forEach(print);
     final aggregateError = AggregateError('Error loading sound.');
 
     for (var audioUrl in audioUrls) {
