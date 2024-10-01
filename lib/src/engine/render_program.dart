@@ -3,7 +3,6 @@ part of stagexl.engine;
 abstract class RenderProgram {
   int _contextIdentifier = -1;
 
-  // These assume activate() is called
   late gl.RenderingContext _renderingContext;
   late gl.Program _program;
 
@@ -14,6 +13,8 @@ abstract class RenderProgram {
   RenderStatistics _renderStatistics;
 
   static var fragmentPrecision = 'mediump';
+
+  var _activated = false;
 
   RenderProgram()
       : _attributes = <String, int>{},
@@ -58,9 +59,11 @@ abstract class RenderProgram {
       _program = _createProgram(_renderingContext);
       _updateAttributes(_renderingContext, _program);
       _updateUniforms(_renderingContext, _program);
+
+      _activated = true;
     }
 
-    renderingContext.useProgram(program);
+    if (_activated) renderingContext.useProgram(program);
   }
 
   //---------------------------------------------------------------------------
