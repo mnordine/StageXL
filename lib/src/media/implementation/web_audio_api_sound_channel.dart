@@ -5,7 +5,7 @@ class WebAudioApiSoundChannel extends SoundChannel {
   late SoundTransform _soundTransform;
   late final WebAudioApiMixer _mixer;
 
-  late AudioBufferSourceNode _sourceNode;
+  AudioBufferSourceNode? _sourceNode;
   StreamSubscription<html.Event>? _sourceNodeEndedSubscription;
 
   bool _stopped = false;
@@ -85,25 +85,29 @@ class WebAudioApiSoundChannel extends SoundChannel {
       _position = position;
       _paused = true;
       _sourceNodeEndedSubscription?.cancel();
-      _sourceNode.stop(0);
+      _sourceNode?.stop(0);
     } else if (_loop) {
       _paused = false;
-      _sourceNode = WebAudioApiMixer.audioContext.createBufferSource();
-      _sourceNode.buffer = _webAudioApiSound._audioBuffer;
-      _sourceNode.loop = true;
-      _sourceNode.loopStart = _startTime;
-      _sourceNode.loopEnd = _startTime + _duration;
-      _sourceNode.connectNode(_mixer.inputNode);
-      _sourceNode.start(0, _startTime + _position);
+
+      _sourceNode = WebAudioApiMixer.audioContext.createBufferSource()
+        ..buffer = _webAudioApiSound._audioBuffer
+        ..loop = true
+        ..loopStart = _startTime
+        ..loopEnd = _startTime + _duration
+        ..connectNode(_mixer.inputNode)
+        ..start(0, _startTime + _position);
+
       _timeOffset = WebAudioApiMixer.audioContext.currentTime! - _position;
     } else {
       _paused = false;
-      _sourceNode = WebAudioApiMixer.audioContext.createBufferSource();
-      _sourceNode.buffer = _webAudioApiSound._audioBuffer;
-      _sourceNode.loop = false;
-      _sourceNode.connectNode(_mixer.inputNode);
-      _sourceNode.start(0, _startTime + _position, _duration - _position);
-      _sourceNodeEndedSubscription = _sourceNode.onEnded.listen(_onEnded);
+
+      final node = _sourceNode = WebAudioApiMixer.audioContext.createBufferSource()
+        ..buffer = _webAudioApiSound._audioBuffer
+        ..loop = false
+        ..connectNode(_mixer.inputNode)
+        ..start(0, _startTime + _position, _duration - _position);
+
+      _sourceNodeEndedSubscription = node.onEnded.listen(_onEnded);
       _timeOffset = WebAudioApiMixer.audioContext.currentTime! - _position;
     }
   }
@@ -122,7 +126,7 @@ class WebAudioApiSoundChannel extends SoundChannel {
   @override
   void stop() {
     if (_stopped == false) {
-      _sourceNode.stop(0);
+      _sourceNode?.stop(0);
       _sourceNodeEndedSubscription?.cancel();
       _onEnded(null);
     }
