@@ -18,9 +18,9 @@ class _FontStyleMetrics {
 
   _FontStyleMetrics(TextFormat textFormat) {
     final fontStyle = textFormat._cssFontStyle;
-    final text = html.Element.tag('span');
-    final block = html.Element.tag('div');
-    final div = html.Element.tag('div');
+    final text = html.HTMLSpanElement();
+    final block = html.HTMLDivElement();
+    final div = html.HTMLDivElement();
 
     text.style.font = fontStyle;
     text.text = 'Hg';
