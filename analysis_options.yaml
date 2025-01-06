@@ -83,3 +83,4 @@ linter:
     - use_setters_to_change_properties
     - use_string_buffers
     - use_super_parameters
+    - invalid_runtime_check_with_js_interop_types
