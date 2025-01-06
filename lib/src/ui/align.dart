@@ -1,4 +1,4 @@
-library stagexl.ui.align;
+library;
 
 enum HorizontalAlign { Left, Center, Right }
 

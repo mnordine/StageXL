@@ -1,4 +1,4 @@
-part of stagexl.engine;
+part of '../engine.dart';
 
 class RenderTexture {
   int _width = 0;
@@ -211,7 +211,7 @@ class RenderTexture {
       _renderingContext?.deleteTexture(_texture);
     }
 
-    if (_source is ImageBitmap) {
+    if (_source.isA<ImageBitmap>()) {
       try {
         (_source as ImageBitmap).close();
       } catch (_) {
@@ -283,7 +283,7 @@ class RenderTexture {
   void _updateTexture(RenderContextWebGL renderContext) {
     final renderingContext = renderContext.rawContext;
 
-    final target = WebGL.TEXTURE_2D;
+    const target = WebGL.TEXTURE_2D;
 
     if (_source != null) {
       renderingContext.texImage2D(target, 0, pixelFormat, pixelFormat.toJS, pixelType.toJS, _source!);
@@ -305,7 +305,7 @@ class RenderTexture {
       final renderingContext = _renderingContext = renderContext.rawContext;
       _texture = renderingContext.createTexture();
 
-      final target = WebGL.TEXTURE_2D;
+      const target = WebGL.TEXTURE_2D;
 
       renderingContext.activeTexture(textureSlot);
       renderingContext.bindTexture(target, _texture);

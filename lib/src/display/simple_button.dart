@@ -1,4 +1,4 @@
-part of stagexl.display;
+part of '../display.dart';
 
 enum SimpleButtonState { Up, Over, Down }
 
@@ -126,8 +126,6 @@ class SimpleButton extends InteractiveObject {
         return overState;
       case SimpleButtonState.Down:
         return downState;
-      default:
-        return null;
     }
   }
 

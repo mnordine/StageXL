@@ -1,4 +1,4 @@
-part of stagexl.media;
+part of '../../media.dart';
 
 class AudioElementSound extends Sound {
   final HTMLAudioElement _audioElement;
@@ -97,7 +97,7 @@ class AudioElementSound extends Sound {
 
   void _onAudioEnded(html.Event event) {
     final audioElement = event.target;
-    if (audioElement is! HTMLAudioElement) return;
+    if (!audioElement.isA<HTMLAudioElement>()) return;
 
     _soundChannels[audioElement]?._onAudioEnded();
   }

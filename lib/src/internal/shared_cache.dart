@@ -1,4 +1,4 @@
-library stagexl.internal.shared_cache;
+library;
 
 import '../events.dart';
 

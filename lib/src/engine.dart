@@ -11,7 +11,7 @@
 /// [RenderTextureQuad] classes. More advanced uses may even implement custom
 /// WebGL shaders by extending the [RenderProgram] class.
 ///
-library stagexl.engine;
+library;
 
 import 'dart:async';
 import 'dart:js_interop';

@@ -1,4 +1,4 @@
-part of stagexl.events;
+part of '../events.dart';
 
 /// Provides a stream of [Event]s.
 class EventStream<T extends Event> extends Stream<T> {
@@ -193,7 +193,9 @@ class EventStream<T extends Event> extends Stream<T> {
 
       if (subscription.isCanceled == true ||
           subscription.isPaused == true ||
-          subscription.isCapturing != isCapturing) continue;
+          subscription.isCapturing != isCapturing) {
+            continue;
+      }
 
       event._target = target;
       event._currentTarget = this.target;

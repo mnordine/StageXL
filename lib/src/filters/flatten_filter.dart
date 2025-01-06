@@ -1,4 +1,4 @@
-library stagexl.filters.flatten;
+library;
 
 import '../display.dart';
 

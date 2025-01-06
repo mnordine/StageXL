@@ -1,4 +1,4 @@
-part of stagexl.display;
+part of '../display.dart';
 
 /// The StageRenderMode defines how often the Stage is rendered by
 /// the [RenderLoop] where the Stage is attached to.
@@ -904,9 +904,11 @@ class Stage extends DisplayObjectContainer {
     final ctrlKey = event.ctrlKey;
     final shiftKey = event.shiftKey;
 
-    final touches =
-        event.changedTouches.toList();
-    for (var changedTouch in touches) {
+    final touches = event.changedTouches;
+    for (var i = 0; i < touches.length; i++) {
+      final changedTouch = touches.item(i);
+      if (changedTouch == null) continue;
+
       final identifier = changedTouch.identifier;
 
       final clientPoint = Point(changedTouch.clientX, changedTouch.clientY);

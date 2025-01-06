@@ -1,4 +1,4 @@
-library stagexl.geom.point;
+library;
 
 import 'dart:math' hide Point, Rectangle;
 import 'dart:math' as math;
@@ -70,7 +70,7 @@ class Point<T extends num> implements math.Point<T> {
   /// Scale this point by [factor] as if it were a vector.
   ///
   /// *Important* *Note*: This function accepts a `num` as its argument only
-  /// so that you can scale Point<double> objects by an `int` factor. Because
+  /// so that you can scale `Point<double>` objects by an `int` factor. Because
   /// the star operator always returns the same type of Point that originally
   /// called it, passing in a double [factor] on a `Point<int>` _causes_ _a_
   /// _runtime_ _error_ in checked mode.

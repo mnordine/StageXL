@@ -6,7 +6,7 @@
 /// you can add it the display list. Use the [TextFormat] class to change
 /// the color, size, margin, style and more of your texts.
 ///
-library stagexl.text;
+library;
 
 import 'dart:js_interop';
 

@@ -1,4 +1,4 @@
-library stagexl.filters.glow;
+library;
 
 import 'dart:js_interop';
 import 'dart:math' hide Point, Rectangle;

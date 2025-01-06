@@ -11,7 +11,7 @@
 /// please read the wiki article about the basics of StageXL here:
 /// [Introducing StageXL](http://www.stagexl.org/docs/wiki-articles.html?article=introduction)
 ///
-library stagexl.display;
+library;
 
 import 'dart:async';
 import 'dart:collection';

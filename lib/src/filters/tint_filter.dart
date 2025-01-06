@@ -1,4 +1,4 @@
-library stagexl.filters.tint;
+library;
 
 import 'dart:js_interop';
 

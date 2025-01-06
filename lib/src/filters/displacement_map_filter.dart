@@ -1,4 +1,4 @@
-library stagexl.filters.displacement_map;
+library;
 
 import 'dart:js_interop';
 import 'dart:typed_data';

@@ -1,4 +1,4 @@
-library stagexl.internal.filter_helpers;
+library;
 
 import 'dart:typed_data';
 import 'environment.dart' as env;

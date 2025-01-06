@@ -1,4 +1,4 @@
-part of stagexl.engine;
+part of '../engine.dart';
 
 class RenderFrameBuffer {
   RenderTexture? _renderTexture;
@@ -61,12 +61,12 @@ class RenderFrameBuffer {
         _renderContext.activateRenderStencilBuffer(_renderStencilBuffer!);
       }
 
-      final target = WebGL.FRAMEBUFFER;
-      final color = WebGL.COLOR_ATTACHMENT0;
-      final colorTarget = WebGL.TEXTURE_2D;
+      const target = WebGL.FRAMEBUFFER;
+      const color = WebGL.COLOR_ATTACHMENT0;
+      const colorTarget = WebGL.TEXTURE_2D;
       final colorData = _renderTexture!.texture;
-      final stencil = WebGL.DEPTH_STENCIL_ATTACHMENT;
-      final stencilTarget = WebGL.RENDERBUFFER;
+      const stencil = WebGL.DEPTH_STENCIL_ATTACHMENT;
+      const stencilTarget = WebGL.RENDERBUFFER;
       final stencilData = _renderStencilBuffer!.renderbuffer;
 
       _renderingContext!.bindFramebuffer(target, _framebuffer);

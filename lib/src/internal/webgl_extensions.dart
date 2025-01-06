@@ -1,5 +1,5 @@
 // ignore_for_file: non_constant_identifier_names
-library stagexl.internal.webgl_extensions;
+library;
 
 import 'dart:js_interop';
 import 'package:web/web.dart' show GLenum;

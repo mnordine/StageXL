@@ -19,7 +19,7 @@
 ///       resourceManager.getSound("bingo").play();
 ///     });
 ///
-library stagexl.media;
+library;
 
 import 'dart:async';
 import 'dart:convert';
