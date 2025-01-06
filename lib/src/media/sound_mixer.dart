@@ -1,6 +1,6 @@
 part of '../media.dart';
 
-bool _isAudioContextSupported() => window['AudioContext'] != null;
+bool _isAudioContextSupported() => window.has('AudioContext');
 
 class SoundMixer {
   static SoundEngine? _engineDetected;
