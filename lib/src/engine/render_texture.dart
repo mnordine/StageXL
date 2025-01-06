@@ -211,7 +211,7 @@ class RenderTexture {
       _renderingContext?.deleteTexture(_texture);
     }
 
-    if (_source is ImageBitmap) {
+    if (_source.isA<ImageBitmap>()) {
       try {
         (_source as ImageBitmap).close();
       } catch (_) {
