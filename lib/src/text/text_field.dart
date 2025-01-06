@@ -339,7 +339,7 @@ class TextField extends InteractiveObject {
           validLine = checkLine;
           checkLine = (validLine == null) ? word : '$validLine $word';
           checkLine = _passwordEncoder(checkLine);
-          lineWidth = canvasContext.measureText(checkLine).width.toDouble();
+          lineWidth = canvasContext.measureText(checkLine).width;
 
           if (lineIndent + lineWidth >= availableWidth) {
             if (validLine == null) {
@@ -382,7 +382,7 @@ class TextField extends InteractiveObject {
           line * (textFormatLeading + textFormatSize + fontStyleMetricsDescent);
 
       final width =
-          canvasContext.measureText(textLineMetrics._text).width.toDouble();
+          canvasContext.measureText(textLineMetrics._text).width;
 
       textLineMetrics._x = offsetX;
       textLineMetrics._y = offsetY;
@@ -475,7 +475,7 @@ class TextField extends InteractiveObject {
           final text = textLineMetrics._text.substring(0, textIndex);
           _caretLine = line;
           _caretX = textLineMetrics.x +
-              canvasContext.measureText(text).width.toDouble();
+              canvasContext.measureText(text).width;
           _caretY = textLineMetrics.y - fontStyleMetricsAscent * 0.9;
           _caretWidth = 2.0;
           _caretHeight = textFormatSize;
@@ -788,7 +788,7 @@ class TextField extends InteractiveObject {
 
         for (var c = 0; c <= text.length; c++) {
           final width =
-              canvasContext.measureText(text.substring(0, c)).width.toDouble();
+              canvasContext.measureText(text.substring(0, c)).width;
           final distance = (lineX + width - mouseX).abs();
           if (distance < bestDistance) {
             bestDistance = distance;
