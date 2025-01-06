@@ -1,5 +1,5 @@
 @TestOn('browser')
-library render_texture_quad_test;
+library;
 
 import 'dart:typed_data';
 import 'package:stagexl/stagexl.dart';

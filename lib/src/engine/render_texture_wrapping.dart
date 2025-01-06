@@ -1,6 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
-part of stagexl.engine;
+part of '../engine.dart';
 
 class RenderTextureWrapping {
   final int value;

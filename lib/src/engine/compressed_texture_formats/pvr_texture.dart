@@ -1,4 +1,4 @@
-part of stagexl.engine;
+part of '../../engine.dart';
 
 // http://cdn.imgtec.com/sdk-documentation/PVR+File+Format.Specification.pdf
 class PvrFormat {

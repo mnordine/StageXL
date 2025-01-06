@@ -1,4 +1,4 @@
-library stagexl.geom.vector;
+library;
 
 import 'dart:math' hide Point, Rectangle;
 import '../internal/jenkins_hash.dart';

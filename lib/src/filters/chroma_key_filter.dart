@@ -1,4 +1,4 @@
-library stagexl.filters.chroma_key;
+library;
 
 import '../display.dart';
 import '../engine.dart';

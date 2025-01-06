@@ -1,6 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
-part of stagexl.engine;
+part of '../engine.dart';
 
 /// The RenderTextureFiltering defines the method that is used to determine
 /// the texture color for a texture mapped pixel, using the colors of nearby

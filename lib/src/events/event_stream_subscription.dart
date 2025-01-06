@@ -1,4 +1,4 @@
-part of stagexl.events;
+part of '../events.dart';
 
 /// A handler function that is used to listen to events.
 

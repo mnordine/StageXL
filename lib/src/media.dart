@@ -19,12 +19,11 @@
 ///       resourceManager.getSound("bingo").play();
 ///     });
 ///
-library stagexl.media;
+library;
 
 import 'dart:async';
 import 'dart:convert';
 import 'dart:js_interop';
-import 'dart:js_interop_unsafe';
 import 'package:web/web.dart' as html;
 import 'package:web/web.dart' hide Event;
 import 'package:http/http.dart' as http;

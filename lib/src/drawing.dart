@@ -1,4 +1,4 @@
-library stagexl.drawing;
+library;
 
 import 'dart:js_interop';
 

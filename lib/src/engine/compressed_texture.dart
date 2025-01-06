@@ -1,4 +1,4 @@
-part of stagexl.engine;
+part of '../engine.dart';
 
 class CompressedExtensions {
   final WebGLCompressedTextureS3tc? s3tc;

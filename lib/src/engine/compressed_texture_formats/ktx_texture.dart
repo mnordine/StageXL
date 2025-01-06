@@ -1,4 +1,4 @@
-part of stagexl.engine;
+part of '../../engine.dart';
 
 // https://registry.khronos.org/KTX/specs/1.0/ktxspec.v1.html
 class KtxFormat {

@@ -1,5 +1,5 @@
 @TestOn('browser')
-library matrix_test;
+library;
 
 import 'dart:math';
 import 'package:stagexl/stagexl.dart';

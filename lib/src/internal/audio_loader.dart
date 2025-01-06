@@ -1,4 +1,4 @@
-library stagexl.internal.audio_loader;
+library;
 
 import 'dart:async';
 import 'package:web/web.dart';

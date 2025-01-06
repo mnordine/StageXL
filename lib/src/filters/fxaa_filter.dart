@@ -1,4 +1,4 @@
-library stagexl.filters.fxaa;
+library;
 
 import '../display.dart';
 import '../engine.dart';

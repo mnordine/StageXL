@@ -1,4 +1,4 @@
-library stagexl.internal.image_bitmap_loader;
+library;
 
 import 'dart:async';
 import 'dart:js_interop';

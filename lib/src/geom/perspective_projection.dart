@@ -1,4 +1,4 @@
-library stagexl.geom.perspective_projection;
+library;
 
 import 'matrix_3d.dart';
 

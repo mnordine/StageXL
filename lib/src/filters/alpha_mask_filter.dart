@@ -1,4 +1,4 @@
-library stagexl.filters.alpha_mask;
+library;
 
 import 'dart:js_interop';
 

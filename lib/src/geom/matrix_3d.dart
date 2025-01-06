@@ -1,4 +1,4 @@
-library stagexl.geom.matrix_3d;
+library;
 
 import 'dart:math' as math;
 import 'dart:typed_data';

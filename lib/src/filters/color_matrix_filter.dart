@@ -1,4 +1,4 @@
-library stagexl.filters.color_matrix;
+library;
 
 import 'dart:js_interop';
 import 'dart:math' hide Point, Rectangle;

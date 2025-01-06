@@ -5,7 +5,7 @@
 /// All display objects extend the [EventDispatcher] class which is used
 /// to listen to events as well as dispatching new events.
 ///
-library stagexl.events;
+library;
 
 import 'dart:async';
 

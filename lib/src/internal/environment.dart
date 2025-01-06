@@ -1,4 +1,4 @@
-library stagexl.internal.environment;
+library;
 
 import 'dart:async';
 import 'dart:js_interop_unsafe';

@@ -1,4 +1,4 @@
-library stagexl;
+library;
 
 //==========================================================
 // StageXL Library Hierarchy (bottom-up)
