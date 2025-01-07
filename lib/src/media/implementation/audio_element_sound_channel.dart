@@ -101,7 +101,7 @@ class AudioElementSoundChannel extends SoundChannel {
     } else {
       final volume1 = _soundTransform.volume;
       final volume2 = SoundMixer._audioElementMixer!.volume;
-      _audioElement!.volume = volume1 * volume2;
+      _audioElement!.volume = (volume1 * volume2).clamp(0.0, 1.0);
     }
   }
 
