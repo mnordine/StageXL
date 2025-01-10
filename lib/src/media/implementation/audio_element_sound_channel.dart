@@ -137,7 +137,7 @@ class AudioElementSoundChannel extends SoundChannel {
       _audioElementSound._releaseAudioElement(audioElement);
     } else {
       _audioElement = audioElement;
-      _audioElement!.volume = _soundTransform.volume * mixer!.volume;
+      _audioElement!.volume = (_soundTransform.volume * mixer!.volume).clamp(0.0, 1.0);
       _volumeChangedSubscription =
           mixer.onVolumeChanged.listen(_onVolumeChanged);
       if (_paused == false) {
@@ -174,7 +174,7 @@ class AudioElementSoundChannel extends SoundChannel {
   }
 
   void _onVolumeChanged(num volume) {
-    _audioElement?.volume = _soundTransform.volume * volume;
+    _audioElement?.volume = (_soundTransform.volume * volume).clamp(0.0, 1.0);
   }
 
   void _onAudioEnded() {
