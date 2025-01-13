@@ -1,4 +1,4 @@
-library stagexl.filters.normal_map;
+library;
 
 import 'dart:math' as math;
 

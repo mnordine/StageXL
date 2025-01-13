@@ -1,10 +1,10 @@
 /// More advanced display objects for special use cases built on top of
 /// the basic display objects.
 ///
-library stagexl.display_ex;
+library;
 
 import 'dart:async';
-import 'dart:html' show CssStyleDeclaration, Element;
+import 'package:web/web.dart' show CSSStyleDeclaration, ElementEventGetters, HTMLElement;
 import 'dart:math' hide Point, Rectangle;
 import 'dart:typed_data';
 

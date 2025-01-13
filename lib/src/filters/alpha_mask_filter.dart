@@ -1,4 +1,6 @@
-library stagexl.filters.alpha_mask;
+library;
+
+import 'dart:js_interop';
 
 import '../display.dart';
 import '../engine.dart';
@@ -32,7 +34,7 @@ class AlphaMaskFilter extends BitmapFilter {
     context.save();
     context.globalCompositeOperation = 'destination-in';
     context.setTransform(
-        matrix.a, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
+        matrix.a.toJS, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
     context.rect(
         vxList[0], vxList[1], vxList[8] - vxList[0], vxList[9] - vxList[1]);
     context.clip();

@@ -1,4 +1,4 @@
-part of stagexl.display_ex;
+part of '../display_ex.dart';
 
 /// The HtmlObject adds a regular HTML element to the display list.
 /// You can set all the well known DisplayObject properties like x, y, scaleX,
@@ -32,10 +32,10 @@ part of stagexl.display_ex;
 ///     htmlObject.y = 300;
 ///     stage.addChild(htmlObject);
 
-class HtmlObject<T extends Element> extends DisplayObject {
+class HtmlObject<T extends HTMLElement> extends DisplayObject {
   final T element;
 
-  late final CssStyleDeclaration _style;
+  late final CSSStyleDeclaration _style;
   String _styleOpacity = '';
   String _styleTransform = '';
   String _styleVisibility = '';

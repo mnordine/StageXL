@@ -1,5 +1,6 @@
-library stagexl.filters.glow;
+library;
 
+import 'dart:js_interop';
 import 'dart:math' hide Point, Rectangle;
 
 import '../display.dart';
@@ -105,7 +106,7 @@ class GlowFilter extends BitmapFilter {
         : null;
 
     final imageData = renderTextureQuad.getImageData();
-    final data = imageData.data;
+    final data = imageData.data.toDart;
     final width = imageData.width;
     final height = imageData.height;
 
@@ -125,11 +126,11 @@ class GlowFilter extends BitmapFilter {
     }
 
     if (knockout) {
-      setColorKnockout(data, color, sourceImageData!.data);
+      setColorKnockout(data, color, sourceImageData!.data.toDart);
     } else if (hideObject) {
       setColor(data, color);
     } else {
-      setColorBlend(data, color, sourceImageData!.data);
+      setColorBlend(data, color, sourceImageData!.data.toDart);
     }
 
     renderTextureQuad.putImageData(imageData);

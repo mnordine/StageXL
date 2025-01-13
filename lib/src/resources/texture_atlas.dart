@@ -1,10 +1,10 @@
-part of stagexl.resources;
+part of '../resources.dart';
 
 class LoaderTuple {
-  _TextureAtlasLoaderFile loader;
+  final _TextureAtlasLoaderFile _loader;
   Future<TextureAtlas> atlasFuture;
 
-  LoaderTuple(this.loader, this.atlasFuture);
+  LoaderTuple._(this._loader, this.atlasFuture);
 }
 
 class TextureAtlas {
@@ -25,7 +25,7 @@ class TextureAtlas {
     textureAtlasFormat ??= TextureAtlasFormat.jsonArray;
 
     final loader = _TextureAtlasLoaderFile(url, bitmapDataLoadOptions);
-    return LoaderTuple(loader, textureAtlasFormat.load(loader));
+    return LoaderTuple._(loader, textureAtlasFormat.load(loader));
   }
 
   static Future<TextureAtlas> fromTextureAtlas(

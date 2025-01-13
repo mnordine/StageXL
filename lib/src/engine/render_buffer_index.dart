@@ -1,4 +1,4 @@
-part of stagexl.engine;
+part of '../engine.dart';
 
 class RenderBufferIndex {
   final Int16List data;
@@ -8,15 +8,15 @@ class RenderBufferIndex {
   int count = 0; // count of indices
 
   int _contextIdentifier = -1;
-  gl.Buffer? _buffer;
-  gl.RenderingContext? _renderingContext;
+  WebGLBuffer? _buffer;
+  WebGL? _renderingContext;
   late RenderStatistics _renderStatistics;
 
   //---------------------------------------------------------------------------
 
   RenderBufferIndex(int length)
       : data = Int16List(length),
-        usage = gl.WebGL.DYNAMIC_DRAW;
+        usage = WebGL.DYNAMIC_DRAW;
 
   //---------------------------------------------------------------------------
 
@@ -37,16 +37,16 @@ class RenderBufferIndex {
       _renderStatistics = renderContext.renderStatistics;
       _renderingContext = renderContext.rawContext;
       _buffer = _renderingContext!.createBuffer();
-      _renderingContext!.bindBuffer(gl.WebGL.ELEMENT_ARRAY_BUFFER, _buffer);
-      _renderingContext!.bufferData(gl.WebGL.ELEMENT_ARRAY_BUFFER, data, usage);
+      _renderingContext!.bindBuffer(WebGL.ELEMENT_ARRAY_BUFFER, _buffer);
+      _renderingContext!.bufferData(WebGL.ELEMENT_ARRAY_BUFFER, data.toJS, usage);
     }
 
-    _renderingContext!.bindBuffer(gl.WebGL.ELEMENT_ARRAY_BUFFER, _buffer);
+    _renderingContext!.bindBuffer(WebGL.ELEMENT_ARRAY_BUFFER, _buffer);
   }
 
   void update() {
     final update = Int16List.view(data.buffer, 0, position);
-    _renderingContext!.bufferSubData(gl.WebGL.ELEMENT_ARRAY_BUFFER, 0, update);
+    _renderingContext!.bufferSubData(WebGL.ELEMENT_ARRAY_BUFFER, 0, update.toJS);
     _renderStatistics.indexCount += count;
   }
 }

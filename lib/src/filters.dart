@@ -9,7 +9,7 @@
 ///
 /// Sample: <http://www.stagexl.org/samples/filter/>
 
-library stagexl.filters;
+library;
 
 export 'filters/alpha_mask_filter.dart' show AlphaMaskFilter;
 export 'filters/blur_filter.dart' show BlurFilter;

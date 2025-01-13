@@ -1,14 +1,14 @@
-part of stagexl.engine;
+part of '../engine.dart';
 
 class RenderContextCanvas extends RenderContext {
-  final CanvasElement _canvasElement;
+  final HTMLCanvasElement _canvasElement;
   final CanvasRenderingContext2D _renderingContext;
 
   final Matrix _identityMatrix = Matrix.fromIdentity();
   BlendMode _activeBlendMode = BlendMode.NORMAL;
   double _activeAlpha = 1;
 
-  RenderContextCanvas(CanvasElement canvasElement)
+  RenderContextCanvas(HTMLCanvasElement canvasElement)
       : _canvasElement = canvasElement,
         _renderingContext = canvasElement.context2D {
     reset();
@@ -42,13 +42,13 @@ class RenderContextCanvas extends RenderContext {
 
     if (alpha < 255) {
       _renderingContext.clearRect(
-          0, 0, _canvasElement.width!, _canvasElement.height!);
+          0, 0, _canvasElement.width, _canvasElement.height);
     }
 
     if (alpha > 0) {
-      _renderingContext.fillStyle = color2rgba(color);
+      _renderingContext.fillStyle = color2rgba(color).toJS;
       _renderingContext.fillRect(
-          0, 0, _canvasElement.width!, _canvasElement.height!);
+          0, 0, _canvasElement.width, _canvasElement.height);
     }
   }
 
@@ -63,7 +63,7 @@ class RenderContextCanvas extends RenderContext {
   void beginRenderMask(RenderState renderState, RenderMask mask) {
     final matrix = renderState.globalMatrix;
     _renderingContext.setTransform(
-        matrix.a, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
+        matrix.a.toJS, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
     _renderingContext.beginPath();
     mask.renderMask(renderState);
     _renderingContext.save();
@@ -77,7 +77,7 @@ class RenderContextCanvas extends RenderContext {
     _renderingContext.globalCompositeOperation =
         _activeBlendMode.compositeOperation;
     if (mask.border) {
-      _renderingContext.strokeStyle = color2rgba(mask.borderColor);
+      _renderingContext.strokeStyle = color2rgba(mask.borderColor).toJS;
       _renderingContext.lineWidth = mask.borderWidth;
       _renderingContext.lineCap = 'round';
       _renderingContext.lineJoin = 'round';
@@ -100,7 +100,7 @@ class RenderContextCanvas extends RenderContext {
 
     final context = _renderingContext;
     final source = renderTextureQuad.renderTexture.source ??
-        renderTextureQuad.renderTexture.imageBitmap;
+        renderTextureQuad.renderTexture.imageBitmap!;
 
     final rotation = renderTextureQuad.rotation;
     final sourceRect = renderTextureQuad.sourceRectangle;
@@ -119,13 +119,10 @@ class RenderContextCanvas extends RenderContext {
       context.globalCompositeOperation = blendMode.compositeOperation;
     }
 
-    // Note: We need to use js_util.callMethod for the drawImage calls,
-    // since Dart SDK does not support ImageBitmap as a CanvasImageSource
-
     if (rotation == 0) {
       context.setTransform(
-          matrix.a, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
-      js_util.callMethod(context, 'drawImage', [
+          matrix.a.toJS, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
+      context.drawImage(
         source,
         sourceRect.left,
         sourceRect.top,
@@ -135,11 +132,11 @@ class RenderContextCanvas extends RenderContext {
         vxList[1],
         vxList[8] - vxList[0],
         vxList[9] - vxList[1]
-      ]);
+      );
     } else if (rotation == 1) {
       context.setTransform(
-          -matrix.c, -matrix.d, matrix.a, matrix.b, matrix.tx, matrix.ty);
-      js_util.callMethod(context, 'drawImage', [
+          (-matrix.c).toJS, -matrix.d, matrix.a, matrix.b, matrix.tx, matrix.ty);
+      context.drawImage(
         source,
         sourceRect.left,
         sourceRect.top,
@@ -149,12 +146,11 @@ class RenderContextCanvas extends RenderContext {
         vxList[12],
         vxList[9] - vxList[1],
         vxList[8] - vxList[0]
-      ]);
+      );
     } else if (rotation == 2) {
       context.setTransform(
-          -matrix.a, -matrix.b, -matrix.c, -matrix.d, matrix.tx, matrix.ty);
-      js_util.callMethod(context, 'drawImage', [
-        source,
+          (-matrix.a).toJS, -matrix.b, -matrix.c, -matrix.d, matrix.tx, matrix.ty);
+      context.drawImage(source,
         sourceRect.left,
         sourceRect.top,
         sourceRect.width,
@@ -162,12 +158,11 @@ class RenderContextCanvas extends RenderContext {
         0.0 - vxList[8],
         0.0 - vxList[9],
         vxList[8] - vxList[0],
-        vxList[9] - vxList[1]
-      ]);
+        vxList[9] - vxList[1]);
     } else if (rotation == 3) {
       context.setTransform(
-          matrix.c, matrix.d, -matrix.a, -matrix.b, matrix.tx, matrix.ty);
-      js_util.callMethod(context, 'drawImage', [
+          matrix.c.toJS, matrix.d, -matrix.a, -matrix.b, matrix.tx, matrix.ty);
+      context.drawImage(
         source,
         sourceRect.left,
         sourceRect.top,
@@ -177,7 +172,7 @@ class RenderContextCanvas extends RenderContext {
         0.0 - vxList[4],
         vxList[9] - vxList[1],
         vxList[8] - vxList[0]
-      ]);
+      );
     }
   }
 
@@ -187,7 +182,7 @@ class RenderContextCanvas extends RenderContext {
   void renderTextureMesh(RenderState renderState, RenderTexture renderTexture,
       Int16List ixList, Float32List vxList) {
     final context = _renderingContext;
-    final source = renderTexture.source ?? renderTexture.imageBitmap;
+    final source = renderTexture.source ?? renderTexture.imageBitmap!;
     final matrix = renderState.globalMatrix;
     final alpha = renderState.globalAlpha;
     final blendMode = renderState.globalBlendMode;
@@ -205,7 +200,7 @@ class RenderContextCanvas extends RenderContext {
     }
 
     context.setTransform(
-        matrix.a, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
+        matrix.a.toJS, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
 
     for (var i = 0; i < ixList.length - 2; i += 3) {
       final i1 = ixList[i + 0] << 2;
@@ -253,7 +248,7 @@ class RenderContextCanvas extends RenderContext {
       final my = y1 - mb * u1 - md * v1;
 
       context.transform(ma * iw, mb * iw, mc * ih, md * ih, mx, my);
-      js_util.callMethod(context, 'drawImage', [source, 0, 0]);
+      context.drawImage(source, 0, 0);
       context.restore();
     }
   }
@@ -291,14 +286,14 @@ class RenderContextCanvas extends RenderContext {
     }
 
     context.setTransform(
-        matrix.a, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
+        matrix.a.toJS, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
 
     context.beginPath();
     context.moveTo(x1, y1);
     context.lineTo(x2, y2);
     context.lineTo(x3, y3);
     context.closePath();
-    context.fillStyle = color2rgba(color);
+    context.fillStyle = color2rgba(color).toJS;
     context.fill();
   }
 
@@ -323,7 +318,7 @@ class RenderContextCanvas extends RenderContext {
     }
 
     context.setTransform(
-        matrix.a, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
+        matrix.a.toJS, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
     context.beginPath();
 
     for (var i = 0; i < ixList.length - 2; i += 3) {
@@ -341,7 +336,7 @@ class RenderContextCanvas extends RenderContext {
       context.lineTo(x3, y3);
     }
 
-    context.fillStyle = color2rgba(color);
+    context.fillStyle = color2rgba(color).toJS;
     context.fill();
   }
 
@@ -370,7 +365,7 @@ class RenderContextCanvas extends RenderContext {
 
   void setTransform(Matrix matrix) {
     _renderingContext.setTransform(
-        matrix.a, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
+        matrix.a.toJS, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
   }
 
   void setAlpha(double alpha) {

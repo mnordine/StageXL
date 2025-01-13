@@ -1,4 +1,5 @@
-part of stagexl.drawing;
+// ignore_for_file: non_constant_identifier_names
+part of '../drawing.dart';
 
 class GraphicsPatternType {
   final String value;
@@ -7,16 +8,16 @@ class GraphicsPatternType {
 
   const GraphicsPatternType(this.value, this.wrappingX, this.wrappingY);
 
-  static const GraphicsPatternType Repeat = GraphicsPatternType(
+  static final GraphicsPatternType Repeat = GraphicsPatternType(
       'repeat', RenderTextureWrapping.REPEAT, RenderTextureWrapping.REPEAT);
 
-  static const GraphicsPatternType RepeatX = GraphicsPatternType(
+  static final GraphicsPatternType RepeatX = GraphicsPatternType(
       'repeat-x', RenderTextureWrapping.REPEAT, RenderTextureWrapping.CLAMP);
 
-  static const GraphicsPatternType RepeatY = GraphicsPatternType(
+  static final GraphicsPatternType RepeatY = GraphicsPatternType(
       'repeat-y', RenderTextureWrapping.CLAMP, RenderTextureWrapping.REPEAT);
 
-  static const GraphicsPatternType NoRepeat = GraphicsPatternType(
+  static final GraphicsPatternType NoRepeat = GraphicsPatternType(
       'no-repeat', RenderTextureWrapping.CLAMP, RenderTextureWrapping.CLAMP);
 }
 

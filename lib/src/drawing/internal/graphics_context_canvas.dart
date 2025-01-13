@@ -1,4 +1,4 @@
-part of stagexl.drawing;
+part of '../../drawing.dart';
 
 class _GraphicsContextCanvas extends GraphicsContext {
   final RenderState renderState;
@@ -79,7 +79,7 @@ class _GraphicsContextCanvas extends GraphicsContext {
 
   @override
   void fillColor(int color) {
-    _canvasContext.fillStyle = color2rgba(color);
+    _canvasContext.fillStyle = color2rgba(color).toJS;
     _canvasContext.fill();
   }
 
@@ -110,7 +110,7 @@ class _GraphicsContextCanvas extends GraphicsContext {
   @override
   void strokeColor(
       int color, double width, JointStyle jointStyle, CapsStyle capsStyle) {
-    _canvasContext.strokeStyle = color2rgba(color);
+    _canvasContext.strokeStyle = color2rgba(color).toJS;
     _canvasContext.lineWidth = width;
     _canvasContext.lineJoin = _getLineJoin(jointStyle);
     _canvasContext.lineCap = _getLineCap(capsStyle);

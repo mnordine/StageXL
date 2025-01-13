@@ -1,4 +1,4 @@
-part of stagexl.resources;
+part of '../resources.dart';
 
 class _SoundData {
   late final String url;
@@ -92,7 +92,7 @@ class ResourceManager {
     final tuple = TextureAtlas.load(url, textureAtlasFormat, options);
     _addResource('TextureAtlas', name, url, tuple.atlasFuture);
 
-    _loaders[name] = tuple.loader;
+    _loaders[name] = tuple._loader;
     tuple.atlasFuture
       .then((_) => _loaders.remove(name))
       .catchError((_) => _loaders.remove(name));
@@ -138,8 +138,8 @@ class ResourceManager {
   bool containsSound(String name) => _containsResource('Sound', name);
 
   void addSound(String name, String url, [SoundLoadOptions? options]) {
-    final loader = Sound.load(url, options);
-    loader.catchError((_) { _soundDatas.remove(name); });
+    final loader = Sound.load(url, options) as Future<Sound?>;
+    loader.catchError((_) { _soundDatas.remove(name); return null; });
 
     _addResource('Sound', name, url, loader);
 
@@ -203,7 +203,7 @@ class ResourceManager {
     final urlHash = getUrlHash(url);
     if (urlHash == null) throw StateError('Failed to load text file: $url');
     final loader =
-        HttpRequest.getString(urlHash).then((text) => text, onError: (error) {
+        http.get(Uri.parse(urlHash)).then((text) => text.body, onError: (error) {
       throw StateError('Failed to load text file.');
     });
     _addResource('TextFile', name, url, loader);

@@ -1,5 +1,5 @@
 @TestOn('browser')
-library events_test;
+library;
 
 import 'package:stagexl/stagexl.dart';
 import 'package:test/test.dart';
@@ -57,7 +57,7 @@ void main() {
 
     dispatcher.addEventListener(eventType, listener1, priority: -100);
     dispatcher.addEventListener(eventType, listener3, priority: 50);
-    dispatcher.addEventListener(eventType, listener2, priority: 0);
+    dispatcher.addEventListener(eventType, listener2);
     dispatcher.addEventListener(eventType, listener4, priority: 100);
     dispatcher.dispatchEvent(Event(eventType));
     expect(actual, equals(expected));

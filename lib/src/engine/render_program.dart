@@ -1,14 +1,14 @@
-part of stagexl.engine;
+part of '../engine.dart';
 
 abstract class RenderProgram {
   int _contextIdentifier = -1;
 
   // These assume activate() is called
-  late gl.RenderingContext _renderingContext;
-  late gl.Program _program;
+  late WebGL _renderingContext;
+  late WebGLProgram _program;
 
   final Map<String, int> _attributes;
-  final Map<String, gl.UniformLocation> _uniforms;
+  final Map<String, WebGLUniformLocation> _uniforms;
   RenderBufferIndex _renderBufferIndex;
   RenderBufferVertex _renderBufferVertex;
   RenderStatistics _renderStatistics;
@@ -17,7 +17,7 @@ abstract class RenderProgram {
 
   RenderProgram()
       : _attributes = <String, int>{},
-        _uniforms = <String, gl.UniformLocation>{},
+        _uniforms = <String, WebGLUniformLocation>{},
         _renderBufferIndex = RenderBufferIndex(0),
         _renderBufferVertex = RenderBufferVertex(0),
         _renderStatistics = RenderStatistics();
@@ -31,17 +31,17 @@ abstract class RenderProgram {
   RenderBufferIndex get renderBufferIndex => _renderBufferIndex;
   RenderBufferVertex get renderBufferVertex => _renderBufferVertex;
   RenderStatistics get renderStatistics => _renderStatistics;
-  gl.RenderingContext get renderingContext => _renderingContext;
-  gl.Program get program => _program;
+  WebGL get renderingContext => _renderingContext;
+  WebGLProgram get program => _program;
 
   Map<String, int> get attributes => _attributes;
-  Map<String, gl.UniformLocation> get uniforms => _uniforms;
+  Map<String, WebGLUniformLocation> get uniforms => _uniforms;
 
   //---------------------------------------------------------------------------
 
   set projectionMatrix(Matrix3D matrix) {
     final location = uniforms['uProjectionMatrix'];
-    renderingContext.uniformMatrix4fv(location, false, matrix.data);
+    renderingContext.uniformMatrix4fv(location, false, matrix.data.toJS);
   }
 
   //---------------------------------------------------------------------------
@@ -75,7 +75,7 @@ abstract class RenderProgram {
       renderBufferVertex.position = 0;
       renderBufferVertex.count = 0;
       renderingContext.drawElements(
-          gl.WebGL.TRIANGLES, count, gl.WebGL.UNSIGNED_SHORT, 0);
+          WebGL.TRIANGLES, count, WebGL.UNSIGNED_SHORT, 0);
       renderStatistics.drawCount += 1;
     }
   }
@@ -83,18 +83,18 @@ abstract class RenderProgram {
   //---------------------------------------------------------------------------
   //---------------------------------------------------------------------------
 
-  gl.Program _createProgram(gl.RenderingContext rc) {
-    final program = rc.createProgram();
+  WebGLProgram _createProgram(WebGL rc) {
+    final program = rc.createProgram()!;
     final vShader =
-        _createShader(rc, vertexShaderSource, gl.WebGL.VERTEX_SHADER);
+        _createShader(rc, vertexShaderSource, WebGL.VERTEX_SHADER);
     final fShader =
-        _createShader(rc, fragmentShaderSource, gl.WebGL.FRAGMENT_SHADER);
+        _createShader(rc, fragmentShaderSource, WebGL.FRAGMENT_SHADER);
 
     rc.attachShader(program, vShader);
     rc.attachShader(program, fShader);
     rc.linkProgram(program);
 
-    final status = rc.getProgramParameter(program, gl.WebGL.LINK_STATUS);
+    final status = (rc.getProgramParameter(program, WebGL.LINK_STATUS) as JSBoolean).toDart;
     if (status == true) return program;
 
     final cl = rc.isContextLost();
@@ -103,12 +103,12 @@ abstract class RenderProgram {
 
   //---------------------------------------------------------------------------
 
-  gl.Shader _createShader(gl.RenderingContext rc, String source, int type) {
-    final shader = rc.createShader(type);
+  WebGLShader _createShader(WebGL rc, String source, int type) {
+    final shader = rc.createShader(type)!;
     rc.shaderSource(shader, source);
     rc.compileShader(shader);
 
-    final status = rc.getShaderParameter(shader, gl.WebGL.COMPILE_STATUS);
+    final status = (rc.getShaderParameter(shader, WebGL.COMPILE_STATUS) as JSBoolean).toDart;
     if (status == true) return shader;
 
     final cl = rc.isContextLost();
@@ -117,13 +117,13 @@ abstract class RenderProgram {
 
   //---------------------------------------------------------------------------
 
-  void _updateAttributes(gl.RenderingContext rc, gl.Program program) {
+  void _updateAttributes(WebGL rc, WebGLProgram program) {
     _attributes.clear();
     final count =
-        rc.getProgramParameter(program, gl.WebGL.ACTIVE_ATTRIBUTES) as int;
+        (rc.getProgramParameter(program, WebGL.ACTIVE_ATTRIBUTES)! as JSNumber).toDartInt;
 
     for (var i = 0; i < count; i++) {
-      final activeInfo = rc.getActiveAttrib(program, i);
+      final activeInfo = rc.getActiveAttrib(program, i)!;
       final location = rc.getAttribLocation(program, activeInfo.name);
       rc.enableVertexAttribArray(location);
       _attributes[activeInfo.name] = location;
@@ -132,14 +132,14 @@ abstract class RenderProgram {
 
   //---------------------------------------------------------------------------
 
-  void _updateUniforms(gl.RenderingContext rc, gl.Program program) {
+  void _updateUniforms(WebGL rc, WebGLProgram program) {
     _uniforms.clear();
     final count =
-        rc.getProgramParameter(program, gl.WebGL.ACTIVE_UNIFORMS) as int;
+        (rc.getProgramParameter(program, WebGL.ACTIVE_UNIFORMS)! as JSNumber).toDartInt;
 
     for (var i = 0; i < count; i++) {
-      final activeInfo = rc.getActiveUniform(program, i);
-      final location = rc.getUniformLocation(program, activeInfo.name);
+      final activeInfo = rc.getActiveUniform(program, i)!;
+      final location = rc.getUniformLocation(program, activeInfo.name)!;
       _uniforms[activeInfo.name] = location;
     }
   }

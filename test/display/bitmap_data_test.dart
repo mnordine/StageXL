@@ -1,8 +1,9 @@
 @TestOn('browser')
-library bitmap_data_test;
+library;
 
 import 'package:stagexl/stagexl.dart';
 import 'package:test/test.dart';
+import 'package:web/web.dart';
 
 void main() {
   late ResourceManager resourceManager;

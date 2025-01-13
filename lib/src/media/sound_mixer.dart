@@ -1,4 +1,6 @@
-part of stagexl.media;
+part of '../media.dart';
+
+bool _isAudioContextSupported() => window.has('AudioContext');
 
 class SoundMixer {
   static SoundEngine? _engineDetected;
@@ -56,7 +58,7 @@ class SoundMixer {
         final context = WebAudioApiMixer.audioContext;
         final source = context.createBufferSource();
         source.buffer = context.createBuffer(1, 1, 22050);
-        source.connectNode(context.destination!);
+        source.connect(context.destination);
         source.start(0);
       } catch (e) {
         // There is nothing we can do :(
@@ -73,7 +75,7 @@ class SoundMixer {
     _engineDetected = SoundEngine.AudioElement;
     _audioElementMixer = AudioElementMixer();
 
-    if (AudioContext.supported) {
+    if (_isAudioContextSupported()) {
       _engineDetected = SoundEngine.WebAudioApi;
       _webAudioApiMixer = WebAudioApiMixer();
     }

@@ -1,4 +1,4 @@
-library stagexl.geom.matrix;
+library;
 
 import 'dart:math' hide Point, Rectangle;
 import 'dart:math' as math;

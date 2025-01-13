@@ -1,9 +1,9 @@
-part of stagexl.media;
+part of '../../media.dart';
 
 class AudioElementSoundChannel extends SoundChannel {
   final AudioElementSound _audioElementSound;
   late SoundTransform _soundTransform;
-  AudioElement? _audioElement;
+  HTMLAudioElement? _audioElement;
   StreamSubscription<num>? _volumeChangedSubscription;
   Timer? _completeTimer;
 
@@ -101,7 +101,7 @@ class AudioElementSoundChannel extends SoundChannel {
     } else {
       final volume1 = _soundTransform.volume;
       final volume2 = SoundMixer._audioElementMixer!.volume;
-      _audioElement!.volume = volume1 * volume2;
+      _audioElement!.volume = (volume1 * volume2).clamp(0.0, 1.0);
     }
   }
 
@@ -130,14 +130,14 @@ class AudioElementSoundChannel extends SoundChannel {
 
   //---------------------------------------------------------------------------
 
-  void _onAudioElement(AudioElement audioElement) {
+  void _onAudioElement(HTMLAudioElement audioElement) {
     final mixer = SoundMixer._audioElementMixer;
 
     if (_stopped) {
       _audioElementSound._releaseAudioElement(audioElement);
     } else {
       _audioElement = audioElement;
-      _audioElement!.volume = _soundTransform.volume * mixer!.volume;
+      _audioElement!.volume = (_soundTransform.volume * mixer!.volume).clamp(0.0, 1.0);
       _volumeChangedSubscription =
           mixer.onVolumeChanged.listen(_onVolumeChanged);
       if (_paused == false) {
@@ -174,7 +174,7 @@ class AudioElementSoundChannel extends SoundChannel {
   }
 
   void _onVolumeChanged(num volume) {
-    _audioElement?.volume = _soundTransform.volume * volume;
+    _audioElement?.volume = (_soundTransform.volume * volume).clamp(0.0, 1.0);
   }
 
   void _onAudioEnded() {

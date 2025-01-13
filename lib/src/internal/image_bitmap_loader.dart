@@ -1,17 +1,18 @@
-library stagexl.internal.image_bitmap_loader;
+library;
 
 import 'dart:async';
-import 'dart:html';
-import 'dart:js_util';
+import 'dart:js_interop';
+import 'package:stagexl/stagexl.dart';
+import 'package:web/web.dart';
 
 import '../internal/image_loader.dart';
-import '../resources.dart' show getUrlHash;
 import 'environment.dart' as env;
+import 'package:http/http.dart' as http;
 
 class ImageBitmapLoader implements BaseImageLoader<ImageBitmap> {
   String _url;
   final _completer = Completer<ImageBitmap>();
-  HttpRequest? _request;
+  bool _cancelled = false;
 
   ImageBitmapLoader(this._url, bool webpAvailable) {
     if (webpAvailable) {
@@ -22,46 +23,33 @@ class ImageBitmapLoader implements BaseImageLoader<ImageBitmap> {
   }
 
   void _load(String url) {
-    final request = _request = HttpRequest();
-    request
-      ..onReadyStateChange.listen((_) async {
-        if (request.readyState == HttpRequest.DONE && request.status == 200) {
-          try {
-            final blob = request.response as Blob;
-
-            // Note: Dart SDK does not support createImageBitmap, so
-            // use callMethod and convert from promise to future.
-            // See https://github.com/dart-lang/sdk/issues/12379
-            final promise = callMethod(window, 'createImageBitmap', [blob]);
-            final imageBitmap =
-                await promiseToFuture<ImageBitmap>(promise as Object);
-
-            _completer.complete(imageBitmap);
-          } catch (e) {
-            _completer.completeError(e);
-          }
+    http.get(Uri.parse(url)).then((response) {
+      if (_cancelled) {
+        _completer.completeError(LoadError('image bitmap load cancelled'));
+        return;
+      } 
+      if (response.statusCode == 200) {
+        try {
+          final imageBitmap = window.createImageBitmap(Blob([response.bodyBytes.toJS].toJS)).toDart;
+          _completer.complete(imageBitmap);
+        } catch (e) {
+          _completer.completeError(e);
         }
-      })
-      ..onError.listen(_completer.completeError)
-      ..open('GET', url, async: true)
-      ..responseType = 'blob'
-      ..send();
+      }
+    });
   }
 
   @override
   Future<ImageBitmap> get done => _completer.future;
 
   @override
-  void cancel() => _request?.abort();
+  void cancel() => _cancelled = true;
 
   void _onWebpSupported(bool webpSupported) {
     final match = RegExp(r'(png|jpg|jpeg)$').firstMatch(_url);
     if (webpSupported && match != null) {
-      final url = getUrlHash(_url, webp: true);
-      if (url == null) return;
-
-      _url = url;
-      _load(_url);
+      _url = getUrlHash(_url, webp: true) ?? _url;
     }
+    _load(_url);
   }
 }

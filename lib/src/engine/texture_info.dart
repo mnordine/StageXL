@@ -1,10 +1,10 @@
-part of stagexl.engine;
+part of '../engine.dart';
 
 class TextureInfo {
 
-  int target = gl.WebGL.TEXTURE_2D;
-  int pixelFormat = gl.WebGL.RGBA;
-  int pixelType = gl.WebGL.UNSIGNED_BYTE;
+  int target = WebGL.TEXTURE_2D;
+  int pixelFormat = WebGL.RGBA;
+  int pixelType = WebGL.UNSIGNED_BYTE;
 
   @override
   bool operator == (Object other) =>

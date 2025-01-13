@@ -1,7 +1,7 @@
 @TestOn('browser')
-library image_bitmap_test;
+library;
 
-import 'dart:html' show ImageBitmap;
+import 'package:web/web.dart' show ImageBitmap;
 import 'dart:math' show pi;
 
 import 'package:stagexl/stagexl.dart';

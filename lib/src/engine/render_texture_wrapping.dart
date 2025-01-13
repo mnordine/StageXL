@@ -1,12 +1,14 @@
-part of stagexl.engine;
+// ignore_for_file: non_constant_identifier_names
+
+part of '../engine.dart';
 
 class RenderTextureWrapping {
   final int value;
 
-  const RenderTextureWrapping(this.value);
+  RenderTextureWrapping(this.value);
 
-  static const RenderTextureWrapping REPEAT =
-      RenderTextureWrapping(gl.WebGL.REPEAT);
-  static const RenderTextureWrapping CLAMP =
-      RenderTextureWrapping(gl.WebGL.CLAMP_TO_EDGE);
+  static final RenderTextureWrapping REPEAT =
+      RenderTextureWrapping(WebGL.REPEAT);
+  static final RenderTextureWrapping CLAMP =
+      RenderTextureWrapping(WebGL.CLAMP_TO_EDGE);
 }

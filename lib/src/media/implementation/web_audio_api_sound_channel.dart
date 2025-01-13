@@ -1,4 +1,4 @@
-part of stagexl.media;
+part of '../../media.dart';
 
 class WebAudioApiSoundChannel extends SoundChannel {
   final WebAudioApiSound _webAudioApiSound;
@@ -49,7 +49,7 @@ class WebAudioApiSoundChannel extends SoundChannel {
     if (_paused || _stopped) {
       return _position;
     } else {
-      final currentTime = WebAudioApiMixer.audioContext.currentTime!;
+      final currentTime = WebAudioApiMixer.audioContext.currentTime;
       final position = currentTime - _timeOffset;
       return _loop ? position % _duration : position.clamp(0.0, _duration);
     }
@@ -93,18 +93,18 @@ class WebAudioApiSoundChannel extends SoundChannel {
       _sourceNode.loop = true;
       _sourceNode.loopStart = _startTime;
       _sourceNode.loopEnd = _startTime + _duration;
-      _sourceNode.connectNode(_mixer.inputNode);
+      _sourceNode.connect(_mixer.inputNode);
       _sourceNode.start(0, _startTime + _position);
-      _timeOffset = WebAudioApiMixer.audioContext.currentTime! - _position;
+      _timeOffset = WebAudioApiMixer.audioContext.currentTime - _position;
     } else {
       _paused = false;
       _sourceNode = WebAudioApiMixer.audioContext.createBufferSource();
       _sourceNode.buffer = _webAudioApiSound._audioBuffer;
       _sourceNode.loop = false;
-      _sourceNode.connectNode(_mixer.inputNode);
+      _sourceNode.connect(_mixer.inputNode);
       _sourceNode.start(0, _startTime + _position, _duration - _position);
       _sourceNodeEndedSubscription = _sourceNode.onEnded.listen(_onEnded);
-      _timeOffset = WebAudioApiMixer.audioContext.currentTime! - _position;
+      _timeOffset = WebAudioApiMixer.audioContext.currentTime - _position;
     }
   }
 

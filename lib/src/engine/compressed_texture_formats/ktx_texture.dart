@@ -1,4 +1,4 @@
-part of stagexl.engine;
+part of '../../engine.dart';
 
 // https://registry.khronos.org/KTX/specs/1.0/ktxspec.v1.html
 class KtxFormat {
@@ -67,5 +67,5 @@ class KtxTexture extends CompressedTexture {
   int get format => _glInternalFormat;
 
   @override
-  TypedData get textureData => _buffer.asByteData(_texDataOffset, _imageSize);
+  ByteData get textureData => _buffer.asByteData(_texDataOffset, _imageSize);
 }

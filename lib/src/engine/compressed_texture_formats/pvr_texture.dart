@@ -1,4 +1,4 @@
-part of stagexl.engine;
+part of '../../engine.dart';
 
 // http://cdn.imgtec.com/sdk-documentation/PVR+File+Format.Specification.pdf
 class PvrFormat {
@@ -81,63 +81,38 @@ class PvrTexture extends CompressedTexture {
 
   @override
   int get format {
-    switch (_pvrFormat) {
-      case PvrFormat.pvrtc_rgb_2bpp:
-        return gl.CompressedTexturePvrtc.COMPRESSED_RGB_PVRTC_2BPPV1_IMG;
-      case PvrFormat.pvrtc_rgb_4bpp:
-        return gl.CompressedTexturePvrtc.COMPRESSED_RGB_PVRTC_4BPPV1_IMG;
-      case PvrFormat.pvrtc_rgba_2bpp:
-        return gl.CompressedTexturePvrtc.COMPRESSED_RGBA_PVRTC_2BPPV1_IMG;
-      case PvrFormat.pvrtc_rgba_4bpp:
-        return gl.CompressedTexturePvrtc.COMPRESSED_RGBA_PVRTC_4BPPV1_IMG;
-
-      case PvrFormat.etc1:
-        return gl.CompressedTextureETC1.COMPRESSED_RGB_ETC1_WEBGL;
-
-      case PvrFormat.etc2_rgb:
-        return gl.CompressedTextureEtc.COMPRESSED_RGB8_ETC2;
-      case PvrFormat.etc2_rgba:
-        return gl.CompressedTextureEtc.COMPRESSED_RGBA8_ETC2_EAC;
-
-      case PvrFormat.bc1:
-        return gl.CompressedTextureS3TC.COMPRESSED_RGBA_S3TC_DXT1_EXT;
-      case PvrFormat.bc3:
-        return gl.CompressedTextureS3TC.COMPRESSED_RGBA_S3TC_DXT5_EXT;
-
-      case PvrFormat.astc_4x4:
-        return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_4x4_KHR;
-      case PvrFormat.astc_5x4:
-        return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_5x4_KHR;
-      case PvrFormat.astc_5x5:
-        return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_5x5_KHR;
-      case PvrFormat.astc_6x5:
-        return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_6x5_KHR;
-      case PvrFormat.astc_6x6:
-        return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_6x6_KHR;
-      case PvrFormat.astc_8x5:
-        return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_8x5_KHR;
-      case PvrFormat.astc_8x6:
-        return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_8x6_KHR;
-      case PvrFormat.astc_8x8:
-        return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_8x8_KHR;
-      case PvrFormat.astc_10x5:
-        return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_10x5_KHR;
-      case PvrFormat.astc_10x6:
-        return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_10x6_KHR;
-      case PvrFormat.astc_10x8:
-        return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_10x8_KHR;
-      case PvrFormat.astc_10x10:
-        return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_10x10_KHR;
-      case PvrFormat.astc_12x10:
-        return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_12x10_KHR;
-      case PvrFormat.astc_12x12:
-        return gl.CompressedTextureAstc.COMPRESSED_RGBA_ASTC_12x12_KHR;
-
-      default:
-        return -1;
+    final ext = CompressedTexture.extensions;
+    if (ext == null) {
+      return -1;
     }
+
+    return switch (_pvrFormat) {
+      PvrFormat.etc1 => ext.etc1?.COMPRESSED_RGB_ETC1_WEBGL,
+      PvrFormat.etc2_rgb => ext.etc?.COMPRESSED_RGB8_ETC2,
+      PvrFormat.etc2_rgba => ext.etc?.COMPRESSED_RGBA8_ETC2_EAC,
+
+      PvrFormat.bc1 => ext.s3tc?.COMPRESSED_RGBA_S3TC_DXT1_EXT,
+      PvrFormat.bc3 => ext.s3tc?.COMPRESSED_RGBA_S3TC_DXT5_EXT,
+
+      PvrFormat.astc_4x4 => ext.astc?.COMPRESSED_RGBA_ASTC_4x4_KHR,
+      PvrFormat.astc_5x4 => ext.astc?.COMPRESSED_RGBA_ASTC_5x4_KHR,
+      PvrFormat.astc_5x5 => ext.astc?.COMPRESSED_RGBA_ASTC_5x5_KHR,
+      PvrFormat.astc_6x5 => ext.astc?.COMPRESSED_RGBA_ASTC_6x5_KHR,
+      PvrFormat.astc_6x6 => ext.astc?.COMPRESSED_RGBA_ASTC_6x6_KHR,
+      PvrFormat.astc_8x5 => ext.astc?.COMPRESSED_RGBA_ASTC_8x5_KHR,
+      PvrFormat.astc_8x6 => ext.astc?.COMPRESSED_RGBA_ASTC_8x6_KHR,
+      PvrFormat.astc_8x8 => ext.astc?.COMPRESSED_RGBA_ASTC_8x8_KHR,
+      PvrFormat.astc_10x5 => ext.astc?.COMPRESSED_RGBA_ASTC_10x5_KHR,
+      PvrFormat.astc_10x6 => ext.astc?.COMPRESSED_RGBA_ASTC_10x6_KHR,
+      PvrFormat.astc_10x8 => ext.astc?.COMPRESSED_RGBA_ASTC_10x8_KHR,
+      PvrFormat.astc_10x10 => ext.astc?.COMPRESSED_RGBA_ASTC_10x10_KHR,
+      PvrFormat.astc_12x10 => ext.astc?.COMPRESSED_RGBA_ASTC_12x10_KHR,
+      PvrFormat.astc_12x12 => ext.astc?.COMPRESSED_RGBA_ASTC_12x12_KHR,
+
+      _ => null
+    } ?? -1;
   }
 
   @override
-  TypedData get textureData => _buffer.asByteData(_texDataOffset);
+  ByteData get textureData => _buffer.asByteData(_texDataOffset);
 }

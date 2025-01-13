@@ -1,4 +1,6 @@
-part of stagexl.engine;
+// ignore_for_file: non_constant_identifier_names
+
+part of '../engine.dart';
 
 /// The RenderTextureFiltering defines the method that is used to determine
 /// the texture color for a texture mapped pixel, using the colors of nearby
@@ -9,10 +11,12 @@ part of stagexl.engine;
 class RenderTextureFiltering {
   final int value;
 
-  const RenderTextureFiltering(this.value);
+  RenderTextureFiltering(this.value);
 
-  static const RenderTextureFiltering NEAREST =
-      RenderTextureFiltering(gl.WebGL.NEAREST);
-  static const RenderTextureFiltering LINEAR =
-      RenderTextureFiltering(gl.WebGL.LINEAR);
+  // NOTE(CEksal): These are `static final` because the associated `WebGL` constants are not
+  // `const`.
+  static final RenderTextureFiltering NEAREST =
+      RenderTextureFiltering(WebGL.NEAREST);
+  static final RenderTextureFiltering LINEAR =
+      RenderTextureFiltering(WebGL.LINEAR);
 }

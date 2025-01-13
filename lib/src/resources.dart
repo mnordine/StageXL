@@ -6,14 +6,15 @@
 /// performance of the WebGL renderer). The [SoundSprite] does a similar
 /// thing for Sounds as the texture altas does for BitmapDatas.
 ///
-library stagexl.resources;
+library;
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:html' show HttpRequest, ImageBitmap, ImageElement;
-import 'dart:js' show JsObject;
+import 'dart:js_interop_unsafe';
+import 'package:web/web.dart' show ImageBitmap, HTMLImageElement;
+import 'dart:js_interop' show JS, JSObject, JSString, JSStringToString;
 import 'dart:typed_data';
-import 'dart:web_gl' as gl;
+import 'package:http/http.dart' as http;
 
 import 'package:xml/xml.dart';
 
@@ -41,7 +42,8 @@ part 'resources/texture_atlas_format_starling_xml.dart';
 part 'resources/texture_atlas_frame.dart';
 part 'resources/texture_atlas_loader.dart';
 
-JsObject? stageXLFileMap;
+@JS()
+external JSObject? stageXLFileMap;
 var stageXLStoragePrefix = '';
 
 String? getUrlHash(String url, {bool webp = false}) {
@@ -59,10 +61,10 @@ String? getUrlHash(String url, {bool webp = false}) {
   }
 
   final key = url.replaceFirst(stageXLStoragePrefix, '');
-  final value = stageXLFileMap![key];
+  final value = stageXLFileMap![key] as JSString?;
   if (value == null) return null;
 
-  final newUrl = '$stageXLStoragePrefix${stageXLFileMap![key] as String}';
+  final newUrl = '$stageXLStoragePrefix${value.toDart}';
   return newUrl;
 }
 
