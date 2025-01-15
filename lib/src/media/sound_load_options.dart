@@ -90,11 +90,7 @@ class SoundLoadOptions {
     final regex = RegExp(r'([A-Za-z0-9]+)$');
     final primaryMatch = regex.firstMatch(primaryUrl);
     if (primaryMatch == null) {
-      return urls
-          .map(getUrlHash)
-          .where((url) => url != null)
-          .map((url) => url!)
-          .toList();
+      return urls;
     }
 
     if (availableTypes.remove(primaryMatch.group(1))) urls.add(primaryUrl);
@@ -113,10 +109,6 @@ class SoundLoadOptions {
       }
     }
 
-    return urls
-        .map(getUrlHash)
-        .where((url) => url != null)
-        .map((url) => url!)
-        .toList();
+    return urls;
   }
 }

@@ -10,7 +10,7 @@ import 'environment.dart' as env;
 import 'package:http/http.dart' as http;
 
 class ImageBitmapLoader implements BaseImageLoader<ImageBitmap> {
-  String _url;
+  final String _url;
   final _completer = Completer<ImageBitmap>();
   bool _cancelled = false;
 
@@ -46,10 +46,6 @@ class ImageBitmapLoader implements BaseImageLoader<ImageBitmap> {
   void cancel() => _cancelled = true;
 
   void _onWebpSupported(bool webpSupported) {
-    final match = RegExp(r'(png|jpg|jpeg)$').firstMatch(_url);
-    if (webpSupported && match != null) {
-      _url = getUrlHash(_url, webp: true) ?? _url;
-    }
     _load(_url);
   }
 }
