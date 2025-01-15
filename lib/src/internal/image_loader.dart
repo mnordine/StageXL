@@ -4,7 +4,6 @@ import 'dart:async';
 import 'package:web/web.dart';
 
 import '../errors.dart';
-import '../resources.dart' show getUrlHash;
 import 'environment.dart' as env;
 
 abstract class BaseImageLoader<T> {
@@ -45,9 +44,7 @@ class ImageLoader implements BaseImageLoader<HTMLImageElement> {
 
   void _onWebpSupported(bool webpSupported) {
     final match = RegExp(r'(png|jpg|jpeg)$').firstMatch(_url);
-    if (webpSupported && match != null) {
-      image.src = getUrlHash(_url, webp: true) ?? '';
-    } else {
+    if (!webpSupported || match == null) {
       image.src = _url;
     }
   }

@@ -34,7 +34,6 @@ import 'errors.dart';
 import 'events.dart';
 import 'internal/audio_loader.dart';
 import 'internal/video_loader.dart';
-import 'resources.dart';
 
 part 'media/implementation/audio_element_mixer.dart';
 part 'media/implementation/audio_element_sound.dart';
