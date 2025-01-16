@@ -15,7 +15,8 @@ import 'package:web/web.dart' show ImageBitmap, HTMLImageElement;
 import 'dart:js_interop' show JS, JSObject, JSString, JSStringToString;
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
-
+import 'package:path/path.dart';
+import 'package:retry/retry.dart';
 import 'package:xml/xml.dart';
 
 import 'display.dart';
@@ -46,26 +47,58 @@ part 'resources/texture_atlas_loader.dart';
 external JSObject? stageXLFileMap;
 var stageXLStoragePrefix = '';
 
-String? getUrlHash(String url, {bool webp = false}) {
+final _modulesCache = <String, Map<String, Object?>>{};
+final _modules = {
+  'assets/games/bonus',
+  'assets/games/keno',
+  'assets/games/reel',
+  'texture_atlases/games/bonus',
+  'texture_atlases/games/keno',
+  'texture_atlases/games/reel',
+};
+
+Future<String?> getUrlHash(String url) async {
   if (stageXLFileMap == null) return url;
 
-  if (webp) {
-    // This is a hack, since it will break if the hash format changes.
-    final i = url.lastIndexOf('-');
-    final j = url.lastIndexOf('@');
-    url = url.substring(0, i) + url.substring(j);
+  final key = url.startsWith(stageXLStoragePrefix) ? url.replaceFirst(stageXLStoragePrefix, '') : url;
+  final value = stageXLFileMap![key] as JSString?;
 
-    final match = RegExp(r'(png|jpg|jpeg)$').firstMatch(url);
-    url = url.substring(0, match!.start) + 'webp'; // ignore: prefer_interpolation_to_compose_strings
-    return getUrlHash(url);
+  // some audio files do not have a hash but all _modules do
+  if (value == null && !_modules.any(key.startsWith)) {
+    return null;
   }
 
-  final key = url.replaceFirst(stageXLStoragePrefix, '');
-  final value = stageXLFileMap![key] as JSString?;
-  if (value == null) return null;
+  if (env.isAssetModules && _modules.any(key.startsWith)) {
+    final dirs = dirname(key).split('/');
 
-  final newUrl = '$stageXLStoragePrefix${value.toDart}';
-  return newUrl;
+    // This is used to find the module asset map in the global asset map
+    // e.g. globalKey = texture_atlases/games/reel/kongos_adventure
+    final globalKey = dirs.take(4).join('/');
+
+    // This is used to find the hashed url from the module asset map
+    // e.g. moduleKey = widescreen/main@1x.json
+    final moduleKey = dirs.length > 4 ? '${dirs.skip(4).join('/')}/${basename(key)}' : basename(key);
+    final assetMap = await _loadModule(globalKey);
+
+    return '$globalKey/${assetMap[moduleKey]}';
+  }
+
+  return '$stageXLStoragePrefix${(stageXLFileMap?[key] as JSString).toDart}';
+}
+
+Future<Map<String, Object?>> _loadModule(String key) async {
+  if (_modulesCache.containsKey(key)) {
+    return _modulesCache[key]!;
+  }
+
+  try {
+    final moduleFileMap = '$stageXLStoragePrefix${(stageXLFileMap?[key] as JSString).toDart}';
+    final response = await retry(() => http.get(Uri.parse('scripts/$moduleFileMap')));
+
+    return _modulesCache[key] = jsonDecode(response.body) as Map<String, Object?>;
+  } catch (e) {
+    rethrow;
+  }
 }
 
 enum CompressedTextureFileTypes {

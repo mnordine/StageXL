@@ -16,7 +16,7 @@ class AudioElementSound extends Sound {
       [SoundLoadOptions? soundLoadOptions]) async {
     try {
       final options = soundLoadOptions ?? Sound.defaultLoadOptions;
-      final audioUrls = options.getOptimalAudioUrls(url);
+      final audioUrls = await options.getOptimalAudioUrls(url);
       final corsEnabled = options.corsEnabled;
       const loadData = false; // options.loadData;
       final audioLoader = AudioLoader(audioUrls, loadData, corsEnabled);

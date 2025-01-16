@@ -66,7 +66,6 @@ export 'src/ui.dart';
 ///
 ///     StageXL.bitmapDataLoadOptions.jpg = true;
 ///     StageXL.bitmapDataLoadOptions.png = true;
-///     StageXL.bitmapDataLoadOptions.webp = false;
 ///     StageXL.bitmapDataLoadOptions.maxPixelRatio = 2;
 ///     StageXL.bitmapDataLoadOptions.corsEnabled = false;
 ///

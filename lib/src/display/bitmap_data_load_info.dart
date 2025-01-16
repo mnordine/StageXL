@@ -34,8 +34,9 @@ class BitmapDataLoadInfo {
     // Skip data urls
     if (_loaderUrl.startsWith('data:')) return;
 
-    final urlHash = getUrlHash(_loaderUrl);
-    if (urlHash != null) _loaderUrl = urlHash;
+    getUrlHash(_loaderUrl).then((urlHash) {
+      if (urlHash != null) _loaderUrl = urlHash;
+    });
   }
 
   String get sourceUrl => _sourceUrl;
