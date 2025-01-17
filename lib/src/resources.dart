@@ -58,7 +58,7 @@ final _modules = {
 };
 
 Future<String?> getUrlHash(String url) async {
-  if (stageXLFileMap == null) return url;
+  if (stageXLFileMap == null || url.startsWith('data:')) return url;
 
   final key = url.startsWith(stageXLStoragePrefix) ? url.replaceFirst(stageXLStoragePrefix, '') : url;
   final value = stageXLFileMap![key] as JSString?;

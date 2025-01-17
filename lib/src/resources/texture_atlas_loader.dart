@@ -59,7 +59,8 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
 
   @override
   Future<RenderTextureQuad> getRenderTextureQuad(String filename) async {
-    final loaderUrl = _loadInfo.loaderUrl;
+    final loaderUrl = await getUrlHash(_loadInfo.loaderUrl);
+    if (loaderUrl == null) throw StateError('Failed to load texture atlas: ${_loadInfo.loaderUrl}');
     final pixelRatio = _loadInfo.pixelRatio;
     final imageUrl = replaceFilename(loaderUrl, filename);
 

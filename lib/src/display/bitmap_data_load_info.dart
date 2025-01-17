@@ -30,13 +30,6 @@ class BitmapDataLoadInfo {
       _loaderUrl = url.replaceRange(match.start + 1, match.end - 1, name);
       _pixelRatio = loaderPixelRatio / originPixelRatio;
     }
-
-    // Skip data urls
-    if (_loaderUrl.startsWith('data:')) return;
-
-    getUrlHash(_loaderUrl).then((urlHash) {
-      if (urlHash != null) _loaderUrl = urlHash;
-    });
   }
 
   String get sourceUrl => _sourceUrl;

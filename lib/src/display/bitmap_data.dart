@@ -71,7 +71,8 @@ class BitmapData implements BitmapDrawable {
       [BitmapDataLoadOptions? options]) async {
     options = options ?? BitmapData.defaultLoadOptions;
     final bitmapDataFileInfo = BitmapDataLoadInfo(url, options.pixelRatios);
-    final targetUrl = bitmapDataFileInfo.loaderUrl;
+    final targetUrl = await getUrlHash(bitmapDataFileInfo.loaderUrl);
+    if (targetUrl == null) throw StateError('Failed to load texture atlas: ${bitmapDataFileInfo.loaderUrl}');
     final pixelRatio = bitmapDataFileInfo.pixelRatio;
 
     if (env.isImageBitmapSupported) {
