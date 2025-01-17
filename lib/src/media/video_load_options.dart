@@ -58,7 +58,7 @@ class VideoLoadOptions {
   /// Determine which video files is the most likely to play smoothly,
   /// based on the supported types and formats available.
 
-  List<String> getOptimalVideoUrls(String primaryUrl) {
+  List<String> getOptimalVideoUrls(String primaryUrl, [AssetManifest? manifest]) {
     final availableTypes = VideoLoader.supportedTypes.toList();
     if (!webm) availableTypes.remove('webm');
     if (!mp4) availableTypes.remove('mp4');
@@ -84,6 +84,8 @@ class VideoLoadOptions {
       }
     }
 
-    return urls;
+    return urls
+        .map((url) => manifest?.mapUrl(url) ?? url)
+        .toList();
   }
 }

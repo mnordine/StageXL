@@ -75,11 +75,11 @@ class Video {
   /// for the ResourceManager.addVideo method.
 
   static Future<Video> load(String url,
-      [VideoLoadOptions? videoLoadOptions]) async {
+      [VideoLoadOptions? videoLoadOptions, AssetManifest? manifest]) async {
     final options = videoLoadOptions ?? Video.defaultLoadOptions;
     final loadData = options.loadData;
     final corsEnabled = options.corsEnabled;
-    final videoUrls = options.getOptimalVideoUrls(url);
+    final videoUrls = options.getOptimalVideoUrls(url, manifest);
     final videoLoader = VideoLoader(videoUrls, loadData, corsEnabled);
     final videoElement = await videoLoader.done;
     return Video._(videoElement);

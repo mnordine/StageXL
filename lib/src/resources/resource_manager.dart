@@ -8,6 +8,8 @@ class _SoundData {
 class ResourceManager {
   final Map<String, ResourceManagerResource> _resourceMap =
       <String, ResourceManagerResource>{};
+  
+  final AssetManifest _manifest;
 
   final _loaders = <String, _TextureAtlasLoaderFile>{};
 
@@ -16,6 +18,9 @@ class ResourceManager {
 
   final _progressEvent = StreamController<num>.broadcast();
   Stream<num> get onProgress => _progressEvent.stream;
+
+  ResourceManager(): _manifest = const AssetManifest();
+  ResourceManager.withManifest(AssetManifest manifest): _manifest = manifest;
 
   //----------------------------------------------------------------------------
 
@@ -64,7 +69,7 @@ class ResourceManager {
 
   void addBitmapData(String name, String url,
       [BitmapDataLoadOptions? options]) {
-    final loader = BitmapData.load(url, options);
+    final loader = BitmapData.load(url, options, _manifest);
     _addResource('BitmapData', name, url, loader);
   }
 
@@ -89,7 +94,7 @@ class ResourceManager {
 
     textureAtlasFormat ??= TextureAtlasFormat.jsonArray;
 
-    final tuple = TextureAtlas.load(url, textureAtlasFormat, options);
+    final tuple = TextureAtlas.load(url, textureAtlasFormat, options, _manifest);
     _addResource('TextureAtlas', name, url, tuple.atlasFuture);
 
     _loaders[name] = tuple._loader;
@@ -123,7 +128,7 @@ class ResourceManager {
   bool containsVideo(String name) => _containsResource('Video', name);
 
   void addVideo(String name, String url, [VideoLoadOptions? options]) {
-    final loader = Video.load(url, options);
+    final loader = Video.load(url, options, _manifest);
     _addResource('Video', name, url, loader);
   }
 
@@ -138,7 +143,7 @@ class ResourceManager {
   bool containsSound(String name) => _containsResource('Sound', name);
 
   void addSound(String name, String url, [SoundLoadOptions? options]) {
-    final loader = Sound.load(url, options) as Future<Sound?>;
+    final loader = Sound.load(url, options, _manifest) as Future<Sound?>;
     loader.catchError((_) { _soundDatas.remove(name); return null; });
 
     _addResource('Sound', name, url, loader);
@@ -170,7 +175,7 @@ class ResourceManager {
       _containsResource('SoundSprite', name);
 
   void addSoundSprite(String name, String url, [SoundLoadOptions? options]) {
-    final loader = SoundSprite.load(url, options);
+    final loader = SoundSprite.load(_manifest.mapUrl(url), options);
     _addResource('SoundSprite', name, url, loader);
   }
 
@@ -200,10 +205,9 @@ class ResourceManager {
   bool containsTextFile(String name) => _containsResource('TextFile', name);
 
   void addTextFile(String name, String url) {
-    final urlHash = getUrlHash(url);
-    if (urlHash == null) throw StateError('Failed to load text file: $url');
+    final mappedUrl = _manifest.mapUrl(url);
     final loader =
-        http.get(Uri.parse(urlHash)).then((text) => text.body, onError: (error) {
+        http.get(Uri.parse(mappedUrl)).then((text) => text.body, onError: (error) {
       throw StateError('Failed to load text file.');
     });
     _addResource('TextFile', name, url, loader);
@@ -215,6 +219,30 @@ class ResourceManager {
 
   String getTextFile(String name) =>
       _getResourceValue('TextFile', name) as String;
+
+  //----------------------------------------------------------------------------
+
+  bool containsAssetManifest(String name) => _containsResource('AssetManifest', name);
+
+  void addAssetManifest(String name, String url) {
+    final mappedUrl = _manifest.mapUrl(url);
+    final loader =
+      http.get(Uri.parse(mappedUrl)).then((resp) {
+        final parsed = json.decode(resp.body) as Map<String, dynamic>;
+        return AssetManifest(parsed.cast<String, String>());
+      }, onError: (error) {
+        throw StateError('Failed to load asset manifest.');
+      });
+
+    _addResource('AssetManifest', name, url, loader);
+  }
+
+  void removeAssetManifest(String name) {
+    _removeResource('AssetManifest', name);
+  }
+
+  AssetManifest getAssetManifest(String name) =>
+    _getResourceValue('AssetManifest', name) as AssetManifest;
 
   //----------------------------------------------------------------------------
 

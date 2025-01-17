@@ -77,7 +77,7 @@ class SoundLoadOptions {
   /// Determine which audio files are the most likely to play smoothly,
   /// based on the supported types and formats available.
 
-  List<String> getOptimalAudioUrls(String primaryUrl) {
+  List<String> getOptimalAudioUrls(String primaryUrl, [AssetManifest? manifest]) {
     final availableTypes = AudioLoader.supportedTypes.toList();
     if (!mp3) availableTypes.remove('mp3');
     if (!mp4) availableTypes.remove('mp4');
@@ -91,9 +91,7 @@ class SoundLoadOptions {
     final primaryMatch = regex.firstMatch(primaryUrl);
     if (primaryMatch == null) {
       return urls
-          .map(getUrlHash)
-          .where((url) => url != null)
-          .map((url) => url!)
+          .map((url) => manifest?.mapUrl(url) ?? url)
           .toList();
     }
 
@@ -114,9 +112,7 @@ class SoundLoadOptions {
     }
 
     return urls
-        .map(getUrlHash)
-        .where((url) => url != null)
-        .map((url) => url!)
+        .map((url) => manifest?.mapUrl(url) ?? url)
         .toList();
   }
 }
