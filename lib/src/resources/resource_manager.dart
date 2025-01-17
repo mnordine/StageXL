@@ -200,13 +200,13 @@ class ResourceManager {
   bool containsTextFile(String name) => _containsResource('TextFile', name);
 
   void addTextFile(String name, String url) {
-    final urlHash = getUrlHash(url);
-    if (urlHash == null) throw StateError('Failed to load text file: $url');
-    final loader =
-        http.get(Uri.parse(urlHash)).then((text) => text.body, onError: (error) {
-      throw StateError('Failed to load text file.');
+    getUrlHash(url).then((urlHash) {
+      if (urlHash == null) throw StateError('Failed to load text file: $url');
+      final loader = http.get(Uri.parse(urlHash)).then((text) => text.body, onError: (error) {
+        throw StateError('Failed to load text file.');
+      });
+      _addResource('TextFile', name, url, loader);
     });
-    _addResource('TextFile', name, url, loader);
   }
 
   void removeTextFile(String name) {

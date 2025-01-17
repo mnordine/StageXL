@@ -41,7 +41,9 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
 
   @override
   Future<String> getSource() async {
-    final response = await http.get(Uri.parse(_loadInfo.loaderUrl));
+    final url = await getUrlHash(_loadInfo.loaderUrl);
+    if (url == null) throw StateError('Failed to load texture atlas: ${_loadInfo.loaderUrl}');
+    final response = await http.get(Uri.parse(url));
     return response.body;
   }
 
@@ -57,7 +59,8 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
 
   @override
   Future<RenderTextureQuad> getRenderTextureQuad(String filename) async {
-    final loaderUrl = _loadInfo.loaderUrl;
+    final loaderUrl = await getUrlHash(_loadInfo.loaderUrl);
+    if (loaderUrl == null) throw StateError('Failed to load texture atlas: ${_loadInfo.loaderUrl}');
     final pixelRatio = _loadInfo.pixelRatio;
     final imageUrl = replaceFilename(loaderUrl, filename);
 
@@ -66,12 +69,12 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
     if (_isCompressedTexture(filename)) {
       renderTexture = await _loadCompressedTexture(imageUrl);
     } else if (env.isImageBitmapSupported) {
-      _imageLoader = ImageBitmapLoader(imageUrl, _loadOptions.webp);
+      _imageLoader = ImageBitmapLoader(imageUrl);
       final image = await _imageLoader!.done;
       renderTexture = RenderTexture.fromImageBitmap(image as ImageBitmap);
     } else {
       final corsEnabled = _loadOptions.corsEnabled;
-      _imageLoader = ImageLoader(imageUrl, _loadOptions.webp, corsEnabled);
+      _imageLoader = ImageLoader(imageUrl, corsEnabled);
       final imageElement = await _imageLoader!.done;
       renderTexture = RenderTexture.fromImageElement(imageElement as HTMLImageElement);
     }

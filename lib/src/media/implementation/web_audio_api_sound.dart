@@ -12,7 +12,7 @@ class WebAudioApiSound extends Sound {
   static Future<Sound> load(String url,
       [SoundLoadOptions? soundLoadOptions]) async {
     final options = soundLoadOptions ?? Sound.defaultLoadOptions;
-    final audioUrls = options.getOptimalAudioUrls(url);
+    final audioUrls = await options.getOptimalAudioUrls(url);
     final aggregateError = AggregateError('Error loading sound.');
 
     for (var audioUrl in audioUrls) {

@@ -11,6 +11,7 @@ final Future<bool> isWebpSupported = _checkWebpSupport();
 final bool isMobileDevice = _checkMobileDevice();
 final bool isLittleEndianSystem = _checkLittleEndianSystem();
 final bool isTouchEventSupported = _checkTouchEventSupport();
+const bool isAssetModules = bool.fromEnvironment('asset_modules');
 bool get isImageBitmapSupported => window.has('createImageBitmap');
 
 //-------------------------------------------------------------------------------------

@@ -77,7 +77,7 @@ class SoundLoadOptions {
   /// Determine which audio files are the most likely to play smoothly,
   /// based on the supported types and formats available.
 
-  List<String> getOptimalAudioUrls(String primaryUrl) {
+  Future<List<String>> getOptimalAudioUrls(String primaryUrl) async {
     final availableTypes = AudioLoader.supportedTypes.toList();
     if (!mp3) availableTypes.remove('mp3');
     if (!mp4) availableTypes.remove('mp4');
@@ -90,11 +90,12 @@ class SoundLoadOptions {
     final regex = RegExp(r'([A-Za-z0-9]+)$');
     final primaryMatch = regex.firstMatch(primaryUrl);
     if (primaryMatch == null) {
-      return urls
-          .map(getUrlHash)
-          .where((url) => url != null)
-          .map((url) => url!)
-          .toList();
+      final hashes = await Future.wait(urls.map((url) async {
+        final hash = await getUrlHash(url);
+        return hash;
+      }));
+
+      return hashes.where((url) => url != null).map((url) => url!).toList();
     }
 
     if (availableTypes.remove(primaryMatch.group(1))) urls.add(primaryUrl);
@@ -113,8 +114,7 @@ class SoundLoadOptions {
       }
     }
 
-    return urls
-        .map(getUrlHash)
+    return (await Future.wait(urls.map((url) async => getUrlHash(url))))
         .where((url) => url != null)
         .map((url) => url!)
         .toList();

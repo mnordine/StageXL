@@ -4,8 +4,6 @@ import 'dart:async';
 import 'package:web/web.dart';
 
 import '../errors.dart';
-import '../resources.dart' show getUrlHash;
-import 'environment.dart' as env;
 
 abstract class BaseImageLoader<T> {
   void cancel();
@@ -20,7 +18,7 @@ class ImageLoader implements BaseImageLoader<HTMLImageElement> {
   late final StreamSubscription _onLoadSubscription;
   late final StreamSubscription _onErrorSubscription;
 
-  ImageLoader(this._url, bool webpAvailable, bool corsEnabled) {
+  ImageLoader(this._url, bool corsEnabled) {
     _onLoadSubscription = image.onLoad.listen(_onImageLoad);
     _onErrorSubscription = image.onError.listen(_onImageError);
 
@@ -28,11 +26,7 @@ class ImageLoader implements BaseImageLoader<HTMLImageElement> {
       image.crossOrigin = 'anonymous';
     }
 
-    if (webpAvailable) {
-      env.isWebpSupported.then(_onWebpSupported);
-    } else {
-      image.src = _url;
-    }
+    image.src = _url;
   }
 
   @override
@@ -42,15 +36,6 @@ class ImageLoader implements BaseImageLoader<HTMLImageElement> {
 
   @override
   Future<HTMLImageElement> get done => _completer.future;
-
-  void _onWebpSupported(bool webpSupported) {
-    final match = RegExp(r'(png|jpg|jpeg)$').firstMatch(_url);
-    if (webpSupported && match != null) {
-      image.src = getUrlHash(_url, webp: true) ?? '';
-    } else {
-      image.src = _url;
-    }
-  }
 
   void _onImageLoad(Event event) {
     _onLoadSubscription.cancel();
