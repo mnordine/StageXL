@@ -9,18 +9,21 @@ class ResourceManager {
   final Map<String, ResourceManagerResource> _resourceMap =
       <String, ResourceManagerResource>{};
   
+  final Map<String, ResourceRegistry<dynamic>> _registries =
+    <String, ResourceRegistry<dynamic>>{};
+
   final AssetManifest _manifest;
-
-  final _loaders = <String, _TextureAtlasLoaderFile>{};
-
-  // Key is name
-  final _soundDatas = <String, _SoundData>{};
+  AssetManifest get manifest => _manifest;
 
   final _progressEvent = StreamController<num>.broadcast();
   Stream<num> get onProgress => _progressEvent.stream;
 
-  ResourceManager(): _manifest = const AssetManifest();
+  ResourceManager(): _manifest = AssetManifest();
   ResourceManager.withManifest(AssetManifest manifest): _manifest = manifest;
+  ResourceManager.cloneManifest(ResourceManager other): _manifest = other._manifest;
+
+  T registry<T extends ResourceRegistry>(String kind, T Function(ResourceManager) factory) =>
+    _registries.putIfAbsent(kind, () => factory(this)) as T;
 
   //----------------------------------------------------------------------------
 
@@ -37,12 +40,9 @@ class ResourceManager {
 
   void dispose() {
     for (var resource in _resourceMap.values.toList(growable: false)) {
-      if (resource.kind == 'BitmapData') {
-        removeBitmapData(resource.name);
-      } else if (resource.kind == 'TextureAtlas') {
-        removeTextureAtlas(resource.name);
-      } else if (resource.kind == 'Sound') {
-        removeSound(resource.name);
+      final registry = _registries[resource.kind];
+      if (registry != null) {
+        registry.remove(resource.name, dispose: true);
       } else {
         _removeResource(resource.kind, resource.name);
       }
@@ -65,200 +65,127 @@ class ResourceManager {
 
   //----------------------------------------------------------------------------
 
-  bool containsBitmapData(String name) => _containsResource('BitmapData', name);
+  BitmapDataResourceRegistry get bitmapDatas =>
+    registry('BitmapData', BitmapDataResourceRegistry.new);
+
+  bool containsBitmapData(String name) => bitmapDatas.contains(name);
 
   void addBitmapData(String name, String url,
-      [BitmapDataLoadOptions? options]) {
-    final loader = BitmapData.load(url, options, _manifest);
-    _addResource('BitmapData', name, url, loader);
-  }
+      [BitmapDataLoadOptions? options]) =>
+    bitmapDatas.add(name, url, options);
 
-  void removeBitmapData(String name, {bool dispose = true}) {
-    final resourceManagerResource = _removeResource('BitmapData', name);
-    final bitmapData = resourceManagerResource?.value;
-    if (bitmapData is BitmapData && dispose) {
-      bitmapData.renderTexture.dispose();
-    }
-  }
+  void removeBitmapData(String name, {bool dispose = true}) =>
+    bitmapDatas.remove(name, dispose: dispose);
 
-  BitmapData getBitmapData(String name) =>
-      _getResourceValue('BitmapData', name) as BitmapData;
+  BitmapData getBitmapData(String name) => bitmapDatas.get(name);
 
   //----------------------------------------------------------------------------
 
-  bool containsTextureAtlas(String name) =>
-      _containsResource('TextureAtlas', name);
+  TextureAtlasResourceRegistry get textureAtlases =>
+    registry('TextureAtlas', TextureAtlasResourceRegistry.new);
+
+  bool containsTextureAtlas(String name) => textureAtlases.contains(name);
 
   void addTextureAtlas(String name, String url,
-      [TextureAtlasFormat? textureAtlasFormat, BitmapDataLoadOptions? options]) {
+      [TextureAtlasFormat? textureAtlasFormat, BitmapDataLoadOptions? options]) =>
+    textureAtlases.add(name, url, textureAtlasFormat, options);
 
-    textureAtlasFormat ??= TextureAtlasFormat.jsonArray;
+  void removeTextureAtlas(String name, {bool dispose = true}) =>
+    textureAtlases.remove(name, dispose: dispose);
 
-    final tuple = TextureAtlas.load(url, textureAtlasFormat, options, _manifest);
-    _addResource('TextureAtlas', name, url, tuple.atlasFuture);
-
-    _loaders[name] = tuple._loader;
-    tuple.atlasFuture
-      .then((_) => _loaders.remove(name))
-      .catchError((_) => _loaders.remove(name));
-  }
-
-  void removeTextureAtlas(String name, {bool dispose = true}) {
-    final resourceManagerResource = _removeResource('TextureAtlas', name);
-    final textureAtlas = resourceManagerResource?.value;
-
-    if (_loaders.containsKey(name)) {
-      print('cancelling loading of $name texture atlas...');
-      _loaders[name]!.cancel();
-      _loaders.remove(name);
-    }
-
-    if (textureAtlas is TextureAtlas && dispose) {
-      for (var textureAtlasFrame in textureAtlas.frames.values) {
-        textureAtlasFrame.bitmapData.renderTexture.dispose();
-      }
-    }
-  }
-
-  TextureAtlas getTextureAtlas(String name) =>
-      _getResourceValue('TextureAtlas', name) as TextureAtlas;
+  TextureAtlas getTextureAtlas(String name) => textureAtlases.get(name);
 
   //----------------------------------------------------------------------------
 
-  bool containsVideo(String name) => _containsResource('Video', name);
+  VideoResourceRegistry get videos =>
+    registry('Video', VideoResourceRegistry.new);
 
-  void addVideo(String name, String url, [VideoLoadOptions? options]) {
-    final loader = Video.load(url, options, _manifest);
-    _addResource('Video', name, url, loader);
-  }
+  bool containsVideo(String name) => videos.contains(name);
 
-  void removeVideo(String name) {
-    _removeResource('Video', name);
-  }
+  void addVideo(String name, String url, [VideoLoadOptions? options]) =>
+    videos.add(name, url, options);
 
-  Video getVideo(String name) => _getResourceValue('Video', name) as Video;
+  void removeVideo(String name) => videos.remove(name);
 
-  //----------------------------------------------------------------------------
-
-  bool containsSound(String name) => _containsResource('Sound', name);
-
-  void addSound(String name, String url, [SoundLoadOptions? options]) {
-    final loader = Sound.load(url, options, _manifest) as Future<Sound?>;
-    loader.catchError((_) { _soundDatas.remove(name); return null; });
-
-    _addResource('Sound', name, url, loader);
-
-    _soundDatas[name] = _SoundData()
-      ..url = url
-      ..engine = options?.engine ?? Sound.defaultLoadOptions.engine ?? SoundMixer.engine;
-  }
-
-  void removeSound(String name) {
-    _removeResource('Sound', name);
-
-    if (!_soundDatas.containsKey(name)) return;
-
-    // TODO: Just Web Audio API for now, add support for Audio Element (IE 11)
-    final data = _soundDatas[name]!;
-    if (data.engine == SoundEngine.WebAudioApi) {
-      WebAudioApiSound.cancel(data.url);
-    }
-
-    _soundDatas.remove(name);
-  }
-
-  Sound getSound(String name) => _getResourceValue('Sound', name) as Sound;
+  Video getVideo(String name) => videos.get(name);
 
   //----------------------------------------------------------------------------
 
-  bool containsSoundSprite(String name) =>
-      _containsResource('SoundSprite', name);
+  SoundResourceRegistry get sounds =>
+    registry('Sound', SoundResourceRegistry.new);
 
-  void addSoundSprite(String name, String url, [SoundLoadOptions? options]) {
-    final loader = SoundSprite.load(_manifest.mapUrl(url), options);
-    _addResource('SoundSprite', name, url, loader);
-  }
+  bool containsSound(String name) => sounds.contains(name);
 
-  void removeSoundSprite(String name) {
-    _removeResource('SoundSprite', name);
-  }
+  void addSound(String name, String url, [SoundLoadOptions? options]) =>
+    sounds.add(name, url, options);
 
-  SoundSprite getSoundSprite(String name) =>
-      _getResourceValue('SoundSprite', name) as SoundSprite;
+  void removeSound(String name) => sounds.remove(name);
+
+  Sound getSound(String name) => sounds.get(name);
 
   //----------------------------------------------------------------------------
 
-  bool containsText(String name) => _containsResource('Text', name);
+  SoundSpriteResourceRegistry get soundSprites =>
+    registry('SoundSprite', SoundSpriteResourceRegistry.new);
 
-  void addText(String name, String text) {
-    _addResource('Text', name, '', Future.value(text));
-  }
+  bool containsSoundSprite(String name) => soundSprites.contains(name);
 
-  void removeText(String name) {
-    _removeResource('Text', name);
-  }
+  void addSoundSprite(String name, String url, [SoundLoadOptions? options]) =>
+    soundSprites.add(name, url, options);
 
-  String getText(String name) => _getResourceValue('Text', name) as String;
+  void removeSoundSprite(String name) => soundSprites.remove(name);
 
-  //----------------------------------------------------------------------------
-
-  bool containsTextFile(String name) => _containsResource('TextFile', name);
-
-  void addTextFile(String name, String url) {
-    final mappedUrl = _manifest.mapUrl(url);
-    final loader =
-        http.get(Uri.parse(mappedUrl)).then((text) => text.body, onError: (error) {
-      throw StateError('Failed to load text file.');
-    });
-    _addResource('TextFile', name, url, loader);
-  }
-
-  void removeTextFile(String name) {
-    _removeResource('TextFile', name);
-  }
-
-  String getTextFile(String name) =>
-      _getResourceValue('TextFile', name) as String;
+  SoundSprite getSoundSprite(String name) => soundSprites.get(name);
 
   //----------------------------------------------------------------------------
 
-  bool containsAssetManifest(String name) => _containsResource('AssetManifest', name);
+  TextResourceRegistry get texts =>
+    registry('Text', TextResourceRegistry.new); 
 
-  void addAssetManifest(String name, String url) {
-    final mappedUrl = _manifest.mapUrl(url);
-    final loader =
-      http.get(Uri.parse(mappedUrl)).then((resp) {
-        final parsed = json.decode(resp.body) as Map<String, dynamic>;
-        return AssetManifest(parsed.cast<String, String>());
-      }, onError: (error) {
-        throw StateError('Failed to load asset manifest.');
-      });
+  bool containsText(String name) => texts.contains(name);
 
-    _addResource('AssetManifest', name, url, loader);
-  }
+  void addText(String name, String text) => texts.add(name, text);
 
-  void removeAssetManifest(String name) {
-    _removeResource('AssetManifest', name);
-  }
+  void removeText(String name) => texts.remove(name);
 
-  AssetManifest getAssetManifest(String name) =>
-    _getResourceValue('AssetManifest', name) as AssetManifest;
+  String getText(String name) => texts.get(name);
 
   //----------------------------------------------------------------------------
+
+  TextFileResourceRegistry get textFiles =>
+    registry('TextFile', TextFileResourceRegistry.new);
+
+  bool containsTextFile(String name) => textFiles.contains(name);
+
+  void addTextFile(String name, String url) => textFiles.add(name, url);
+
+  void removeTextFile(String name) => textFiles.remove(name);
+
+  String getTextFile(String name) => textFiles.get(name);
+
+  //----------------------------------------------------------------------------
+
+  AssetManifestResourceRegistry get assetManifests =>
+    registry('AssetManifest', AssetManifestResourceRegistry.new);
+  
+  void useAssetManifest(AssetManifest manifest) {
+    _manifest.extend(manifest);
+  }
+
+  //----------------------------------------------------------------------------
+
+  CustomObjectResourceRegistry get customObjects =>
+    registry('CustomObject', CustomObjectResourceRegistry.new);
 
   bool containsCustomObject(String name) =>
-      _containsResource('CustomObject', name);
+    customObjects.contains(name);
 
-  void addCustomObject(String name, Future loader) {
-    _addResource('CustomObject', name, '', loader);
-  }
+  void addCustomObject(String name, Future loader) =>
+    customObjects.add(name, loader);
 
-  void removeCustomObject(String name) {
-    _removeResource('CustomObject', name);
-  }
+  void removeCustomObject(String name) => customObjects.remove(name);
 
-  dynamic getCustomObject(String name) =>
-      _getResourceValue('CustomObject', name);
+  dynamic getCustomObject(String name) => customObjects.get(name);
 
   //----------------------------------------------------------------------------
 
@@ -304,4 +231,23 @@ class ResourceManager {
       throw StateError("Resource '$name' has not finished loading yet.");
     }
   }
+}
+
+/// A proxy type, used by a ResourceRegistry to add/remove/get/check for
+/// resources, and to access the AssetManifest in use by this registry.
+extension type ResourceManagerProxy._(ResourceManager manager) {
+  /// The asset manifest in use by this resource manager
+  AssetManifest get manifest => manager._manifest;
+
+  void addResource(String kind, String name, String url, Future loader) =>
+    manager._addResource(kind, name, url, loader);
+
+  void removeResource(String kind, String name) =>
+    manager._removeResource(kind, name);
+
+  dynamic getResourceValue(String kind, String name) =>
+    manager._getResourceValue(kind, name);
+
+  bool containsResource(String kind, String name) =>
+    manager._containsResource(kind, name);
 }

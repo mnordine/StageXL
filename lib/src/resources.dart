@@ -12,7 +12,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
-
+import 'package:meta/meta.dart';
 import 'package:xml/xml.dart';
 
 import 'display.dart';
@@ -28,6 +28,7 @@ import 'media.dart';
 part 'resources/asset_manifest.dart';
 part 'resources/resource_manager.dart';
 part 'resources/resource_manager_resource.dart';
+part 'resources/resource_registry.dart';
 part 'resources/sound_sprite.dart';
 part 'resources/sound_sprite_segment.dart';
 part 'resources/sprite_sheet.dart';
