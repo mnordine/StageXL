@@ -110,7 +110,65 @@ class ChromaKeyFilter extends BitmapFilter {
 
 class ChromaKeyFilterProgram extends RenderProgramSimple {
   @override
-  String get fragmentShaderSource => '''
+  String get fragmentShaderSource => isWebGL2 ? '''
+    #version 300 es
+
+    precision ${RenderProgram.fragmentPrecision} float;
+    uniform sampler2D uSampler;
+    uniform vec4 backgroundColor;
+    uniform float solidThreshold;
+    uniform float invisibleThreshold;
+    uniform float weight;
+
+    out vec2 vTextCoord;
+    out vec4 fragColor;
+
+    void main() {
+      // -- get pixel color
+      vec4 pixelColor = texture(uSampler, vTextCoord);
+
+      // -- calcul diference betwen chroma key color and actual pixelColor
+      float redDiff = abs(pixelColor.r - backgroundColor.r);
+      float greenDiff = abs(pixelColor.g - backgroundColor.g);
+      float blueDiff = abs(pixelColor.b - backgroundColor.b);
+
+      // is pixel close enouph to chroma key to be fully invisible
+      bool rCanBeInvisible = redDiff < invisibleThreshold;
+      bool gCanBeInvisible = greenDiff < invisibleThreshold;
+      bool bCanBeInvisible = blueDiff < invisibleThreshold;
+
+      // is pixel different enouph to chroma key to be fully visible
+      bool rCanBeSolid = redDiff > solidThreshold;
+      bool gCanBeSolid = greenDiff > solidThreshold;
+      bool bCanBeSolid = blueDiff > solidThreshold;
+
+      if (rCanBeSolid || gCanBeSolid || bCanBeSolid) {
+        fragColor = pixelColor;
+
+      } else if (rCanBeInvisible && gCanBeInvisible && bCanBeInvisible) {
+        fragColor = pixelColor * 0.0;
+
+      } else {
+        // semi transparent color
+        float alpha = 1.0;
+
+        // try tyo calculate the alpha as cloase as possible
+        float rAlpha = clamp((redDiff - invisibleThreshold) / (solidThreshold - invisibleThreshold), 0.0, 1.0);
+        float gAlpha = clamp((greenDiff - invisibleThreshold) / (solidThreshold - invisibleThreshold), 0.0, 1.0);
+        float bAlpha = clamp((blueDiff - invisibleThreshold) / (solidThreshold - invisibleThreshold), 0.0, 1.0);
+
+        alpha = min(rAlpha, gAlpha);
+        alpha = min(bAlpha, alpha);
+
+        // try to ge back the original color
+        float red = pixelColor.r - (1.0 - redDiff) * (1.0 - alpha) * backgroundColor.r * weight;
+        float green = pixelColor.g - (1.0 - greenDiff) * (1.0 - alpha) * backgroundColor.g * weight;
+        float blue = pixelColor.b - (1.0 - blueDiff) * (1.0 - alpha) * backgroundColor.b * weight;
+
+        fragColor = vec4(red, green, blue, alpha);
+      }
+    }
+    ''' : '''
 
     precision ${RenderProgram.fragmentPrecision} float;
     uniform sampler2D uSampler;

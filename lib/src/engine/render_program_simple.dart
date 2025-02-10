@@ -6,7 +6,23 @@ class RenderProgramSimple extends RenderProgram {
   // aVertexAlpha:      Float32(alpha)
 
   @override
-  String get vertexShaderSource => '''
+  String get vertexShaderSource => isWebGL2 ? '''
+    #version 300 es
+
+    uniform mat4 uProjectionMatrix;
+    in vec2 aVertexPosition;
+    in vec2 aVertexTextCoord;
+    in float aVertexAlpha;
+
+    out vec2 vTextCoord;
+    out float vAlpha;
+
+    void main() {
+      vTextCoord = aVertexTextCoord;
+      vAlpha = aVertexAlpha;
+      gl_Position = vec4(aVertexPosition, 0.0, 1.0) * uProjectionMatrix;
+    }
+    ''' : '''
 
     uniform mat4 uProjectionMatrix;
     attribute vec2 aVertexPosition;
@@ -23,7 +39,21 @@ class RenderProgramSimple extends RenderProgram {
     ''';
 
   @override
-  String get fragmentShaderSource => '''
+  String get fragmentShaderSource => isWebGL2 ? '''
+    #version 300 es
+
+    precision ${RenderProgram.fragmentPrecision} float;
+    uniform sampler2D uSampler;
+
+    in vec2 vTextCoord;
+    in float vAlpha;
+
+    out vec4 fragColor;
+
+    void main() {
+      fragColor = texture(uSampler, vTextCoord) * vAlpha;
+    }
+    ''' : '''
 
     precision ${RenderProgram.fragmentPrecision} float;
     uniform sampler2D uSampler;

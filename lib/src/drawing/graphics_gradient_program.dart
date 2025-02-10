@@ -7,7 +7,23 @@ abstract class _GraphicsGradientProgram extends RenderProgram {
   // aVertexAlpha:      Float32(alpha)
 
   @override
-  String get vertexShaderSource => '''
+  String get vertexShaderSource => isWebGL2 ? '''
+    #version 300 es
+
+    uniform mat4 uProjectionMatrix;
+
+    in vec2 aVertexPosition;
+    in float aVertexAlpha;
+
+    out vec2 vTextCoord;
+    out float vAlpha;
+
+    void main() {
+      vTextCoord = aVertexPosition;
+      vAlpha = aVertexAlpha;
+      gl_Position = vec4(aVertexPosition, 0.0, 1.0) * uProjectionMatrix;
+    }
+    ''' : '''
 
     uniform mat4 uProjectionMatrix;
     attribute vec2 aVertexPosition;
@@ -93,7 +109,26 @@ abstract class _GraphicsGradientProgram extends RenderProgram {
 
 class _LinearGraphicsGradientProgram extends _GraphicsGradientProgram {
   @override
-  String get fragmentShaderSource => '''
+  String get fragmentShaderSource => isWebGL2 ? '''
+    #version 300 es
+
+    precision ${RenderProgram.fragmentPrecision} float;
+
+    uniform sampler2D uSampler;
+    uniform vec2 uvGradientStart;
+    uniform vec2 uvGradientVector;
+
+    in vec2 vTextCoord;
+    in float vAlpha;
+
+    out vec4 fragColor;
+
+    void main() {
+      vec2 pixelVector = vTextCoord - uvGradientStart;
+      float t = dot(pixelVector,uvGradientVector)/dot(uvGradientVector,uvGradientVector);
+      fragColor = texture(uSampler, vec2(0.5,t)) * vAlpha;
+    }
+    ''' : '''
 
     precision ${RenderProgram.fragmentPrecision} float;
     uniform sampler2D uSampler;
@@ -134,7 +169,30 @@ class _LinearGraphicsGradientProgram extends _GraphicsGradientProgram {
 
 class _RadialGraphicsGradientProgram extends _GraphicsGradientProgram {
   @override
-  String get fragmentShaderSource => '''
+  String get fragmentShaderSource => isWebGL2 ? '''
+    #version 300 es
+
+    precision ${RenderProgram.fragmentPrecision} float;
+
+    uniform sampler2D uSampler;
+    uniform vec2 uvA;
+    uniform vec3 uvB;
+    uniform vec3 uvC;
+
+    in vec2 vTextCoord;
+    in float vAlpha;
+
+    out vec4 fragColor;
+
+    void main() {
+      float a = uvA.x;
+      float b = dot(uvB,vec3(vTextCoord,1));
+      float c = dot(vTextCoord,vTextCoord) + dot(uvC,vec3(vTextCoord,1));
+      float sign = uvA.y;
+      float t = (-b + sign*sqrt(b*b-4.0*a*c))/(2.0*a);
+      fragColor = texture(uSampler, vec2(0.5,t)) * vAlpha;
+    }
+    ''' : '''
 
     precision ${RenderProgram.fragmentPrecision} float;
     uniform sampler2D uSampler;

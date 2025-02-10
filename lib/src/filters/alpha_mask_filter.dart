@@ -74,7 +74,30 @@ class AlphaMaskFilterProgram extends RenderProgram {
   // aVertexAlpha:     Float32(a)
 
   @override
-  String get vertexShaderSource => '''
+  String get vertexShaderSource => isWebGL2 ? '''
+    #version 300 es
+
+    uniform mat4 uProjectionMatrix;
+
+    in vec2 aVertexPosition;
+    in vec2 aVertexTexCoord;
+    in vec2 aVertexMskCoord;
+    in vec4 aVertexMskLimit;
+    in float aVertexAlpha;
+
+    out vec2 vTexCoord;
+    out vec2 vMskCoord;
+    out vec4 vMskLimit;
+    out float vAlpha;
+
+    void main() {
+      vTexCoord = aVertexTexCoord;
+      vMskCoord = aVertexMskCoord;
+      vMskLimit = aVertexMskLimit;
+      vAlpha = aVertexAlpha;
+      gl_Position = vec4(aVertexPosition, 0.0, 1.0) * uProjectionMatrix;
+    }
+    ''' : '''
 
     uniform mat4 uProjectionMatrix;
 
@@ -99,7 +122,29 @@ class AlphaMaskFilterProgram extends RenderProgram {
     ''';
 
   @override
-  String get fragmentShaderSource => '''
+  String get fragmentShaderSource => isWebGL2 ? '''
+    #version 300 es
+
+    precision ${RenderProgram.fragmentPrecision} float;
+    uniform sampler2D uTexSampler;
+    uniform sampler2D uMskSampler;
+
+    in vec2 vTexCoord;
+    in vec2 vMskCoord;
+    in vec4 vMskLimit;
+    in float vAlpha;
+
+    out vec4 fragColor;
+
+    void main() {
+      vec4 texColor = texture(uTexSampler, vTexCoord.xy);
+      vec4 mskColor = texture(uMskSampler, vMskCoord.xy);
+      vec2 s1 = step(vMskLimit.xy, vMskCoord.xy);
+      vec2 s2 = step(vMskCoord.xy, vMskLimit.zw);
+      float sAlpha = s1.x * s1.y * s2.x * s2.y;
+      fragColor = texColor * (mskColor.a * vAlpha * sAlpha);
+    }
+    ''' : '''
 
     precision ${RenderProgram.fragmentPrecision} float;
     uniform sampler2D uTexSampler;

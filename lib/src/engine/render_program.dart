@@ -15,6 +15,8 @@ abstract class RenderProgram {
 
   static var fragmentPrecision = 'mediump';
 
+  bool get isWebGL2 => _renderingContext.isA<WebGL2RenderingContext>();
+
   RenderProgram()
       : _attributes = <String, int>{},
         _uniforms = <String, WebGLUniformLocation>{},

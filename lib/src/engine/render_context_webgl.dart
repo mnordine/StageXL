@@ -15,6 +15,9 @@ class RenderContextWebGL extends RenderContext {
 
   bool _contextValid = true;
   int _contextIdentifier = 0;
+  late final bool _isWebGL2;
+
+  bool get isWebGL2 => _isWebGL2;
 
   //---------------------------------------------------------------------------
 
@@ -37,8 +40,19 @@ class RenderContextWebGL extends RenderContext {
     _canvasElement.onWebGlContextLost.listen(_onContextLost);
     _canvasElement.onWebGlContextRestored.listen(_onContextRestored);
 
-    final renderingContext = _canvasElement.getContext3d(
-      alpha: alpha, antialias: antialias, depth: false, stencil: true) as WebGL?;
+    // Try WebGL 2 first
+    var renderingContext = _canvasElement.getContext('webgl2', {
+      'alpha': alpha,
+      'antialias': antialias,
+      'depth': false,
+      'stencil': true
+    }.jsify()) as WebGL?;
+
+    _isWebGL2 = renderingContext != null;
+
+    // Fall back to WebGL 1 if WebGL 2 is not available
+    renderingContext ??= _canvasElement.getContext3d(
+        alpha: alpha, antialias: antialias, depth: false, stencil: true) as WebGL?;
 
     if (renderingContext == null) {
       throw StateError('Failed to get WebGL context.');
@@ -65,10 +79,15 @@ class RenderContextWebGL extends RenderContext {
 
   //---------------------------------------------------------------------------
 
-  WebGL get rawContext => _renderingContext;
+  GLContext get rawContext => _renderingContext;
 
   @override
-  RenderEngine get renderEngine => RenderEngine.WebGL;
+  RenderEngine get renderEngine {
+    final canvas = _renderingContext.canvas as HTMLCanvasElement;
+    return canvas.getContext('webgl2') != null
+        ? RenderEngine.WebGL2
+        : RenderEngine.WebGL;
+  }
 
   @override
   Object? get maxTextureSize =>
