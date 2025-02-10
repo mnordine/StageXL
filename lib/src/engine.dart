@@ -56,3 +56,5 @@ part 'engine/compressed_texture_formats/pvr_texture.dart';
 part 'engine/compressed_texture_formats/ktx_texture.dart';
 
 typedef WebGL = WebGLRenderingContext;
+typedef WebGL2 = WebGL2RenderingContext;
+typedef GLContext = WebGLRenderingContext;

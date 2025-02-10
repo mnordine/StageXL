@@ -60,7 +60,36 @@ class NormalMapFilterProgram extends RenderProgram {
   // aVertexAlpha:         Float32(a)
 
   @override
-  String get vertexShaderSource => '''
+  String get vertexShaderSource => isWebGL2 ? '''
+    #version 300 es
+
+    uniform mat4 uProjectionMatrix;
+
+    in vec2 aVertexPosition;
+    in vec2 aVertexTexCoord;
+    in vec2 aVertexMapCoord;
+    in vec4 aVertexAmbientColor;
+    in vec4 aVertexLightColor;
+    in vec4 aVertexLightCoord;
+    in float aVertexAlpha;
+
+    out vec2 vTexCoord;
+    out vec2 vMapCoord;
+    out vec4 vAmbientColor;
+    out vec4 vLightColor;
+    out vec4 vLightCoord;
+    out float vAlpha;
+
+    void main() {
+      vTexCoord = aVertexTexCoord;
+      vMapCoord = aVertexMapCoord;
+      vAmbientColor = aVertexAmbientColor;
+      vLightColor = aVertexLightColor;
+      vLightCoord = aVertexLightCoord;
+      vAlpha = aVertexAlpha;
+      gl_Position = vec4(aVertexPosition, 0.0, 1.0) * uProjectionMatrix;
+    }
+    ''' : '''
 
     uniform mat4 uProjectionMatrix;
 
@@ -91,7 +120,50 @@ class NormalMapFilterProgram extends RenderProgram {
     ''';
 
   @override
-  String get fragmentShaderSource => '''
+  String get fragmentShaderSource => isWebGL2 ? '''
+    #version 300 es
+
+    precision ${RenderProgram.fragmentPrecision} float;
+    uniform sampler2D uTexSampler;
+    uniform sampler2D uMapSampler;
+
+    in vec2 vTexCoord;
+    in vec2 vMapCoord;
+    in vec4 vAmbientColor;
+    in vec4 vLightColor;
+    in vec4 vLightCoord;
+    in float vAlpha;
+
+    out vec4 fragColor;
+
+    void main() {
+
+      // Texture color and map color/vector/normal
+      vec4 texColor = texture(uTexSampler, vTexCoord.xy);
+      vec4 mapColor = texture(uMapSampler, vMapCoord.xy);
+      vec3 mapVector = vec3(mapColor.r, 1.0 - mapColor.g, mapColor.b);
+      vec3 mapNormal = normalize(mapVector * 2.0 - 1.0);
+
+      // Position of light relative to texture coordinates
+      vec3 lightDelta = vec3(vLightCoord.xy - vTexCoord.xy, vLightCoord.z);
+      vec3 lightNormal = normalize(lightDelta);
+
+      // Calculate diffuse and ambient color
+      float diffuse = max(dot(mapNormal, lightNormal), 0.0);
+      vec3 diffuseColor = vLightColor.rgb * vLightColor.a * diffuse;
+      vec3 ambientColor = vAmbientColor.rgb * vAmbientColor.a;
+
+      // Calculate attenuation
+      float distance = length(lightDelta.xy);
+      float radius = vLightCoord.w;
+      float temp = clamp(1.0 - (distance * distance) / (radius * radius), 0.0, 1.0);
+      float attenuation = temp * temp;
+
+      // Get the final color
+      vec3 color = texColor.rgb * (ambientColor + diffuseColor * attenuation);
+      fragColor = vec4(color.rgb, texColor.a) * vAlpha;
+    }
+    ''' : '''
 
     precision ${RenderProgram.fragmentPrecision} float;
     uniform sampler2D uTexSampler;

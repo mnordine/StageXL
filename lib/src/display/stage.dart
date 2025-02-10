@@ -449,21 +449,22 @@ class Stage extends DisplayObjectContainer {
 
   RenderContext _createRenderContext(
       HTMLCanvasElement canvas, StageOptions options) {
-    if (options.renderEngine == RenderEngine.WebGL) {
+    if (options.renderEngine == RenderEngine.WebGL2 || options.renderEngine == RenderEngine.WebGL) {
       final RenderContextWebGL context;
 
-      // NOTE(CEksal): Prior behavior was to try and create a new context no matter what
-      // However, once the WebGL context is created, this isn't possible; we'll get `null` from `getContext2D`.
-      // Thus, we only fall back if we fail to get the WebGL context in the first place.
       try {
         context = RenderContextWebGL(canvas,
           alpha: options.transparent, antialias: options.antialias);
 
-        // ignore: avoid_catching_errors
-      } on StateError catch (e) {
-        if (e.message == 'Failed to get WebGL context.') {
+        // Check if we got the requested context type
+        if (options.renderEngine == RenderEngine.WebGL2 && context.renderEngine != RenderEngine.WebGL2) {
           return RenderContextCanvas(canvas);
         }
+      } on StateError catch (e) { // ignore: avoid_catching_errors
+        if (e.message == 'Failed to get WebGL context.') {
+          return RenderContextCanvas(canvas);
+        } 
+
         rethrow;
       }
 

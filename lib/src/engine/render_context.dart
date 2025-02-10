@@ -4,7 +4,7 @@ part of '../engine.dart';
 
 /// The implementation kind of the render context.
 
-enum RenderEngine { WebGL, Canvas2D }
+enum RenderEngine { WebGL2, WebGL, Canvas2D }
 
 /// The base class for all events fired by a render context.
 
