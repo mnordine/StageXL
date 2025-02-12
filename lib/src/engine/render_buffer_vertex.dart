@@ -54,5 +54,6 @@ class RenderBufferVertex {
     if (index == null) return;
     _renderingContext!.vertexAttribPointer(
         index, size, WebGL.FLOAT, false, stride, offset);
+    _renderingContext!.enableVertexAttribArray(index);
   }
 }

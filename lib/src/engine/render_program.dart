@@ -1,11 +1,16 @@
 part of '../engine.dart';
 
+// Updated type definitions for better WebGL2 support
+typedef WebGLVertexArrayObject = JSObject;
+
 abstract class RenderProgram {
   int _contextIdentifier = -1;
 
-  // These assume activate() is called
   late WebGL _renderingContext;
   late WebGLProgram _program;
+  WebGLVertexArrayObject? _vao;
+  bool _hasVAOSupport = false;
+  dynamic _vaoExtension;
 
   final Map<String, int> _attributes;
   final Map<String, WebGLUniformLocation> _uniforms;
@@ -55,17 +60,83 @@ abstract class RenderProgram {
       _renderStatistics = renderContext.renderStatistics;
       _renderBufferIndex = renderContext.renderBufferIndex;
       _renderBufferVertex = renderContext.renderBufferVertex;
-      _renderBufferIndex.activate(renderContext);
-      _renderBufferVertex.activate(renderContext);
+      
+      // Check for VAO support
+      _hasVAOSupport = isWebGL2;
+      if (!_hasVAOSupport) {
+        _vaoExtension = _renderingContext.getExtension('OES_vertex_array_object');
+        _hasVAOSupport = _vaoExtension != null;
+      }
+
       _program = _createProgram(_renderingContext);
       _updateAttributes(_renderingContext, _program);
       _updateUniforms(_renderingContext, _program);
+
+      // Create and set up VAO if supported
+      if (_hasVAOSupport) {
+        if (isWebGL2) {
+          _vao = (_renderingContext as dynamic).createVertexArray() as WebGLVertexArrayObject;
+        } else {
+          _vao = _vaoExtension.createVertexArrayOES() as WebGLVertexArrayObject;
+        }
+        _bindVAO();
+        _renderBufferIndex.activate(renderContext);
+        _renderBufferVertex.activate(renderContext);
+        _setupVAOAttributes();
+        _unbindVAO();
+      } else {
+        _renderBufferIndex.activate(renderContext);
+        _renderBufferVertex.activate(renderContext);
+        _setupAttributes();
+      }
     }
 
     renderingContext.useProgram(program);
+    if (_hasVAOSupport) {
+      _bindVAO();
+    } else {
+      _renderBufferIndex.activate(renderContext);
+      _renderBufferVertex.activate(renderContext);
+      _setupAttributes();
+    }
+  }
+
+  void _bindVAO() {
+    if (isWebGL2) {
+      (_renderingContext as dynamic).bindVertexArray(_vao);
+    } else {
+      _vaoExtension.bindVertexArrayOES(_vao);
+    }
+  }
+
+  void _unbindVAO() {
+    if (isWebGL2) {
+      (_renderingContext as dynamic).bindVertexArray(null);
+    } else {
+      _vaoExtension.bindVertexArrayOES(null);
+    }
+  }
+
+  void _setupVAOAttributes() {
+    // This method should be overridden by subclasses to set up their specific attributes
+  }
+
+  void _setupAttributes() {
+    // This method should be overridden by subclasses to set up their specific attributes
   }
 
   //---------------------------------------------------------------------------
+
+  void dispose() {
+    if (_vao != null) {
+      if (isWebGL2) {
+        (_renderingContext as dynamic).deleteVertexArray(_vao);
+      } else if (_vaoExtension != null) {
+        _vaoExtension.deleteVertexArrayOES(_vao);
+      }
+      _vao = null;
+    }
+  }
 
   void flush() {
     if (renderBufferIndex.position > 0 && renderBufferVertex.position > 0) {

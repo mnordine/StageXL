@@ -70,14 +70,24 @@ class RenderProgramTinted extends RenderProgram {
   //---------------------------------------------------------------------------
 
   @override
-  void activate(RenderContextWebGL renderContext) {
-    super.activate(renderContext);
-
-    renderingContext.uniform1i(uniforms['uSampler'], 0);
-
+  void _setupVAOAttributes() {
     renderBufferVertex.bindAttribute(attributes['aVertexPosition'], 2, 32, 0);
     renderBufferVertex.bindAttribute(attributes['aVertexTextCoord'], 2, 32, 8);
     renderBufferVertex.bindAttribute(attributes['aVertexColor'], 4, 32, 16);
+  }
+
+  @override
+  void _setupAttributes() {
+    renderBufferVertex.bindAttribute(attributes['aVertexPosition'], 2, 32, 0);
+    renderBufferVertex.bindAttribute(attributes['aVertexTextCoord'], 2, 32, 8);
+    renderBufferVertex.bindAttribute(attributes['aVertexColor'], 4, 32, 16);
+  }
+
+  @override
+  void activate(RenderContextWebGL renderContext) {
+    super.activate(renderContext);
+    
+    // The VAO setup is now handled by the parent class and _setupVAOAttributes
   }
 
   //---------------------------------------------------------------------------

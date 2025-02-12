@@ -57,11 +57,21 @@ class RenderProgramTriangle extends RenderProgram {
   //---------------------------------------------------------------------------
 
   @override
-  void activate(RenderContextWebGL renderContext) {
-    super.activate(renderContext);
-
+  void _setupVAOAttributes() {
     renderBufferVertex.bindAttribute(attributes['aVertexPosition'], 2, 24, 0);
     renderBufferVertex.bindAttribute(attributes['aVertexColor'], 4, 24, 8);
+  }
+
+  @override
+  void _setupAttributes() {
+    renderBufferVertex.bindAttribute(attributes['aVertexPosition'], 2, 24, 0);
+    renderBufferVertex.bindAttribute(attributes['aVertexColor'], 4, 24, 8);
+  }
+
+  @override
+  void activate(RenderContextWebGL renderContext) {
+    super.activate(renderContext);
+    // The VAO setup is now handled by the parent class and _setupVAOAttributes
   }
 
   //---------------------------------------------------------------------------
