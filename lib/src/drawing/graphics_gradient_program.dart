@@ -41,8 +41,7 @@ abstract class _GraphicsGradientProgram extends RenderProgram {
   //---------------------------------------------------------------------------
 
   @override
-  void activate(RenderContextWebGL renderContext) {
-    super.activate(renderContext);
+  void setupAttributes() {
     renderBufferVertex.bindAttribute(attributes['aVertexPosition'], 2, 12, 0);
     renderBufferVertex.bindAttribute(attributes['aVertexAlpha'], 1, 12, 8);
   }

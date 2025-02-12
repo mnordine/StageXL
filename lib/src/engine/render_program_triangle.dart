@@ -57,9 +57,7 @@ class RenderProgramTriangle extends RenderProgram {
   //---------------------------------------------------------------------------
 
   @override
-  void activate(RenderContextWebGL renderContext) {
-    super.activate(renderContext);
-
+  void setupAttributes() {
     renderBufferVertex.bindAttribute(attributes['aVertexPosition'], 2, 24, 0);
     renderBufferVertex.bindAttribute(attributes['aVertexColor'], 4, 24, 8);
   }

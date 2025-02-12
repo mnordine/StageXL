@@ -39,9 +39,11 @@ class RenderBufferIndex {
       _buffer = _renderingContext!.createBuffer();
       _renderingContext!.bindBuffer(WebGL.ELEMENT_ARRAY_BUFFER, _buffer);
       _renderingContext!.bufferData(WebGL.ELEMENT_ARRAY_BUFFER, data.toJS, usage);
+    } else {
+      // When using VAO, the ELEMENT_ARRAY_BUFFER binding is part of the VAO state
+      // so we only need to bind when creating a new buffer or when VAOs aren't supported
+      _renderingContext!.bindBuffer(WebGL.ELEMENT_ARRAY_BUFFER, _buffer);
     }
-
-    _renderingContext!.bindBuffer(WebGL.ELEMENT_ARRAY_BUFFER, _buffer);
   }
 
   void update() {

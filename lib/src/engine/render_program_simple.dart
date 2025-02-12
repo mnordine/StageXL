@@ -72,7 +72,10 @@ class RenderProgramSimple extends RenderProgram {
     super.activate(renderContext);
 
     renderingContext.uniform1i(uniforms['uSampler'], 0);
+  }
 
+  @override
+  void setupAttributes() {
     renderBufferVertex.bindAttribute(attributes['aVertexPosition'], 2, 20, 0);
     renderBufferVertex.bindAttribute(attributes['aVertexTextCoord'], 2, 20, 8);
     renderBufferVertex.bindAttribute(attributes['aVertexAlpha'], 1, 20, 16);
