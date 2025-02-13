@@ -449,41 +449,45 @@ class Stage extends DisplayObjectContainer {
 
   RenderContext _createRenderContext(
       HTMLCanvasElement canvas, StageOptions options) {
-    if (options.renderEngine == RenderEngine.WebGL2 || options.renderEngine == RenderEngine.WebGL) {
-      final RenderContextWebGL context;
+    switch (options.renderEngine) {
+      case RenderEngine.WebGL || RenderEngine.WebGL2:
+        final RenderContextWebGL context;
 
-      try {
-        context = RenderContextWebGL(canvas,
-          alpha: options.transparent, antialias: options.antialias);
-
-        // Check if we got the requested context type
-        if (options.renderEngine == RenderEngine.WebGL2 && context.renderEngine != RenderEngine.WebGL2) {
-          return RenderContextCanvas(canvas);
-        }
-      } on StateError catch (e) { // ignore: avoid_catching_errors
-        if (e.message == 'Failed to get WebGL context.') {
-          return RenderContextCanvas(canvas);
-        } 
-
-        rethrow;
-      }
-
-      // Override to medium precision if high is not supported
-      if (options.shaderPrecision == ShaderPrecision.high) {
         try {
-          final gl = context.rawContext;
-          final high = gl.getShaderPrecisionFormat(WebGL.FRAGMENT_SHADER, WebGL.HIGH_FLOAT);
-          if (high!.precision <= 0) options.shaderPrecision = ShaderPrecision.medium;
-        } catch (e) {
-          options.shaderPrecision = ShaderPrecision.medium;
-        }
-      }
+          context = RenderContextWebGL(
+            canvas,
+            alpha: options.transparent, 
+            antialias: options.antialias, 
+            forceWebGL1: options.renderEngine == RenderEngine.WebGL,
+          );
 
-      return context;
-    } else if (options.renderEngine == RenderEngine.Canvas2D) {
-      return RenderContextCanvas(canvas);
-    } else {
-      throw StateError('Unknown RenderEngine');
+          // Check if we got the requested context type
+          if (options.renderEngine == RenderEngine.WebGL2 && context.renderEngine != RenderEngine.WebGL2) {
+            return RenderContextCanvas(canvas);
+          }
+        } on StateError catch (e) { // ignore: avoid_catching_errors
+          if (e.message == 'Failed to get WebGL context.') {
+            return RenderContextCanvas(canvas);
+          } 
+
+          rethrow;
+        }
+
+        // Override to medium precision if high is not supported
+        if (options.shaderPrecision == ShaderPrecision.high) {
+          try {
+            final gl = context.rawContext;
+            final high = gl.getShaderPrecisionFormat(WebGL.FRAGMENT_SHADER, WebGL.HIGH_FLOAT);
+            if (high!.precision <= 0) options.shaderPrecision = ShaderPrecision.medium;
+          } catch (e) {
+            options.shaderPrecision = ShaderPrecision.medium;
+          }
+        }
+
+        return context;
+
+      case RenderEngine.Canvas2D:
+        return RenderContextCanvas(canvas);
     }
   }
 

@@ -35,18 +35,22 @@ class RenderContextWebGL extends RenderContext {
   //---------------------------------------------------------------------------
 
   RenderContextWebGL(HTMLCanvasElement canvasElement,
-      {bool alpha = false, bool antialias = false})
+      {bool alpha = false, bool antialias = false, bool forceWebGL1 = false})
       : _canvasElement = canvasElement {
     _canvasElement.onWebGlContextLost.listen(_onContextLost);
     _canvasElement.onWebGlContextRestored.listen(_onContextRestored);
 
-    // Try WebGL 2 first
-    var renderingContext = _canvasElement.getContext('webgl2', {
-      'alpha': alpha,
-      'antialias': antialias,
-      'depth': false,
-      'stencil': true
-    }.jsify()) as WebGL?;
+    WebGLRenderingContext? renderingContext;
+
+    if (!forceWebGL1) {
+      // Try WebGL 2 first
+      renderingContext = _canvasElement.getContext('webgl2', {
+        'alpha': alpha,
+        'antialias': antialias,
+        'depth': false,
+        'stencil': true
+      }.jsify()) as WebGL?;
+    }
 
     _isWebGL2 = renderingContext != null;
 
