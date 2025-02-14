@@ -460,11 +460,6 @@ class Stage extends DisplayObjectContainer {
             antialias: options.antialias, 
             forceWebGL1: options.renderEngine == RenderEngine.WebGL,
           );
-
-          // Check if we got the requested context type
-          if (options.renderEngine == RenderEngine.WebGL2 && context.renderEngine != RenderEngine.WebGL2) {
-            return RenderContextCanvas(canvas);
-          }
         } on StateError catch (e) { // ignore: avoid_catching_errors
           if (e.message == 'Failed to get WebGL context.') {
             return RenderContextCanvas(canvas);
