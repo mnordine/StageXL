@@ -5,7 +5,21 @@ class RenderProgramTriangle extends RenderProgram {
   // aVertexAlpha:      Float32(r), Float32(g), Float32(b), Float32(a)
 
   @override
-  String get vertexShaderSource => '''
+  String get vertexShaderSource => isWebGL2 ? '''
+    #version 300 es
+
+    uniform mat4 uProjectionMatrix;
+
+    in vec2 aVertexPosition;
+    in vec4 aVertexColor;
+
+    out vec4 vColor;
+
+    void main() {
+      vColor = aVertexColor;
+      gl_Position = vec4(aVertexPosition, 0.0, 1.0) * uProjectionMatrix;
+    }
+    ''' : '''
 
     uniform mat4 uProjectionMatrix;
     attribute vec2 aVertexPosition;
@@ -19,7 +33,18 @@ class RenderProgramTriangle extends RenderProgram {
     ''';
 
   @override
-  String get fragmentShaderSource => '''
+  String get fragmentShaderSource => isWebGL2 ? '''
+    #version 300 es
+
+    precision ${RenderProgram.fragmentPrecision} float;
+
+    in vec4 vColor;
+    out vec4 fragColor;
+
+    void main() {
+      fragColor = vColor;
+    }
+    ''' : '''
 
     precision ${RenderProgram.fragmentPrecision} float;
     varying vec4 vColor;

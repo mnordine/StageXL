@@ -13,7 +13,7 @@ class StageOptions {
   /// Setting the render engine to WebGL will automatically fallback
   /// to Canvas2D if WebGL is not supported.
 
-  RenderEngine renderEngine = RenderEngine.WebGL;
+  RenderEngine renderEngine = RenderEngine.WebGL2;
 
   /// The [InputEventMode] used for input events on the [Stage].
   ///

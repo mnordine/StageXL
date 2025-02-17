@@ -283,7 +283,30 @@ class ColorMatrixFilterProgram extends RenderProgram {
   // aOffset:    Float32(r), Float32(g), Float32(b), Float32(a)
 
   @override
-  String get vertexShaderSource => '''
+  String get vertexShaderSource => isWebGL2 ? '''
+    #version 300 es
+
+    uniform mat4 uProjectionMatrix;
+
+    in vec2 aPosition;
+    in vec2 aTexCoord;
+    in vec4 aMatrixR, aMatrixG, aMatrixB, aMatrixA;
+    in vec4 aOffset;
+
+    out vec2 vTexCoord;
+    out vec4 vMatrixR, vMatrixG, vMatrixB, vMatrixA;
+    out vec4 vOffset;
+
+    void main() {
+      vTexCoord = aTexCoord;
+      vMatrixR = aMatrixR;
+      vMatrixG = aMatrixG;
+      vMatrixB = aMatrixB;
+      vMatrixA = aMatrixA;
+      vOffset = aOffset;
+      gl_Position = vec4(aPosition, 0.0, 1.0) * uProjectionMatrix;
+    }
+    ''' : '''
 
     uniform mat4 uProjectionMatrix;
 
@@ -308,7 +331,26 @@ class ColorMatrixFilterProgram extends RenderProgram {
     ''';
 
   @override
-  String get fragmentShaderSource => '''
+  String get fragmentShaderSource => isWebGL2 ? '''
+    #version 300 es
+
+    precision ${RenderProgram.fragmentPrecision} float;
+    uniform sampler2D uSampler;
+
+    in vec2 vTexCoord;
+    in vec4 vMatrixR, vMatrixG, vMatrixB, vMatrixA;
+    in vec4 vOffset;
+
+    out vec4 fragColor;
+
+    void main() {
+      vec4 color = texture(uSampler, vTexCoord);
+      mat4 colorMatrix = mat4(vMatrixR, vMatrixG, vMatrixB, vMatrixA);
+      color = vec4(color.rgb / color.a, color.a);
+      color = vOffset + color * colorMatrix;
+      fragColor = vec4(color.rgb * color.a, color.a);
+    }
+    ''' : '''
 
     precision ${RenderProgram.fragmentPrecision} float;
     uniform sampler2D uSampler;

@@ -124,21 +124,42 @@ class DisplacementMapFilter extends BitmapFilter {
 
 class DisplacementMapFilterProgram extends RenderProgramSimple {
   @override
-  String get fragmentShaderSource => '''
-      precision ${RenderProgram.fragmentPrecision} float;
-      uniform sampler2D uTexSampler;
-      uniform sampler2D uMapSampler;
-      uniform mat3 uMapMatrix;
-      uniform mat3 uDisMatrix;
-      varying vec2 vTextCoord;
-      varying float vAlpha;
-      void main() {
-        vec3 mapCoord = vec3(vTextCoord.xy, 1) * uMapMatrix;
-        vec4 mapColor = texture2D(uMapSampler, mapCoord.xy);
-        vec3 displacement = vec3(mapColor.rg - 0.5, 1) * uDisMatrix;
-        gl_FragColor = texture2D(uTexSampler, vTextCoord + displacement.xy) * vAlpha;
-      }
-      ''';
+  String get fragmentShaderSource => isWebGL2 ? '''
+    #version 300 es
+
+    precision ${RenderProgram.fragmentPrecision} float;
+
+    uniform sampler2D uTexSampler;
+    uniform sampler2D uMapSampler;
+    uniform mat3 uMapMatrix;
+    uniform mat3 uDisMatrix;
+
+    out vec2 vTextCoord;
+    out float vAlpha;
+    out vec4 fragColor;
+
+    void main() {
+      vec3 mapCoord = vec3(vTextCoord.xy, 1) * uMapMatrix;
+      vec4 mapColor = texture(uMapSampler, mapCoord.xy);
+      vec3 displacement = vec3(mapColor.rg - 0.5, 1) * uDisMatrix;
+      fragColor = texture(uTexSampler, vTextCoord + displacement.xy) * vAlpha;
+    }
+    ''' : '''
+
+    precision ${RenderProgram.fragmentPrecision} float;
+    uniform sampler2D uTexSampler;
+    uniform sampler2D uMapSampler;
+    uniform mat3 uMapMatrix;
+    uniform mat3 uDisMatrix;
+    varying vec2 vTextCoord;
+    varying float vAlpha;
+    void main() {
+      vec3 mapCoord = vec3(vTextCoord.xy, 1) * uMapMatrix;
+      vec4 mapColor = texture2D(uMapSampler, mapCoord.xy);
+      vec3 displacement = vec3(mapColor.rg - 0.5, 1) * uDisMatrix;
+      gl_FragColor = texture2D(uTexSampler, vTextCoord + displacement.xy) * vAlpha;
+    }
+    ''';
 
   void configure(DisplacementMapFilter displacementMapFilter,
       RenderTextureQuad renderTextureQuad) {

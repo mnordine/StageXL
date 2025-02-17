@@ -155,7 +155,28 @@ class BlurFilter extends BitmapFilter {
 
 class BlurFilterProgram extends RenderProgramSimple {
   @override
-  String get vertexShaderSource => '''
+  String get vertexShaderSource => isWebGL2 ? '''
+    #version 300 es
+    
+    uniform mat4 uProjectionMatrix;
+    uniform vec2 uRadius;
+
+    in vec2 aVertexPosition;
+    in vec2 aVertexTextCoord;
+
+    out vec2 vBlurCoords[7];
+
+    void main() {
+      vBlurCoords[0] = aVertexTextCoord - uRadius * 1.2;
+      vBlurCoords[1] = aVertexTextCoord - uRadius * 0.8;
+      vBlurCoords[2] = aVertexTextCoord - uRadius * 0.4;
+      vBlurCoords[3] = aVertexTextCoord;
+      vBlurCoords[4] = aVertexTextCoord + uRadius * 0.4;
+      vBlurCoords[5] = aVertexTextCoord + uRadius * 0.8;
+      vBlurCoords[6] = aVertexTextCoord + uRadius * 1.2;
+      gl_Position = vec4(aVertexPosition, 0.0, 1.0) * uProjectionMatrix;
+    }
+    ''' : '''
 
     uniform mat4 uProjectionMatrix;
     uniform vec2 uRadius;
@@ -178,7 +199,29 @@ class BlurFilterProgram extends RenderProgramSimple {
     ''';
 
   @override
-  String get fragmentShaderSource => '''
+  String get fragmentShaderSource => isWebGL2 ? '''
+    #version 300 es
+    
+    precision ${RenderProgram.fragmentPrecision} float;
+
+    uniform sampler2D uSampler;
+    uniform float uAlpha;
+
+    in vec2 vBlurCoords[7];
+    out vec4 fragColor;
+
+    void main() {
+      vec4 sum = vec4(0.0);
+      sum += texture(uSampler, vBlurCoords[0]) * 0.00443;
+      sum += texture(uSampler, vBlurCoords[1]) * 0.05399;
+      sum += texture(uSampler, vBlurCoords[2]) * 0.24197;
+      sum += texture(uSampler, vBlurCoords[3]) * 0.39894;
+      sum += texture(uSampler, vBlurCoords[4]) * 0.24197;
+      sum += texture(uSampler, vBlurCoords[5]) * 0.05399;
+      sum += texture(uSampler, vBlurCoords[6]) * 0.00443;
+      fragColor = sum * uAlpha;
+    }
+    ''' : '''
 
     precision ${RenderProgram.fragmentPrecision} float;
 

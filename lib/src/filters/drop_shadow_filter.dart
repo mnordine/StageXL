@@ -202,7 +202,30 @@ class DropShadowFilter extends BitmapFilter {
 
 class DropShadowFilterProgram extends RenderProgramSimple {
   @override
-  String get vertexShaderSource => '''
+  String get vertexShaderSource => isWebGL2 ? '''
+    #version 300 es
+
+    uniform mat4 uProjectionMatrix;
+    uniform vec2 uRadius;
+    uniform vec2 uShift;
+
+    in vec2 aVertexPosition;
+    in vec2 aVertexTextCoord;
+
+    out vec2 vBlurCoords[7];
+
+    void main() {
+      vec2 texCoord = aVertexTextCoord - uShift;
+      vBlurCoords[0] = texCoord - uRadius * 1.2;
+      vBlurCoords[1] = texCoord - uRadius * 0.8;
+      vBlurCoords[2] = texCoord - uRadius * 0.4;
+      vBlurCoords[3] = texCoord;
+      vBlurCoords[4] = texCoord + uRadius * 0.4;
+      vBlurCoords[5] = texCoord + uRadius * 0.8;
+      vBlurCoords[6] = texCoord + uRadius * 1.2;
+      gl_Position = vec4(aVertexPosition, 0.0, 1.0) * uProjectionMatrix;
+    }
+    ''' : '''
 
     uniform mat4 uProjectionMatrix;
     uniform vec2 uRadius;
@@ -227,7 +250,30 @@ class DropShadowFilterProgram extends RenderProgramSimple {
     ''';
 
   @override
-  String get fragmentShaderSource => '''
+  String get fragmentShaderSource => isWebGL2 ? '''
+    #version 300 es
+
+    precision ${RenderProgram.fragmentPrecision} float;
+
+    uniform sampler2D uSampler;
+    uniform vec4 uColor;
+
+    in vec2 vBlurCoords[7];
+    out vec4 fragColor;
+
+    void main() {
+      float alpha = 0.0;
+      alpha += texture(uSampler, vBlurCoords[0]).a * 0.00443;
+      alpha += texture(uSampler, vBlurCoords[1]).a * 0.05399;
+      alpha += texture(uSampler, vBlurCoords[2]).a * 0.24197;
+      alpha += texture(uSampler, vBlurCoords[3]).a * 0.39894;
+      alpha += texture(uSampler, vBlurCoords[4]).a * 0.24197;
+      alpha += texture(uSampler, vBlurCoords[5]).a * 0.05399;
+      alpha += texture(uSampler, vBlurCoords[6]).a * 0.00443;
+      alpha *= uColor.a;
+      fragColor = vec4(uColor.rgb * alpha, alpha);
+    }
+    ''' : '''
 
     precision ${RenderProgram.fragmentPrecision} float;
 
