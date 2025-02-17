@@ -113,9 +113,7 @@ abstract class RenderProgram {
     }
   }
 
-  void setupAttributes() {
-    // This method should be overridden by subclasses to set up their specific attributes
-  }
+  void setupAttributes();
 
   //---------------------------------------------------------------------------
 
