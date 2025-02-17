@@ -74,13 +74,6 @@ class RenderProgramSimple extends RenderProgram {
     renderBufferVertex.bindAttribute(attributes['aVertexAlpha'], 1, 20, 16);
   }
 
-  @override
-  void activate(RenderContextWebGL renderContext) {
-    super.activate(renderContext);
-    
-    // The VAO setup is now handled by the parent class and _setupVAOAttributes
-  }
-
   //---------------------------------------------------------------------------
 
   void renderTextureQuad(

@@ -76,13 +76,6 @@ class RenderProgramTinted extends RenderProgram {
     renderBufferVertex.bindAttribute(attributes['aVertexColor'], 4, 32, 16);
   }
 
-  @override
-  void activate(RenderContextWebGL renderContext) {
-    super.activate(renderContext);
-    
-    // The VAO setup is now handled by the parent class and _setupVAOAttributes
-  }
-
   //---------------------------------------------------------------------------
 
   void renderTextureQuad(RenderState renderState,
