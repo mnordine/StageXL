@@ -1,8 +1,5 @@
 part of '../engine.dart';
 
-// Updated type definitions for better WebGL2 support
-typedef WebGLVertexArrayObject = JSObject;
-
 abstract class RenderProgram {
   int _contextIdentifier = -1;
 
