@@ -7,7 +7,7 @@ abstract class RenderProgram {
   late WebGLProgram _program;
   WebGLVertexArrayObject? _vao;
   WebGLVertexArrayObjectOES? _vaoOes;
-  bool _hasVAOSupport = false;
+  bool _supportsVao = false;
   OES_vertex_array_object? _vaoExtension;
 
   final Map<String, int> _attributes;
@@ -60,10 +60,10 @@ abstract class RenderProgram {
       _renderBufferVertex = renderContext.renderBufferVertex;
       
       // Check for VAO support
-      _hasVAOSupport = isWebGL2;
-      if (!_hasVAOSupport) {
+      _supportsVao = isWebGL2;
+      if (!_supportsVao) {
         _vaoExtension = _renderingContext.getExtension('OES_vertex_array_object') as OES_vertex_array_object?;
-        _hasVAOSupport = _vaoExtension != null;
+        _supportsVao = _vaoExtension != null;
       }
 
       _program = _createProgram(_renderingContext);
@@ -82,7 +82,7 @@ abstract class RenderProgram {
   }
 
   void _createVao() {
-    if (!_hasVAOSupport) return;
+    if (!_supportsVao) return;
 
     if (isWebGL2) {
       _vao = (_renderingContext as WebGL2RenderingContext).createVertexArray() as WebGLVertexArrayObject;
@@ -92,7 +92,7 @@ abstract class RenderProgram {
   }
 
   void _bindVAO() {
-    if (!_hasVAOSupport) return;
+    if (!_supportsVao) return;
 
     if (isWebGL2) {
       (_renderingContext as WebGL2RenderingContext).bindVertexArray(_vao);
@@ -102,7 +102,7 @@ abstract class RenderProgram {
   }
 
   void _unbindVAO() {
-    if (!_hasVAOSupport) return;
+    if (!_supportsVao) return;
 
     if (isWebGL2) {
       (_renderingContext as WebGL2RenderingContext).bindVertexArray(null);
