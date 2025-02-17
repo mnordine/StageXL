@@ -72,29 +72,30 @@ abstract class RenderProgram {
       _updateAttributes(_renderingContext, _program);
       _updateUniforms(_renderingContext, _program);
 
-      // Create and set up VAO if supported
-      if (_hasVAOSupport) {
-        if (isWebGL2) {
-          _vao = (_renderingContext as dynamic).createVertexArray() as WebGLVertexArrayObject;
-        } else {
-          _vao = _vaoExtension.createVertexArrayOES() as WebGLVertexArrayObject;
-        }
-        _bindVAO();
-        _renderBufferIndex.activate(renderContext);
-        _renderBufferVertex.activate(renderContext);
-        setupAttributes();
-        _unbindVAO();
-      } else {
-        _renderBufferIndex.activate(renderContext);
-        _renderBufferVertex.activate(renderContext);
-        setupAttributes();
-      }
+      _createVao();
+      _bindVAO();
+      _renderBufferIndex.activate(renderContext);
+      _renderBufferVertex.activate(renderContext);
+      setupAttributes();
+      _unbindVAO();
     }
 
     renderingContext.useProgram(program);
   }
 
+  void _createVao() {
+    if (!_hasVAOSupport) return;
+
+    if (isWebGL2) {
+      _vao = (_renderingContext as dynamic).createVertexArray() as WebGLVertexArrayObject;
+    } else {
+      _vao = _vaoExtension.createVertexArrayOES() as WebGLVertexArrayObject;
+    }
+  }
+
   void _bindVAO() {
+    if (!_hasVAOSupport) return;
+
     if (isWebGL2) {
       (_renderingContext as dynamic).bindVertexArray(_vao);
     } else {
@@ -103,6 +104,8 @@ abstract class RenderProgram {
   }
 
   void _unbindVAO() {
+    if (!_hasVAOSupport) return;
+
     if (isWebGL2) {
       (_renderingContext as dynamic).bindVertexArray(null);
     } else {
