@@ -82,12 +82,12 @@ abstract class RenderProgram {
         _bindVAO();
         _renderBufferIndex.activate(renderContext);
         _renderBufferVertex.activate(renderContext);
-        _setupVAOAttributes();
+        setupAttributes();
         _unbindVAO();
       } else {
         _renderBufferIndex.activate(renderContext);
         _renderBufferVertex.activate(renderContext);
-        _setupAttributes();
+        setupAttributes();
       }
     }
 
@@ -117,11 +117,7 @@ abstract class RenderProgram {
     }
   }
 
-  void _setupVAOAttributes() {
-    // This method should be overridden by subclasses to set up their specific attributes
-  }
-
-  void _setupAttributes() {
+  void setupAttributes() {
     // This method should be overridden by subclasses to set up their specific attributes
   }
 

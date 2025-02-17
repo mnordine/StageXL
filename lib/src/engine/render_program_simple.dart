@@ -68,14 +68,7 @@ class RenderProgramSimple extends RenderProgram {
   //---------------------------------------------------------------------------
 
   @override
-  void _setupVAOAttributes() {
-    renderBufferVertex.bindAttribute(attributes['aVertexPosition'], 2, 20, 0);
-    renderBufferVertex.bindAttribute(attributes['aVertexTextCoord'], 2, 20, 8);
-    renderBufferVertex.bindAttribute(attributes['aVertexAlpha'], 1, 20, 16);
-  }
-
-  @override
-  void _setupAttributes() {
+  void setupAttributes() {
     renderBufferVertex.bindAttribute(attributes['aVertexPosition'], 2, 20, 0);
     renderBufferVertex.bindAttribute(attributes['aVertexTextCoord'], 2, 20, 8);
     renderBufferVertex.bindAttribute(attributes['aVertexAlpha'], 1, 20, 16);

@@ -57,13 +57,7 @@ class RenderProgramTriangle extends RenderProgram {
   //---------------------------------------------------------------------------
 
   @override
-  void _setupVAOAttributes() {
-    renderBufferVertex.bindAttribute(attributes['aVertexPosition'], 2, 24, 0);
-    renderBufferVertex.bindAttribute(attributes['aVertexColor'], 4, 24, 8);
-  }
-
-  @override
-  void _setupAttributes() {
+  void setupAttributes() {
     renderBufferVertex.bindAttribute(attributes['aVertexPosition'], 2, 24, 0);
     renderBufferVertex.bindAttribute(attributes['aVertexColor'], 4, 24, 8);
   }

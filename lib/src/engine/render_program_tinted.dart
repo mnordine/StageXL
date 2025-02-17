@@ -70,14 +70,7 @@ class RenderProgramTinted extends RenderProgram {
   //---------------------------------------------------------------------------
 
   @override
-  void _setupVAOAttributes() {
-    renderBufferVertex.bindAttribute(attributes['aVertexPosition'], 2, 32, 0);
-    renderBufferVertex.bindAttribute(attributes['aVertexTextCoord'], 2, 32, 8);
-    renderBufferVertex.bindAttribute(attributes['aVertexColor'], 4, 32, 16);
-  }
-
-  @override
-  void _setupAttributes() {
+  void setupAttributes() {
     renderBufferVertex.bindAttribute(attributes['aVertexPosition'], 2, 32, 0);
     renderBufferVertex.bindAttribute(attributes['aVertexTextCoord'], 2, 32, 8);
     renderBufferVertex.bindAttribute(attributes['aVertexColor'], 4, 32, 16);
