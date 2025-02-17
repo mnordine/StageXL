@@ -92,13 +92,6 @@ abstract class RenderProgram {
     }
 
     renderingContext.useProgram(program);
-    if (_hasVAOSupport) {
-      _bindVAO();
-    } else {
-      _renderBufferIndex.activate(renderContext);
-      _renderBufferVertex.activate(renderContext);
-      _setupAttributes();
-    }
   }
 
   void _bindVAO() {
@@ -136,6 +129,7 @@ abstract class RenderProgram {
 
   void flush() {
     if (renderBufferIndex.position > 0 && renderBufferVertex.position > 0) {
+      _bindVAO();
       final count = renderBufferIndex.position;
       renderBufferIndex.update();
       renderBufferIndex.position = 0;
@@ -146,6 +140,7 @@ abstract class RenderProgram {
       renderingContext.drawElements(
           WebGL.TRIANGLES, count, WebGL.UNSIGNED_SHORT, 0);
       renderStatistics.drawCount += 1;
+      _unbindVAO();
     }
   }
 
