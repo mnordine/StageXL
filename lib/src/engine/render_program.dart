@@ -85,7 +85,7 @@ abstract class RenderProgram {
     if (!_hasVAOSupport) return;
 
     if (isWebGL2) {
-      _vao = (_renderingContext as dynamic).createVertexArray() as WebGLVertexArrayObject;
+      _vao = (_renderingContext as WebGL2RenderingContext).createVertexArray() as WebGLVertexArrayObject;
     } else {
       _vaoOes = _vaoExtension?.createVertexArrayOES() as WebGLVertexArrayObjectOES;
     }
@@ -95,7 +95,7 @@ abstract class RenderProgram {
     if (!_hasVAOSupport) return;
 
     if (isWebGL2) {
-      (_renderingContext as dynamic).bindVertexArray(_vao);
+      (_renderingContext as WebGL2RenderingContext).bindVertexArray(_vao);
     } else {
       _vaoExtension?.bindVertexArrayOES(_vaoOes);
     }
@@ -105,7 +105,7 @@ abstract class RenderProgram {
     if (!_hasVAOSupport) return;
 
     if (isWebGL2) {
-      (_renderingContext as dynamic).bindVertexArray(null);
+      (_renderingContext as WebGL2RenderingContext).bindVertexArray(null);
     } else {
       _vaoExtension?.bindVertexArrayOES(null);
     }
@@ -118,7 +118,7 @@ abstract class RenderProgram {
   void dispose() {
     if (_vao != null) {
       if (isWebGL2) {
-        (_renderingContext as dynamic).deleteVertexArray(_vao);
+        (_renderingContext as WebGL2RenderingContext).deleteVertexArray(_vao);
       } else if (_vaoExtension != null) {
         _vaoExtension?.deleteVertexArrayOES(_vaoOes);
       }
