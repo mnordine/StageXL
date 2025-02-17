@@ -173,7 +173,10 @@ class AlphaMaskFilterProgram extends RenderProgram {
 
     renderingContext.uniform1i(uniforms['uTexSampler'], 0);
     renderingContext.uniform1i(uniforms['uMskSampler'], 1);
+  }
 
+  @override
+  void setupAttributes() {
     renderBufferVertex.bindAttribute(attributes['aVertexPosition'], 2, 44, 0);
     renderBufferVertex.bindAttribute(attributes['aVertexTexCoord'], 2, 44, 8);
     renderBufferVertex.bindAttribute(attributes['aVertexMskCoord'], 2, 44, 16);

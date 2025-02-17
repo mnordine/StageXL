@@ -375,7 +375,10 @@ class ColorMatrixFilterProgram extends RenderProgram {
     super.activate(renderContext);
 
     renderingContext.uniform1i(uniforms['uSampler'], 0);
+  }
 
+  @override
+  void setupAttributes() {
     renderBufferVertex.bindAttribute(attributes['aPosition'], 2, 96, 0);
     renderBufferVertex.bindAttribute(attributes['aTexCoord'], 2, 96, 8);
     renderBufferVertex.bindAttribute(attributes['aMatrixR'], 4, 96, 16);

@@ -213,7 +213,10 @@ class NormalMapFilterProgram extends RenderProgram {
 
     renderingContext.uniform1i(uniforms['uTexSampler'], 0);
     renderingContext.uniform1i(uniforms['uMapSampler'], 1);
+  }
 
+  @override
+  void setupAttributes() {
     renderBufferVertex.bindAttribute(attributes['aVertexPosition'], 2, 76, 0);
     renderBufferVertex.bindAttribute(attributes['aVertexTexCoord'], 2, 76, 8);
     renderBufferVertex.bindAttribute(attributes['aVertexMapCoord'], 2, 76, 16);
