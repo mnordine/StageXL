@@ -9,8 +9,9 @@ abstract class RenderProgram {
   late WebGL _renderingContext;
   late WebGLProgram _program;
   WebGLVertexArrayObject? _vao;
+  WebGLVertexArrayObjectOES? _vaoOes;
   bool _hasVAOSupport = false;
-  dynamic _vaoExtension;
+  OES_vertex_array_object? _vaoExtension;
 
   final Map<String, int> _attributes;
   final Map<String, WebGLUniformLocation> _uniforms;
@@ -64,7 +65,7 @@ abstract class RenderProgram {
       // Check for VAO support
       _hasVAOSupport = isWebGL2;
       if (!_hasVAOSupport) {
-        _vaoExtension = _renderingContext.getExtension('OES_vertex_array_object');
+        _vaoExtension = _renderingContext.getExtension('OES_vertex_array_object') as OES_vertex_array_object?;
         _hasVAOSupport = _vaoExtension != null;
       }
 
@@ -89,7 +90,7 @@ abstract class RenderProgram {
     if (isWebGL2) {
       _vao = (_renderingContext as dynamic).createVertexArray() as WebGLVertexArrayObject;
     } else {
-      _vao = _vaoExtension.createVertexArrayOES() as WebGLVertexArrayObject;
+      _vaoOes = _vaoExtension?.createVertexArrayOES() as WebGLVertexArrayObjectOES;
     }
   }
 
@@ -99,7 +100,7 @@ abstract class RenderProgram {
     if (isWebGL2) {
       (_renderingContext as dynamic).bindVertexArray(_vao);
     } else {
-      _vaoExtension.bindVertexArrayOES(_vao);
+      _vaoExtension?.bindVertexArrayOES(_vaoOes);
     }
   }
 
@@ -109,7 +110,7 @@ abstract class RenderProgram {
     if (isWebGL2) {
       (_renderingContext as dynamic).bindVertexArray(null);
     } else {
-      _vaoExtension.bindVertexArrayOES(null);
+      _vaoExtension?.bindVertexArrayOES(null);
     }
   }
 
@@ -122,7 +123,7 @@ abstract class RenderProgram {
       if (isWebGL2) {
         (_renderingContext as dynamic).deleteVertexArray(_vao);
       } else if (_vaoExtension != null) {
-        _vaoExtension.deleteVertexArrayOES(_vao);
+        _vaoExtension?.deleteVertexArrayOES(_vaoOes);
       }
       _vao = null;
     }
