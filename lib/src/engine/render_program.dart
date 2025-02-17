@@ -117,12 +117,13 @@ abstract class RenderProgram {
 
   void dispose() {
     if (_vao != null) {
-      if (isWebGL2) {
-        (_renderingContext as WebGL2RenderingContext).deleteVertexArray(_vao);
-      } else if (_vaoExtension != null) {
-        _vaoExtension?.deleteVertexArrayOES(_vaoOes);
-      }
+      (_renderingContext as WebGL2RenderingContext).deleteVertexArray(_vao);
       _vao = null;
+    } 
+    
+    if (_vaoOes != null) {
+      _vaoExtension?.deleteVertexArrayOES(_vaoOes);
+      _vaoOes = null;
     }
   }
 
