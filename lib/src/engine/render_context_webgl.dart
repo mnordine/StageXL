@@ -19,6 +19,8 @@ class RenderContextWebGL extends RenderContext {
 
   bool get isWebGL2 => _isWebGL2;
 
+  OES_vertex_array_object? _vaoExtension;
+
   //---------------------------------------------------------------------------
 
   final RenderProgramSimple renderProgramSimple = RenderProgramSimple();
@@ -78,8 +80,14 @@ class RenderContextWebGL extends RenderContext {
 
     CompressedTexture.initExtensions(_renderingContext);
 
+    if (!isWebGL2) {
+      _vaoExtension = renderingContext.getExtension('OES_vertex_array_object') as OES_vertex_array_object?;
+    }
+
     reset();
   }
+
+  OES_vertex_array_object? get vaoExtension => _vaoExtension;
 
   //---------------------------------------------------------------------------
 

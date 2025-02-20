@@ -65,7 +65,7 @@ abstract class RenderProgram {
       // Check for VAO support
       _supportsVao = isWebGL2;
       if (!_supportsVao) {
-        _vaoExtension = _renderingContext.getExtension('OES_vertex_array_object') as OES_vertex_array_object?;
+        _vaoExtension = renderContext.vaoExtension;
         _supportsVao = _vaoExtension != null;
       }
 
