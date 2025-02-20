@@ -3,9 +3,12 @@ part of '../engine.dart';
 abstract class RenderProgram {
   int _contextIdentifier = -1;
 
-  // These assume activate() is called
   late WebGL _renderingContext;
   late WebGLProgram _program;
+  WebGLVertexArrayObject? _vao;
+  WebGLVertexArrayObjectOES? _vaoOes;
+  bool _supportsVao = false;
+  OES_vertex_array_object? _vaoExtension;
 
   final Map<String, int> _attributes;
   final Map<String, WebGLUniformLocation> _uniforms;
@@ -14,6 +17,9 @@ abstract class RenderProgram {
   RenderStatistics _renderStatistics;
 
   static var fragmentPrecision = 'mediump';
+
+  static WebGLVertexArrayObject? currentVao;
+  static WebGLVertexArrayObjectOES? currentVaoOes;
 
   bool get isWebGL2 => _renderingContext.isA<WebGL2RenderingContext>();
 
@@ -55,20 +61,78 @@ abstract class RenderProgram {
       _renderStatistics = renderContext.renderStatistics;
       _renderBufferIndex = renderContext.renderBufferIndex;
       _renderBufferVertex = renderContext.renderBufferVertex;
-      _renderBufferIndex.activate(renderContext);
-      _renderBufferVertex.activate(renderContext);
+      
+      // Check for VAO support
+      _supportsVao = isWebGL2;
+      if (!_supportsVao) {
+        _vaoExtension = renderContext.vaoExtension;
+        _supportsVao = _vaoExtension != null;
+      }
+
+      _createVao();
+      _bindVAO();
+
       _program = _createProgram(_renderingContext);
       _updateAttributes(_renderingContext, _program);
       _updateUniforms(_renderingContext, _program);
+
+      _renderBufferIndex.activate(renderContext);
+      _renderBufferVertex.activate(renderContext);
+      setupAttributes();
+    }
+
+    if (!_supportsVao) {
+      setupAttributes();
     }
 
     renderingContext.useProgram(program);
   }
 
+  void _createVao() {
+    if (!_supportsVao) return;
+
+    if (isWebGL2) {
+      _vao = (_renderingContext as WebGL2RenderingContext).createVertexArray() as WebGLVertexArrayObject;
+    } else {
+      _vaoOes = _vaoExtension?.createVertexArrayOES() as WebGLVertexArrayObjectOES;
+    }
+  }
+
+  void _bindVAO() {
+    if (!_supportsVao) return;
+
+    if (isWebGL2) {
+      if (currentVao != _vao) {
+        (_renderingContext as WebGL2RenderingContext).bindVertexArray(_vao);
+        currentVao = _vao;
+      }
+    } else {
+      if (currentVaoOes != _vaoOes) {
+        _vaoExtension?.bindVertexArrayOES(_vaoOes);
+        currentVaoOes = _vaoOes;
+      }
+    }
+  }
+
+  void setupAttributes();
+
   //---------------------------------------------------------------------------
+
+  void dispose() {
+    if (_vao != null) {
+      (_renderingContext as WebGL2RenderingContext).deleteVertexArray(_vao);
+      _vao = null;
+    } 
+    
+    if (_vaoOes != null) {
+      _vaoExtension?.deleteVertexArrayOES(_vaoOes);
+      _vaoOes = null;
+    }
+  }
 
   void flush() {
     if (renderBufferIndex.position > 0 && renderBufferVertex.position > 0) {
+      _bindVAO();
       final count = renderBufferIndex.position;
       renderBufferIndex.update();
       renderBufferIndex.position = 0;
