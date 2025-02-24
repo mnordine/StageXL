@@ -20,11 +20,12 @@ class TextureAtlas {
 
   static LoaderTuple load(String url, [
       TextureAtlasFormat? textureAtlasFormat,
-      BitmapDataLoadOptions? bitmapDataLoadOptions])
+      BitmapDataLoadOptions? bitmapDataLoadOptions,
+      AssetManifest? manifest])
   {
     textureAtlasFormat ??= TextureAtlasFormat.jsonArray;
 
-    final loader = _TextureAtlasLoaderFile(url, bitmapDataLoadOptions);
+    final loader = _TextureAtlasLoaderFile(url, bitmapDataLoadOptions, manifest);
     return LoaderTuple._(loader, textureAtlasFormat.load(loader));
   }
 

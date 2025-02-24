@@ -13,10 +13,10 @@ class AudioElementSound extends Sound {
   //---------------------------------------------------------------------------
 
   static Future<Sound> load(String url,
-      [SoundLoadOptions? soundLoadOptions]) async {
+      [SoundLoadOptions? soundLoadOptions, AssetManifest? manifest]) async {
     try {
       final options = soundLoadOptions ?? Sound.defaultLoadOptions;
-      final audioUrls = options.getOptimalAudioUrls(url);
+      final audioUrls = options.getOptimalAudioUrls(url, manifest);
       final corsEnabled = options.corsEnabled;
       const loadData = false; // options.loadData;
       final audioLoader = AudioLoader(audioUrls, loadData, corsEnabled);

@@ -25,13 +25,13 @@ abstract class Sound {
   ///     var sound = await Sound.load("assets/audio/hello.mp3");
   ///     sound.play();
 
-  static Future<Sound> load(String url, [SoundLoadOptions? soundLoadOptions]) {
+  static Future<Sound> load(String url, [SoundLoadOptions? soundLoadOptions, AssetManifest? manifest]) {
     final options = soundLoadOptions ?? Sound.defaultLoadOptions;
     switch (options.engine ?? SoundMixer.engine) {
       case SoundEngine.WebAudioApi:
-        return WebAudioApiSound.load(url, options);
+        return WebAudioApiSound.load(url, options, manifest);
       case SoundEngine.AudioElement:
-        return AudioElementSound.load(url, options);
+        return AudioElementSound.load(url, options, manifest);
       default:
         return MockSound.load(url, options);
     }

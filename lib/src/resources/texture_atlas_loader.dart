@@ -23,25 +23,26 @@ abstract class TextureAtlasLoader {
 //-------------------------------------------------------------------------------------------------
 
 class _TextureAtlasLoaderFile extends TextureAtlasLoader {
-  late BitmapDataLoadOptions _loadOptions;
-  late BitmapDataLoadInfo _loadInfo;
+  final BitmapDataLoadOptions _loadOptions;
+  final BitmapDataLoadInfo _loadInfo;
+  final AssetManifest _manifest;
 
   BaseImageLoader? _imageLoader;
   bool _cancelled = false;
 
   static const compressedTextureFormats = {'.pvr', '.pvr.gz', '.ktx'};
 
-  _TextureAtlasLoaderFile(String url, [BitmapDataLoadOptions? options]) {
-    _loadOptions = options ?? BitmapData.defaultLoadOptions;
-    _loadInfo = BitmapDataLoadInfo(url, _loadOptions.pixelRatios);
-  }
+  _TextureAtlasLoaderFile(String url, [BitmapDataLoadOptions? options, AssetManifest? manifest])
+  : _loadOptions  = options ?? BitmapData.defaultLoadOptions,
+    _loadInfo = BitmapDataLoadInfo(url, (options ?? BitmapData.defaultLoadOptions).pixelRatios),
+    _manifest = manifest ?? AssetManifest();
 
   @override
   double getPixelRatio() => _loadInfo.pixelRatio;
 
   @override
   Future<String> getSource() async {
-    final response = await http.get(Uri.parse(_loadInfo.loaderUrl));
+    final response = await http.get(Uri.parse(_manifest.mapUrl(_loadInfo.loaderUrl)));
     return response.body;
   }
 
@@ -59,21 +60,29 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
   Future<RenderTextureQuad> getRenderTextureQuad(String filename) async {
     final loaderUrl = _loadInfo.loaderUrl;
     final pixelRatio = _loadInfo.pixelRatio;
-    final imageUrl = replaceFilename(loaderUrl, filename);
 
     final RenderTexture renderTexture;
 
     if (_isCompressedTexture(filename)) {
+      final imageUrl = _manifest.mapUrl(replaceFilename(loaderUrl, filename));
       renderTexture = await _loadCompressedTexture(imageUrl);
-    } else if (env.isImageBitmapSupported) {
-      _imageLoader = ImageBitmapLoader(imageUrl, _loadOptions.webp);
-      final image = await _imageLoader!.done;
-      renderTexture = RenderTexture.fromImageBitmap(image as ImageBitmap);
     } else {
-      final corsEnabled = _loadOptions.corsEnabled;
-      _imageLoader = ImageLoader(imageUrl, _loadOptions.webp, corsEnabled);
-      final imageElement = await _imageLoader!.done;
-      renderTexture = RenderTexture.fromImageElement(imageElement as HTMLImageElement);
+      final match = RegExp(r'\.(png|jpg|jpeg)$').firstMatch(filename);
+      if (_loadOptions.webp && match != null && await env.isWebpSupported) {
+        filename = '${filename.substring(match.start)}.webp';
+      }
+
+      final imageUrl = _manifest.mapUrl(replaceFilename(loaderUrl, filename));
+      if (env.isImageBitmapSupported) {
+        final loader = _imageLoader = ImageBitmapLoader(imageUrl);
+        final imageLoader = await loader.done;
+        renderTexture = RenderTexture.fromImageBitmap(imageLoader);
+      } else {
+        final corsEnabled = _loadOptions.corsEnabled;
+        final imageLoader = _imageLoader = ImageLoader(imageUrl, corsEnabled);
+        final imageElement = await imageLoader.done;
+        renderTexture = RenderTexture.fromImageElement(imageElement);
+      }
     }
 
     return renderTexture.quad.withPixelRatio(pixelRatio);
