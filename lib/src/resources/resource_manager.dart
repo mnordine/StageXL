@@ -18,9 +18,9 @@ class ResourceManager {
   final _progressEvent = StreamController<num>.broadcast();
   Stream<num> get onProgress => _progressEvent.stream;
 
-  ResourceManager(): _manifest = AssetManifest();
-  ResourceManager.withManifest(AssetManifest manifest): _manifest = manifest;
-  ResourceManager.cloneManifest(ResourceManager other): _manifest = other._manifest;
+  ResourceManager() : _manifest = AssetManifest();
+  ResourceManager.withManifest(AssetManifest manifest) : _manifest = manifest;
+  ResourceManager.cloneManifest(ResourceManager other) : _manifest = other._manifest;
 
   T registry<T extends ResourceRegistry>(String kind, T Function(ResourceManager) factory) =>
     _registries.putIfAbsent(kind, () => factory(this)) as T;
