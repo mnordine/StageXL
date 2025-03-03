@@ -68,19 +68,27 @@ class BitmapData implements BitmapDrawable {
   /// Loads a BitmapData from the given url.
 
   static Future<BitmapData> load(String url,
-      [BitmapDataLoadOptions? options]) async {
+      [BitmapDataLoadOptions? options, AssetManifest? manifest]) async {
     options = options ?? BitmapData.defaultLoadOptions;
     final bitmapDataFileInfo = BitmapDataLoadInfo(url, options.pixelRatios);
-    final targetUrl = bitmapDataFileInfo.loaderUrl;
+    final String loaderUrl;
+
+    if (bitmapDataFileInfo.canReplaceWithWebp && options.webp && await env.isWebpSupported) {
+      loaderUrl = bitmapDataFileInfo.loaderUrlWebp;
+    } else {
+      loaderUrl = bitmapDataFileInfo.loaderUrl;
+    }
+
+    final targetUrl = manifest?.mapUrl(loaderUrl) ?? url;
     final pixelRatio = bitmapDataFileInfo.pixelRatio;
 
     if (env.isImageBitmapSupported) {
-      final loader = ImageBitmapLoader(targetUrl, options.webp);
+      final loader = ImageBitmapLoader(targetUrl);
       final imageBitmap = await loader.done;
       return BitmapData.fromImageBitmap(imageBitmap, pixelRatio);
     }
 
-    final loader = ImageLoader(targetUrl, options.webp, options.corsEnabled);
+    final loader = ImageLoader(targetUrl, options.corsEnabled);
     return loader.done.then((i) => BitmapData.fromImageElement(i, pixelRatio));
   }
 
