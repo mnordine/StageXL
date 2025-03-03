@@ -4,12 +4,12 @@ class ResourceManagerResource {
   final String kind;
   final String name;
   final String url;
-  dynamic _value;
-  dynamic _error;
+  Object? _value;
+  Object? _error;
   final Completer<ResourceManagerResource> _completer =
       Completer<ResourceManagerResource>();
 
-  ResourceManagerResource(this.kind, this.name, this.url, Future loader) {
+  ResourceManagerResource(this.kind, this.name, this.url, Future<Object?> loader) {
     loader.then((resource) {
       _value = resource;
     }).catchError((Object error) {
@@ -25,7 +25,7 @@ class ResourceManagerResource {
 
   //---------------------------------------------------------------------------
 
-  dynamic get value => _value;
+  Object? get value => _value;
   Object? get error => _error;
 
   Future<ResourceManagerResource> get complete => _completer.future;

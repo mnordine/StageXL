@@ -180,7 +180,7 @@ class ResourceManager {
   bool containsCustomObject(String name) =>
     customObjects.contains(name);
 
-  void addCustomObject(String name, Future loader) =>
+  void addCustomObject(String name, Future<Object?> loader) =>
     customObjects.add(name, loader);
 
   void removeCustomObject(String name) => customObjects.remove(name);
@@ -199,7 +199,7 @@ class ResourceManager {
     return _resourceMap.remove(key);
   }
 
-  void _addResource(String kind, String name, String url, Future loader) {
+  void _addResource(String kind, String name, String url, Future<Object?> loader) {
     final key = '$kind.$name';
     final resource = ResourceManagerResource(kind, name, url, loader);
 
@@ -217,7 +217,7 @@ class ResourceManager {
     });
   }
 
-  dynamic _getResourceValue(String kind, String name) {
+  Object? _getResourceValue(String kind, String name) {
     final key = '$kind.$name';
     final resource = _resourceMap[key];
     if (resource == null) {
@@ -239,13 +239,13 @@ extension type ResourceManagerProxy._(ResourceManager manager) {
   /// The asset manifest in use by this resource manager
   AssetManifest get manifest => manager._manifest;
 
-  void addResource(String kind, String name, String url, Future loader) =>
+  void addResource(String kind, String name, String url, Future<Object?> loader) =>
     manager._addResource(kind, name, url, loader);
 
   void removeResource(String kind, String name) =>
     manager._removeResource(kind, name);
 
-  dynamic getResourceValue(String kind, String name) =>
+  Object? getResourceValue(String kind, String name) =>
     manager._getResourceValue(kind, name);
 
   bool containsResource(String kind, String name) =>
