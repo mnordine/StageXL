@@ -101,7 +101,13 @@ class RenderTexture {
         ..width = _width
         ..height = _height;
       
-      _canvas!.context2D.drawImageScaled(imageElement, 0, 0, _width.toDouble(), _height.toDouble());
+      _canvas!.context2D.drawImage(
+        imageElement,
+        0,
+        0,
+        _width,
+        _height,
+      );
       return _canvas!;
     } else if (_source.isA<ImageBitmap>()) {
       final image = _source as ImageBitmap;
