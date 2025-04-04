@@ -23,7 +23,6 @@ class RenderContextWebGL extends RenderContext {
 
   //---------------------------------------------------------------------------
 
-  final RenderProgramSimple renderProgramSimple = RenderProgramSimple();
   final RenderProgramTinted renderProgramTinted = RenderProgramTinted();
   final RenderProgramTriangle renderProgramTriangle = RenderProgramTriangle();
 
@@ -72,7 +71,7 @@ class RenderContextWebGL extends RenderContext {
     _renderingContext.pixelStorei(WebGL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
     _renderingContext.blendFunc(WebGL.ONE, WebGL.ONE_MINUS_SRC_ALPHA);
 
-    _activeRenderProgram = renderProgramSimple;
+    _activeRenderProgram = renderProgramTinted;
     _activeRenderProgram.activate(this);
 
     _contextValid = true;
@@ -215,19 +214,19 @@ class RenderContextWebGL extends RenderContext {
   @override
   void renderTextureQuad(
       RenderState renderState, RenderTextureQuad renderTextureQuad) {
-    activateRenderProgram(renderProgramSimple);
+    activateRenderProgram(renderProgramTinted);
     activateBlendMode(renderState.globalBlendMode);
     activateRenderTexture(renderTextureQuad.renderTexture);
-    renderProgramSimple.renderTextureQuad(renderState, renderTextureQuad);
+    renderProgramTinted.renderTextureQuad(renderState, renderTextureQuad, 1, 1, 1, 1);
   }
 
   @override
   void renderTextureMesh(RenderState renderState, RenderTexture renderTexture,
       Int16List ixList, Float32List vxList) {
-    activateRenderProgram(renderProgramSimple);
+    activateRenderProgram(renderProgramTinted);
     activateBlendMode(renderState.globalBlendMode);
     activateRenderTexture(renderTexture);
-    renderProgramSimple.renderTextureMesh(renderState, ixList, vxList);
+    renderProgramTinted.renderTextureMesh(renderState, ixList, vxList, 1, 1, 1, 1);
   }
 
   @override
@@ -237,11 +236,11 @@ class RenderContextWebGL extends RenderContext {
       Matrix mappingMatrix,
       Int16List ixList,
       Float32List vxList) {
-    activateRenderProgram(renderProgramSimple);
+    activateRenderProgram(renderProgramTinted);
     activateBlendMode(renderState.globalBlendMode);
     activateRenderTexture(renderTexture);
-    renderProgramSimple.renderTextureMapping(
-      renderState, mappingMatrix, ixList, vxList);
+    renderProgramTinted.renderTextureMapping(
+      renderState, mappingMatrix, ixList, vxList, 1, 1, 1, 1);
   }
 
   //---------------------------------------------------------------------------
