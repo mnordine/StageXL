@@ -245,4 +245,65 @@ class RenderProgramTinted extends RenderProgram {
     renderBufferVertex.position += vxListCount * 8;
     renderBufferVertex.count += vxListCount;
   }
+
+  void renderTextureMapping(RenderState renderState, Matrix mappingMatrix,
+      Int16List ixList, Float32List vxList, num r, num g, num b, num a) {
+    final alpha = renderState.globalAlpha;
+    final globalMatrix = renderState.globalMatrix;
+    final ixListCount = ixList.length;
+    final vxListCount = vxList.length >> 1;
+
+    // check buffer sizes and flush if necessary
+    final ixData = renderBufferIndex.data;
+    final ixPosition = renderBufferIndex.position;
+    if (ixPosition + ixListCount >= ixData.length) flush();
+
+    final vxData = renderBufferVertex.data;
+    final vxPosition = renderBufferVertex.position;
+    if (vxPosition + vxListCount * 8 >= vxData.length) flush();
+
+    // copy index list
+    final ixIndex = renderBufferIndex.position;
+    var vxIndex = renderBufferVertex.position;
+    final vxCount = renderBufferVertex.count;
+
+    for (var i = 0; i < ixListCount; i++) {
+      ixData[ixIndex + i] = vxCount + ixList[i];
+    }
+
+    renderBufferIndex.position += ixListCount;
+    renderBufferIndex.count += ixListCount;
+
+    // copy vertex list
+    final ma = globalMatrix.a;
+    final mb = globalMatrix.b;
+    final mc = globalMatrix.c;
+    final md = globalMatrix.d;
+    final mx = globalMatrix.tx;
+    final my = globalMatrix.ty;
+
+    final ta = mappingMatrix.a;
+    final tb = mappingMatrix.b;
+    final tc = mappingMatrix.c;
+    final td = mappingMatrix.d;
+    final tx = mappingMatrix.tx;
+    final ty = mappingMatrix.ty;
+
+    for (var i = 0, o = 0; i < vxListCount; i++, o += 2) {
+      final x = vxList[o + 0];
+      final y = vxList[o + 1];
+      vxData[vxIndex + 0] = mx + ma * x + mc * y;
+      vxData[vxIndex + 1] = my + mb * x + md * y;
+      vxData[vxIndex + 2] = tx + ta * x + tc * y;
+      vxData[vxIndex + 3] = ty + tb * x + td * y;
+      vxData[vxIndex + 4] = r.toDouble();
+      vxData[vxIndex + 5] = g.toDouble();
+      vxData[vxIndex + 6] = b.toDouble();
+      vxData[vxIndex + 7] = alpha;
+      vxIndex += 8;
+    }
+
+    renderBufferVertex.position += vxListCount * 8;
+    renderBufferVertex.count += vxListCount;
+  }
 }
