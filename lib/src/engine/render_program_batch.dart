@@ -63,11 +63,10 @@ class RenderProgramBatch extends RenderProgram {
           fragColor = texture(uSampler$i, vTextCoord) * vColor;
         }''');
       }
-      // Add a fallback for any out-of-range indices
+      // We still need a fallback case, but now just use transparent black
       sb.write('''
         else {
-          // Fallback - show a bright pink to indicate missing texture
-          fragColor = vec4(1.0, 0.1, 1.0, 1.0);
+          fragColor = vec4(0.0, 0.0, 0.0, 0.0);
         }''');
       
       final ifStatements = sb.toString();
@@ -107,11 +106,10 @@ class RenderProgramBatch extends RenderProgram {
           gl_FragColor = texture2D(uSampler$i, vTextCoord) * vColor;
         }''');
       }
-      // Add a fallback for any out-of-range indices
+      // We still need a fallback case, but now just use transparent black
       sb.write('''
         else {
-          // Fallback - show a bright pink to indicate missing texture
-          gl_FragColor = vec4(1.0, 0.1, 1.0, 1.0);
+          gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
         }''');
       
       final ifStatements = sb.toString();
@@ -279,19 +277,15 @@ class RenderProgramBatch extends RenderProgram {
     final md1 = vxList[1] * matrix.d;
     final md2 = vxList[9] * matrix.d;
 
-    // Set different colors based on texture index for easier debugging
-    final debugR = textureIndex == 0 ? 1.0 : (textureIndex == 1 ? 0.7 : (textureIndex == 2 ? 0.4 : 1.0));
-    final debugG = textureIndex == 3 ? 1.0 : (textureIndex == 4 ? 0.7 : (textureIndex == 5 ? 0.4 : 1.0));
-    final debugB = textureIndex == 6 ? 1.0 : (textureIndex == 7 ? 0.7 : 1.0);
-    
+
     // Vertex 0
     vxData[vxIndex + 00] = ma1 + mc1;                       // x
     vxData[vxIndex + 01] = mb1 + md1;                       // y
     vxData[vxIndex + 02] = vxList[2];                       // u
     vxData[vxIndex + 03] = vxList[3];                       // v
-    vxData[vxIndex + 04] = debugR;                          // r (debug indicator)
-    vxData[vxIndex + 05] = debugG;                          // g (debug indicator)
-    vxData[vxIndex + 06] = debugB;                          // b (debug indicator)
+    vxData[vxIndex + 04] = 1.0;                             // r
+    vxData[vxIndex + 05] = 1.0;                             // g
+    vxData[vxIndex + 06] = 1.0;                             // b
     vxData[vxIndex + 07] = alpha;                           // a
     vxData[vxIndex + 08] = textureIndex.toDouble();         // texture index
 
@@ -300,9 +294,9 @@ class RenderProgramBatch extends RenderProgram {
     vxData[vxIndex + 10] = mb2 + md1;                       // y
     vxData[vxIndex + 11] = vxList[6];                       // u
     vxData[vxIndex + 12] = vxList[7];                       // v
-    vxData[vxIndex + 13] = debugR;                          // r (debug indicator)
-    vxData[vxIndex + 14] = debugG;                          // g (debug indicator)
-    vxData[vxIndex + 15] = debugB;                          // b (debug indicator)
+    vxData[vxIndex + 13] = 1.0;                             // r
+    vxData[vxIndex + 14] = 1.0;                             // g
+    vxData[vxIndex + 15] = 1.0;                             // b
     vxData[vxIndex + 16] = alpha;                           // a
     vxData[vxIndex + 17] = textureIndex.toDouble();         // texture index
 
@@ -311,9 +305,9 @@ class RenderProgramBatch extends RenderProgram {
     vxData[vxIndex + 19] = mb2 + md2;                       // y
     vxData[vxIndex + 20] = vxList[10];                      // u
     vxData[vxIndex + 21] = vxList[11];                      // v
-    vxData[vxIndex + 22] = debugR;                          // r (debug indicator)
-    vxData[vxIndex + 23] = debugG;                          // g (debug indicator)
-    vxData[vxIndex + 24] = debugB;                          // b (debug indicator)
+    vxData[vxIndex + 22] = 1.0;                             // r
+    vxData[vxIndex + 23] = 1.0;                             // g
+    vxData[vxIndex + 24] = 1.0;                             // b
     vxData[vxIndex + 25] = alpha;                           // a
     vxData[vxIndex + 26] = textureIndex.toDouble();         // texture index
 
@@ -322,9 +316,9 @@ class RenderProgramBatch extends RenderProgram {
     vxData[vxIndex + 28] = mb1 + md2;                       // y
     vxData[vxIndex + 29] = vxList[14];                      // u
     vxData[vxIndex + 30] = vxList[15];                      // v
-    vxData[vxIndex + 31] = debugR;                          // r (debug indicator)
-    vxData[vxIndex + 32] = debugG;                          // g (debug indicator)
-    vxData[vxIndex + 33] = debugB;                          // b (debug indicator)
+    vxData[vxIndex + 31] = 1.0;                             // r
+    vxData[vxIndex + 32] = 1.0;                             // g
+    vxData[vxIndex + 33] = 1.0;                             // b
     vxData[vxIndex + 34] = alpha;                           // a
     vxData[vxIndex + 35] = textureIndex.toDouble();         // texture index
 
