@@ -43,6 +43,7 @@ part 'engine/render_program.dart';
 part 'engine/render_program_simple.dart';
 part 'engine/render_program_tinted.dart';
 part 'engine/render_program_triangle.dart';
+part 'engine/render_program_batch.dart';
 part 'engine/render_state.dart';
 part 'engine/render_statistics.dart';
 part 'engine/render_stencil_buffer.dart';

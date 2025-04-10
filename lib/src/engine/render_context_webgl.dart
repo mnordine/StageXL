@@ -40,6 +40,7 @@ class RenderContextWebGL extends RenderContext {
 
   final RenderProgramTinted renderProgramTinted = RenderProgramTinted();
   final RenderProgramTriangle renderProgramTriangle = RenderProgramTriangle();
+  final RenderProgramBatch renderProgramBatch = RenderProgramBatch();
 
   final RenderBufferIndex renderBufferIndex = RenderBufferIndex(16384);
   final RenderBufferVertex renderBufferVertex = RenderBufferVertex(32768);
@@ -453,19 +454,19 @@ class RenderContextWebGL extends RenderContext {
   @override
   void renderTextureQuad(
       RenderState renderState, RenderTextureQuad renderTextureQuad) {
-    activateRenderProgram(renderProgramTinted);
+    activateRenderProgram(renderProgramBatch);
     activateBlendMode(renderState.globalBlendMode);
-    activateRenderTexture(renderTextureQuad.renderTexture);
-    renderProgramTinted.renderTextureQuad(renderState, renderTextureQuad, 1, 1, 1, 1);
+    renderProgramBatch.renderTextureQuad(
+        renderState, this, renderTextureQuad);
   }
 
   @override
   void renderTextureMesh(RenderState renderState, RenderTexture renderTexture,
       Int16List ixList, Float32List vxList) {
-    activateRenderProgram(renderProgramTinted);
+    activateRenderProgram(renderProgramBatch);
     activateBlendMode(renderState.globalBlendMode);
-    activateRenderTexture(renderTexture);
-    renderProgramTinted.renderTextureMesh(renderState, ixList, vxList, 1, 1, 1, 1);
+    renderProgramBatch.renderTextureMesh(
+        renderState, this, renderTexture, ixList, vxList, 1, 1, 1, 1);
   }
 
   @override
@@ -475,6 +476,8 @@ class RenderContextWebGL extends RenderContext {
       Matrix mappingMatrix,
       Int16List ixList,
       Float32List vxList) {
+    // For texture mapping, we continue to use the tinted renderer
+    // as it's not a common batch rendering use case
     activateRenderProgram(renderProgramTinted);
     activateBlendMode(renderState.globalBlendMode);
     activateRenderTexture(renderTexture);
