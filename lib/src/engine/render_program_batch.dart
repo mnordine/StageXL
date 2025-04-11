@@ -96,7 +96,7 @@ class RenderProgramBatch extends RenderProgram {
         sb.write('''
         if (int(vTexIndex+0.1) == $i) {
           vec4 textureColor = texture2D(uSampler$i, vTextCoord);
-          gl_fragColor = vec4(textureColor.rgb * vColor.rgb * vColor.a, textureColor.a * vColor.a);
+          gl_FragColor = vec4(textureColor.rgb * vColor.rgb * vColor.a, textureColor.a * vColor.a);
         }''');
       }
       // We still need a fallback case, but now just use transparent black
