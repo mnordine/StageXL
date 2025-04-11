@@ -60,7 +60,7 @@ class RenderProgramBatch extends RenderProgram {
         if (i > 0) sb.write('else ');
         sb.write('''
         if (int(vTexIndex+0.1) == $i) {
-          fragColor = texture(uSampler$i, vTextCoord) * vColor;
+          fragColor = vec4(texture(uSampler$i, vTextCoord).rgb * vColor.rgb * vColor.a, texture(uSampler$i, vTextCoord).a * vColor.a);
         }''');
       }
       // We still need a fallback case, but now just use transparent black
@@ -68,13 +68,9 @@ class RenderProgramBatch extends RenderProgram {
         else {
           fragColor = vec4(0.0, 0.0, 0.0, 0.0);
         }''');
-      
-      final ifStatements = sb.toString();
-      
-      // Generate uniform sampler declarations for WebGL 2
-      final samplerDeclarations = List.generate(_maxTextures, 
-          (i) => 'uniform sampler2D uSampler$i;').join('\n');
-          
+
+      final samplerDeclarations = List.generate(_maxTextures, (i) => 'uniform sampler2D uSampler$i;').join('\n');
+
       return '''
       #version 300 es
 
@@ -89,21 +85,16 @@ class RenderProgramBatch extends RenderProgram {
       out vec4 fragColor;
 
       void main() {
-        $ifStatements
+        $sb
       }
       ''';
     } else {
-      // WebGL 1 doesn't support array indexing with dynamic values,
-      // so we need to use conditionals
-      final samplerDeclarations = List.generate(_maxTextures, (i) => 'uniform sampler2D uSampler$i;').join('\n');
-
-      // Use simple integer equality to select texture sampler
       final sb = StringBuffer();
       for (var i = 0; i < _maxTextures; i++) {
         if (i > 0) sb.write('else ');
         sb.write('''
         if (int(vTexIndex+0.1) == $i) {
-          gl_FragColor = texture2D(uSampler$i, vTextCoord) * vColor;
+          gl_FragColor = vec4(texture2D(uSampler$i, vTextCoord).rgb * vColor.rgb * vColor.a, texture2D(uSampler$i, vTextCoord).a * vColor.a);
         }''');
       }
       // We still need a fallback case, but now just use transparent black
@@ -111,18 +102,20 @@ class RenderProgramBatch extends RenderProgram {
         else {
           gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
         }''');
-      
-      final ifStatements = sb.toString();
+
+      final samplerDeclarations = List.generate(_maxTextures, (i) => 'uniform sampler2D uSampler$i;').join('\n');
 
       return '''
       precision ${RenderProgram.fragmentPrecision} float;
+
       $samplerDeclarations
+
       varying vec2 vTextCoord;
       varying vec4 vColor;
       varying float vTexIndex;
 
       void main() {
-        $ifStatements
+        $sb
       }
       ''';
     }
