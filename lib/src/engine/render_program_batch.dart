@@ -55,8 +55,8 @@ class RenderProgramBatch extends RenderProgram {
     if (isWebGL2) {
       // For WebGL2, use individual samplers for clarity and compatibility
       // Use simple integer equality to select texture sampler
-      final StringBuffer sb = StringBuffer();
-      for (int i = 0; i < _maxTextures; i++) {
+      final sb = StringBuffer();
+      for (var i = 0; i < _maxTextures; i++) {
         if (i > 0) sb.write('else ');
         sb.write('''
         if (int(vTexIndex+0.1) == $i) {
@@ -98,8 +98,8 @@ class RenderProgramBatch extends RenderProgram {
       final samplerDeclarations = List.generate(_maxTextures, (i) => 'uniform sampler2D uSampler$i;').join('\n');
 
       // Use simple integer equality to select texture sampler
-      final StringBuffer sb = StringBuffer();
-      for (int i = 0; i < _maxTextures; i++) {
+      final sb = StringBuffer();
+      for (var i = 0; i < _maxTextures; i++) {
         if (i > 0) sb.write('else ');
         sb.write('''
         if (int(vTexIndex+0.1) == $i) {
