@@ -718,6 +718,15 @@ class RenderContextWebGL extends RenderContext {
         _renderingContext.bindFramebuffer(WebGL.FRAMEBUFFER, null);
         _renderingContext.viewport(
             0, 0, _canvasElement.width, _canvasElement.height);
+
+        // Reset texture state when switching back to the canvas frame buffer
+        for (var i = 0; i < _activeRenderTextures.length; i++) {
+          if (_activeRenderTextures[i] != null) {
+            _renderingContext.activeTexture(WebGL.TEXTURE0 + i);
+            _renderingContext.bindTexture(WebGL.TEXTURE_2D, null);
+            _activeRenderTextures[i] = null;
+          }
+        }
       }
       _updateScissorTest(_getLastScissorValue());
       _updateStencilTest(_getLastStencilValue());
