@@ -206,13 +206,13 @@ class RenderProgramBatch extends RenderProgram {
 
   void renderTextureQuad(
       RenderState renderState, RenderContextWebGL renderContext,
-      RenderTextureQuad renderTextureQuad) {
+      RenderTextureQuad renderTextureQuad, [num r = 1, num g = 1, num b = 1, num a = 1]) {
 
     if (renderTextureQuad.hasCustomVertices) {
       final ixList = renderTextureQuad.ixList;
       final vxList = renderTextureQuad.vxList;
       renderTextureMesh(renderState, renderContext,
-          renderTextureQuad.renderTexture, ixList, vxList, 1, 1, 1, 1);
+          renderTextureQuad.renderTexture, ixList, vxList, r, g, b, a);
       return;
     }
 
