@@ -60,7 +60,8 @@ class RenderProgramBatch extends RenderProgram {
         if (i > 0) sb.write('else ');
         sb.write('''
         if (int(vTexIndex+0.1) == $i) {
-          fragColor = vec4(texture(uSampler$i, vTextCoord).rgb * vColor.rgb * vColor.a, texture(uSampler$i, vTextCoord).a * vColor.a);
+          vec4 textureColor = texture(uSampler$i, vTextCoord);
+          fragColor = vec4(textureColor.rgb * vColor.rgb * vColor.a, textureColor.a * vColor.a);
         }''');
       }
       // We still need a fallback case, but now just use transparent black
@@ -94,7 +95,8 @@ class RenderProgramBatch extends RenderProgram {
         if (i > 0) sb.write('else ');
         sb.write('''
         if (int(vTexIndex+0.1) == $i) {
-          gl_FragColor = vec4(texture2D(uSampler$i, vTextCoord).rgb * vColor.rgb * vColor.a, texture2D(uSampler$i, vTextCoord).a * vColor.a);
+          vec4 textureColor = texture2D(uSampler$i, vTextCoord);
+          gl_fragColor = vec4(textureColor.rgb * vColor.rgb * vColor.a, textureColor.a * vColor.a);
         }''');
       }
       // We still need a fallback case, but now just use transparent black
