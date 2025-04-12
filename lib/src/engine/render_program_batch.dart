@@ -4,7 +4,7 @@ class RenderProgramBatch extends RenderProgram {
   // aVertexPosition:   Float32(x), Float32(y)
   // aVertexTextCoord:  Float32(u), Float32(v)
   // aVertexColor:      Float32(r), Float32(g), Float32(b), Float32(a)
-  // aVertexTexIndex:   Float32(textureIndex)
+  // aVertexTexIndex:   WebGL2: Int32(textureIndex), WebGL1: Float32(textureIndex) // Corrected comment
 
   static int _maxTextures = 8; // Default value, will be updated at runtime
 
@@ -62,25 +62,23 @@ class RenderProgramBatch extends RenderProgram {
 
   @override
   String get fragmentShaderSource {
+    final sb = StringBuffer();
+    final samplerDeclarations = List.generate(_maxTextures, (i) => 'uniform sampler2D uSampler$i;').join('\n');
+
     if (isWebGL2) {
-      // For WebGL2, use individual samplers for clarity and compatibility
-      // Use simple integer equality to select texture sampler
-      final sb = StringBuffer();
+      // WebGL 2: Use direct integer comparison
       for (var i = 0; i < _maxTextures; i++) {
         if (i > 0) sb.write('else ');
         sb.write('''
-        if (vTexIndex == $i) { // Direct integer comparison
-          vec4 textureColor = texture(uSampler$i, vTextCoord);
-          fragColor = textureColor * vColor;
+        if (vTexIndex == $i) {
+          fragColor = texture(uSampler$i, vTextCoord) * vColor;
         }''');
       }
-      // We still need a fallback case, but now just use transparent black
+      // Fallback (Magenta for debugging)
       sb.write('''
         else {
-          fragColor = vec4(0.0, 0.0, 0.0, 0.0);
+          fragColor = vec4(1.0, 0.0, 1.0, 1.0);
         }''');
-
-      final samplerDeclarations = List.generate(_maxTextures, (i) => 'uniform sampler2D uSampler$i;').join('\n');
 
       return '''
       #version 300 es
@@ -100,22 +98,21 @@ class RenderProgramBatch extends RenderProgram {
       }
       ''';
     } else {
-      final sb = StringBuffer();
+      // WebGL 1: Use float range comparison
       for (var i = 0; i < _maxTextures; i++) {
+        final iFloat = i.toDouble();
         if (i > 0) sb.write('else ');
+        // Check if vTexIndex is close to the integer index i
         sb.write('''
-        if (int(vTexIndex+0.1) == $i) {
-          vec4 textureColor = texture2D(uSampler$i, vTextCoord);
-          gl_FragColor = textureColor * vColor;
+        if (vTexIndex >= ${iFloat - 0.1} && vTexIndex <= ${iFloat + 0.1}) {
+          gl_FragColor = texture2D(uSampler$i, vTextCoord) * vColor;
         }''');
       }
-      // We still need a fallback case, but now just use transparent black
+      // Fallback (Magenta for debugging)
       sb.write('''
         else {
-          gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+          gl_FragColor = vec4(1.0, 0.0, 1.0, 1.0);
         }''');
-
-      final samplerDeclarations = List.generate(_maxTextures, (i) => 'uniform sampler2D uSampler$i;').join('\n');
 
       return '''
       precision ${RenderProgram.fragmentPrecision} float;
@@ -139,18 +136,12 @@ class RenderProgramBatch extends RenderProgram {
   void activate(RenderContextWebGL renderContext) {
     super.activate(renderContext);
 
-    if (isWebGL2) {
-      // In WebGL 2, use individual samplers for clarity and compatibility
-      for (var i = 0; i < _maxTextures; i++) {
-        final uniformName = 'uSampler$i';
-        if (uniforms.containsKey(uniformName)) {
-          renderingContext.uniform1i(uniforms[uniformName], i);
-        }
-      }
-    } else {
-      // In WebGL 1, we need to set each sampler separately
-      for (var i = 0; i < _maxTextures; i++) {
-        renderingContext.uniform1i(uniforms['uSampler$i'], i);
+    // Set sampler uniforms (needs to be done after program is bound in super.activate)
+    for (var i = 0; i < _maxTextures; i++) {
+      final uniformName = 'uSampler$i';
+      // Check if the uniform exists (it might be optimized out if not used)
+      if (uniforms.containsKey(uniformName)) {
+        renderingContext.uniform1i(uniforms[uniformName], i);
       }
     }
 
@@ -170,12 +161,7 @@ class RenderProgramBatch extends RenderProgram {
     renderBufferVertex.bindAttribute(attributes['aVertexColor'], 4, stride, 16); // offset 16 bytes
 
     final location = attributes['aVertexTexIndex'];
-    if (location == null) {
-      // This can happen if the attribute is unused and optimized out by the shader compiler.
-      // It's not necessarily an error, but indicates the batching logic might not be fully utilized.
-      // print("Warning: aVertexTexIndex attribute location not found. Shader might have optimized it out.");
-      return;
-    }
+    if (location == null) return; // Optimized out, batching likely unused
 
     if (isWebGL2) {
       // Use vertexAttribIPointer for integer attributes in WebGL 2
@@ -198,12 +184,14 @@ class RenderProgramBatch extends RenderProgram {
   @override
   void flush() {
     if (renderBufferIndex.position > 0) {
-      // Update Int32List view cache before flushing if needed
-      if (isWebGL2 && _vxDataIntView == null) {
-         _vxDataIntView = renderBufferVertex.data.buffer.asInt32List();
+      // Update Int32List view cache before flushing if needed (WebGL2 only)
+      if (isWebGL2 && _vxDataIntView == null && renderBufferVertex.position > 0) {
+         _vxDataIntView = renderBufferVertex.data.buffer.asInt32List(
+             renderBufferVertex.data.offsetInBytes,
+             renderBufferVertex.position); // More precise view
       }
-      super.flush(); // This handles the actual drawing
-      _clearTextures();
+      super.flush(); // Handles buffer updates and draw call
+      _clearTextures(); // Clear local texture tracking for the new batch
       // Reset Int32List view cache after flush
       _vxDataIntView = null;
     }
@@ -231,14 +219,6 @@ class RenderProgramBatch extends RenderProgram {
     // No slots available
     return -1;
   }
-  
-  void _bindTextureToSlot(RenderContextWebGL renderContext, RenderTexture texture, int index) {
-    _textures[index] = texture;
-    // Use the context's activation method which handles flushing if needed,
-    // although ideally we flushed *before* calling this if index was 0.
-    // It also ensures the texture is correctly activated on the GPU texture unit.
-    renderContext.activateRenderTextureAt(texture, index);
-  }
 
   //---------------------------------------------------------------------------
 
@@ -255,21 +235,21 @@ class RenderProgramBatch extends RenderProgram {
     }
 
     final texture = renderTextureQuad.renderTexture;
-    
-    // Check if this texture will fit in the current batch
     var textureIndex = _getTextureIndexIfAvailable(texture);
-    
-    // If no slot is available, flush the batch and try again
+    var needsFlush = false;
+
+    // --- Texture Slot Management ---
     if (textureIndex < 0) {
-      flush(); // Flush if no slots (or this specific texture) are available
-      textureIndex = 0; // After flush, slot 0 is always available
-      // We MUST bind the texture now after the flush
-      _bindTextureToSlot(renderContext, texture, textureIndex);
+      // No slot available OR texture not found -> Need to Flush
+      needsFlush = true;
+      textureIndex = 0; // Will use slot 0 after flush
     } else if (_textures[textureIndex] == null) {
-      // Texture slot is available but not yet bound for this texture
-      _bindTextureToSlot(renderContext, texture, textureIndex);
+      // Slot is available but empty -> Assign and activate texture directly (NO FLUSH)
+      _textures[textureIndex] = texture;
+      // Activate texture in its assigned GPU slot without flushing batch
+      texture.activate(renderContext, WebGL.TEXTURE0 + textureIndex);
     }
-    // If textureIndex >= 0 and _textures[textureIndex] is already the correct texture, do nothing.
+    // Else: Texture is already in the slot and active, do nothing for texture binding.
 
     final alpha = renderState.globalAlpha;
     final matrix = renderState.globalMatrix;
@@ -281,23 +261,28 @@ class RenderProgramBatch extends RenderProgram {
     // check buffer sizes and flush if necessary
     final ixData = renderBufferIndex.data;
     final ixPosition = renderBufferIndex.position;
-    if (ixPosition + ixListCount >= ixData.length) {
-       flush();
-       // Re-bind texture after flush if needed (textureIndex might change, but will be 0)
-       textureIndex = 0;
-       _bindTextureToSlot(renderContext, texture, textureIndex);
+    if (!needsFlush && ixPosition + ixListCount >= ixData.length) {
+       needsFlush = true;
+       textureIndex = 0; // Will use slot 0 after flush
     }
 
     final vxData = renderBufferVertex.data;
     final vxPosition = renderBufferVertex.position;
-     // Check based on float count
-    if (vxPosition + vxListCount * vertexFloatCount >= vxData.length) {
-       flush();
-       // Re-bind texture after flush if needed
-       textureIndex = 0;
-       _bindTextureToSlot(renderContext, texture, textureIndex);
+    if (!needsFlush && vxPosition + vxListCount * vertexFloatCount >= vxData.length) {
+       needsFlush = true;
+       textureIndex = 0; // Will use slot 0 after flush
     }
 
+    // --- Flush if Needed ---
+    if (needsFlush) {
+        flush(); // Flush the current batch
+        // Now, assign and activate the texture for the *new* batch in slot 0
+        _textures[textureIndex] = texture; // textureIndex is 0 here
+        texture.activate(renderContext, WebGL.TEXTURE0 + textureIndex);
+        // Buffer positions/counts are reset internally by flush/super.flush
+    }
+
+    // Get potentially updated buffer positions and counts AFTER flush checks
     final ixIndex = renderBufferIndex.position;
     final vxIndex = renderBufferVertex.position;
     final vxCount = renderBufferVertex.count;
@@ -378,7 +363,6 @@ class RenderProgramBatch extends RenderProgram {
     vxData[currentVxIndex + 6] = colorB;    // b
     vxData[currentVxIndex + 7] = colorA;    // a
     _writeTextureIndex(vxData, currentVxIndex + 8, textureIndex);
-    // currentVxIndex += vertexFloatCount; // No need to increment after last vertex
 
     renderBufferVertex.position += vxListCount * vertexFloatCount;
     renderBufferVertex.count += vxListCount;
@@ -391,16 +375,17 @@ class RenderProgramBatch extends RenderProgram {
       RenderTexture renderTexture, Int16List ixList, Float32List vxList,
       num r, num g, num b, num a) {
 
-    // Check if this texture will fit in the current batch
-    var textureIndex = _getTextureIndexIfAvailable(renderTexture);
-    
-    // If no slot is available, flush the batch and try again
+    final texture = renderTexture; // Use consistent naming
+    var textureIndex = _getTextureIndexIfAvailable(texture);
+    var needsFlush = false;
+
+    // --- Texture Slot Management ---
     if (textureIndex < 0) {
-      flush();
+      needsFlush = true;
       textureIndex = 0;
-      _bindTextureToSlot(renderContext, renderTexture, textureIndex);
     } else if (_textures[textureIndex] == null) {
-      _bindTextureToSlot(renderContext, renderTexture, textureIndex);
+      _textures[textureIndex] = texture;
+      texture.activate(renderContext, WebGL.TEXTURE0 + textureIndex);
     }
 
     final matrix = renderState.globalMatrix;
@@ -409,24 +394,29 @@ class RenderProgramBatch extends RenderProgram {
     final vxListCount = vxList.length >> 2; // Input vxList has 4 floats (x,y,u,v)
     const vertexFloatCount = 9; // Output vertex has 9 floats
 
-    // check buffer sizes and flush if necessary
+    // --- Buffer Size Checks ---
     final ixData = renderBufferIndex.data;
     final ixPosition = renderBufferIndex.position;
-    if (ixPosition + ixListCount >= ixData.length) {
-       flush();
+    if (!needsFlush && ixPosition + ixListCount >= ixData.length) {
+       needsFlush = true;
        textureIndex = 0;
-       _bindTextureToSlot(renderContext, renderTexture, textureIndex);
     }
 
     final vxData = renderBufferVertex.data;
     final vxPosition = renderBufferVertex.position;
-    if (vxPosition + vxListCount * vertexFloatCount >= vxData.length) {
-       flush();
+    if (!needsFlush && vxPosition + vxListCount * vertexFloatCount >= vxData.length) {
+       needsFlush = true;
        textureIndex = 0;
-       _bindTextureToSlot(renderContext, renderTexture, textureIndex);
     }
 
-    // Get potentially updated buffer positions and counts after flush checks
+    // --- Flush if Needed ---
+    if (needsFlush) {
+        flush();
+        _textures[textureIndex] = texture; // textureIndex is 0
+        texture.activate(renderContext, WebGL.TEXTURE0 + textureIndex);
+    }
+
+    // Get potentially updated buffer positions and counts AFTER flush checks
     final ixIndex = renderBufferIndex.position;
     var vxIndex = renderBufferVertex.position; // Base float index for this mesh
     final vxCount = renderBufferVertex.count;
@@ -472,140 +462,21 @@ class RenderProgramBatch extends RenderProgram {
     renderBufferVertex.count += vxListCount;
   }
 
-  //---------------------------------------------------------------------------
-
-  /// Render a quad with a color tint
-  void renderTextureQuadTinted(
-      RenderState renderState, RenderContextWebGL renderContext,
-      RenderTextureQuad renderTextureQuad, num r, num g, num b, num a) {
-
-    if (renderTextureQuad.hasCustomVertices) {
-      final ixList = renderTextureQuad.ixList;
-      final vxList = renderTextureQuad.vxList;
-      renderTextureMesh(renderState, renderContext,
-          renderTextureQuad.renderTexture, ixList, vxList, r, g, b, a);
-      return;
-    }
-
-    final texture = renderTextureQuad.renderTexture;
-    
-    // Check if this texture will fit in the current batch
-    var textureIndex = _getTextureIndexIfAvailable(texture);
-    
-    // If no slot is available, flush the batch and try again
-    if (textureIndex < 0) {
-      flush();
-      textureIndex = 0; // After flushing, slot 0 is guaranteed to be available
-    }
-    
-    // Now we can bind the texture to a slot
-    if (_textures[textureIndex] == null) {
-      _bindTextureToSlot(renderContext, texture, textureIndex);
-    }
-    
-    final alpha = renderState.globalAlpha;
-    final matrix = renderState.globalMatrix;
-    final vxList = renderTextureQuad.vxListQuad;
-    const ixListCount = 6;
-    const vxListCount = 4;
-
-    // check buffer sizes and flush if necessary
-    final ixData = renderBufferIndex.data;
-    final ixPosition = renderBufferIndex.position;
-    if (ixPosition + ixListCount >= ixData.length) flush();
-
-    final vxData = renderBufferVertex.data;
-    final vxPosition = renderBufferVertex.position;
-    if (vxPosition + vxListCount * 9 >= vxData.length) flush();
-
-    final ixIndex = renderBufferIndex.position;
-    final vxIndex = renderBufferVertex.position;
-    final vxCount = renderBufferVertex.count;
-
-    // copy index list
-    ixData[ixIndex + 0] = vxCount + 0;
-    ixData[ixIndex + 1] = vxCount + 1;
-    ixData[ixIndex + 2] = vxCount + 2;
-    ixData[ixIndex + 3] = vxCount + 0;
-    ixData[ixIndex + 4] = vxCount + 2;
-    ixData[ixIndex + 5] = vxCount + 3;
-
-    renderBufferIndex.position += ixListCount;
-    renderBufferIndex.count += ixListCount;
-
-    // copy vertex list
-    final ma1 = vxList[0] * matrix.a + matrix.tx;
-    final ma2 = vxList[8] * matrix.a + matrix.tx;
-    final mb1 = vxList[0] * matrix.b + matrix.ty;
-    final mb2 = vxList[8] * matrix.b + matrix.ty;
-    final mc1 = vxList[1] * matrix.c;
-    final mc2 = vxList[9] * matrix.c;
-    final md1 = vxList[1] * matrix.d;
-    final md2 = vxList[9] * matrix.d;
-
-    final colorA = a * alpha;
-    final colorR = r * colorA;
-    final colorG = g * colorA;
-    final colorB = b * colorA;
-    final texIdx = textureIndex.toDouble();
-
-    // Vertex 0
-    vxData[vxIndex + 00] = ma1 + mc1;                       // x
-    vxData[vxIndex + 01] = mb1 + md1;                       // y
-    vxData[vxIndex + 02] = vxList[2];                       // u
-    vxData[vxIndex + 03] = vxList[3];                       // v
-    vxData[vxIndex + 04] = colorR;                          // r
-    vxData[vxIndex + 05] = colorG;                          // g
-    vxData[vxIndex + 06] = colorB;                          // b
-    vxData[vxIndex + 07] = colorA;                          // a
-    vxData[vxIndex + 08] = texIdx;                          // texture index
-
-    // Vertex 1
-    vxData[vxIndex + 09] = ma2 + mc1;                       // x
-    vxData[vxIndex + 10] = mb2 + md1;                       // y
-    vxData[vxIndex + 11] = vxList[6];                       // u
-    vxData[vxIndex + 12] = vxList[7];                       // v
-    vxData[vxIndex + 13] = colorR;                          // r
-    vxData[vxIndex + 14] = colorG;                          // g
-    vxData[vxIndex + 15] = colorB;                          // b
-    vxData[vxIndex + 16] = colorA;                          // a
-    vxData[vxIndex + 17] = texIdx;                          // texture index
-
-    // Vertex 2
-    vxData[vxIndex + 18] = ma2 + mc2;                       // x
-    vxData[vxIndex + 19] = mb2 + md2;                       // y
-    vxData[vxIndex + 20] = vxList[10];                      // u
-    vxData[vxIndex + 21] = vxList[11];                      // v
-    vxData[vxIndex + 22] = colorR;                          // r
-    vxData[vxIndex + 23] = colorG;                          // g
-    vxData[vxIndex + 24] = colorB;                          // b
-    vxData[vxIndex + 25] = colorA;                          // a
-    vxData[vxIndex + 26] = texIdx;                          // texture index
-
-    // Vertex 3
-    vxData[vxIndex + 27] = ma1 + mc2;                       // x
-    vxData[vxIndex + 28] = mb1 + md2;                       // y
-    vxData[vxIndex + 29] = vxList[14];                      // u
-    vxData[vxIndex + 30] = vxList[15];                      // v
-    vxData[vxIndex + 31] = colorR;                          // r
-    vxData[vxIndex + 32] = colorG;                          // g
-    vxData[vxIndex + 33] = colorB;                          // b
-    vxData[vxIndex + 34] = colorA;                          // a
-    vxData[vxIndex + 35] = texIdx;                          // texture index
-
-    renderBufferVertex.position += vxListCount * 9;
-    renderBufferVertex.count += vxListCount;
-  }
-
   // Helper to write texture index based on WebGL version
   void _writeTextureIndex(Float32List vxData, int floatIndex, int textureIndex) {
     if (isWebGL2) {
-      // Ensure the Int32List view is available
-      _vxDataIntView ??= vxData.buffer.asInt32List();
+      // Ensure the Int32List view is available and correctly sized
+      // We get the view just before writing if it's null or potentially stale
+      _vxDataIntView ??= vxData.buffer.asInt32List(vxData.offsetInBytes);
+
       // Write the integer value directly using the Int32List view.
-      // The floatIndex corresponds directly to the intIndex here because
-      // both Float32 and Int32 are 4 bytes.
-      _vxDataIntView![floatIndex] = textureIndex;
+      // floatIndex corresponds directly to the intIndex (Float32/Int32 are 4 bytes).
+      // Check bounds defensively, though ideally buffer checks prevent this.
+      if (floatIndex < _vxDataIntView!.length) {
+         _vxDataIntView![floatIndex] = textureIndex;
+      } else {
+         print('Warning: Attempted to write texture index out of bounds.');
+      }
     } else {
       // Write the index as a float for WebGL 1
       vxData[floatIndex] = textureIndex.toDouble();
