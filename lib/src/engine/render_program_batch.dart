@@ -8,7 +8,7 @@ class RenderProgramBatch extends RenderProgram {
 
   static int _maxTextures = 8; // Default value, will be updated at runtime
   // Reintroduce sampler indices cache for WebGL 2 sampler array uniform
-  static Uint32List? _samplerIndices;
+  static JSUint32Array? _samplerIndices;
 
   static void initializeMaxTextures(WebGL renderingContext) {
     _maxTextures = (renderingContext.getParameter(WebGL.MAX_TEXTURE_IMAGE_UNITS) as JSNumber?)?.toDartInt ?? 8;
@@ -16,7 +16,7 @@ class RenderProgramBatch extends RenderProgram {
     // _maxTextures = math.min(_maxTextures, 16);
     print('StageXL Batch Renderer - Max texture units: $_maxTextures');
     // Pre-calculate the sampler indices list for WebGL 2
-    _samplerIndices = Uint32List.fromList(List.generate(_maxTextures, (i) => i, growable: false));
+    _samplerIndices = Uint32List.fromList(List.generate(_maxTextures, (i) => i, growable: false)).toJS;
   }
 
   late final List<RenderTexture?> _textures = List.filled(_maxTextures, null);
@@ -150,7 +150,7 @@ class RenderProgramBatch extends RenderProgram {
       final location = uniforms['uSamplers[0]'] ?? uniforms['uSamplers'];
       if (location != null && _samplerIndices != null) {
         // Pass the array [0, 1, 2, ..., maxTextures-1] to the uniform
-        (renderingContext as WebGL2RenderingContext).uniform1iv(location, _samplerIndices!.toJS);
+        (renderingContext as WebGL2RenderingContext).uniform1iv(location, _samplerIndices!);
       } else if (location == null) {
          print("Warning: 'uSamplers' uniform not found in WebGL 2 batch program.");
       }
