@@ -4,13 +4,19 @@ class RenderProgramBatch extends RenderProgram {
   // aVertexPosition:   Float32(x), Float32(y)
   // aVertexTextCoord:  Float32(u), Float32(v)
   // aVertexColor:      Float32(r), Float32(g), Float32(b), Float32(a)
-  // aVertexTexIndex:   WebGL2: Int32(textureIndex), WebGL1: Float32(textureIndex) // Corrected comment
+  // aVertexTexIndex:   WebGL2: Int32(textureIndex), WebGL1: Float32(textureIndex)
 
   static int _maxTextures = 8; // Default value, will be updated at runtime
+  // Reintroduce sampler indices cache for WebGL 2 sampler array uniform
+  static Uint32List? _samplerIndices;
 
   static void initializeMaxTextures(WebGL renderingContext) {
     _maxTextures = (renderingContext.getParameter(WebGL.MAX_TEXTURE_IMAGE_UNITS) as JSNumber?)?.toDartInt ?? 8;
-    print('max texture units: $_maxTextures');
+    // Limit max textures if necessary (optional)
+    // _maxTextures = math.min(_maxTextures, 16);
+    print('StageXL Batch Renderer - Max texture units: $_maxTextures');
+    // Pre-calculate the sampler indices list for WebGL 2
+    _samplerIndices = Uint32List.fromList(List.generate(_maxTextures, (i) => i, growable: false));
   }
 
   late final List<RenderTexture?> _textures = List.filled(_maxTextures, null);
@@ -27,13 +33,11 @@ class RenderProgramBatch extends RenderProgram {
     in vec2 aVertexPosition;
     in vec2 aVertexTextCoord;
     in vec4 aVertexColor;
-    // CHANGE: Use int for texture index in WebGL 2
-    in int aVertexTexIndex;
+    in int aVertexTexIndex; // Use int for texture index in WebGL 2
 
     out vec2 vTextCoord;
     out vec4 vColor;
-    // CHANGE: Use flat interpolation for integer varying
-    flat out int vTexIndex;
+    flat out int vTexIndex; // Use flat interpolation for integer varying
 
     void main() {
       vTextCoord = aVertexTextCoord;
@@ -63,15 +67,17 @@ class RenderProgramBatch extends RenderProgram {
   @override
   String get fragmentShaderSource {
     final sb = StringBuffer();
-    final samplerDeclarations = List.generate(_maxTextures, (i) => 'uniform sampler2D uSampler$i;').join('\n');
 
     if (isWebGL2) {
-      // WebGL 2: Use direct integer comparison
+      // WebGL 2: Use sampler array declaration but with branching for lookup
+      final samplerDeclaration = 'uniform sampler2D uSamplers[$_maxTextures];';
+
       for (var i = 0; i < _maxTextures; i++) {
         if (i > 0) sb.write('else ');
+        // Use branching to access the sampler array element
         sb.write('''
         if (vTexIndex == $i) {
-          fragColor = texture(uSampler$i, vTextCoord) * vColor;
+          fragColor = texture(uSamplers[$i], vTextCoord) * vColor;
         }''');
       }
       // Fallback (Magenta for debugging)
@@ -85,7 +91,7 @@ class RenderProgramBatch extends RenderProgram {
 
       precision ${RenderProgram.fragmentPrecision} float;
 
-      $samplerDeclarations
+      $samplerDeclaration // Use sampler array
 
       in vec2 vTextCoord;
       in vec4 vColor;
@@ -98,11 +104,12 @@ class RenderProgramBatch extends RenderProgram {
       }
       ''';
     } else {
-      // WebGL 1: Use float range comparison
+      // WebGL 1: Use individual samplers and float range comparison (unchanged)
+      final samplerDeclarations = List.generate(_maxTextures, (i) => 'uniform sampler2D uSampler$i;').join('\n');
+
       for (var i = 0; i < _maxTextures; i++) {
         final iFloat = i.toDouble();
         if (i > 0) sb.write('else ');
-        // Check if vTexIndex is close to the integer index i
         sb.write('''
         if (vTexIndex >= ${iFloat - 0.1} && vTexIndex <= ${iFloat + 0.1}) {
           gl_FragColor = texture2D(uSampler$i, vTextCoord) * vColor;
@@ -117,7 +124,7 @@ class RenderProgramBatch extends RenderProgram {
       return '''
       precision ${RenderProgram.fragmentPrecision} float;
 
-      $samplerDeclarations
+      $samplerDeclarations // Use individual samplers
 
       varying vec2 vTextCoord;
       varying vec4 vColor;
@@ -136,12 +143,24 @@ class RenderProgramBatch extends RenderProgram {
   void activate(RenderContextWebGL renderContext) {
     super.activate(renderContext);
 
-    // Set sampler uniforms (needs to be done after program is bound in super.activate)
-    for (var i = 0; i < _maxTextures; i++) {
-      final uniformName = 'uSampler$i';
-      // Check if the uniform exists (it might be optimized out if not used)
-      if (uniforms.containsKey(uniformName)) {
-        renderingContext.uniform1i(uniforms[uniformName], i);
+    // --- Set Sampler Uniforms ---
+    if (isWebGL2) {
+      // WebGL 2: Set the sampler array uniform 'uSamplers'
+      // Find the location (might be named 'uSamplers' or 'uSamplers[0]')
+      final location = uniforms['uSamplers[0]'] ?? uniforms['uSamplers'];
+      if (location != null && _samplerIndices != null) {
+        // Pass the array [0, 1, 2, ..., maxTextures-1] to the uniform
+        (renderingContext as WebGL2RenderingContext).uniform1iv(location, _samplerIndices!.toJS);
+      } else if (location == null) {
+         print("Warning: 'uSamplers' uniform not found in WebGL 2 batch program.");
+      }
+    } else {
+      // WebGL 1: Set individual sampler uniforms 'uSampler0', 'uSampler1', ...
+      for (var i = 0; i < _maxTextures; i++) {
+        final uniformName = 'uSampler$i';
+        if (uniforms.containsKey(uniformName)) {
+          renderingContext.uniform1i(uniforms[uniformName], i);
+        }
       }
     }
 
