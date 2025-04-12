@@ -68,7 +68,7 @@ class RenderProgramBatch extends RenderProgram {
         sb.write('''
         if (vTexIndex == $i) { // Direct integer comparison
           vec4 textureColor = texture(uSampler$i, vTextCoord);
-          fragColor = vec4(textureColor.rgb * vColor.rgb * vColor.a, textureColor.a * vColor.a);
+          fragColor = textureColor * vColor;
         }''');
       }
       // We still need a fallback case, but now just use transparent black
@@ -103,7 +103,7 @@ class RenderProgramBatch extends RenderProgram {
         sb.write('''
         if (int(vTexIndex+0.1) == $i) {
           vec4 textureColor = texture2D(uSampler$i, vTextCoord);
-          gl_FragColor = vec4(textureColor.rgb * vColor.rgb * vColor.a, textureColor.a * vColor.a);
+          gl_FragColor = textureColor * vColor;
         }''');
       }
       // We still need a fallback case, but now just use transparent black
@@ -288,50 +288,55 @@ class RenderProgramBatch extends RenderProgram {
     final md1 = vxList[1] * matrix.d;
     final md2 = vxList[9] * matrix.d;
 
+    final colorA = a * alpha;
+    final colorR = r * colorA; // Premultiply
+    final colorG = g * colorA; // Premultiply
+    final colorB = b * colorA; // Premultiply
+    final texIdx = textureIndex.toDouble();
 
     // Vertex 0
     vxData[vxIndex + 00] = ma1 + mc1;                       // x
     vxData[vxIndex + 01] = mb1 + md1;                       // y
     vxData[vxIndex + 02] = vxList[2];                       // u
     vxData[vxIndex + 03] = vxList[3];                       // v
-    vxData[vxIndex + 04] = 1.0;                             // r
-    vxData[vxIndex + 05] = 1.0;                             // g
-    vxData[vxIndex + 06] = 1.0;                             // b
-    vxData[vxIndex + 07] = alpha;                           // a
-    vxData[vxIndex + 08] = textureIndex.toDouble();         // texture index
+    vxData[vxIndex + 04] = colorR;                          // r
+    vxData[vxIndex + 05] = colorG;                          // g
+    vxData[vxIndex + 06] = colorB;                          // b
+    vxData[vxIndex + 07] = colorA;                          // a
+    vxData[vxIndex + 08] = texIdx;                          // texture index
 
     // Vertex 1
     vxData[vxIndex + 09] = ma2 + mc1;                       // x
     vxData[vxIndex + 10] = mb2 + md1;                       // y
     vxData[vxIndex + 11] = vxList[6];                       // u
     vxData[vxIndex + 12] = vxList[7];                       // v
-    vxData[vxIndex + 13] = 1.0;                             // r
-    vxData[vxIndex + 14] = 1.0;                             // g
-    vxData[vxIndex + 15] = 1.0;                             // b
-    vxData[vxIndex + 16] = alpha;                           // a
-    vxData[vxIndex + 17] = textureIndex.toDouble();         // texture index
+    vxData[vxIndex + 13] = colorR;                          // r
+    vxData[vxIndex + 14] = colorG;                          // g
+    vxData[vxIndex + 15] = colorB;                          // b
+    vxData[vxIndex + 16] = colorA;                          // a
+    vxData[vxIndex + 17] = texIdx;                          // texture index
 
     // Vertex 2
     vxData[vxIndex + 18] = ma2 + mc2;                       // x
     vxData[vxIndex + 19] = mb2 + md2;                       // y
     vxData[vxIndex + 20] = vxList[10];                      // u
     vxData[vxIndex + 21] = vxList[11];                      // v
-    vxData[vxIndex + 22] = 1.0;                             // r
-    vxData[vxIndex + 23] = 1.0;                             // g
-    vxData[vxIndex + 24] = 1.0;                             // b
-    vxData[vxIndex + 25] = alpha;                           // a
-    vxData[vxIndex + 26] = textureIndex.toDouble();         // texture index
+    vxData[vxIndex + 22] = colorR;                          // r
+    vxData[vxIndex + 23] = colorG;                          // g
+    vxData[vxIndex + 24] = colorB;                          // b
+    vxData[vxIndex + 25] = colorA;                          // a
+    vxData[vxIndex + 26] = texIdx;                          // texture index
 
     // Vertex 3
     vxData[vxIndex + 27] = ma1 + mc2;                       // x
     vxData[vxIndex + 28] = mb1 + md2;                       // y
     vxData[vxIndex + 29] = vxList[14];                      // u
     vxData[vxIndex + 30] = vxList[15];                      // v
-    vxData[vxIndex + 31] = 1.0;                             // r
-    vxData[vxIndex + 32] = 1.0;                             // g
-    vxData[vxIndex + 33] = 1.0;                             // b
-    vxData[vxIndex + 34] = alpha;                           // a
-    vxData[vxIndex + 35] = textureIndex.toDouble();         // texture index
+    vxData[vxIndex + 31] = colorR;                          // r (premultiplied)
+    vxData[vxIndex + 32] = colorG;                          // g (premultiplied)
+    vxData[vxIndex + 33] = colorB;                          // b (premultiplied)
+    vxData[vxIndex + 34] = colorA;                          // a
+    vxData[vxIndex + 35] = texIdx;                          // texture index
 
     renderBufferVertex.position += vxListCount * 9;
     renderBufferVertex.count += vxListCount;
@@ -392,9 +397,9 @@ class RenderProgramBatch extends RenderProgram {
     final my = matrix.ty;
 
     final colorA = a * alpha;
-    final colorR = r.toDouble();
-    final colorG = g.toDouble();
-    final colorB = b.toDouble();
+    final colorR = r * colorA; // Premultiply
+    final colorG = g * colorA; // Premultiply
+    final colorB = b * colorA; // Premultiply
     final texIdx = textureIndex.toDouble();
 
     for (var i = 0, o = 0; i < vxListCount; i++, o += 4) {
