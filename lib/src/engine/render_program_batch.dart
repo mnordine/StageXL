@@ -24,11 +24,13 @@ class RenderProgramBatch extends RenderProgram {
     in vec2 aVertexPosition;
     in vec2 aVertexTextCoord;
     in vec4 aVertexColor;
-    in float aVertexTexIndex;
+    // CHANGE: Use int for texture index in WebGL 2
+    in int aVertexTexIndex;
 
     out vec2 vTextCoord;
     out vec4 vColor;
-    out float vTexIndex;
+    // CHANGE: Use flat interpolation for integer varying
+    flat out int vTexIndex;
 
     void main() {
       vTextCoord = aVertexTextCoord;
@@ -64,7 +66,7 @@ class RenderProgramBatch extends RenderProgram {
       for (var i = 0; i < _maxTextures; i++) {
         if (i > 0) sb.write('else ');
         sb.write('''
-        if (int(vTexIndex+0.1) == $i) {
+        if (vTexIndex == $i) { // Direct integer comparison
           vec4 textureColor = texture(uSampler$i, vTextCoord);
           fragColor = vec4(textureColor.rgb * vColor.rgb * vColor.a, textureColor.a * vColor.a);
         }''');
@@ -86,7 +88,7 @@ class RenderProgramBatch extends RenderProgram {
 
       in vec2 vTextCoord;
       in vec4 vColor;
-      in float vTexIndex;
+      flat in int vTexIndex;
 
       out vec4 fragColor;
 
@@ -154,11 +156,20 @@ class RenderProgramBatch extends RenderProgram {
 
   @override
   void setupAttributes() {
-    // Position (x,y), TexCoord (u,v), Color (r,g,b,a), TexIndex
-    renderBufferVertex.bindAttribute(attributes['aVertexPosition'], 2, 36, 0);
-    renderBufferVertex.bindAttribute(attributes['aVertexTextCoord'], 2, 36, 8);
-    renderBufferVertex.bindAttribute(attributes['aVertexColor'], 4, 36, 16);
-    renderBufferVertex.bindAttribute(attributes['aVertexTexIndex'], 1, 36, 32);
+    // Stride remains 36 bytes (2*4 + 2*4 + 4*4 + 1*4)
+    const stride = 36;
+    renderBufferVertex.bindAttribute(attributes['aVertexPosition'], 2, stride, 0); // x, y (offset 0)
+    renderBufferVertex.bindAttribute(attributes['aVertexTextCoord'], 2, stride, 8); // u, v (offset 8)
+    renderBufferVertex.bindAttribute(attributes['aVertexColor'], 4, stride, 16); // r, g, b, a (offset 16)
+
+    if (isWebGL2) {
+      final location = attributes['aVertexTexIndex']!;
+      // Use vertexAttribIPointer for integer attributes
+      (renderingContext as WebGL2RenderingContext).vertexAttribIPointer(location, 1, WebGL.INT, stride, 32); // texture index (offset 32)
+    } else {
+      // Use vertexAttribPointer for float attribute in WebGL 1
+      renderBufferVertex.bindAttribute(attributes['aVertexTexIndex'], 1, stride, 32); // texture index (offset 32)
+    }
   }
 
   //---------------------------------------------------------------------------
