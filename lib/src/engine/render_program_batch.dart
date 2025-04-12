@@ -6,9 +6,14 @@ class RenderProgramBatch extends RenderProgram {
   // aVertexColor:      Float32(r), Float32(g), Float32(b), Float32(a)
   // aVertexTexIndex:   Float32(textureIndex)
 
-  static const int _maxTextures = 8; // Most WebGL implementations support at least 8 texture units
+  static int _maxTextures = 8; // Default value, will be updated at runtime
 
-  final List<RenderTexture?> _textures = List.filled(_maxTextures, null);
+  static void initializeMaxTextures(WebGL renderingContext) {
+    _maxTextures = (renderingContext.getParameter(WebGL.MAX_TEXTURE_IMAGE_UNITS) as JSNumber?)?.toDartInt ?? 8;
+    print('max texture units: $_maxTextures');
+  }
+
+  late final List<RenderTexture?> _textures = List.filled(_maxTextures, null);
 
   @override
   String get vertexShaderSource => isWebGL2 ? '''

@@ -80,6 +80,10 @@ class RenderContextWebGL extends RenderContext {
     }
 
     _renderingContext = renderingContext;
+
+    // Initialize max textures for RenderProgramBatch
+    RenderProgramBatch.initializeMaxTextures(_renderingContext);
+
     _renderingContext.enable(WebGL.BLEND);
     _renderingContext.disable(WebGL.STENCIL_TEST);
     _renderingContext.disable(WebGL.DEPTH_TEST);
