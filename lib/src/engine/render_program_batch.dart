@@ -469,29 +469,34 @@ class RenderProgramBatch extends RenderProgram {
 
   // Helper to write texture index based on WebGL version
   void _writeTextureIndex(Float32List vxData, int floatIndex, int textureIndex) {
-    if (isWebGL2) {
-      // --- START CHANGE ---
-      // Get the underlying buffer and offset *from the current Float32List view*.
-      final buffer = vxData.buffer;
-      final offsetInBytes = vxData.offsetInBytes;
-      // Create an Int32List view *of the same region* as the Float32List view.
-      // The length in elements will be the same since Int32 and Float32 are both 4 bytes.
-      // Use vxData.lengthInBytes ~/ 4 for the length calculation.
-      final intView = buffer.asInt32List(offsetInBytes, vxData.lengthInBytes ~/ Int32List.bytesPerElement);
+  if (isWebGL2) {
+    // --- START FIX ---
+    // Get the underlying buffer and the byte offset *within that buffer*
+    // corresponding to the start of the vxData view.
+    final buffer = vxData.buffer;
+    final baseOffsetInBytes = vxData.offsetInBytes;
+    // Calculate the byte offset for the specific float index we want to write to.
+    final targetOffsetInBytes = baseOffsetInBytes + (floatIndex * Float32List.bytesPerElement);
 
-      // Write the integer value directly using the *freshly created* Int32List view.
-      // floatIndex corresponds directly to the intIndex.
-      // Bounds check against the view we just created.
-      if (floatIndex < intView.length) {
-         intView[floatIndex] = textureIndex;
-      } else {
-         // This error condition is less likely now but kept for safety.
-         print('Warning: Attempted to write texture index out of bounds. floatIndex: $floatIndex, viewLength: ${intView.length}');
-      }
-      // --- END CHANGE ---
+    // Create an Int32List view *specifically for the single integer* we want to write.
+    // Ensure the offset is valid and there's enough space for one Int32.
+    if (targetOffsetInBytes >= 0 && targetOffsetInBytes + Int32List.bytesPerElement <= buffer.lengthInBytes) {
+       final intView = buffer.asInt32List(targetOffsetInBytes, 1);
+       intView[0] = textureIndex;
     } else {
-      // Write the index as a float for WebGL 1
-      vxData[floatIndex] = textureIndex.toDouble();
+       // This indicates a logic error elsewhere if hit.
+       print('Error: Calculated invalid offset for texture index write. '
+             'floatIndex: $floatIndex, baseOffset: $baseOffsetInBytes, targetOffset: $targetOffsetInBytes, bufferLength: ${buffer.lengthInBytes}');
     }
-  } 
+    // --- END FIX ---
+  } else {
+    // Write the index as a float for WebGL 1
+    // Add bounds check for safety
+    if (floatIndex < vxData.length) {
+       vxData[floatIndex] = textureIndex.toDouble();
+    } else {
+        print('Warning: Attempted to write texture index out of bounds (WebGL1). floatIndex: $floatIndex, vxData.length: ${vxData.length}');
+    }
+  }
+} 
 }
