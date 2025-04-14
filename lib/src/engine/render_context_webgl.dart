@@ -93,7 +93,7 @@ class RenderContextWebGL extends RenderContext {
     _renderingContext.pixelStorei(WebGL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
     _renderingContext.blendFunc(WebGL.ONE, WebGL.ONE_MINUS_SRC_ALPHA);
 
-    _activeRenderProgram = renderProgramTinted;
+    _activeRenderProgram = renderProgramBatch;
     _activeRenderProgram.activate(this);
 
     _contextValid = true;
