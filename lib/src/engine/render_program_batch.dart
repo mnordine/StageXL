@@ -10,13 +10,15 @@ class RenderProgramBatch extends RenderProgram {
   // Reintroduce sampler indices cache for WebGL 2 sampler array uniform
   static JSUint32Array? _samplerIndices;
 
-  static void initializeMaxTextures(WebGL renderingContext) {
+  static int initializeMaxTextures(WebGL renderingContext) {
     _maxTextures = (renderingContext.getParameter(WebGL.MAX_TEXTURE_IMAGE_UNITS) as JSNumber?)?.toDartInt ?? 8;
     // Limit max textures if necessary (optional)
     // _maxTextures = math.min(_maxTextures, 16);
     print('StageXL Batch Renderer - Max texture units: $_maxTextures');
     // Pre-calculate the sampler indices list for WebGL 2
     _samplerIndices = Uint32List.fromList(List.generate(_maxTextures, (i) => i, growable: false)).toJS;
+
+    return _maxTextures;
   }
 
   late final List<RenderTexture?> _textures = List.filled(_maxTextures, null);

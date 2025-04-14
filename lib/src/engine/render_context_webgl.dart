@@ -45,7 +45,7 @@ class RenderContextWebGL extends RenderContext {
   final RenderBufferIndex renderBufferIndex = RenderBufferIndex(16384);
   final RenderBufferVertex renderBufferVertex = RenderBufferVertex(32768);
 
-  final List<RenderTexture?> _activeRenderTextures = List.filled(8, null);
+  late final List<RenderTexture?> _activeRenderTextures;
   final List<RenderFrameBuffer> _renderFrameBufferPool = <RenderFrameBuffer>[];
   final Map<String, RenderProgram> _renderPrograms = <String, RenderProgram>{};
 
@@ -82,7 +82,9 @@ class RenderContextWebGL extends RenderContext {
     _renderingContext = renderingContext;
 
     // Initialize max textures for RenderProgramBatch
-    RenderProgramBatch.initializeMaxTextures(_renderingContext);
+    final maxTextureUnits = RenderProgramBatch.initializeMaxTextures(_renderingContext);
+
+    _activeRenderTextures = List.filled(maxTextureUnits, null);
 
     _renderingContext.enable(WebGL.BLEND);
     _renderingContext.disable(WebGL.STENCIL_TEST);
