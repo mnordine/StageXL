@@ -21,9 +21,6 @@ class RenderProgramBatch extends RenderProgram {
 
   late final List<RenderTexture?> _textures = List.filled(_maxTextures, null);
 
-  // Cache for Int32List view to avoid recreation
-  Int32List? _vxDataIntView;
-
   @override
   String get vertexShaderSource => isWebGL2 ? '''
     #version 300 es
@@ -165,9 +162,6 @@ class RenderProgramBatch extends RenderProgram {
     }
 
     _clearTextures();
-
-    // Invalidate Int32List view cache if context changes
-    _vxDataIntView = null;
   }
 
   @override
@@ -203,16 +197,8 @@ class RenderProgramBatch extends RenderProgram {
   @override
   void flush() {
     if (renderBufferIndex.position > 0) {
-      // Update Int32List view cache before flushing if needed (WebGL2 only)
-      if (isWebGL2 && _vxDataIntView == null && renderBufferVertex.position > 0) {
-         _vxDataIntView = renderBufferVertex.data.buffer.asInt32List(
-             renderBufferVertex.data.offsetInBytes,
-             renderBufferVertex.position); // More precise view
-      }
       super.flush(); // Handles buffer updates and draw call
       _clearTextures(); // Clear local texture tracking for the new batch
-      // Reset Int32List view cache after flush
-      _vxDataIntView = null;
     }
   }
 
@@ -484,21 +470,28 @@ class RenderProgramBatch extends RenderProgram {
   // Helper to write texture index based on WebGL version
   void _writeTextureIndex(Float32List vxData, int floatIndex, int textureIndex) {
     if (isWebGL2) {
-      // Ensure the Int32List view is available and correctly sized
-      // We get the view just before writing if it's null or potentially stale
-      _vxDataIntView ??= vxData.buffer.asInt32List(vxData.offsetInBytes);
+      // --- START CHANGE ---
+      // Get the underlying buffer and offset *from the current Float32List view*.
+      final buffer = vxData.buffer;
+      final offsetInBytes = vxData.offsetInBytes;
+      // Create an Int32List view *of the same region* as the Float32List view.
+      // The length in elements will be the same since Int32 and Float32 are both 4 bytes.
+      // Use vxData.lengthInBytes ~/ 4 for the length calculation.
+      final intView = buffer.asInt32List(offsetInBytes, vxData.lengthInBytes ~/ Int32List.bytesPerElement);
 
-      // Write the integer value directly using the Int32List view.
-      // floatIndex corresponds directly to the intIndex (Float32/Int32 are 4 bytes).
-      // Check bounds defensively, though ideally buffer checks prevent this.
-      if (floatIndex < _vxDataIntView!.length) {
-         _vxDataIntView![floatIndex] = textureIndex;
+      // Write the integer value directly using the *freshly created* Int32List view.
+      // floatIndex corresponds directly to the intIndex.
+      // Bounds check against the view we just created.
+      if (floatIndex < intView.length) {
+         intView[floatIndex] = textureIndex;
       } else {
-         print('Warning: Attempted to write texture index out of bounds.');
+         // This error condition is less likely now but kept for safety.
+         print('Warning: Attempted to write texture index out of bounds. floatIndex: $floatIndex, viewLength: ${intView.length}');
       }
+      // --- END CHANGE ---
     } else {
       // Write the index as a float for WebGL 1
       vxData[floatIndex] = textureIndex.toDouble();
     }
-  }
+  } 
 }
