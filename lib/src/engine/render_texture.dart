@@ -266,38 +266,33 @@ class RenderTexture {
   /// RenderTexture and you don't need to call the [update] method.
 
   void update() {
-    if (_renderContext == null || _texture == null) return;
+    final renderContext = _renderContext;
+    final renderingContext = _renderingContext;
+    if (renderContext == null || renderingContext == null || _texture == null) return;
     if (_renderContext!.contextIdentifier != contextIdentifier) return;
 
-    _renderContext!.flush();
+    renderContext.flush();
 
-    // --- Use the last texture unit for the upload operation ---
+    // Determine the upload unit (use the last available texture unit)
+    // This avoids interfering with units 0, 1, etc., which are used first by the batcher.
     final uploadUnitIndex = RenderProgramBatch._maxTextures - 1;
     final uploadUnitEnum = WebGL.TEXTURE0 + uploadUnitIndex;
 
-    // --- Save state of the upload unit ---
-    final savedActiveUnit = (_renderingContext!.getParameter(WebGL.ACTIVE_TEXTURE) as JSNumber).toDartInt;
-    _renderingContext!.activeTexture(uploadUnitEnum); // Switch to upload unit
-    final savedTextureOnUploadUnit = _renderingContext!.getParameter(WebGL.TEXTURE_BINDING_2D) as WebGLTexture?;
+    // Save the currently active texture unit. We need to restore this later.
+    // Using getParameter is safer here as update() could be called from various places.
+    final savedActiveUnit = (renderingContext.getParameter(WebGL.ACTIVE_TEXTURE) as JSNumber).toDartInt;
 
-    _renderingContext!.bindTexture(WebGL.TEXTURE_2D, _texture);
+    renderingContext.activeTexture(uploadUnitEnum);
+    renderingContext.bindTexture(WebGL.TEXTURE_2D, _texture);
 
-    final scissors = _renderingContext!.isEnabled(WebGL.SCISSOR_TEST);
-    if (scissors) _renderingContext!.disable(WebGL.SCISSOR_TEST);
+    _updateTexture(renderContext);
 
-    _updateTexture(_renderContext!);
-
-    if (scissors) _renderingContext!.enable(WebGL.SCISSOR_TEST);
-
-    // --- Restore state ---
-    // Restore original binding on the upload unit (if it wasn't this texture)
-    if (!identical(savedTextureOnUploadUnit, _texture)) {
-      // activeTexture(uploadUnitEnum) is still active
-      _renderingContext!.bindTexture(WebGL.TEXTURE_2D, savedTextureOnUploadUnit);
-    }
-    // Restore originally active texture unit
+    // Restore the originally active texture unit.
+    // We don't need to restore the texture binding *on* the uploadUnitEnum itself,
+    // because it's treated as a temporary slot. The next call to activate()
+    // for that slot (if needed) will handle binding the correct texture.
     if (savedActiveUnit != uploadUnitEnum) {
-      _renderingContext!.activeTexture(savedActiveUnit);
+       renderingContext.activeTexture(savedActiveUnit);
     }
   }
 
