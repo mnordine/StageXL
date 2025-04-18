@@ -250,13 +250,7 @@ class RenderProgramBatch extends RenderProgram {
       // No slot available OR texture not found -> Need to Flush
       needsFlush = true;
       textureIndex = 0; // Will use slot 0 after flush
-    } else if (_textures[textureIndex] == null) {
-      // Slot is available but empty -> Assign and activate texture directly (NO FLUSH)
-      _textures[textureIndex] = texture;
-      // Activate texture in its assigned GPU slot without flushing batch
-      texture.activate(renderContext, WebGL.TEXTURE0 + textureIndex);
     }
-    // Else: Texture is already in the slot and active, do nothing for texture binding.
 
     final alpha = renderState.globalAlpha;
     final matrix = renderState.globalMatrix;
@@ -282,12 +276,17 @@ class RenderProgramBatch extends RenderProgram {
 
     // --- Flush if Needed ---
     if (needsFlush) {
-        flush(); // Flush the current batch
-        // Now, assign and activate the texture for the *new* batch in slot 0
-        _textures[textureIndex] = texture; // textureIndex is 0 here
-        texture.activate(renderContext, WebGL.TEXTURE0 + textureIndex);
-        // Buffer positions/counts are reset internally by flush/super.flush
+      flush(); // Flush the current batch
     }
+
+    // --- Ensure Texture is Active in Correct Slot (AFTER potential flush) ---
+    // Use the context's activation method which includes caching.
+    // This will only call texture.activate() if the texture isn't already
+    // active in this slot according to the context's state.
+    renderContext.activateRenderTextureAt(texture, textureIndex);
+
+    // Update our internal tracking *after* ensuring activation via context
+    _textures[textureIndex] ??= texture;
 
     // Get potentially updated buffer positions and counts AFTER flush checks
     final ixIndex = renderBufferIndex.position;
@@ -390,10 +389,7 @@ class RenderProgramBatch extends RenderProgram {
     if (textureIndex < 0) {
       needsFlush = true;
       textureIndex = 0;
-    } else if (_textures[textureIndex] == null) {
-      _textures[textureIndex] = texture;
-      texture.activate(renderContext, WebGL.TEXTURE0 + textureIndex);
-    }
+    } 
 
     final matrix = renderState.globalMatrix;
     final alpha = renderState.globalAlpha;
@@ -418,10 +414,15 @@ class RenderProgramBatch extends RenderProgram {
 
     // --- Flush if Needed ---
     if (needsFlush) {
-        flush();
-        _textures[textureIndex] = texture; // textureIndex is 0
-        texture.activate(renderContext, WebGL.TEXTURE0 + textureIndex);
+      flush();
     }
+
+    // --- Ensure Texture is Active in Correct Slot (AFTER potential flush) ---
+    // Use the context's activation method which includes caching.
+    renderContext.activateRenderTextureAt(texture, textureIndex);
+
+    // Update our internal tracking *after* ensuring activation via context
+    _textures[textureIndex] ??= texture;
 
     // Get potentially updated buffer positions and counts AFTER flush checks
     final ixIndex = renderBufferIndex.position;
