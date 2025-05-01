@@ -43,6 +43,7 @@ class VideoObject extends InteractiveObject {
     videoElement.onPause.listen((e) => dispatchEvent(Event('videoPause')));
     videoElement.onError.listen((e) => dispatchEvent(Event('videoError')));
     videoElement.onPlay.listen((e) => dispatchEvent(Event('videoPlay')));
+    videoElement.autoplay = autoplay;
 
     if (autoplay) play();
   }
