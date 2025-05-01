@@ -101,4 +101,10 @@ class VideoObject extends InteractiveObject {
   }
 
   bool get isPlaying => video.isPlaying;
+
+  bool get playsInline => video.playsInline;
+
+  set playsInline(bool value) {
+    video.playsInline = value;
+  }
 }
