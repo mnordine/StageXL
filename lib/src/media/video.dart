@@ -166,6 +166,12 @@ class Video {
     videoElement.playsInline = value;
   }
 
+  bool get controls => videoElement.controls;
+
+  set controls(bool value) {
+    videoElement.controls = value;
+  }
+
   //---------------------------------------------------------------------------
 
   void _onEnded(html.Event event) {

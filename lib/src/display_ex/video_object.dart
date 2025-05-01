@@ -107,4 +107,10 @@ class VideoObject extends InteractiveObject {
   set playsInline(bool value) {
     video.playsInline = value;
   }
+
+  bool get controls => video.controls;
+
+  set controls(bool value) {
+    video.controls = value;
+  }
 }
