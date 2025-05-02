@@ -459,6 +459,7 @@ class Stage extends DisplayObjectContainer {
             alpha: options.transparent, 
             antialias: options.antialias, 
             forceWebGL1: options.renderEngine == RenderEngine.WebGL,
+            powerPreference: options.powerPreference,
           );
         } on StateError catch (e) { // ignore: avoid_catching_errors
           if (e.message == 'Failed to get WebGL context.') {

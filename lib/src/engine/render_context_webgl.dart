@@ -51,7 +51,7 @@ class RenderContextWebGL extends RenderContext {
   //---------------------------------------------------------------------------
 
   RenderContextWebGL(HTMLCanvasElement canvasElement,
-      {bool alpha = false, bool antialias = false, bool forceWebGL1 = false})
+      {required PowerPreference powerPreference, bool alpha = false, bool antialias = false, bool forceWebGL1 = false})
       : _canvasElement = canvasElement {
     _canvasElement.onWebGlContextLost.listen(_onContextLost);
     _canvasElement.onWebGlContextRestored.listen(_onContextRestored);
@@ -64,7 +64,8 @@ class RenderContextWebGL extends RenderContext {
         'alpha': alpha,
         'antialias': antialias,
         'depth': false,
-        'stencil': true
+        'powerPreference': powerPreference.value,
+        'stencil': true,
       }.jsify()) as WebGL?;
     }
 
