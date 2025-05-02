@@ -16,6 +16,7 @@ library;
 import 'dart:async';
 import 'dart:collection';
 import 'dart:js_interop';
+import 'shared/power_prefs.dart';
 import 'package:web/web.dart' as html;
 import 'package:web/web.dart' show HTMLCanvasElement, HTMLImageElement, HTMLVideoElement, ImageBitmap;
 import 'dart:math' hide Point, Rectangle;
