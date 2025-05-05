@@ -182,6 +182,7 @@ class RenderContextCanvas extends RenderContext {
   void renderTextureMesh(RenderState renderState, RenderTexture renderTexture,
       Int16List ixList, Float32List vxList) {
     final context = _renderingContext;
+    print('renderTextureMesh: $renderTexture, image bitmap: ${renderTexture.imageBitmap}');
     final source = renderTexture.source ?? renderTexture.imageBitmap!;
     final matrix = renderState.globalMatrix;
     final alpha = renderState.globalAlpha;
