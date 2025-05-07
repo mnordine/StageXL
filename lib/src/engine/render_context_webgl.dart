@@ -245,12 +245,7 @@ class RenderContextWebGL extends RenderContext {
   GLContext get rawContext => _renderingContext;
 
   @override
-  RenderEngine get renderEngine {
-    final canvas = _renderingContext.canvas as HTMLCanvasElement;
-    return canvas.getContext('webgl2') != null
-        ? RenderEngine.WebGL2
-        : RenderEngine.WebGL;
-  }
+  RenderEngine get renderEngine => _isWebGL2 ? RenderEngine.WebGL2 : RenderEngine.WebGL;
 
   @override
   Object? get maxTextureSize =>
