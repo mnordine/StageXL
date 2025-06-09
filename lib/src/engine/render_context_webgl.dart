@@ -1,5 +1,10 @@
 part of '../engine.dart';
 
+extension type WebGLProvokingVertex._(JSObject _) {
+  external GLenum get FIRST_VERTEX_CONVENTION_WEBGL; // ignore: non_constant_identifier_names
+  external void provokingVertexWEBGL(GLenum value);
+}
+
 class RenderContextWebGL extends RenderContext {
   static int _globalContextIdentifier = 0;
   final HTMLCanvasElement _canvasElement;
@@ -178,6 +183,18 @@ class RenderContextWebGL extends RenderContext {
 
     // Restore previous program
     _activeRenderProgram.activate(this);
+
+    // https://registry.khronos.org/webgl/extensions/WEBGL_provoking_vertex/
+    // Modern APIs, such as Metal, Vulkan, Direct3D 12, use the first vertex 
+    // as the provoking vertex, whereas WebGL API uses last. This can cause 
+    // performance degradation as, behind the scenes, workarounds are done to 
+    // switch from first vertex to last vertex in the implementation.
+
+    // Note this is only for flat shading, or solid colors.
+
+    // It seems there is no reason not to set this for WebGL2.
+    final ext = gl2.getExtension('WEBGL_provoking_vertex') as WebGLProvokingVertex?;
+    ext?.provokingVertexWEBGL(ext.FIRST_VERTEX_CONVENTION_WEBGL);
   }
 
   // Create a minimal shader program for mask operations
