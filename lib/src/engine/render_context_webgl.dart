@@ -52,7 +52,7 @@ class RenderContextWebGL extends RenderContext {
   //---------------------------------------------------------------------------
 
   RenderContextWebGL(HTMLCanvasElement canvasElement,
-      {bool alpha = false, bool antialias = false, bool forceWebGL1 = false})
+      {required PowerPreference powerPreference, bool alpha = false, bool antialias = false, bool forceWebGL1 = false})
       : _canvasElement = canvasElement {
     _canvasElement.onWebGlContextLost.listen(_onContextLost);
     _canvasElement.onWebGlContextRestored.listen(_onContextRestored);
@@ -65,7 +65,8 @@ class RenderContextWebGL extends RenderContext {
         'alpha': alpha,
         'antialias': antialias,
         'depth': false,
-        'stencil': true
+        'powerPreference': powerPreference.value,
+        'stencil': true,
       }.jsify()) as WebGL?;
     }
 
@@ -251,12 +252,7 @@ class RenderContextWebGL extends RenderContext {
   GLContext get rawContext => _renderingContext;
 
   @override
-  RenderEngine get renderEngine {
-    final canvas = _renderingContext.canvas as HTMLCanvasElement;
-    return canvas.getContext('webgl2') != null
-        ? RenderEngine.WebGL2
-        : RenderEngine.WebGL;
-  }
+  RenderEngine get renderEngine => _isWebGL2 ? RenderEngine.WebGL2 : RenderEngine.WebGL;
 
   @override
   Object? get maxTextureSize =>

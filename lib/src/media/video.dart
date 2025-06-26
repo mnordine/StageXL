@@ -160,6 +160,18 @@ class Video {
     videoElement.currentTime = value;
   }
 
+  bool get playsInline => videoElement.playsInline;
+
+  set playsInline(bool value) {
+    videoElement.playsInline = value;
+  }
+
+  bool get controls => videoElement.controls;
+
+  set controls(bool value) {
+    videoElement.controls = value;
+  }
+
   //---------------------------------------------------------------------------
 
   void _onEnded(html.Event event) {

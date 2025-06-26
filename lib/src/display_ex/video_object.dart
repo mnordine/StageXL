@@ -43,6 +43,7 @@ class VideoObject extends InteractiveObject {
     videoElement.onPause.listen((e) => dispatchEvent(Event('videoPause')));
     videoElement.onError.listen((e) => dispatchEvent(Event('videoError')));
     videoElement.onPlay.listen((e) => dispatchEvent(Event('videoPlay')));
+    videoElement.autoplay = autoplay;
 
     if (autoplay) play();
   }
@@ -101,4 +102,16 @@ class VideoObject extends InteractiveObject {
   }
 
   bool get isPlaying => video.isPlaying;
+
+  bool get playsInline => video.playsInline;
+
+  set playsInline(bool value) {
+    video.playsInline = value;
+  }
+
+  bool get controls => video.controls;
+
+  set controls(bool value) {
+    video.controls = value;
+  }
 }

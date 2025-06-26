@@ -116,6 +116,9 @@ class StageOptions {
 
   bool preventDefaultOnKeyboard = false;
 
+  /// The power preference for the WebGL render engine.
+  PowerPreference powerPreference = PowerPreference.normal;
+
   String _shaderPrecision = 'mediump';
 
   ShaderPrecision get shaderPrecision {
@@ -156,6 +159,7 @@ class StageOptions {
     options.preventDefaultOnWheel = preventDefaultOnWheel;
     options.preventDefaultOnKeyboard = preventDefaultOnKeyboard;
     options.shaderPrecision = shaderPrecision;
+    options.powerPreference = powerPreference;
     return options;
   }
 }
