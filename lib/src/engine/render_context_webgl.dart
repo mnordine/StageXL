@@ -303,12 +303,12 @@ class RenderContextWebGL extends RenderContext {
       _viewportWidth = viewportWidth;
       _viewportHeight = viewportHeight;
       _renderingContext.viewport(0, 0, viewportWidth, viewportHeight);
-    }
 
-    _projectionMatrix.setIdentity();
-    _projectionMatrix.scale(2.0 / viewportWidth, -2.0 / viewportHeight, 1.0);
-    _projectionMatrix.translate(-1.0, 1.0, 0.0);
-    _activeRenderProgram.projectionMatrix = _projectionMatrix;
+      _projectionMatrix.setIdentity();
+      _projectionMatrix.scale(2.0 / viewportWidth, -2.0 / viewportHeight, 1.0);
+      _projectionMatrix.translate(-1.0, 1.0, 0.0);
+      _activeRenderProgram.projectionMatrix = _projectionMatrix;
+    }
   }
 
   @override
