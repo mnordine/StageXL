@@ -265,13 +265,22 @@ class RenderContextWebGL extends RenderContext {
   Object? getParameter(int parameter) =>
       _renderingContext.getParameter(parameter);
 
+  int? _viewportWidth;
+  int? _viewportHeight; 
+
   @override
   void reset() {
-    final viewportWidth = _canvasElement.width;
-    final viewportHeight = _canvasElement.height;
     _activeRenderFrameBuffer = null;
     _renderingContext.bindFramebuffer(WebGL.FRAMEBUFFER, null);
-    _renderingContext.viewport(0, 0, viewportWidth, viewportHeight);
+
+    final viewportWidth = _canvasElement.width;
+    final viewportHeight = _canvasElement.height;
+    if (viewportWidth != _viewportWidth || viewportHeight != _viewportHeight) {
+      _viewportWidth = viewportWidth;
+      _viewportHeight = viewportHeight;
+      _renderingContext.viewport(0, 0, viewportWidth, viewportHeight);
+    }
+
     _projectionMatrix.setIdentity();
     _projectionMatrix.scale(2.0 / viewportWidth, -2.0 / viewportHeight, 1.0);
     _projectionMatrix.translate(-1.0, 1.0, 0.0);
