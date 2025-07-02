@@ -139,6 +139,10 @@ class StageOptions {
     RenderProgram.fragmentPrecision = _shaderPrecision;
   }
 
+  bool resetScissorTestOnRenderStart = true;
+  bool resetStencilTestOnRenderStart = true;
+  bool resetColorOnRenderStart = true;
+
   //---------------------------------------------------------------------------
 
   /// Create a deep clone of this [StageOptions].
@@ -160,6 +164,9 @@ class StageOptions {
     options.preventDefaultOnKeyboard = preventDefaultOnKeyboard;
     options.shaderPrecision = shaderPrecision;
     options.powerPreference = powerPreference;
+    options.resetColorOnRenderStart = resetColorOnRenderStart;
+    options.resetStencilTestOnRenderStart = resetStencilTestOnRenderStart;
+    options.resetScissorTestOnRenderStart = resetScissorTestOnRenderStart;
     return options;
   }
 }

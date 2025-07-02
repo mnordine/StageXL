@@ -48,11 +48,19 @@ class RenderContextWebGL extends RenderContext {
   final List<RenderFrameBuffer> _renderFrameBufferPool = <RenderFrameBuffer>[];
   final Map<String, RenderProgram> _renderPrograms = <String, RenderProgram>{};
 
+  final bool _resetScissorTest;
+  final bool _resetStencilTest;
+  final bool _resetColor;
+
   //---------------------------------------------------------------------------
 
   RenderContextWebGL(HTMLCanvasElement canvasElement,
-      {required PowerPreference powerPreference, bool alpha = false, bool antialias = false, bool forceWebGL1 = false})
-      : _canvasElement = canvasElement {
+      {required PowerPreference powerPreference, bool alpha = false, bool antialias = false, bool forceWebGL1 = false,
+      bool resetScissorTest = true, bool resetStencilTest = true, bool resetColor = true})
+      : _canvasElement = canvasElement,
+        _resetScissorTest = resetScissorTest,
+        _resetStencilTest = resetStencilTest,
+        _resetColor = resetColor {
     _canvasElement.onWebGlContextLost.listen(_onContextLost);
     _canvasElement.onWebGlContextRestored.listen(_onContextRestored);
 
@@ -292,16 +300,20 @@ class RenderContextWebGL extends RenderContext {
   @override
   void clear(int color) {
     _getMaskStates().clear();
-    _updateScissorTest(null);
-    _updateStencilTest(0);
-    final num r = colorGetR(color) / 255.0;
-    final num g = colorGetG(color) / 255.0;
-    final num b = colorGetB(color) / 255.0;
-    final num a = colorGetA(color) / 255.0;
-    _renderingContext.colorMask(true, true, true, true);
-    _renderingContext.clearColor(r * a, g * a, b * a, a);
-    _renderingContext
-        .clear(WebGL.COLOR_BUFFER_BIT | WebGL.STENCIL_BUFFER_BIT);
+
+    if (_resetScissorTest) _updateScissorTest(null);
+    if (_resetStencilTest) _updateStencilTest(0);
+
+    if (_resetColor) {
+      final num r = colorGetR(color) / 255.0;
+      final num g = colorGetG(color) / 255.0;
+      final num b = colorGetB(color) / 255.0;
+      final num a = colorGetA(color) / 255.0;
+      _renderingContext.colorMask(true, true, true, true);
+      _renderingContext.clearColor(r * a, g * a, b * a, a);
+      _renderingContext
+          .clear(WebGL.COLOR_BUFFER_BIT | WebGL.STENCIL_BUFFER_BIT);
+    }
   }
 
   @override
