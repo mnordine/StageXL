@@ -770,6 +770,8 @@ class RenderContextWebGL extends RenderContext {
           }
         }
       }
+      _updateScissorTest(_getLastScissorValue());
+      _updateStencilTest(_getLastStencilValue());
     }
   }
 
