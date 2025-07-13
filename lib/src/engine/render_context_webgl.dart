@@ -785,9 +785,9 @@ class RenderContextWebGL extends RenderContext {
     }
   }
 
-  void activateRenderTextureAt(RenderTexture renderTexture, int index) {
+  void activateRenderTextureAt(RenderTexture renderTexture, int index, {bool flush = true}) {
     if (!identical(renderTexture, _activeRenderTextures[index])) {
-      _activeRenderProgram.flush();
+      if (flush) _activeRenderProgram.flush();
       _activeRenderTextures[index] = renderTexture;
       renderTexture.activate(this, WebGL.TEXTURE0 + index);
     }

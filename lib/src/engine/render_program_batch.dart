@@ -208,7 +208,7 @@ class RenderProgramBatch extends RenderProgram {
 
   /// Checks if the given texture is already in a slot or if there's an empty slot.
   /// Returns the texture index if available, or -1 if no slots are available.
-  int _getTextureIndexIfAvailable(RenderTexture texture) {
+  int getTextureIndexIfAvailable(RenderTexture texture) {
     // First check if the texture is already bound
     for (var i = 0; i < _maxTextures; i++) {
       if (identical(_textures[i], texture)) {
@@ -242,7 +242,7 @@ class RenderProgramBatch extends RenderProgram {
     }
 
     final texture = renderTextureQuad.renderTexture;
-    var textureIndex = _getTextureIndexIfAvailable(texture);
+    var textureIndex = getTextureIndexIfAvailable(texture);
     var needsFlush = false;
 
     // --- Texture Slot Management ---
@@ -283,7 +283,7 @@ class RenderProgramBatch extends RenderProgram {
     // Use the context's activation method which includes caching.
     // This will only call texture.activate() if the texture isn't already
     // active in this slot according to the context's state.
-    renderContext.activateRenderTextureAt(texture, textureIndex);
+    renderContext.activateRenderTextureAt(texture, textureIndex, flush: false);
 
     // Update our internal tracking *after* ensuring activation via context
     _textures[textureIndex] ??= texture;
@@ -382,7 +382,7 @@ class RenderProgramBatch extends RenderProgram {
       num r, num g, num b, num a) {
 
     final texture = renderTexture; // Use consistent naming
-    var textureIndex = _getTextureIndexIfAvailable(texture);
+    var textureIndex = getTextureIndexIfAvailable(texture);
     var needsFlush = false;
 
     // --- Texture Slot Management ---
@@ -419,7 +419,7 @@ class RenderProgramBatch extends RenderProgram {
 
     // --- Ensure Texture is Active in Correct Slot (AFTER potential flush) ---
     // Use the context's activation method which includes caching.
-    renderContext.activateRenderTextureAt(texture, textureIndex);
+    renderContext.activateRenderTextureAt(texture, textureIndex, flush: false);
 
     // Update our internal tracking *after* ensuring activation via context
     _textures[textureIndex] ??= texture;
