@@ -21,7 +21,9 @@ abstract class RenderProgram {
   static WebGLVertexArrayObject? currentVao;
   static WebGLVertexArrayObjectOES? currentVaoOes;
 
-  bool get isWebGL2 => _renderingContext.isA<WebGL2RenderingContext>();
+  bool? _isWebGL2;
+  bool get isWebGL2 => 
+    _isWebGL2 ??= _renderingContext.isA<WebGL2RenderingContext>();
 
   RenderProgram()
       : _attributes = <String, int>{},
