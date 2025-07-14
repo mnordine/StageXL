@@ -4,7 +4,7 @@ class RenderProgramBatch extends RenderProgram {
   // aVertexPosition:   Float32(x), Float32(y)
   // aVertexTextCoord:  Float32(u), Float32(v)
   // aVertexColor:      Float32(r), Float32(g), Float32(b), Float32(a)
-  // aVertexTexIndex:   WebGL2: Int32(textureIndex), WebGL1: Float32(textureIndex)
+  // aVertexTexIndex:   Float32(textureIndex)
 
   static int _maxTextures = 8; // Default value, will be updated at runtime
   // Reintroduce sampler indices cache for WebGL 2 sampler array uniform
@@ -32,11 +32,11 @@ class RenderProgramBatch extends RenderProgram {
     in vec2 aVertexPosition;
     in vec2 aVertexTextCoord;
     in vec4 aVertexColor;
-    in int aVertexTexIndex; // Use int for texture index in WebGL 2
+    in float aVertexTexIndex;
 
     out vec2 vTextCoord;
     out vec4 vColor;
-    flat out int vTexIndex; // Use flat interpolation for integer varying
+    out float vTexIndex;
 
     void main() {
       vTextCoord = aVertexTextCoord;
@@ -72,10 +72,11 @@ class RenderProgramBatch extends RenderProgram {
       final samplerDeclaration = 'uniform sampler2D uSamplers[$_maxTextures];';
 
       for (var i = 0; i < _maxTextures; i++) {
+        final iFloat = i.toDouble();
         if (i > 0) sb.write('else ');
         // Use branching to access the sampler array element
         sb.write('''
-        if (vTexIndex == $i) {
+        if (vTexIndex >= ${iFloat - 0.1} && vTexIndex <= ${iFloat + 0.1}) {
           fragColor = texture(uSamplers[$i], vTextCoord) * vColor;
         }''');
       }
@@ -94,7 +95,7 @@ class RenderProgramBatch extends RenderProgram {
 
       in vec2 vTextCoord;
       in vec4 vColor;
-      flat in int vTexIndex;
+      in float vTexIndex;
 
       out vec4 fragColor;
 
@@ -168,7 +169,7 @@ class RenderProgramBatch extends RenderProgram {
 
   @override
   void setupAttributes() {
-    // Stride is 36 bytes (vec2 pos, vec2 texCoord, vec4 color, float/int texIndex)
+    // Stride is 36 bytes (vec2 pos, vec2 texCoord, vec4 color, float texIndex)
     // 2*4 + 2*4 + 4*4 + 1*4 = 8 + 8 + 16 + 4 = 36
     const stride = 36;
     renderBufferVertex.bindAttribute(attributes['aVertexPosition'], 2, stride, 0);  // offset 0 bytes
@@ -178,14 +179,7 @@ class RenderProgramBatch extends RenderProgram {
     final location = attributes['aVertexTexIndex'];
     if (location == null) return; // Optimized out, batching likely unused
 
-    if (isWebGL2) {
-      // Use vertexAttribIPointer for integer attributes in WebGL 2
-      (renderingContext as WebGL2RenderingContext).vertexAttribIPointer(
-          location, 1, WebGL.INT, stride, 32); // offset 32 bytes
-    } else {
-      // Use vertexAttribPointer for float attribute in WebGL 1
-      renderBufferVertex.bindAttribute(location, 1, stride, 32); // offset 32 bytes
-    }
+    renderBufferVertex.bindAttribute(location, 1, stride, 32); // offset 32 bytes
   }
 
   //---------------------------------------------------------------------------
@@ -331,8 +325,7 @@ class RenderProgramBatch extends RenderProgram {
     vxData[currentVxIndex + 5] = colorG;    // g
     vxData[currentVxIndex + 6] = colorB;    // b
     vxData[currentVxIndex + 7] = colorA;    // a
-    // Write texture index (float or int bits) at offset 8
-    _writeTextureIndex(vxData, currentVxIndex + 8, textureIndex);
+    vxData[currentVxIndex + 8] = textureIndex.toDouble();
     currentVxIndex += vertexFloatCount;
 
     // Vertex 1
@@ -344,7 +337,7 @@ class RenderProgramBatch extends RenderProgram {
     vxData[currentVxIndex + 5] = colorG;    // g
     vxData[currentVxIndex + 6] = colorB;    // b
     vxData[currentVxIndex + 7] = colorA;    // a
-    _writeTextureIndex(vxData, currentVxIndex + 8, textureIndex);
+    vxData[currentVxIndex + 8] = textureIndex.toDouble();
     currentVxIndex += vertexFloatCount;
 
     // Vertex 2
@@ -356,7 +349,7 @@ class RenderProgramBatch extends RenderProgram {
     vxData[currentVxIndex + 5] = colorG;    // g
     vxData[currentVxIndex + 6] = colorB;    // b
     vxData[currentVxIndex + 7] = colorA;    // a
-    _writeTextureIndex(vxData, currentVxIndex + 8, textureIndex);
+    vxData[currentVxIndex + 8] = textureIndex.toDouble();
     currentVxIndex += vertexFloatCount;
 
     // Vertex 3
@@ -368,7 +361,7 @@ class RenderProgramBatch extends RenderProgram {
     vxData[currentVxIndex + 5] = colorG;    // g
     vxData[currentVxIndex + 6] = colorB;    // b
     vxData[currentVxIndex + 7] = colorA;    // a
-    _writeTextureIndex(vxData, currentVxIndex + 8, textureIndex);
+    vxData[currentVxIndex + 8] = textureIndex.toDouble();
 
     renderBufferVertex.position += vxListCount * vertexFloatCount;
     renderBufferVertex.count += vxListCount;
@@ -461,45 +454,11 @@ class RenderProgramBatch extends RenderProgram {
       vxData[vxIndex + 5] = colorG;               // g
       vxData[vxIndex + 6] = colorB;               // b
       vxData[vxIndex + 7] = colorA;               // a
-      // Write texture index (float or int bits) at offset 8
-      _writeTextureIndex(vxData, vxIndex + 8, textureIndex);
+      vxData[vxIndex + 8] = textureIndex.toDouble();
       vxIndex += vertexFloatCount;
     }
 
     renderBufferVertex.position += vxListCount * vertexFloatCount;
     renderBufferVertex.count += vxListCount;
   }
-
-  // Helper to write texture index based on WebGL version
-  void _writeTextureIndex(Float32List vxData, int floatIndex, int textureIndex) {
-  if (isWebGL2) {
-    // --- START FIX ---
-    // Get the underlying buffer and the byte offset *within that buffer*
-    // corresponding to the start of the vxData view.
-    final buffer = vxData.buffer;
-    final baseOffsetInBytes = vxData.offsetInBytes;
-    // Calculate the byte offset for the specific float index we want to write to.
-    final targetOffsetInBytes = baseOffsetInBytes + (floatIndex * Float32List.bytesPerElement);
-
-    // Create an Int32List view *specifically for the single integer* we want to write.
-    // Ensure the offset is valid and there's enough space for one Int32.
-    if (targetOffsetInBytes >= 0 && targetOffsetInBytes + Int32List.bytesPerElement <= buffer.lengthInBytes) {
-       final intView = buffer.asInt32List(targetOffsetInBytes, 1);
-       intView[0] = textureIndex;
-    } else {
-       // This indicates a logic error elsewhere if hit.
-       print('Error: Calculated invalid offset for texture index write. '
-             'floatIndex: $floatIndex, baseOffset: $baseOffsetInBytes, targetOffset: $targetOffsetInBytes, bufferLength: ${buffer.lengthInBytes}');
-    }
-    // --- END FIX ---
-  } else {
-    // Write the index as a float for WebGL 1
-    // Add bounds check for safety
-    if (floatIndex < vxData.length) {
-       vxData[floatIndex] = textureIndex.toDouble();
-    } else {
-        print('Warning: Attempted to write texture index out of bounds (WebGL1). floatIndex: $floatIndex, vxData.length: ${vxData.length}');
-    }
-  }
-} 
 }
