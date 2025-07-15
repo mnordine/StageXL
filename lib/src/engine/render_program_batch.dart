@@ -36,7 +36,7 @@ class RenderProgramBatch extends RenderProgram {
 
     out vec2 vTextCoord;
     out vec4 vColor;
-    out float vTexIndex;
+    flat out float vTexIndex;
 
     void main() {
       vTextCoord = aVertexTextCoord;
@@ -72,11 +72,10 @@ class RenderProgramBatch extends RenderProgram {
       final samplerDeclaration = 'uniform sampler2D uSamplers[$_maxTextures];';
 
       for (var i = 0; i < _maxTextures; i++) {
-        final iFloat = i.toDouble();
         if (i > 0) sb.write('else ');
         // Use branching to access the sampler array element
         sb.write('''
-        if (vTexIndex >= ${iFloat - 0.1} && vTexIndex <= ${iFloat + 0.1}) {
+        if (textureIndex == $i) {
           fragColor = texture(uSamplers[$i], vTextCoord) * vColor;
         }''');
       }
@@ -95,11 +94,12 @@ class RenderProgramBatch extends RenderProgram {
 
       in vec2 vTextCoord;
       in vec4 vColor;
-      in float vTexIndex;
+      flat in float vTexIndex;
 
       out vec4 fragColor;
 
       void main() {
+        int textureIndex = int(vTexIndex);
         $sb
       }
       ''';
