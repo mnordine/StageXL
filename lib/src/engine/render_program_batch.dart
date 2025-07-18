@@ -44,6 +44,7 @@ class RenderProgramBatch extends RenderProgram {
   final List<double> _aggregateVertexData = <double>[];
   final List<int> _aggregateIndexData = <int>[];
   RenderContextWebGL? _renderContextWebGL;
+  bool _executingBatch = false;
 
   @override
   String get vertexShaderSource => isWebGL2 ? '''
@@ -219,10 +220,16 @@ class RenderProgramBatch extends RenderProgram {
     _drawCommands.clear();
     _aggregateVertexData.clear();
     _aggregateIndexData.clear();
+    _executingBatch = false;
   }
 
   @override
   void flush() {
+    if (_executingBatch) {
+      // Prevent recursion during batch execution
+      return;
+    }
+    
     if (_drawCommands.isNotEmpty) {
       _executeBatchedCommands();
     } else if (renderBufferIndex.position > 0) {
@@ -235,18 +242,21 @@ class RenderProgramBatch extends RenderProgram {
   void _executeBatchedCommands() {
     if (_drawCommands.isEmpty) return;
 
+    _executingBatch = true;
+
     // Upload all vertex data at once
     final vertexData = Float32List.fromList(_aggregateVertexData);
     final indexData = Int16List.fromList(_aggregateIndexData);
     
+    // Copy to actual buffers
+    renderBufferVertex.data.setRange(0, vertexData.length, vertexData);
+    renderBufferIndex.data.setRange(0, indexData.length, indexData);
+
+    // Set positions for update
     renderBufferVertex.position = vertexData.length;
     renderBufferVertex.count = vertexData.length ~/ 9; // 9 floats per vertex
     renderBufferIndex.position = indexData.length;
     renderBufferIndex.count = indexData.length;
-    
-    // Copy to actual buffers
-    renderBufferVertex.data.setRange(0, vertexData.length, vertexData);
-    renderBufferIndex.data.setRange(0, indexData.length, indexData);
 
     // Update GPU buffers
     renderBufferVertex.update();
@@ -269,6 +279,14 @@ class RenderProgramBatch extends RenderProgram {
       renderingContext.drawElements(WebGL.TRIANGLES, command.indexCount, 
           WebGL.UNSIGNED_SHORT, command.indexOffset * 2); // * 2 for byte offset
     }
+    
+    // Reset buffer positions after batched rendering
+    renderBufferVertex.position = 0;
+    renderBufferVertex.count = 0;
+    renderBufferIndex.position = 0;
+    renderBufferIndex.count = 0;
+    
+    _executingBatch = false;
   }
 
   //---------------------------------------------------------------------------

@@ -58,6 +58,7 @@ class DrawCommand {
    - Calculate vertex offsets dynamically: `_aggregateVertexData.length ~/ 9`
    - Calculate index offsets: `_aggregateIndexData.length - indexCount`
    - Create `DrawCommand` objects with blend mode and texture info
+   - Reset old buffer positions to 0 to prevent fallback to immediate mode
    - No immediate GPU uploads
 
 #### Phase 2: Optimized Upload and Draw
@@ -73,6 +74,9 @@ class DrawCommand {
 ```dart
 BlendMode? currentBlendMode;
 for (final command in _drawCommands) {
+  // Activate texture if needed
+  _renderContextWebGL!.activateRenderTextureAt(command.texture, command.textureIndex, flush: false);
+  
   // Only change blend mode if different
   if (!identical(command.blendMode, currentBlendMode)) {
     _renderContextWebGL!.activateBlendMode(command.blendMode);
@@ -105,6 +109,7 @@ if (!needsFlush && _aggregateIndexData.length + ixListCount >= renderBufferIndex
 ### Flush Behavior
 - **Immediate Mode**: Falls back to original `super.flush()` when no commands are batched
 - **Batched Mode**: Executes `_executeBatchedCommands()` for optimized rendering
+- **Prevention of Fallback**: Old buffer positions are reset to 0 after each object to force batched execution
 - **Cleanup**: Clears all aggregate data after each flush
 
 ## Performance Benefits
@@ -133,3 +138,23 @@ if (!needsFlush && _aggregateIndexData.length + ixListCount >= renderBufferIndex
 - Could be extended to optimize texture switching in similar manner
 - Potential for further batching of shader uniform changes
 - Opportunity to implement instanced rendering for identical objects
+
+## Critical Implementation Details
+
+### Preventing Premature Flushes
+The key to making batching work was identifying and removing sources of premature flushes:
+
+1. **Removed `activateBlendMode` from render context**: The original `renderTextureQuad` and `renderTextureMesh` methods called `activateBlendMode` before each object, which would flush the batch immediately.
+
+2. **Forced batched execution path**: After adding objects to the batch, the old buffer positions are reset to 0, preventing fallback to immediate mode rendering.
+
+### Buffer Position Management
+```dart
+// After adding to batch, prevent old rendering path
+renderBufferIndex.position = 0;
+renderBufferIndex.count = 0;
+renderBufferVertex.position = 0;
+renderBufferVertex.count = 0;
+```
+
+This ensures that the condition `renderBufferIndex.position > 0` is false, forcing the use of `_executeBatchedCommands()` instead of `super.flush()`.

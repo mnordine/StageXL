@@ -497,7 +497,6 @@ class RenderContextWebGL extends RenderContext {
   void renderTextureQuad(
       RenderState renderState, RenderTextureQuad renderTextureQuad) {
     activateRenderProgram(renderProgramBatch);
-    activateBlendMode(renderState.globalBlendMode);
     renderProgramBatch.renderTextureQuad(
         renderState, this, renderTextureQuad);
   }
@@ -506,7 +505,6 @@ class RenderContextWebGL extends RenderContext {
   void renderTextureMesh(RenderState renderState, RenderTexture renderTexture,
       Int16List ixList, Float32List vxList) {
     activateRenderProgram(renderProgramBatch);
-    activateBlendMode(renderState.globalBlendMode);
     renderProgramBatch.renderTextureMesh(
         renderState, this, renderTexture, ixList, vxList, 1, 1, 1, 1);
   }
