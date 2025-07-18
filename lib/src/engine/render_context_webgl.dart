@@ -17,6 +17,7 @@ class RenderContextWebGL extends RenderContext {
   RenderFrameBuffer? _activeRenderFrameBuffer;
   RenderStencilBuffer? _activeRenderStencilBuffer;
   BlendMode? _activeBlendMode;
+  int? _activeBlendEquation;
 
   bool _contextValid = true;
   int _contextIdentifier = 0;
@@ -106,6 +107,8 @@ class RenderContextWebGL extends RenderContext {
     _renderingContext.disable(WebGL.CULL_FACE);
     _renderingContext.pixelStorei(WebGL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
     _renderingContext.blendFunc(WebGL.ONE, WebGL.ONE_MINUS_SRC_ALPHA);
+    _renderingContext.blendEquation(WebGL.FUNC_ADD);
+    _activeBlendEquation = WebGL.FUNC_ADD;
 
     _activeRenderProgram = renderProgramBatch;
     _activeRenderProgram.activate(this);
@@ -794,7 +797,15 @@ class RenderContextWebGL extends RenderContext {
     if (!identical(blendMode, _activeBlendMode)) {
       _activeRenderProgram.flush();
       _activeBlendMode = blendMode;
-      _activeBlendMode!.blend(_renderingContext);
+      
+      // Set blend function
+      _renderingContext.blendFunc(blendMode.srcFactor, blendMode.dstFactor);
+      
+      // Only set blend equation if it has changed
+      if (_activeBlendEquation != WebGL.FUNC_ADD) {
+        _activeBlendEquation = WebGL.FUNC_ADD;
+        _renderingContext.blendEquation(WebGL.FUNC_ADD);
+      }
     }
   }
 
@@ -883,6 +894,9 @@ class RenderContextWebGL extends RenderContext {
     contextEvent.preventDefault();
     _contextValid = false;
 
+    // Reset blend equation state
+    _activeBlendEquation = null;
+
     // Clean up WebGL 2 resources
     if (_isWebGL2) {
       _maskQuadVao = null;
@@ -897,6 +911,9 @@ class RenderContextWebGL extends RenderContext {
   void _onContextRestored(WebGLContextEvent contextEvent) {
     _contextValid = true;
     _contextIdentifier = ++_globalContextIdentifier;
+
+    // Reset blend equation state
+    _activeBlendEquation = null;
 
     // Re-initialize WebGL 2 features
     if (_isWebGL2) {
