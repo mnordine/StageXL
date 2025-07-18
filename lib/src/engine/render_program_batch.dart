@@ -262,22 +262,51 @@ class RenderProgramBatch extends RenderProgram {
     renderBufferVertex.update();
     renderBufferIndex.update();
 
-    // Execute draw commands with optimized blend mode switching
+    // Execute draw commands with optimized batching
     BlendMode? currentBlendMode;
+    RenderTexture? currentTexture;
+    var currentTextureIndex = -1;
     
-    for (final command in _drawCommands) {
-      // Activate texture if needed
-      _renderContextWebGL!.activateRenderTextureAt(command.texture, command.textureIndex, flush: false);
+    var i = 0;
+    while (i < _drawCommands.length) {
+      final command = _drawCommands[i];
       
-      // Change blend mode only if different
+      // Check if we need to change blend mode
       if (!identical(command.blendMode, currentBlendMode)) {
         _renderContextWebGL!.activateBlendMode(command.blendMode);
         currentBlendMode = command.blendMode;
       }
       
-      // Draw with offset
-      renderingContext.drawElements(WebGL.TRIANGLES, command.indexCount, 
+      // Check if we need to change texture
+      if (!identical(command.texture, currentTexture) || command.textureIndex != currentTextureIndex) {
+        _renderContextWebGL!.activateRenderTextureAt(command.texture, command.textureIndex, flush: false);
+        currentTexture = command.texture;
+        currentTextureIndex = command.textureIndex;
+      }
+      
+      // Find consecutive commands with same blend mode and texture
+      var batchIndexCount = command.indexCount;
+      var j = i + 1;
+      
+      while (j < _drawCommands.length) {
+        final nextCommand = _drawCommands[j];
+        
+        // Check if next command can be batched (same blend mode and texture)
+        if (identical(nextCommand.blendMode, currentBlendMode) && 
+            identical(nextCommand.texture, currentTexture) &&
+            nextCommand.textureIndex == currentTextureIndex) {
+          batchIndexCount += nextCommand.indexCount;
+          j++;
+        } else {
+          break;
+        }
+      }
+      
+      // Draw the entire batch with a single call
+      renderingContext.drawElements(WebGL.TRIANGLES, batchIndexCount, 
           WebGL.UNSIGNED_SHORT, command.indexOffset * 2); // * 2 for byte offset
+      
+      i = j; // Move to next unbatched command
     }
     
     // Reset buffer positions after batched rendering
