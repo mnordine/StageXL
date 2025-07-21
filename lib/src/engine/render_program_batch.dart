@@ -262,10 +262,9 @@ class RenderProgramBatch extends RenderProgram {
     renderBufferVertex.update();
     renderBufferIndex.update();
 
-    // Execute draw commands with optimized batching
+    // Execute draw commands with optimized batching - batch by blend mode only
     BlendMode? currentBlendMode;
-    RenderTexture? currentTexture;
-    var currentTextureIndex = -1;
+    var activatedTextures = <int, RenderTexture>{};
     
     var i = 0;
     while (i < _drawCommands.length) {
@@ -275,26 +274,32 @@ class RenderProgramBatch extends RenderProgram {
       if (!identical(command.blendMode, currentBlendMode)) {
         _renderContextWebGL!.activateBlendMode(command.blendMode);
         currentBlendMode = command.blendMode;
+        
+        // Clear activated textures when blend mode changes
+        activatedTextures.clear();
       }
       
-      // Check if we need to change texture
-      if (!identical(command.texture, currentTexture) || command.textureIndex != currentTextureIndex) {
-        _renderContextWebGL!.activateRenderTextureAt(command.texture, command.textureIndex, flush: false);
-        currentTexture = command.texture;
-        currentTextureIndex = command.textureIndex;
-      }
-      
-      // Find consecutive commands with same blend mode and texture
+      // Find consecutive commands with same blend mode (textures can vary)
       var batchIndexCount = command.indexCount;
       var j = i + 1;
+      
+      // Activate texture for first command
+      if (!activatedTextures.containsKey(command.textureIndex)) {
+        _renderContextWebGL!.activateRenderTextureAt(command.texture, command.textureIndex, flush: false);
+        activatedTextures[command.textureIndex] = command.texture;
+      }
       
       while (j < _drawCommands.length) {
         final nextCommand = _drawCommands[j];
         
-        // Check if next command can be batched (same blend mode and texture)
-        if (identical(nextCommand.blendMode, currentBlendMode) && 
-            identical(nextCommand.texture, currentTexture) &&
-            nextCommand.textureIndex == currentTextureIndex) {
+        // Check if next command can be batched (same blend mode, texture can vary)
+        if (identical(nextCommand.blendMode, currentBlendMode)) {
+          // Activate texture if not already activated
+          if (!activatedTextures.containsKey(nextCommand.textureIndex)) {
+            _renderContextWebGL!.activateRenderTextureAt(nextCommand.texture, nextCommand.textureIndex, flush: false);
+            activatedTextures[nextCommand.textureIndex] = nextCommand.texture;
+          }
+          
           batchIndexCount += nextCommand.indexCount;
           j++;
         } else {
