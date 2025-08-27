@@ -376,7 +376,13 @@ class RenderProgramBatch extends RenderProgram {
   void renderTextureQuad(
       RenderState renderState, RenderContextWebGL renderContext,
       RenderTextureQuad renderTextureQuad, [num r = 1, num g = 1, num b = 1, num a = 1]) {
-
+    // Ensure we have a reference to the active RenderContextWebGL. Some
+    // integrations (for example stagexl_spine) call this method directly on
+    // the program instance. In those cases the program may not have been
+    // activated via RenderContext.activateRenderProgram, so _renderContextWebGL
+    // could be null. Use the provided renderContext parameter to be resilient
+    // to that usage pattern.
+    _renderContextWebGL = renderContext;
     if (renderTextureQuad.hasCustomVertices) {
       final ixList = renderTextureQuad.ixList;
       final vxList = renderTextureQuad.vxList;
@@ -478,7 +484,9 @@ class RenderProgramBatch extends RenderProgram {
       RenderState renderState, RenderContextWebGL renderContext,
       RenderTexture renderTexture, Int16List ixList, Float32List vxList,
       num r, num g, num b, num a) {
-
+    // Ensure we have a reference to the active RenderContextWebGL. See
+    // comment in renderTextureQuad for rationale.
+    _renderContextWebGL = renderContext;
     final texture = renderTexture; // Use consistent naming
     var textureIndex = getTextureIndexIfAvailable(texture);
     var needsFlush = false;
