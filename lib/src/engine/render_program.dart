@@ -20,6 +20,11 @@ abstract class RenderProgram {
 
   static WebGLVertexArrayObject? currentVao;
   static WebGLVertexArrayObjectOES? currentVaoOes;
+  // Track enabled vertex attrib arrays globally so we can disable those
+  // that are not used by the newly activated program. This avoids
+  // leftover vertex attribute state from other programs (for example
+  // filter programs) causing incorrect vertex attribute pointers.
+  static final Set<int> _enabledVertexAttribArrays = <int>{};
 
   bool? _isWebGL2;
 
@@ -90,6 +95,12 @@ abstract class RenderProgram {
     if (!_supportsVao) {
       setupAttributes();
     }
+
+    // Always bind this program's VAO when VAOs are supported. This ensures
+    // that attribute bindings saved in the VAO are restored even when the
+    // program was previously initialized and another program (for example
+    // a filter) may have bound a different VAO in the meantime.
+    _bindVAO();
 
     renderingContext.useProgram(program);
   }
@@ -190,16 +201,57 @@ abstract class RenderProgram {
   //---------------------------------------------------------------------------
 
   void _updateAttributes(WebGL rc, WebGLProgram program) {
-    _attributes.clear();
     final count =
         (rc.getProgramParameter(program, WebGL.ACTIVE_ATTRIBUTES)! as JSNumber).toDartInt;
 
+    // If VAOs are supported we should not try to globally disable vertex
+    // attribute arrays here. VAOs encapsulate attribute state and disabling
+    // arrays globally can corrupt other VAOs' state (this was breaking
+    // WebGL2 runs). When VAOs are supported we just enable attributes for
+    // the currently bound VAO and record their locations.
+    if (_supportsVao) {
+      _attributes.clear();
+      for (var i = 0; i < count; i++) {
+        final activeInfo = rc.getActiveAttrib(program, i)!;
+        final location = rc.getAttribLocation(program, activeInfo.name);
+        try {
+          rc.enableVertexAttribArray(location);
+        } catch (_) {}
+        _attributes[activeInfo.name] = location;
+      }
+      return;
+    }
+
+    // Fallback for platforms without VAO support: track enabled attribute
+    // arrays globally and disable any that aren't used by the new program.
+    final newAttributes = <String, int>{};
+    final newLocations = <int>{};
     for (var i = 0; i < count; i++) {
       final activeInfo = rc.getActiveAttrib(program, i)!;
       final location = rc.getAttribLocation(program, activeInfo.name);
-      rc.enableVertexAttribArray(location);
-      _attributes[activeInfo.name] = location;
+      newAttributes[activeInfo.name] = location;
+      newLocations.add(location);
     }
+
+    for (final loc in _enabledVertexAttribArrays.toList()) {
+      if (!newLocations.contains(loc)) {
+        try {
+          rc.disableVertexAttribArray(loc);
+        } catch (_) {
+          // ignore errors when disabling invalid locations
+        }
+        _enabledVertexAttribArrays.remove(loc);
+      }
+    }
+
+    _attributes.clear();
+    newAttributes.forEach((name, location) {
+      try {
+        rc.enableVertexAttribArray(location);
+      } catch (_) {}
+      _enabledVertexAttribArrays.add(location);
+      _attributes[name] = location;
+    });
   }
 
   //---------------------------------------------------------------------------

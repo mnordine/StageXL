@@ -27,6 +27,7 @@ Future<void> main() async {
     ..x = 100
     ..y = 100
     ..blendMode = BlendMode.ADD
+    ..filters = [BlurFilter()]
     ..addTo(stage);
 
   Bitmap(resources.getBitmapData('captive'))
