@@ -244,19 +244,26 @@ class RenderProgramBatch extends RenderProgram {
 
     _executingBatch = true;
 
-    // Upload all vertex data at once
-    final vertexData = Float32List.fromList(_aggregateVertexData);
-    final indexData = Int16List.fromList(_aggregateIndexData);
-    
-    // Copy to actual buffers
-    renderBufferVertex.data.setRange(0, vertexData.length, vertexData);
-    renderBufferIndex.data.setRange(0, indexData.length, indexData);
+    // Upload all vertex and index data at once. Avoid creating typed
+    // intermediate arrays to reduce allocations: copy directly from the
+    // aggregate Dart lists into the underlying typed buffers.
+
+    final vertexCount = _aggregateVertexData.length;
+    final indexCount = _aggregateIndexData.length;
+
+    // Copy to actual buffers (this will convert/copy Dart List<num> -> TypedList)
+    if (vertexCount > 0) {
+      renderBufferVertex.data.setRange(0, vertexCount, _aggregateVertexData);
+    }
+    if (indexCount > 0) {
+      renderBufferIndex.data.setRange(0, indexCount, _aggregateIndexData);
+    }
 
     // Set positions for update
-    renderBufferVertex.position = vertexData.length;
-    renderBufferVertex.count = vertexData.length ~/ 9; // 9 floats per vertex
-    renderBufferIndex.position = indexData.length;
-    renderBufferIndex.count = indexData.length;
+    renderBufferVertex.position = vertexCount;
+    renderBufferVertex.count = vertexCount ~/ 9; // 9 floats per vertex
+    renderBufferIndex.position = indexCount;
+    renderBufferIndex.count = indexCount;
 
     // Update GPU buffers
     renderBufferVertex.update();
@@ -282,33 +289,36 @@ class RenderProgramBatch extends RenderProgram {
       // Find consecutive commands with same blend mode (textures can vary)
       var batchIndexCount = command.indexCount;
       var j = i + 1;
-      
-      // Activate texture for first command
-      if (!activatedTextures.containsKey(command.textureIndex)) {
-        _renderContextWebGL!.activateRenderTextureAt(command.texture, command.textureIndex, flush: false);
-        activatedTextures[command.textureIndex] = command.texture;
-      }
-      
+
+      // Collect all unique texture indices used by this blend group so we can
+      // bind them once up front. This reduces activeTexture/bindTexture calls
+      // during the inner loop.
+      final texturesNeeded = { command.textureIndex };
+
       while (j < _drawCommands.length) {
         final nextCommand = _drawCommands[j];
         
         // Check if next command can be batched (same blend mode, texture can vary)
         if (identical(nextCommand.blendMode, currentBlendMode)) {
-          // Activate texture if not already activated
-          if (!activatedTextures.containsKey(nextCommand.textureIndex)) {
-            _renderContextWebGL!.activateRenderTextureAt(nextCommand.texture, nextCommand.textureIndex, flush: false);
-            activatedTextures[nextCommand.textureIndex] = nextCommand.texture;
-          }
-          
+          texturesNeeded.add(nextCommand.textureIndex);
           batchIndexCount += nextCommand.indexCount;
           j++;
         } else {
           break;
         }
       }
-      
-      // Draw the entire batch with a single call
-      renderingContext.drawElements(WebGL.TRIANGLES, batchIndexCount, 
+
+      // Activate all textures needed for this batch (once)
+      for (final texIndex in texturesNeeded) {
+        final tex = _textures[texIndex];
+        if (tex != null) {
+          _renderContextWebGL!.activateRenderTextureAt(tex, texIndex, flush: false);
+          activatedTextures[texIndex] = tex;
+        }
+      }
+
+      // Draw the entire batch with a single call using byte offset
+      renderingContext.drawElements(WebGL.TRIANGLES, batchIndexCount,
           WebGL.UNSIGNED_SHORT, command.indexOffset * 2); // * 2 for byte offset
       
       i = j; // Move to next unbatched command
