@@ -333,6 +333,21 @@ class RenderProgramBatch extends RenderProgram {
     _executingBatch = false;
   }
 
+  /// Public wrapper to execute (flush) the current batched commands now.
+  /// This uploads the current aggregated vertex/index data and issues the
+  /// drawElements calls for the accumulated draw commands. It's intended
+  /// to be called from the render context when an immediate draw is needed
+  /// (for example, when switching blend modes from an external library like
+  /// spine which expects draws to happen immediately).
+  void executeBatchedCommandsNow() {
+    if (_executingBatch) return;
+    if (_drawCommands.isEmpty) return;
+    _executeBatchedCommands();
+    // After execution, clear batch data to allow subsequent batches.
+    _clearTextures();
+    _clearBatchData();
+  }
+
   //---------------------------------------------------------------------------
 
   /// Checks if the given texture is already in a slot or if there's an empty slot.

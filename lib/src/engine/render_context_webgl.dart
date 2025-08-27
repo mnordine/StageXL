@@ -829,12 +829,20 @@ class RenderContextWebGL extends RenderContext {
 
   void activateBlendMode(BlendMode blendMode) {
     if (!identical(blendMode, _activeBlendMode)) {
-      // If the active program is the batch renderer, avoid flushing here.
-      // The batch renderer uploads its buffers once and issues multiple
-      // drawElements calls with offsets while changing the blend function
-      // between those calls. Flushing here would force repeated buffer
-      // uploads (bufferSubData) for each blend change and slow things down.
-      if (_activeRenderProgram is! RenderProgramBatch) {
+      // If the active program is the batch renderer, we need to ensure
+      // that any accumulated batched commands are executed now so that
+      // external code which switches blend modes per-subdraw (for
+      // example spine) receives the corresponding drawElements calls.
+      // For other programs, do the normal flush behavior.
+      if (_activeRenderProgram is RenderProgramBatch) {
+        try {
+          (_activeRenderProgram as RenderProgramBatch).executeBatchedCommandsNow();
+        } catch (_) {
+          // If something goes wrong, fall back to a regular flush to avoid
+          // leaving the renderer in an inconsistent state.
+          _activeRenderProgram.flush();
+        }
+      } else {
         _activeRenderProgram.flush();
       }
 
