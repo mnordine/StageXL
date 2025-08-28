@@ -301,6 +301,13 @@ class RenderTexture {
 
     const target = WebGL.TEXTURE_2D;
 
+    if (RenderProgramBatch.debugBatch) {
+      try {
+        final premul = renderingContext.getParameter(WebGL.UNPACK_PREMULTIPLY_ALPHA_WEBGL);
+        print('[Texture] updating texture (premultiply=$premul) source=${_source.runtimeType}');
+      } catch (_) {}
+    }
+
     if (_source != null) {
       renderingContext.texImage2D(target, 0, pixelFormat, pixelFormat.toJS, pixelType.toJS, _source!);
     } else if (_compressedTexture != null) {

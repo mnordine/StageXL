@@ -101,11 +101,14 @@ class RenderContextWebGL extends RenderContext {
 
     _activeRenderTextures = List.filled(maxTextureUnits, null);
 
-    _renderingContext.enable(WebGL.BLEND);
+  _renderingContext.enable(WebGL.BLEND);
     _renderingContext.disable(WebGL.STENCIL_TEST);
     _renderingContext.disable(WebGL.DEPTH_TEST);
     _renderingContext.disable(WebGL.CULL_FACE);
-    _renderingContext.pixelStorei(WebGL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
+  // Default behavior: enable premultiplied alpha during texture uploads.
+  // Expose a runtime toggle via `setPremultiplyAlpha` if you need to
+  // experiment with non-premultiplied assets.
+  _renderingContext.pixelStorei(WebGL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
     _renderingContext.blendFunc(WebGL.ONE, WebGL.ONE_MINUS_SRC_ALPHA);
     _renderingContext.blendEquation(WebGL.FUNC_ADD);
     _activeBlendEquation = WebGL.FUNC_ADD;
@@ -820,6 +823,7 @@ class RenderContextWebGL extends RenderContext {
 
   void activateRenderProgram(RenderProgram renderProgram) {
     if (!identical(renderProgram, _activeRenderProgram)) {
+      if (RenderProgramBatch.debugBatch) print('[GL] activateRenderProgram: switching to ${renderProgram.runtimeType}');
       _activeRenderProgram.flush();
       _activeRenderProgram = renderProgram;
       _activeRenderProgram.activate(this);
@@ -829,32 +833,36 @@ class RenderContextWebGL extends RenderContext {
 
   void activateBlendMode(BlendMode blendMode) {
     if (!identical(blendMode, _activeBlendMode)) {
-      // If the active program is the batch renderer, we need to ensure
-      // that any accumulated batched commands are executed now so that
-      // external code which switches blend modes per-subdraw (for
-      // example spine) receives the corresponding drawElements calls.
-      // For other programs, do the normal flush behavior.
-      if (_activeRenderProgram is RenderProgramBatch) {
-        try {
-          (_activeRenderProgram as RenderProgramBatch).executeBatchedCommandsNow();
-        } catch (_) {
-          // If something goes wrong, fall back to a regular flush to avoid
-          // leaving the renderer in an inconsistent state.
-          _activeRenderProgram.flush();
-        }
-      } else {
+      // Avoid flushing when the batch renderer is active. The batch
+      // renderer uploads its buffers once and issues multiple drawElements
+      // calls with offsets while changing the blend function between those
+      // calls. Flushing here would force repeated buffer uploads and slow
+      // things down. External integrations (like spine) should set the
+      // blend mode before queueing geometry so that one upload + many
+      // draw calls with different blend funcs can be performed during
+      // the final flush.
+      if (_activeRenderProgram is! RenderProgramBatch) {
         _activeRenderProgram.flush();
       }
-
+      // Update the cached blend mode. If the batch renderer is active we
+      // intentionally avoid calling the GL blendFunc here: the batch
+      // executor will set the GL blend function right before each draw
+      // so that many blend changes can be applied without flushing and
+      // without tripping buffer uploads during command accumulation.
       _activeBlendMode = blendMode;
-      
-      // Set blend function
-      _renderingContext.blendFunc(blendMode.srcFactor, blendMode.dstFactor);
-      
-      // Only set blend equation if it has changed
-      if (_activeBlendEquation != WebGL.FUNC_ADD) {
-        _activeBlendEquation = WebGL.FUNC_ADD;
-        _renderingContext.blendEquation(WebGL.FUNC_ADD);
+
+      if (_activeRenderProgram is! RenderProgramBatch) {
+        // Only call the GL API when not batching.
+        _renderingContext.blendFunc(blendMode.srcFactor, blendMode.dstFactor);
+        if (RenderProgramBatch.debugBatch) print('[GL] activateBlendMode: src=${blendMode.srcFactor} dst=${blendMode.dstFactor}');
+
+        // Only set blend equation if it has changed
+        if (_activeBlendEquation != WebGL.FUNC_ADD) {
+          _activeBlendEquation = WebGL.FUNC_ADD;
+          _renderingContext.blendEquation(WebGL.FUNC_ADD);
+        }
+      } else {
+        if (RenderProgramBatch.debugBatch) print('[GL] activateBlendMode(deferred): src=${blendMode.srcFactor} dst=${blendMode.dstFactor}');
       }
     }
   }
