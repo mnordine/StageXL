@@ -18,7 +18,7 @@ class DrawCommand {
 
 class RenderProgramBatch extends RenderProgram {
   /// Enable to print debug information about batch execution.
-  static bool debugBatch = true;
+  static bool debugBatch = false;
 
   // aVertexPosition:   Float32(x), Float32(y)
   // aVertexTextCoord:  Float32(u), Float32(v)
@@ -284,7 +284,8 @@ class RenderProgramBatch extends RenderProgram {
     // reducing the number of GL draw calls when possible.
     var cmdIndex = 0;
     int? lastBoundTexIndex;
-    BlendMode? lastBoundBlend;
+    // BlendMode? lastBoundBlend;
+    var lastBoundBlend = BlendMode.NORMAL;
     while (cmdIndex < _drawCommands.length) {
       final first = _drawCommands[cmdIndex];
 
@@ -309,23 +310,25 @@ class RenderProgramBatch extends RenderProgram {
       }
 
       // Activate blend mode for the whole group (if changed)
-        final needBlendChange = lastBoundBlend == null || lastBoundBlend.srcFactor != groupBlend.srcFactor || lastBoundBlend.dstFactor != groupBlend.dstFactor;
+      final needBlendChange = /*lastBoundBlend == null ||*/
+          lastBoundBlend.srcFactor != groupBlend.srcFactor ||
+              lastBoundBlend.dstFactor != groupBlend.dstFactor;
       if (needBlendChange) {
         _renderContextWebGL!.activateBlendMode(groupBlend);
         lastBoundBlend = groupBlend;
       }
 
       // Bind texture for the whole group (if changed)
-        final groupTexture = first.texture;
-        // Ensure internal slot reflects the texture we will bind.
-        _textures[groupTexIndex] ??= groupTexture;
-        if (groupTexIndex != lastBoundTexIndex) {
-          if (debugBatch) print('[Batch] binding texture index=$groupTexIndex present=true');
-          _renderContextWebGL!.activateRenderTextureAt(groupTexture, groupTexIndex, flush: false);
-          lastBoundTexIndex = groupTexIndex;
-        }
+      final groupTexture = first.texture;
+      // Ensure internal slot reflects the texture we will bind.
+      _textures[groupTexIndex] ??= groupTexture;
+      if (groupTexIndex != lastBoundTexIndex) {
+        if (debugBatch) print('[Batch] binding texture index=$groupTexIndex present=true');
+        _renderContextWebGL!.activateRenderTextureAt(groupTexture, groupTexIndex, flush: false);
+        lastBoundTexIndex = groupTexIndex;
+      }
 
-  if (debugBatch) {
+      if (debugBatch) {
         // Query GL state to help debug mismatches between expected
         // blend/texture state and the actual GL state at draw time.
         try {
@@ -360,28 +363,30 @@ class RenderProgramBatch extends RenderProgram {
       }
 
       // Force the GL blend function for the group immediately before drawing.
-      try {
-        final gl = _renderContextWebGL!.rawContext;
-        // Make absolutely sure the correct texture is bound to the
-        // expected texture unit. Some drivers can be finicky about the
-        // active texture unit state; calling this explicitly here is a
-        // defensive step and cheap compared to the draw.
-        try {
-          final webglTex = groupTexture.texture;
-          if (webglTex != null) {
-            gl.activeTexture(WebGL.TEXTURE0 + groupTexIndex);
-            gl.bindTexture(WebGL.TEXTURE_2D, webglTex);
-          }
-        } catch (_) {
-          // ignore
-        }
+      // try {
+      final gl = _renderContextWebGL!.rawContext;
+      //   // Make absolutely sure the correct texture is bound to the
+      //   // expected texture unit. Some drivers can be finicky about the
+      //   // active texture unit state; calling this explicitly here is a
+      //   // defensive step and cheap compared to the draw.
+      //   try {
+      //     final webglTex = groupTexture.texture;
+      //     if (webglTex != null) {
+      //       gl.activeTexture(WebGL.TEXTURE0 + groupTexIndex);
+      //       gl.bindTexture(WebGL.TEXTURE_2D, webglTex);
+      //     }
+      //   } catch (_) {
+      //     // ignore
+      //   }
 
-        gl.blendFunc(groupBlend.srcFactor, groupBlend.dstFactor);
-        // Also ensure the blend equation is set (conservative; cheap).
-        gl.blendEquation(WebGL.FUNC_ADD);
-      } catch (_) {
-        // ignore
-      }
+      // if (_lastBlendMode != groupBlend) {
+      if (needBlendChange) gl.blendFunc(groupBlend.srcFactor, groupBlend.dstFactor);
+      //   // Also ensure the blend equation is set (conservative; cheap).
+      // gl.blendEquation(WebGL.FUNC_ADD);
+      // }
+      // } catch (_) {
+      //   // ignore
+      // }
 
       renderingContext.drawElements(WebGL.TRIANGLES, groupCount, WebGL.UNSIGNED_SHORT, groupOffset * 2);
 
@@ -474,6 +479,13 @@ class RenderProgramBatch extends RenderProgram {
     const vxListCount = 4;
     const vertexFloatCount = 9; // Stride in floats
 
+    // Check if blend mode changed - flush if so
+    // final currentBlendMode = renderState.globalBlendMode;
+    // if (currentBlendMode.srcFactor != currentBlendMode.srcFactor ||
+    //     currentBlendMode.dstFactor != currentBlendMode.dstFactor) {
+    //   needsFlush = true;
+    // }
+
     // Check if we need to flush due to buffer size limits
     if (!needsFlush && _aggregateIndexData.length + ixListCount >= renderBufferIndex.data.length) {
        needsFlush = true;
@@ -547,9 +559,16 @@ class RenderProgramBatch extends RenderProgram {
   //---------------------------------------------------------------------------
 
   void renderTextureMesh(
-      RenderState renderState, RenderContextWebGL renderContext,
-      RenderTexture renderTexture, Int16List ixList, Float32List vxList,
-      num r, num g, num b, num a) {
+      RenderState renderState,
+      RenderContextWebGL renderContext,
+      RenderTexture renderTexture,
+      Int16List ixList,
+      Float32List vxList,
+      num r,
+      num g,
+      num b,
+      num a,
+      {BlendMode? blendMode}) {
     // Ensure we have a reference to the active RenderContextWebGL. See
     // comment in renderTextureQuad for rationale.
     _renderContextWebGL = renderContext;
@@ -568,6 +587,8 @@ class RenderProgramBatch extends RenderProgram {
     final ixListCount = ixList.length;
     final vxListCount = vxList.length >> 2; // Input vxList has 4 floats (x,y,u,v)
     const vertexFloatCount = 9; // Output vertex has 9 floats
+
+    blendMode ??= renderState.globalBlendMode;
 
     // Check if we need to flush due to buffer size limits
     if (!needsFlush && _aggregateIndexData.length + ixListCount >= renderBufferIndex.data.length) {
@@ -627,7 +648,7 @@ class RenderProgramBatch extends RenderProgram {
     final drawCommand = DrawCommand(
       indexCount: ixListCount,
       indexOffset: _aggregateIndexData.length - ixListCount,
-      blendMode: renderState.globalBlendMode,
+      blendMode: blendMode,
       texture: texture,
       textureIndex: textureIndex,
     );
