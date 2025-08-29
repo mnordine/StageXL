@@ -330,19 +330,22 @@ class RenderContextWebGL extends RenderContext {
       _projectionMatrix.translate(-1.0, 1.0, 0.0);
       _activeRenderProgram.projectionMatrix = _projectionMatrix;
     }
-    // Ensure blend state is reset at the start of a new frame. This prevents
-    // blend modes (for example ADD) from leaking into subsequent frames if
-    // an earlier frame left the cached _activeBlendMode set while using the
-    // batch renderer (which defers GL blend calls). Explicitly set the
-    // cached value and update GL state so non-batched render paths start
-    // with a known default.
-    _activeBlendMode = BlendMode.NORMAL;
-    try {
-      _renderingContext.blendFunc(WebGL.ONE, WebGL.ONE_MINUS_SRC_ALPHA);
-      _renderingContext.blendEquation(WebGL.FUNC_ADD);
-      _activeBlendEquation = WebGL.FUNC_ADD;
-    } catch (_) {
-      // Some environments may restrict GL calls during initialization; ignore.
+
+    if (_activeBlendMode != BlendMode.NORMAL) {
+      // Ensure blend state is reset at the start of a new frame. This prevents
+      // blend modes (for example ADD) from leaking into subsequent frames if
+      // an earlier frame left the cached _activeBlendMode set while using the
+      // batch renderer (which defers GL blend calls). Explicitly set the
+      // cached value and update GL state so non-batched render paths start
+      // with a known default.
+      _activeBlendMode = BlendMode.NORMAL;
+      try {
+        _renderingContext.blendFunc(WebGL.ONE, WebGL.ONE_MINUS_SRC_ALPHA);
+        _renderingContext.blendEquation(WebGL.FUNC_ADD);
+        _activeBlendEquation = WebGL.FUNC_ADD;
+      } catch (_) {
+        // Some environments may restrict GL calls during initialization; ignore.
+      }
     }
   }
 
