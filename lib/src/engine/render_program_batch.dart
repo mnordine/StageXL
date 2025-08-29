@@ -241,7 +241,17 @@ class RenderProgramBatch extends RenderProgram {
     }
     _clearTextures(); // Clear local texture tracking for the new batch
     _clearBatchData();
+
+    final lastBlendMode = _lastBlendMode;
+    if (lastBlendMode != null &&
+        (lastBlendMode.srcFactor != BlendMode.NORMAL.srcFactor ||
+         lastBlendMode.dstFactor != BlendMode.NORMAL.dstFactor)) {
+      _renderingContext.blendFunc(BlendMode.NORMAL.srcFactor, BlendMode.NORMAL.dstFactor);
+      _lastBlendMode = null;
+    }
   }
+
+  BlendMode? _lastBlendMode;
 
   void _executeBatchedCommands() {
     if (_drawCommands.isEmpty) return;
@@ -407,7 +417,10 @@ class RenderProgramBatch extends RenderProgram {
       //   }
 
       // if (_lastBlendMode != groupBlend) {
-      if (needBlendChange) gl.blendFunc(groupBlend.srcFactor, groupBlend.dstFactor);
+      if (needBlendChange) {
+        _lastBlendMode = groupBlend;
+        gl.blendFunc(groupBlend.srcFactor, groupBlend.dstFactor);
+      } 
       //   // Also ensure the blend equation is set (conservative; cheap).
       // gl.blendEquation(WebGL.FUNC_ADD);
       // }
