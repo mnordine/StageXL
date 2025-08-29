@@ -282,10 +282,9 @@ class RenderProgramBatch extends RenderProgram {
     // blendMode and textureIndex into a single drawElements call. This
     // preserves correct ordering and per-blend correctness while
     // reducing the number of GL draw calls when possible.
-    var cmdIndex = 0;
-    int? lastBoundTexIndex;
-    // BlendMode? lastBoundBlend;
-    var lastBoundBlend = BlendMode.NORMAL;
+  var cmdIndex = 0;
+  // BlendMode? lastBoundBlend;
+  var lastBoundBlend = BlendMode.NORMAL;
     while (cmdIndex < _drawCommands.length) {
       final first = _drawCommands[cmdIndex];
 
@@ -296,17 +295,27 @@ class RenderProgramBatch extends RenderProgram {
       final groupBlend = first.blendMode;
 
       var lookahead = cmdIndex + 1;
+      // Track unique texture indices used by this group. We may batch
+      // multiple textures together as long as the number of unique
+      // textures does not exceed the shader-supported _maxTextures.
+      final uniqueTexIndices = {groupTexIndex};
       while (lookahead < _drawCommands.length) {
         final next = _drawCommands[lookahead];
-        // Only group if blend and texture match and indices are contiguous
+        // Only group if blend matches and indices are contiguous
         final contiguous = next.indexOffset == groupOffset + groupCount;
-        final sameBlend = next.blendMode.srcFactor == groupBlend.srcFactor && next.blendMode.dstFactor == groupBlend.dstFactor;
-        if (next.textureIndex == groupTexIndex && sameBlend && contiguous) {
-          groupCount += next.indexCount;
-          lookahead++;
-        } else {
-          break;
-        }
+        final sameBlend = next.blendMode.srcFactor == groupBlend.srcFactor &&
+            next.blendMode.dstFactor == groupBlend.dstFactor;
+        if (!contiguous || !sameBlend) break;
+
+        // Determine if adding this texture would exceed available slots
+        final willAdd = uniqueTexIndices.contains(next.textureIndex)
+            ? uniqueTexIndices.length
+            : uniqueTexIndices.length + 1;
+        if (willAdd > _maxTextures) break;
+
+        uniqueTexIndices.add(next.textureIndex);
+        groupCount += next.indexCount;
+        lookahead++;
       }
 
       // Activate blend mode for the whole group (if changed)
@@ -318,15 +327,33 @@ class RenderProgramBatch extends RenderProgram {
         lastBoundBlend = groupBlend;
       }
 
-      // Bind texture for the whole group (if changed)
-      final groupTexture = first.texture;
-      // Ensure internal slot reflects the texture we will bind.
-      _textures[groupTexIndex] ??= groupTexture;
-      if (groupTexIndex != lastBoundTexIndex) {
-        if (debugBatch) print('[Batch] binding texture index=$groupTexIndex present=true');
-        _renderContextWebGL!.activateRenderTextureAt(groupTexture, groupTexIndex, flush: false);
-        lastBoundTexIndex = groupTexIndex;
+      // Bind all textures required by this group. Find or populate the
+      // corresponding slot entries in _textures and call
+      // activateRenderTextureAt(...) for each used slot. This ensures the
+      // shader samplers point to the correct WebGL texture units before
+      // the grouped drawElements call.
+      for (final texIndex in uniqueTexIndices) {
+        var tex = _textures[texIndex];
+        if (tex == null) {
+          // Try to locate a matching texture instance from commands in the group
+          for (var ci = cmdIndex; ci < lookahead; ci++) {
+            final ct = _drawCommands[ci];
+            if (ct.textureIndex == texIndex) {
+              tex = ct.texture;
+              _textures[texIndex] = tex;
+              break;
+            }
+          }
+        }
+        if (tex != null) {
+          if (debugBatch) print('[Batch] binding texture index=$texIndex present=true');
+          _renderContextWebGL!.activateRenderTextureAt(tex, texIndex, flush: false);
+        } else {
+          if (debugBatch) print('[Batch] binding texture index=$texIndex present=false');
+        }
       }
+  // Multiple textures were bound for this group; no single "last"
+  // texture index applies.
 
       if (debugBatch) {
         // Query GL state to help debug mismatches between expected
