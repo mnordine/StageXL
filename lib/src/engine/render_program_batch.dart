@@ -416,6 +416,7 @@ class RenderProgramBatch extends RenderProgram {
       // }
 
       renderingContext.drawElements(WebGL.TRIANGLES, groupCount, WebGL.UNSIGNED_SHORT, groupOffset * 2);
+      renderStatistics.drawCount += 1;
 
       // Advance to next command after the group
       cmdIndex = lookahead;
