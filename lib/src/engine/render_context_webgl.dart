@@ -132,11 +132,6 @@ class RenderContextWebGL extends RenderContext {
     reset();
   }
 
-  // Debug flag to enable GL state dumps after filter rendering. Set to true
-  // while debugging to print PROGRAM, VAO, ACTIVE_TEXTURE and enabled attribs.
-  // Keep this disabled by default.
-  final debugDumpGLStateAfterFilter = false;
-
   // Add this method to set up VAO for WebGL 1
   void _setupWebGL1Features() {
     if (_vaoExtension == null) return;
@@ -730,35 +725,6 @@ class RenderContextWebGL extends RenderContext {
       renderFrameBufferMap.clear();
       renderFrameBufferMap[0] = filterRenderFrameBuffer;
     }
-
-    // Optional debug dump to inspect GL state after filter processing.
-    if (debugDumpGLStateAfterFilter) {
-      _dumpGLState('after_filters');
-    }
-  }
-
-  void _dumpGLState(String tag) {
-    try {
-      final gl = _renderingContext;
-      final currentProgram = gl.getParameter(WebGL.CURRENT_PROGRAM);
-      final activeTexture = (gl.getParameter(WebGL.ACTIVE_TEXTURE) as JSNumber?)?.toDartInt;
-  final vao = isWebGL2 ? (gl as WebGL2RenderingContext).getParameter(0x85B5 /* VERTEX_ARRAY_BINDING */) : null;
-      final attribCount = (gl.getParameter(WebGL.MAX_VERTEX_ATTRIBS) as JSNumber?)?.toDartInt ?? 16;
-
-      final enabledAttribs = <int>[];
-      for (var i = 0; i < attribCount; i++) {
-        try {
-          final enabled = gl.getVertexAttrib(i, WebGL.VERTEX_ATTRIB_ARRAY_ENABLED) as JSBoolean?;
-          if (enabled != null && enabled.toDart == true) enabledAttribs.add(i);
-        } catch (_) {
-          // ignore
-        }
-      }
-
-      print('GLState[$tag]: program=$currentProgram vao=$vao activeTexture=$activeTexture enabledAttribs=$enabledAttribs');
-    } catch (e) {
-      print('GLStateDumpError: $e');
-    }
   }
 
   //---------------------------------------------------------------------------
@@ -840,7 +806,6 @@ class RenderContextWebGL extends RenderContext {
 
   void activateRenderProgram(RenderProgram renderProgram) {
     if (!identical(renderProgram, _activeRenderProgram)) {
-      if (RenderProgramBatch.debugBatch) print('[GL] activateRenderProgram: switching to ${renderProgram.runtimeType}');
       _activeRenderProgram.flush();
       _activeRenderProgram = renderProgram;
       _activeRenderProgram.activate(this);
@@ -871,15 +836,12 @@ class RenderContextWebGL extends RenderContext {
       if (_activeRenderProgram is! RenderProgramBatch) {
         // Only call the GL API when not batching.
         _renderingContext.blendFunc(blendMode.srcFactor, blendMode.dstFactor);
-        if (RenderProgramBatch.debugBatch) print('[GL] activateBlendMode: src=${blendMode.srcFactor} dst=${blendMode.dstFactor}');
 
         // Only set blend equation if it has changed
         if (_activeBlendEquation != WebGL.FUNC_ADD) {
           _activeBlendEquation = WebGL.FUNC_ADD;
           _renderingContext.blendEquation(WebGL.FUNC_ADD);
         }
-      } else {
-        if (RenderProgramBatch.debugBatch) print('[GL] activateBlendMode(deferred): src=${blendMode.srcFactor} dst=${blendMode.dstFactor}');
       }
     }
   }

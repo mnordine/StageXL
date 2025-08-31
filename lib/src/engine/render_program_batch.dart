@@ -17,9 +17,6 @@ class DrawCommand {
 }
 
 class RenderProgramBatch extends RenderProgram {
-  /// Enable to print debug information about batch execution.
-  static bool debugBatch = false;
-
   // aVertexPosition:   Float32(x), Float32(y)
   // aVertexTextCoord:  Float32(u), Float32(v)
   // aVertexColor:      Float32(r), Float32(g), Float32(b), Float32(a)
@@ -234,7 +231,6 @@ class RenderProgramBatch extends RenderProgram {
     }
     
     if (_drawCommands.isNotEmpty) {
-      if (debugBatch) print('[Batch] flush -> executing ${_drawCommands.length} drawCommands, vertices=${_aggregateVertexData.length}, indices=${_aggregateIndexData.length}');
       _executeBatchedCommands();
     } else if (renderBufferIndex.position > 0) {
       super.flush(); // Handles buffer updates and draw call
@@ -287,7 +283,6 @@ class RenderProgramBatch extends RenderProgram {
     // ensuring buffers were uploaded only once above. This guarantees
     // correct per-command blend state and texture binding even when
     // Spine toggles blend modes frequently.
-    if (debugBatch) print('[Batch] _executeBatchedCommands: totalCommands=${_drawCommands.length} (drawing per-command)');
     // We'll try to group consecutive commands that share the same
     // blendMode and textureIndex into a single drawElements call. This
     // preserves correct ordering and per-blend correctness while
@@ -356,48 +351,11 @@ class RenderProgramBatch extends RenderProgram {
           }
         }
         if (tex != null) {
-          if (debugBatch) print('[Batch] binding texture index=$texIndex present=true');
           _renderContextWebGL!.activateRenderTextureAt(tex, texIndex, flush: false);
-        } else {
-          if (debugBatch) print('[Batch] binding texture index=$texIndex present=false');
-        }
+        } 
       }
   // Multiple textures were bound for this group; no single "last"
   // texture index applies.
-
-      if (debugBatch) {
-        // Query GL state to help debug mismatches between expected
-        // blend/texture state and the actual GL state at draw time.
-        try {
-          final gl = _renderContextWebGL!.rawContext;
-          final activeProgram = gl.getParameter(WebGL.CURRENT_PROGRAM);
-          final activeTextureEnum = (gl.getParameter(WebGL.ACTIVE_TEXTURE) as JSNumber?)?.toDartInt;
-          final boundTexture = gl.getParameter(WebGL.TEXTURE_BINDING_2D);
-          final src = gl.getParameter(WebGL.BLEND_SRC_RGB);
-          final dst = gl.getParameter(WebGL.BLEND_DST_RGB);
-          print('[Batch] GLState before draw: program=$activeProgram activeTexture=$activeTextureEnum boundTexture=$boundTexture blendSrc=$src blendDst=$dst');
-        } catch (_) {
-          // Ignore errors when querying state in some environments
-        }
-        // Compute min/max alpha for vertices referenced by this group's indices
-        try {
-          var minAlpha = double.infinity;
-          var maxAlpha = double.negativeInfinity;
-          for (var ii = groupOffset; ii < groupOffset + groupCount; ii++) {
-            final vertexIndex = _aggregateIndexData[ii];
-            final alphaValue = _aggregateVertexData[vertexIndex * 9 + 7]; // alpha is 8th float
-            if (alphaValue < minAlpha) minAlpha = alphaValue;
-            if (alphaValue > maxAlpha) maxAlpha = alphaValue;
-          }
-          if (minAlpha == double.infinity) {
-            minAlpha = 0.0;
-            maxAlpha = 0.0;
-          }
-          print('[Batch] drawElements(group): offset=$groupOffset, count=$groupCount, tex=$groupTexIndex, blendSrc=${groupBlend.srcFactor}, blendDst=${groupBlend.dstFactor} alpha[min=$minAlpha,max=$maxAlpha]');
-        } catch (e) {
-          print('[Batch] drawElements(group): offset=$groupOffset, count=$groupCount, tex=$groupTexIndex, blendSrc=${groupBlend.srcFactor}, blendDst=${groupBlend.dstFactor} (alpha-check-failed: $e)');
-        }
-      }
 
       // Force the GL blend function for the group immediately before drawing.
       // try {
@@ -593,7 +551,6 @@ class RenderProgramBatch extends RenderProgram {
       textureIndex: textureIndex,
     );
 
-  if (debugBatch) print('[Batch] addCommand: off=${drawCommand.indexOffset} cnt=${drawCommand.indexCount} tex=${drawCommand.textureIndex} blendSrc=${drawCommand.blendMode.srcFactor} blendDst=${drawCommand.blendMode.dstFactor}');
     _drawCommands.add(drawCommand);
   }
 
@@ -694,7 +651,6 @@ class RenderProgramBatch extends RenderProgram {
       textureIndex: textureIndex,
     );
 
-  if (debugBatch) print('[Batch] addCommand: off=${drawCommand.indexOffset} cnt=${drawCommand.indexCount} tex=${drawCommand.textureIndex} blendSrc=${drawCommand.blendMode.srcFactor} blendDst=${drawCommand.blendMode.dstFactor}');
     _drawCommands.add(drawCommand);
   }
 }
