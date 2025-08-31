@@ -41,8 +41,6 @@ class RenderProgramBatch extends RenderProgram {
   
   // Batching infrastructure
   final List<DrawCommand> _drawCommands = <DrawCommand>[];
-  final List<double> _aggregateVertexData = <double>[];
-  final List<int> _aggregateIndexData = <int>[];
   RenderContextWebGL? _renderContextWebGL;
   bool _executingBatch = false;
 
@@ -218,8 +216,6 @@ class RenderProgramBatch extends RenderProgram {
 
   void _clearBatchData() {
     _drawCommands.clear();
-    _aggregateVertexData.clear();
-    _aggregateIndexData.clear();
     _executingBatch = false;
   }
 
@@ -254,28 +250,8 @@ class RenderProgramBatch extends RenderProgram {
 
     _executingBatch = true;
 
-    // Upload all vertex and index data at once. Avoid creating typed
-    // intermediate arrays to reduce allocations: copy directly from the
-    // aggregate Dart lists into the underlying typed buffers.
-
-    final vertexCount = _aggregateVertexData.length;
-    final indexCount = _aggregateIndexData.length;
-
-    // Copy to actual buffers (this will convert/copy Dart List<num> -> TypedList)
-    if (vertexCount > 0) {
-      renderBufferVertex.data.setRange(0, vertexCount, _aggregateVertexData);
-    }
-    if (indexCount > 0) {
-      renderBufferIndex.data.setRange(0, indexCount, _aggregateIndexData);
-    }
-
-    // Set positions for update
-    renderBufferVertex.position = vertexCount;
-    renderBufferVertex.count = vertexCount ~/ 9; // 9 floats per vertex
-    renderBufferIndex.position = indexCount;
-    renderBufferIndex.count = indexCount;
-
-    // Update GPU buffers
+    // The vertex and index data has already been written to the
+    // RenderBuffer's TypedData lists. We just need to upload it to the GPU.
     renderBufferVertex.update();
     renderBufferIndex.update();
 
@@ -486,12 +462,12 @@ class RenderProgramBatch extends RenderProgram {
     // }
 
     // Check if we need to flush due to buffer size limits
-    if (!needsFlush && _aggregateIndexData.length + ixListCount >= renderBufferIndex.data.length) {
+    if (!needsFlush && renderBufferIndex.position + ixListCount >= renderBufferIndex.data.length) {
        needsFlush = true;
        textureIndex = 0;
     }
 
-    if (!needsFlush && _aggregateVertexData.length + vxListCount * vertexFloatCount >= renderBufferVertex.data.length) {
+    if (!needsFlush && renderBufferVertex.position + vxListCount * vertexFloatCount >= renderBufferVertex.data.length) {
        needsFlush = true;
        textureIndex = 0;
     }
@@ -503,6 +479,13 @@ class RenderProgramBatch extends RenderProgram {
 
     // Update our internal tracking
     _textures[textureIndex] ??= texture;
+
+    // Get current buffer positions and data
+    final ixData = renderBufferIndex.data;
+    final ixPosition = renderBufferIndex.position;
+    final vxData = renderBufferVertex.data;
+    final vxPosition = renderBufferVertex.position;
+    final vxCount = renderBufferVertex.count;
 
     // Calculate vertex data
     final ma1 = vxList[0] * matrix.a + matrix.tx;
@@ -519,39 +502,37 @@ class RenderProgramBatch extends RenderProgram {
     final colorG = g * colorA;
     final colorB = b * colorA;
 
-    // Add indices to aggregate data
-    final vertexOffset = _aggregateVertexData.length ~/ 9; // 9 floats per vertex
-    _aggregateIndexData.addAll([
-      vertexOffset + 0,
-      vertexOffset + 1,
-      vertexOffset + 2,
-      vertexOffset + 0,
-      vertexOffset + 2,
-      vertexOffset + 3,
-    ]);
+    // Add indices directly to buffer
+    ixData[ixPosition + 0] = vxCount + 0;
+    ixData[ixPosition + 1] = vxCount + 1;
+    ixData[ixPosition + 2] = vxCount + 2;
+    ixData[ixPosition + 3] = vxCount + 0;
+    ixData[ixPosition + 4] = vxCount + 2;
+    ixData[ixPosition + 5] = vxCount + 3;
 
-    // Add vertices to aggregate data
-    _aggregateVertexData.addAll([
-      // Vertex 0
-      ma1 + mc1, mb1 + md1, vxList[2], vxList[3], colorR, colorG, colorB, colorA, textureIndex.toDouble(),
-      // Vertex 1
-      ma2 + mc1, mb2 + md1, vxList[6], vxList[7], colorR, colorG, colorB, colorA, textureIndex.toDouble(),
-      // Vertex 2
-      ma2 + mc2, mb2 + md2, vxList[10], vxList[11], colorR, colorG, colorB, colorA, textureIndex.toDouble(),
-      // Vertex 3
-      ma1 + mc2, mb1 + md2, vxList[14], vxList[15], colorR, colorG, colorB, colorA, textureIndex.toDouble(),
-    ]);
+    // Add vertices directly to buffer
+    var vPos = vxPosition;
+    vxData[vPos++] = ma1 + mc1; vxData[vPos++] = mb1 + md1; vxData[vPos++] = vxList[2]; vxData[vPos++] = vxList[3]; vxData[vPos++] = colorR; vxData[vPos++] = colorG; vxData[vPos++] = colorB; vxData[vPos++] = colorA; vxData[vPos++] = textureIndex.toDouble();
+    vxData[vPos++] = ma2 + mc1; vxData[vPos++] = mb2 + md1; vxData[vPos++] = vxList[6]; vxData[vPos++] = vxList[7]; vxData[vPos++] = colorR; vxData[vPos++] = colorG; vxData[vPos++] = colorB; vxData[vPos++] = colorA; vxData[vPos++] = textureIndex.toDouble();
+    vxData[vPos++] = ma2 + mc2; vxData[vPos++] = mb2 + md2; vxData[vPos++] = vxList[10]; vxData[vPos++] = vxList[11]; vxData[vPos++] = colorR; vxData[vPos++] = colorG; vxData[vPos++] = colorB; vxData[vPos++] = colorA; vxData[vPos++] = textureIndex.toDouble();
+    vxData[vPos++] = ma1 + mc2; vxData[vPos++] = mb1 + md2; vxData[vPos++] = vxList[14]; vxData[vPos++] = vxList[15]; vxData[vPos++] = colorR; vxData[vPos++] = colorG; vxData[vPos++] = colorB; vxData[vPos++] = colorA; vxData[vPos++] = textureIndex.toDouble();
 
     // Create draw command
     final drawCommand = DrawCommand(
       indexCount: ixListCount,
-      indexOffset: _aggregateIndexData.length - ixListCount,
+      indexOffset: ixPosition,
       blendMode: renderState.globalBlendMode,
       texture: texture,
       textureIndex: textureIndex,
     );
 
     _drawCommands.add(drawCommand);
+
+    // Update buffer positions
+    renderBufferIndex.position += ixListCount;
+    renderBufferIndex.count += ixListCount;
+    renderBufferVertex.position += vxListCount * vertexFloatCount;
+    renderBufferVertex.count += vxListCount;
   }
 
   //---------------------------------------------------------------------------
@@ -589,12 +570,12 @@ class RenderProgramBatch extends RenderProgram {
     blendMode ??= renderState.globalBlendMode;
 
     // Check if we need to flush due to buffer size limits
-    if (!needsFlush && _aggregateIndexData.length + ixListCount >= renderBufferIndex.data.length) {
+    if (!needsFlush && renderBufferIndex.position + ixListCount >= renderBufferIndex.data.length) {
        needsFlush = true;
        textureIndex = 0;
     }
 
-    if (!needsFlush && _aggregateVertexData.length + vxListCount * vertexFloatCount >= renderBufferVertex.data.length) {
+    if (!needsFlush && renderBufferVertex.position + vxListCount * vertexFloatCount >= renderBufferVertex.data.length) {
        needsFlush = true;
        textureIndex = 0;
     }
@@ -607,13 +588,19 @@ class RenderProgramBatch extends RenderProgram {
     // Update our internal tracking
     _textures[textureIndex] ??= texture;
 
-    // Add indices to aggregate data
-    final vertexOffset = _aggregateVertexData.length ~/ 9; // 9 floats per vertex
+    // Get current buffer positions and data
+    final ixData = renderBufferIndex.data;
+    final ixPosition = renderBufferIndex.position;
+    final vxData = renderBufferVertex.data;
+    var vxPosition = renderBufferVertex.position;
+    final vxCount = renderBufferVertex.count;
+
+    // Add indices directly to buffer
     for (var i = 0; i < ixListCount; i++) {
-      _aggregateIndexData.add(vertexOffset + ixList[i]);
+      ixData[ixPosition + i] = vxCount + ixList[i];
     }
 
-    // Transform and add vertices to aggregate data
+    // Transform and add vertices directly to buffer
     final ma = matrix.a;
     final mb = matrix.b;
     final mc = matrix.c;
@@ -629,28 +616,32 @@ class RenderProgramBatch extends RenderProgram {
     for (var i = 0, o = 0; i < vxListCount; i++, o += 4) {
       final x = vxList[o + 0];
       final y = vxList[o + 1];
-      _aggregateVertexData.addAll([
-        mx + ma * x + mc * y, // x
-        my + mb * x + md * y, // y
-        vxList[o + 2],        // u
-        vxList[o + 3],        // v
-        colorR,               // r
-        colorG,               // g
-        colorB,               // b
-        colorA,               // a
-        textureIndex.toDouble(),
-      ]);
+      vxData[vxPosition++] = mx + ma * x + mc * y; // x
+      vxData[vxPosition++] = my + mb * x + md * y; // y
+      vxData[vxPosition++] = vxList[o + 2];        // u
+      vxData[vxPosition++] = vxList[o + 3];        // v
+      vxData[vxPosition++] = colorR;               // r
+      vxData[vxPosition++] = colorG;               // g
+      vxData[vxPosition++] = colorB;               // b
+      vxData[vxPosition++] = colorA;               // a
+      vxData[vxPosition++] = textureIndex.toDouble();
     }
 
     // Create draw command
     final drawCommand = DrawCommand(
       indexCount: ixListCount,
-      indexOffset: _aggregateIndexData.length - ixListCount,
+      indexOffset: ixPosition,
       blendMode: blendMode,
       texture: texture,
       textureIndex: textureIndex,
     );
 
     _drawCommands.add(drawCommand);
+
+    // Update buffer positions
+    renderBufferIndex.position += ixListCount;
+    renderBufferIndex.count += ixListCount;
+    renderBufferVertex.position += vxListCount * vertexFloatCount;
+    renderBufferVertex.count += vxListCount;
   }
 }
