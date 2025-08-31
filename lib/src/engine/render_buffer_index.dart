@@ -51,10 +51,10 @@ class RenderBufferIndex {
 
     final update = Int16List.view(data.buffer, 0, position);
 
-    try {
-      _renderingContext!.bufferData(WebGL.ELEMENT_ARRAY_BUFFER, (data.length * 2).toJS, usage);
+    // Orphan the buffer to avoid GPU sync stalls.
+    try { _renderingContext!.bufferData(WebGL.ELEMENT_ARRAY_BUFFER, (data.length * 2).toJS, usage);
     } catch (_) {
-      // ignore fallback
+      // Fallback: if the driver doesn't accept byte size, skip orphaning.
     }
     _renderingContext!.bufferSubData(WebGL.ELEMENT_ARRAY_BUFFER, 0, update.toJS);
     _renderStatistics.indexCount += count;
