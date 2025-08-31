@@ -247,129 +247,72 @@ class RenderProgramBatch extends RenderProgram {
 
   void _executeBatchedCommands() {
     if (_drawCommands.isEmpty) return;
-
     _executingBatch = true;
 
-    // The vertex and index data has already been written to the
-    // RenderBuffer's TypedData lists. We just need to upload it to the GPU.
+    // Upload all vertex and index data that was accumulated.
     renderBufferVertex.update();
     renderBufferIndex.update();
 
-    // Execute draw commands: draw each command individually while
-    // ensuring buffers were uploaded only once above. This guarantees
-    // correct per-command blend state and texture binding even when
-    // Spine toggles blend modes frequently.
-    // We'll try to group consecutive commands that share the same
-    // blendMode and textureIndex into a single drawElements call. This
-    // preserves correct ordering and per-blend correctness while
-    // reducing the number of GL draw calls when possible.
-  var cmdIndex = 0;
-  // BlendMode? lastBoundBlend;
-  var lastBoundBlend = BlendMode.NORMAL;
+    final gl = _renderContextWebGL!.rawContext;
+    var cmdIndex = 0;
     while (cmdIndex < _drawCommands.length) {
       final first = _drawCommands[cmdIndex];
-
-      // Start grouping from here
-      var groupOffset = first.indexOffset;
-      var groupCount = first.indexCount;
-      final groupTexIndex = first.textureIndex;
       final groupBlend = first.blendMode;
 
+      // --- Group consecutive commands ---
+      var groupOffset = first.indexOffset;
+      var groupCount = first.indexCount;
+      final uniqueTextures = {first.textureIndex: first.texture};
+
       var lookahead = cmdIndex + 1;
-      // Track unique texture indices used by this group. We may batch
-      // multiple textures together as long as the number of unique
-      // textures does not exceed the shader-supported _maxTextures.
-      final uniqueTexIndices = {groupTexIndex};
       while (lookahead < _drawCommands.length) {
         final next = _drawCommands[lookahead];
-        // Only group if blend matches and indices are contiguous
-        final contiguous = next.indexOffset == groupOffset + groupCount;
+
+        // Conditions to break the group:
+        // 1. Blend mode is different.
         final sameBlend = next.blendMode.srcFactor == groupBlend.srcFactor &&
             next.blendMode.dstFactor == groupBlend.dstFactor;
-        if (!contiguous || !sameBlend) break;
+        if (!sameBlend) break;
 
-        // Determine if adding this texture would exceed available slots
-        final willAdd = uniqueTexIndices.contains(next.textureIndex)
-            ? uniqueTexIndices.length
-            : uniqueTexIndices.length + 1;
-        if (willAdd > _maxTextures) break;
+        // 2. Indices are not contiguous.
+        final contiguous = next.indexOffset == groupOffset + groupCount;
+        if (!contiguous) break;
 
-        uniqueTexIndices.add(next.textureIndex);
+        // 3. The number of unique textures would exceed the hardware limit.
+        if (!uniqueTextures.containsKey(next.textureIndex) &&
+            uniqueTextures.length >= _maxTextures) {
+          break;
+        }
+
+        uniqueTextures[next.textureIndex] = next.texture;
         groupCount += next.indexCount;
         lookahead++;
       }
 
-      // Activate blend mode for the whole group (if changed)
-      final needBlendChange = /*lastBoundBlend == null ||*/
-          lastBoundBlend.srcFactor != groupBlend.srcFactor ||
-              lastBoundBlend.dstFactor != groupBlend.dstFactor;
-      if (needBlendChange) {
-        _renderContextWebGL!.activateBlendMode(groupBlend);
-        lastBoundBlend = groupBlend;
-      }
+      // --- Set state and draw the group ---
 
-      // Bind all textures required by this group. Find or populate the
-      // corresponding slot entries in _textures and call
-      // activateRenderTextureAt(...) for each used slot. This ensures the
-      // shader samplers point to the correct WebGL texture units before
-      // the grouped drawElements call.
-      for (final texIndex in uniqueTexIndices) {
-        var tex = _textures[texIndex];
-        if (tex == null) {
-          // Try to locate a matching texture instance from commands in the group
-          for (var ci = cmdIndex; ci < lookahead; ci++) {
-            final ct = _drawCommands[ci];
-            if (ct.textureIndex == texIndex) {
-              tex = ct.texture;
-              _textures[texIndex] = tex;
-              break;
-            }
-          }
-        }
-        if (tex != null) {
-          _renderContextWebGL!.activateRenderTextureAt(tex, texIndex, flush: false);
-        } 
-      }
-  // Multiple textures were bound for this group; no single "last"
-  // texture index applies.
-
-      // Force the GL blend function for the group immediately before drawing.
-      // try {
-      final gl = _renderContextWebGL!.rawContext;
-      //   // Make absolutely sure the correct texture is bound to the
-      //   // expected texture unit. Some drivers can be finicky about the
-      //   // active texture unit state; calling this explicitly here is a
-      //   // defensive step and cheap compared to the draw.
-      //   try {
-      //     final webglTex = groupTexture.texture;
-      //     if (webglTex != null) {
-      //       gl.activeTexture(WebGL.TEXTURE0 + groupTexIndex);
-      //       gl.bindTexture(WebGL.TEXTURE_2D, webglTex);
-      //     }
-      //   } catch (_) {
-      //     // ignore
-      //   }
-
-      // if (_lastBlendMode != groupBlend) {
-      if (needBlendChange) {
-        _lastBlendMode = groupBlend;
+      // 1. Activate blend mode for the group (if it changed).
+      if (_lastBlendMode == null ||
+          _lastBlendMode!.srcFactor != groupBlend.srcFactor ||
+          _lastBlendMode!.dstFactor != groupBlend.dstFactor) {
         gl.blendFunc(groupBlend.srcFactor, groupBlend.dstFactor);
-      } 
-      //   // Also ensure the blend equation is set (conservative; cheap).
-      // gl.blendEquation(WebGL.FUNC_ADD);
-      // }
-      // } catch (_) {
-      //   // ignore
-      // }
+        _lastBlendMode = groupBlend;
+      }
 
-      renderingContext.drawElements(WebGL.TRIANGLES, groupCount, WebGL.UNSIGNED_SHORT, groupOffset * 2);
+      // 2. Bind all unique textures required by this group.
+      for (final entry in uniqueTextures.entries) {
+        _renderContextWebGL!.activateRenderTextureAt(entry.value, entry.key, flush: false);
+      }
+
+      // 3. Issue the grouped draw call.
+      gl.drawElements(WebGL.TRIANGLES, groupCount, WebGL.UNSIGNED_SHORT, groupOffset * 2);
       renderStatistics.drawCount += 1;
 
-      // Advance to next command after the group
+      // Advance to the next command after the group.
       cmdIndex = lookahead;
     }
-    
-    // Reset buffer positions after batched rendering
+
+    // Reset buffer positions for the next batch.
     renderBufferVertex.position = 0;
     renderBufferVertex.count = 0;
     renderBufferIndex.position = 0;
