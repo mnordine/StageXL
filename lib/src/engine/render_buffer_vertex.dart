@@ -39,9 +39,11 @@ class RenderBufferVertex {
       _buffer = _renderingContext!.createBuffer();
       _renderingContext!.bindBuffer(WebGL.ARRAY_BUFFER, _buffer);
       _renderingContext!.bufferData(WebGL.ARRAY_BUFFER, data.toJS, usage);
+    } else {
+      // When using VAO, the ARRAY_BUFFER binding is part of the VAO state
+      // so we only need to bind when creating a new buffer or when VAOs aren't supported
+      _renderingContext!.bindBuffer(WebGL.ARRAY_BUFFER, _buffer);
     }
-
-    _renderingContext!.bindBuffer(WebGL.ARRAY_BUFFER, _buffer);
   }
 
   void update() {
