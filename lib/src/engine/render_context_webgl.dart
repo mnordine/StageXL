@@ -101,14 +101,11 @@ class RenderContextWebGL extends RenderContext {
 
     _activeRenderTextures = List.filled(maxTextureUnits, null);
 
-  _renderingContext.enable(WebGL.BLEND);
+    _renderingContext.enable(WebGL.BLEND);
     _renderingContext.disable(WebGL.STENCIL_TEST);
     _renderingContext.disable(WebGL.DEPTH_TEST);
     _renderingContext.disable(WebGL.CULL_FACE);
-  // Default behavior: enable premultiplied alpha during texture uploads.
-  // Expose a runtime toggle via `setPremultiplyAlpha` if you need to
-  // experiment with non-premultiplied assets.
-  _renderingContext.pixelStorei(WebGL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
+    _renderingContext.pixelStorei(WebGL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
     _renderingContext.blendFunc(WebGL.ONE, WebGL.ONE_MINUS_SRC_ALPHA);
     _renderingContext.blendEquation(WebGL.FUNC_ADD);
     _activeBlendEquation = WebGL.FUNC_ADD;
@@ -520,8 +517,7 @@ class RenderContextWebGL extends RenderContext {
   void renderTextureQuad(
       RenderState renderState, RenderTextureQuad renderTextureQuad) {
     activateRenderProgram(renderProgramBatch);
-    renderProgramBatch.renderTextureQuad(
-        renderState, this, renderTextureQuad);
+    renderProgramBatch.renderTextureQuad(renderState, this, renderTextureQuad);
   }
 
   @override
