@@ -330,7 +330,7 @@ class RenderProgramBatch extends RenderProgram {
 
   /// Checks if the given texture is already in a slot or if there's an empty slot.
   /// Returns the texture index if available, or -1 if no slots are available.
-  int getTextureIndexIfAvailable(RenderTexture texture) {
+  int? getTextureIndexIfAvailable(RenderTexture texture) {
     // First check if the texture is already bound
     for (var i = 0; i < _maxTextures; i++) {
       if (identical(_textures[i], texture)) {
@@ -346,7 +346,7 @@ class RenderProgramBatch extends RenderProgram {
     }
 
     // No slots available
-    return -1;
+    return null;
   }
 
   //---------------------------------------------------------------------------
@@ -374,7 +374,7 @@ class RenderProgramBatch extends RenderProgram {
     var needsFlush = false;
 
     // --- Texture Slot Management ---
-    if (textureIndex < 0) {
+    if (textureIndex == null) {
       // No slot available OR texture not found -> Need to Flush
       needsFlush = true;
       textureIndex = 0; // Will use slot 0 after flush
@@ -489,7 +489,7 @@ class RenderProgramBatch extends RenderProgram {
     var needsFlush = false;
 
     // --- Texture Slot Management ---
-    if (textureIndex < 0) {
+    if (textureIndex == null) {
       needsFlush = true;
       textureIndex = 0;
     } 
