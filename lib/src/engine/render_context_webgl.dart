@@ -787,26 +787,14 @@ class RenderContextWebGL extends RenderContext {
 
   void activateBlendMode(BlendMode blendMode) {
     if (!identical(blendMode, _activeBlendMode)) {
-      // Avoid flushing when the batch renderer is active. The batch
-      // renderer uploads its buffers once and issues multiple drawElements
-      // calls with offsets while changing the blend function between those
-      // calls. Flushing here would force repeated buffer uploads and slow
-      // things down. External integrations (like spine) should set the
-      // blend mode before queueing geometry so that one upload + many
-      // draw calls with different blend funcs can be performed during
-      // the final flush.
+      // Batch renderer manages its own flushing/drawing.
       if (_activeRenderProgram is! RenderProgramBatch) {
         _activeRenderProgram.flush();
       }
-      // Update the cached blend mode. If the batch renderer is active we
-      // intentionally avoid calling the GL blendFunc here: the batch
-      // executor will set the GL blend function right before each draw
-      // so that many blend changes can be applied without flushing and
-      // without tripping buffer uploads during command accumulation.
-      _activeBlendMode = blendMode;
 
+      _activeBlendMode = blendMode;
       if (_activeRenderProgram is! RenderProgramBatch) {
-        // Only call the GL API when not batching.
+        // Batch renderer program has its own blend handling.
         _renderingContext.blendFunc(blendMode.srcFactor, blendMode.dstFactor);
       }
     }
