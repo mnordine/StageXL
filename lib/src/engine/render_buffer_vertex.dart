@@ -50,15 +50,6 @@ class RenderBufferVertex {
     if (position == 0) return;
 
     final update = Float32List.view(data.buffer, 0, position);
-
-    // Orphan the buffer to avoid GPU sync stalls, then upload the new data.
-    // Using bufferData with a size hint causes the driver to allocate a new
-    // backing store which lets bufferSubData upload without stalling.
-    try {
-      _renderingContext!.bufferData(WebGL.ARRAY_BUFFER, (data.length * 4).toJS, usage);
-    } catch (_) {
-      // Fallback: if the driver doesn't accept byte size, skip orphaning.
-    }
     _renderingContext!.bufferSubData(WebGL.ARRAY_BUFFER, 0, update.toJS);
     _renderStatistics.vertexCount += count;
   }
