@@ -531,8 +531,6 @@ class RenderContextWebGL extends RenderContext {
       Matrix mappingMatrix,
       Int16List ixList,
       Float32List vxList) {
-    // For texture mapping, we continue to use the tinted renderer
-    // as it's not a common batch rendering use case
     activateRenderProgram(renderProgramTinted);
     activateBlendMode(renderState.globalBlendMode);
     activateRenderTexture(renderTexture);
