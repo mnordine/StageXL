@@ -322,7 +322,7 @@ class RenderTexture {
       // Store context info and create WebGL texture object ONLY once per context
       _renderContext = renderContext;
       _contextIdentifier = renderContext.contextIdentifier;
-      _texture = _renderingContext!.createTexture();
+      _texture = renderingContext.createTexture();
     }
 
     const target = WebGL.TEXTURE_2D;
