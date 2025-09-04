@@ -47,8 +47,8 @@ class RenderContextWebGL extends RenderContext {
   final RenderProgramTriangle renderProgramTriangle = RenderProgramTriangle();
   final RenderProgramBatch renderProgramBatch = RenderProgramBatch();
 
-  final RenderBufferIndex renderBufferIndex = RenderBufferIndex(16384 * 4);
-  final RenderBufferVertex renderBufferVertex = RenderBufferVertex(32768 * 4);
+  final RenderBufferIndex renderBufferIndex = RenderBufferIndex(16384 * 2);
+  final RenderBufferVertex renderBufferVertex = RenderBufferVertex(32768 * 2);
 
   late final List<RenderTexture?> _activeRenderTextures;
   final List<RenderFrameBuffer> _renderFrameBufferPool = <RenderFrameBuffer>[];
