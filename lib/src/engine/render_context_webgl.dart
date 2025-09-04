@@ -737,11 +737,7 @@ class RenderContextWebGL extends RenderContext {
 
   void releaseRenderTexture(RenderTexture renderTexture) {
     for (var i = 0; i < _activeRenderTextures.length; i++) {
-      if (identical(renderTexture, _activeRenderTextures[i])) {
-        _activeRenderTextures[i] = null;
-        _renderingContext.activeTexture(WebGL.TEXTURE0 + i);
-        _renderingContext.bindTexture(WebGL.TEXTURE_2D, null);
-      }
+      if (identical(renderTexture, _activeRenderTextures[i])) _unbindTextureAt(i);
     }
   }
 
@@ -764,11 +760,7 @@ class RenderContextWebGL extends RenderContext {
 
         // Reset texture state when switching back to the canvas frame buffer
         for (var i = 0; i < _activeRenderTextures.length; i++) {
-          if (_activeRenderTextures[i] != null) {
-            _renderingContext.activeTexture(WebGL.TEXTURE0 + i);
-            _renderingContext.bindTexture(WebGL.TEXTURE_2D, null);
-            _activeRenderTextures[i] = null;
-          }
+          _unbindTextureAt(i);
         }
       }
       _updateScissorTest(_getLastScissorValue());
@@ -866,6 +858,14 @@ class RenderContextWebGL extends RenderContext {
       if (maskState is _ScissorMaskState) return maskState.value;
     }
     return null;
+  }
+
+  void _unbindTextureAt(int index) {
+    if (_activeRenderTextures[index] == null) return;
+
+    _renderingContext.activeTexture(WebGL.TEXTURE0 + index);
+    _renderingContext.bindTexture(WebGL.TEXTURE_2D, null);
+    _activeRenderTextures[index] = null;
   }
 
   void _updateStencilTest(int value) {
