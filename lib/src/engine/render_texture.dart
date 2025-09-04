@@ -314,7 +314,7 @@ class RenderTexture {
 
   //-----------------------------------------------------------------------------------------------
 
-  void activate(RenderContextWebGL renderContext, int textureSlot) { // textureSlot is the enum value 33984, 33985, ...
+  void activate(RenderContextWebGL renderContext, int textureSlot) {
     final renderingContext = _renderingContext = renderContext.rawContext;
 
     final needsInitialization = contextIdentifier != renderContext.contextIdentifier;
@@ -327,15 +327,10 @@ class RenderTexture {
 
     const target = WebGL.TEXTURE_2D;
 
-    // --- Always make the texture unit active and bind the texture ---
-    // This ensures the correct texture is bound to the correct unit *every time* activate is called.
-    renderingContext.activeTexture(textureSlot); // Use the enum value (e.g., 33984)
+    renderingContext.activeTexture(textureSlot);
     renderingContext.bindTexture(target, _texture);
-    // ---
 
     if (needsInitialization) {
-      // Set parameters and upload data ONLY during initialization
-
       final scissors = renderingContext.isEnabled(WebGL.SCISSOR_TEST);
       if (scissors) renderingContext.disable(WebGL.SCISSOR_TEST);
 
