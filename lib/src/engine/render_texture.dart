@@ -141,15 +141,12 @@ class RenderTexture {
   set filtering(RenderTextureFiltering filtering) {
     if (_filtering == filtering) return;
     _filtering = filtering;
-
-    if (_renderContext == null || _texture == null) return;
-    if (_renderContext!.contextIdentifier != contextIdentifier) return;
-
-    _renderContext!.activateRenderTexture(this);
-    _renderingContext!.texParameteri(
-        WebGL.TEXTURE_2D, WebGL.TEXTURE_MIN_FILTER, _filtering.value);
-    _renderingContext!.texParameteri(
-        WebGL.TEXTURE_2D, WebGL.TEXTURE_MAG_FILTER, _filtering.value);
+    _applyTextureParameters((gl) {
+      gl.texParameteri(
+          WebGL.TEXTURE_2D, WebGL.TEXTURE_MIN_FILTER, _filtering.value);
+      gl.texParameteri(
+          WebGL.TEXTURE_2D, WebGL.TEXTURE_MAG_FILTER, _filtering.value);
+    });
   }
 
   //-----------------------------------------------------------------------------------------------
@@ -159,13 +156,9 @@ class RenderTexture {
   set wrappingX(RenderTextureWrapping wrapping) {
     if (_wrappingX == wrapping) return;
     _wrappingX = wrapping;
-
-    if (_renderContext == null || _texture == null) return;
-    if (_renderContext!.contextIdentifier != contextIdentifier) return;
-
-    _renderContext!.activateRenderTexture(this);
-    _renderingContext!.texParameteri(
-        WebGL.TEXTURE_2D, WebGL.TEXTURE_WRAP_S, _wrappingX.value);
+    _applyTextureParameters((gl) {
+      gl.texParameteri(WebGL.TEXTURE_2D, WebGL.TEXTURE_WRAP_S, _wrappingX.value);
+    });
   }
 
   //-----------------------------------------------------------------------------------------------
@@ -175,13 +168,9 @@ class RenderTexture {
   set wrappingY(RenderTextureWrapping wrapping) {
     if (_wrappingY == wrapping) return;
     _wrappingY = wrapping;
-
-    if (_renderContext == null || _texture == null) return;
-    if (_renderContext!.contextIdentifier != contextIdentifier) return;
-
-    _renderContext!.activateRenderTexture(this);
-    _renderingContext!.texParameteri(
-        WebGL.TEXTURE_2D, WebGL.TEXTURE_WRAP_T, _wrappingY.value);
+    _applyTextureParameters((gl) {
+      gl.texParameteri(WebGL.TEXTURE_2D, WebGL.TEXTURE_WRAP_T, _wrappingY.value);
+    });
   }
 
   int get pixelFormat => _pixelFormat;
@@ -293,6 +282,32 @@ class RenderTexture {
     // for that slot (if needed) will handle binding the correct texture.
     if (savedActiveUnit != uploadUnitEnum) {
        renderingContext.activeTexture(savedActiveUnit);
+    }
+  }
+
+  void _applyTextureParameters(void Function(WebGL renderingContext) apply) {
+    final renderContext = _renderContext;
+    final renderingContext = _renderingContext;
+    if (renderContext == null || renderingContext == null || _texture == null) {
+      return;
+    }
+    if (renderContext.contextIdentifier != contextIdentifier) return;
+
+    renderContext.flush();
+
+    final uploadUnitIndex = RenderProgramBatch._maxTextures - 1;
+    final uploadUnitEnum = WebGL.TEXTURE0 + uploadUnitIndex;
+    final savedActiveUnit =
+        (renderingContext.getParameter(WebGL.ACTIVE_TEXTURE) as JSNumber)
+            .toDartInt;
+
+    renderingContext.activeTexture(uploadUnitEnum);
+    renderingContext.bindTexture(WebGL.TEXTURE_2D, _texture);
+
+    apply(renderingContext);
+
+    if (savedActiveUnit != uploadUnitEnum) {
+      renderingContext.activeTexture(savedActiveUnit);
     }
   }
 
