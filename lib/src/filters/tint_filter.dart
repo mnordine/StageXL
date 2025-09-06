@@ -66,7 +66,6 @@ class TintFilter extends BitmapFilter {
     final renderProgram = renderContext.renderProgramBatch;
 
     renderContext.activateRenderProgram(renderProgram);
-    renderContext.activateRenderTexture(renderTextureQuad.renderTexture);
     renderProgram.renderTextureQuad(renderState, renderContext, renderTextureQuad,
         factorR, factorG, factorB, factorA);
   }
