@@ -240,15 +240,14 @@ class RenderProgramBatch extends RenderProgram {
     _clearBatchData();
 
     final lastBlendMode = _lastBlendMode;
-    if (lastBlendMode != null &&
-        (lastBlendMode.srcFactor != BlendMode.NORMAL.srcFactor ||
-         lastBlendMode.dstFactor != BlendMode.NORMAL.dstFactor)) {
+    if (lastBlendMode.srcFactor != BlendMode.NORMAL.srcFactor ||
+         lastBlendMode.dstFactor != BlendMode.NORMAL.dstFactor) {
       _renderingContext.blendFunc(BlendMode.NORMAL.srcFactor, BlendMode.NORMAL.dstFactor);
-      _lastBlendMode = null;
+      _lastBlendMode = BlendMode.NORMAL;
     }
   }
 
-  BlendMode? _lastBlendMode;
+  var _lastBlendMode = BlendMode.NORMAL;
 
   void _executeBatchedCommands() {
     if (_drawCommands.isEmpty) return;
@@ -297,9 +296,8 @@ class RenderProgramBatch extends RenderProgram {
       // --- Set state and draw the group ---
 
       // 1. Activate blend mode for the group (if it changed).
-      if (_lastBlendMode == null ||
-          _lastBlendMode!.srcFactor != groupBlend.srcFactor ||
-          _lastBlendMode!.dstFactor != groupBlend.dstFactor) {
+      if (_lastBlendMode.srcFactor != groupBlend.srcFactor ||
+          _lastBlendMode.dstFactor != groupBlend.dstFactor) {
         gl.blendFunc(groupBlend.srcFactor, groupBlend.dstFactor);
         _lastBlendMode = groupBlend;
       }
