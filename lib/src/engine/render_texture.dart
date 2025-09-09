@@ -281,7 +281,7 @@ class RenderTexture {
     // because it's treated as a temporary slot. The next call to activate()
     // for that slot (if needed) will handle binding the correct texture.
     if (activeUnit != lastUnit) {
-       renderingContext.activeTexture(activeUnit);
+      renderingContext.activeTexture(activeUnit);
     }
   }
 
