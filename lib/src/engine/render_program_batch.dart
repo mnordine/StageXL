@@ -44,7 +44,6 @@ class RenderProgramBatch extends RenderProgram {
   
   final _drawCommands = <_DrawCommand>[];
   RenderContextWebGL? _renderContextWebGL;
-  bool _executingBatch = false;
 
   @override
   String get vertexShaderSource => isWebGL2 ? '''
@@ -211,16 +210,10 @@ class RenderProgramBatch extends RenderProgram {
 
   void _clearBatchData() {
     _drawCommands.clear();
-    _executingBatch = false;
   }
 
   @override
   void flush() {
-    if (_executingBatch) {
-      // Prevent recursion during batch execution
-      return;
-    }
-    
     if (_drawCommands.isNotEmpty) {
       _executeBatchedCommands();
     } else if (renderBufferIndex.position > 0) {
@@ -241,7 +234,6 @@ class RenderProgramBatch extends RenderProgram {
 
   void _executeBatchedCommands() {
     if (_drawCommands.isEmpty) return;
-    _executingBatch = true;
 
     // Upload all vertex and index data that was accumulated.
     renderBufferVertex.update();
@@ -310,8 +302,6 @@ class RenderProgramBatch extends RenderProgram {
     renderBufferVertex.count = 0;
     renderBufferIndex.position = 0;
     renderBufferIndex.count = 0;
-    
-    _executingBatch = false;
   }
 
   //---------------------------------------------------------------------------
