@@ -40,11 +40,12 @@ class RenderContextWebGL extends RenderContext {
 
   final RenderProgramTinted renderProgramTinted = RenderProgramTinted();
   final RenderProgramTriangle renderProgramTriangle = RenderProgramTriangle();
+  final RenderProgramBatch renderProgramBatch = RenderProgramBatch();
 
-  final RenderBufferIndex renderBufferIndex = RenderBufferIndex(16384);
-  final RenderBufferVertex renderBufferVertex = RenderBufferVertex(32768);
+  final RenderBufferIndex renderBufferIndex = RenderBufferIndex(16384 * 2);
+  final RenderBufferVertex renderBufferVertex = RenderBufferVertex(32768 * 2);
 
-  final List<RenderTexture?> _activeRenderTextures = List.filled(8, null);
+  late final List<RenderTexture?> _activeRenderTextures;
   final List<RenderFrameBuffer> _renderFrameBufferPool = <RenderFrameBuffer>[];
   final Map<String, RenderProgram> _renderPrograms = <String, RenderProgram>{};
 
@@ -94,14 +95,20 @@ class RenderContextWebGL extends RenderContext {
     }
 
     _renderingContext = renderingContext;
+
+    // Initialize max textures for RenderProgramBatch
+    final maxTextureUnits = RenderProgramBatch.initializeMaxTextures(_renderingContext, isWebGL2: _isWebGL2);
+    _activeRenderTextures = List.filled(maxTextureUnits, null);
+
     _renderingContext.enable(WebGL.BLEND);
     _renderingContext.disable(WebGL.STENCIL_TEST);
     _renderingContext.disable(WebGL.DEPTH_TEST);
     _renderingContext.disable(WebGL.CULL_FACE);
     _renderingContext.pixelStorei(WebGL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
     _renderingContext.blendFunc(WebGL.ONE, WebGL.ONE_MINUS_SRC_ALPHA);
+    _renderingContext.blendEquation(WebGL.FUNC_ADD);
 
-    _activeRenderProgram = renderProgramTinted;
+    _activeRenderProgram = renderProgramBatch;
     _activeRenderProgram.activate(this);
 
     _contextValid = true;
@@ -301,6 +308,11 @@ class RenderContextWebGL extends RenderContext {
       _projectionMatrix.translate(-1.0, 1.0, 0.0);
       _activeRenderProgram.projectionMatrix = _projectionMatrix;
     }
+
+    if (_activeBlendMode != BlendMode.NORMAL) {
+      _activeBlendMode = BlendMode.NORMAL;
+      _renderingContext.blendFunc(WebGL.ONE, WebGL.ONE_MINUS_SRC_ALPHA);
+    }
   }
 
   @override
@@ -478,19 +490,16 @@ class RenderContextWebGL extends RenderContext {
   @override
   void renderTextureQuad(
       RenderState renderState, RenderTextureQuad renderTextureQuad) {
-    activateRenderProgram(renderProgramTinted);
-    activateBlendMode(renderState.globalBlendMode);
-    activateRenderTexture(renderTextureQuad.renderTexture);
-    renderProgramTinted.renderTextureQuad(renderState, renderTextureQuad, 1, 1, 1, 1);
+    activateRenderProgram(renderProgramBatch);
+    renderProgramBatch.renderTextureQuad(renderState, this, renderTextureQuad);
   }
 
   @override
   void renderTextureMesh(RenderState renderState, RenderTexture renderTexture,
       Int16List ixList, Float32List vxList) {
-    activateRenderProgram(renderProgramTinted);
-    activateBlendMode(renderState.globalBlendMode);
-    activateRenderTexture(renderTexture);
-    renderProgramTinted.renderTextureMesh(renderState, ixList, vxList, 1, 1, 1, 1);
+    activateRenderProgram(renderProgramBatch);
+    renderProgramBatch.renderTextureMesh(
+      renderState, this, renderTexture, ixList, vxList, 1, 1, 1, 1);
   }
 
   @override
@@ -716,11 +725,7 @@ class RenderContextWebGL extends RenderContext {
 
   void releaseRenderTexture(RenderTexture renderTexture) {
     for (var i = 0; i < _activeRenderTextures.length; i++) {
-      if (identical(renderTexture, _activeRenderTextures[i])) {
-        _activeRenderTextures[i] = null;
-        _renderingContext.activeTexture(WebGL.TEXTURE0 + i);
-        _renderingContext.bindTexture(WebGL.TEXTURE_2D, null);
-      }
+      if (identical(renderTexture, _activeRenderTextures[i])) _unbindTextureAt(i);
     }
   }
 
@@ -740,6 +745,11 @@ class RenderContextWebGL extends RenderContext {
         _renderingContext.bindFramebuffer(WebGL.FRAMEBUFFER, null);
         _renderingContext.viewport(
             0, 0, _canvasElement.width, _canvasElement.height);
+
+        // Reset texture state when switching back to the canvas frame buffer
+        for (var i = 0; i < _activeRenderTextures.length; i++) {
+          _unbindTextureAt(i);
+        }
       }
       _updateScissorTest(_getLastScissorValue());
       _updateStencilTest(_getLastStencilValue());
@@ -765,9 +775,17 @@ class RenderContextWebGL extends RenderContext {
 
   void activateBlendMode(BlendMode blendMode) {
     if (!identical(blendMode, _activeBlendMode)) {
-      _activeRenderProgram.flush();
+      // Batch renderer manages its own flushing/drawing.
+      if (_activeRenderProgram is! RenderProgramBatch) {
+        _activeRenderProgram.flush();
+      }
+
       _activeBlendMode = blendMode;
-      _activeBlendMode!.blend(_renderingContext);
+
+      if (_activeRenderProgram is! RenderProgramBatch) {
+        // Batch renderer program has its own blend handling.
+        _renderingContext.blendFunc(blendMode.srcFactor, blendMode.dstFactor);
+      }
     }
   }
 
@@ -779,12 +797,20 @@ class RenderContextWebGL extends RenderContext {
     }
   }
 
-  void activateRenderTextureAt(RenderTexture renderTexture, int index) {
+  void activateRenderTextureAt(RenderTexture renderTexture, int index, {bool flush = true}) {
     if (!identical(renderTexture, _activeRenderTextures[index])) {
-      _activeRenderProgram.flush();
+      if (flush) _activeRenderProgram.flush();
       _activeRenderTextures[index] = renderTexture;
       renderTexture.activate(this, WebGL.TEXTURE0 + index);
     }
+  }
+
+  void _unbindTextureAt(int index) {
+    if (_activeRenderTextures[index] == null) return;
+
+    _renderingContext.activeTexture(WebGL.TEXTURE0 + index);
+    _renderingContext.bindTexture(WebGL.TEXTURE_2D, null);
+    _activeRenderTextures[index] = null;
   }
 
   void activateProjectionMatrix(Matrix3D matrix) {

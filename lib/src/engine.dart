@@ -15,7 +15,7 @@ library;
 
 import 'dart:async';
 import 'dart:js_interop';
-import 'package:web/web.dart' hide Float32List;
+import 'package:web/web.dart' hide Float32List, Int32List, Uint32List;
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -41,6 +41,7 @@ part 'engine/render_loop_base.dart';
 part 'engine/render_mask.dart';
 part 'engine/render_object.dart';
 part 'engine/render_program.dart';
+part 'engine/render_program_batch.dart';
 part 'engine/render_program_simple.dart';
 part 'engine/render_program_tinted.dart';
 part 'engine/render_program_triangle.dart';
