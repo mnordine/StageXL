@@ -375,13 +375,6 @@ class RenderProgramBatch extends RenderProgram {
     const vxListCount = 4;
     const vertexFloatCount = 9; // Stride in floats
 
-    // Check if blend mode changed - flush if so
-    // final currentBlendMode = renderState.globalBlendMode;
-    // if (currentBlendMode.srcFactor != currentBlendMode.srcFactor ||
-    //     currentBlendMode.dstFactor != currentBlendMode.dstFactor) {
-    //   needsFlush = true;
-    // }
-
     // Check if we need to flush due to buffer size limits
     if (!needsFlush && renderBufferIndex.position + ixListCount >= renderBufferIndex.data.length) {
        needsFlush = true;
