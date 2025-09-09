@@ -42,7 +42,6 @@ class RenderProgramBatch extends RenderProgram {
 
   late final List<RenderTexture?> _textures = List.filled(_maxTextures, null);
   
-  // Batching infrastructure
   final _drawCommands = <_DrawCommand>[];
   RenderContextWebGL? _renderContextWebGL;
   bool _executingBatch = false;
@@ -114,7 +113,7 @@ class RenderProgramBatch extends RenderProgram {
 
       precision ${RenderProgram.fragmentPrecision} float;
 
-      $samplerDeclaration // Use sampler array
+      $samplerDeclaration
 
       in vec2 vTextCoord;
       in vec4 vColor;
@@ -128,7 +127,7 @@ class RenderProgramBatch extends RenderProgram {
       }
       ''';
     } else {
-      // WebGL 1: Use individual samplers and float range comparison (unchanged)
+      // WebGL 1: Use individual samplers and float range comparison.
       final samplerDeclarations = List.generate(_maxTextures, (i) => 'uniform sampler2D uSampler$i;').join('\n');
 
       for (var i = 0; i < _maxTextures; i++) {
@@ -170,16 +169,13 @@ class RenderProgramBatch extends RenderProgram {
     // Store reference to render context for batch operations
     _renderContextWebGL = renderContext;
 
-    // --- Set Sampler Uniforms ---
     if (isWebGL2) {
-      // WebGL 2: Set the sampler array uniform 'uSamplers'
+      // Set the sampler array uniform 'uSamplers'
       // Find the location (might be named 'uSamplers' or 'uSamplers[0]')
       final location = uniforms['uSamplers[0]'] ?? uniforms['uSamplers'];
       if (location != null && _samplerIndices != null) {
         // Pass the array [0, 1, 2, ..., maxTextures-1] to the uniform
         (renderingContext as WebGL2RenderingContext).uniform1iv(location, _samplerIndices!);
-      } else if (location == null) {
-         print("Warning: 'uSamplers' uniform not found in WebGL 2 batch program.");
       }
     } else {
       // WebGL 1: Set individual sampler uniforms 'uSampler0', 'uSampler1', ...
@@ -202,11 +198,7 @@ class RenderProgramBatch extends RenderProgram {
     renderBufferVertex.bindAttribute(attributes['aVertexPosition'], 2, stride, 0);  // offset 0 bytes
     renderBufferVertex.bindAttribute(attributes['aVertexTextCoord'], 2, stride, 8); // offset 8 bytes
     renderBufferVertex.bindAttribute(attributes['aVertexColor'], 4, stride, 16); // offset 16 bytes
-
-    final location = attributes['aVertexTexIndex'];
-    if (location == null) return; // Optimized out, batching likely unused
-
-    renderBufferVertex.bindAttribute(location, 1, stride, 32); // offset 32 bytes
+    renderBufferVertex.bindAttribute(attributes['aVertexTexIndex'], 1, stride, 32); // offset 32 bytes
   }
 
   //---------------------------------------------------------------------------
