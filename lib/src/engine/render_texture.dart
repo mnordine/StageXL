@@ -354,13 +354,13 @@ class RenderTexture {
       if (scissors) renderingContext.enable(WebGL.SCISSOR_TEST);
 
       renderingContext.texParameteri(
-          target, WebGL.TEXTURE_WRAP_S, _wrappingX.value);
+          WebGL.TEXTURE_2D, WebGL.TEXTURE_WRAP_S, _wrappingX.value);
       renderingContext.texParameteri(
-          target, WebGL.TEXTURE_WRAP_T, _wrappingY.value);
+          WebGL.TEXTURE_2D, WebGL.TEXTURE_WRAP_T, _wrappingY.value);
       renderingContext.texParameteri(
-          target, WebGL.TEXTURE_MIN_FILTER, _filtering.value);
+          WebGL.TEXTURE_2D, WebGL.TEXTURE_MIN_FILTER, _filtering.value);
       renderingContext.texParameteri(
-          target, WebGL.TEXTURE_MAG_FILTER, _filtering.value);
+          WebGL.TEXTURE_2D, WebGL.TEXTURE_MAG_FILTER, _filtering.value);
     }
   }
 
