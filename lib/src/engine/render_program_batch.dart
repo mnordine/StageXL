@@ -416,10 +416,42 @@ class RenderProgramBatch extends RenderProgram {
 
     // Add vertices directly to buffer
     var vPos = vxPosition;
-    vxData[vPos++] = ma1 + mc1; vxData[vPos++] = mb1 + md1; vxData[vPos++] = vxList[2]; vxData[vPos++] = vxList[3]; vxData[vPos++] = colorR; vxData[vPos++] = colorG; vxData[vPos++] = colorB; vxData[vPos++] = colorA; vxData[vPos++] = textureIndex.toDouble();
-    vxData[vPos++] = ma2 + mc1; vxData[vPos++] = mb2 + md1; vxData[vPos++] = vxList[6]; vxData[vPos++] = vxList[7]; vxData[vPos++] = colorR; vxData[vPos++] = colorG; vxData[vPos++] = colorB; vxData[vPos++] = colorA; vxData[vPos++] = textureIndex.toDouble();
-    vxData[vPos++] = ma2 + mc2; vxData[vPos++] = mb2 + md2; vxData[vPos++] = vxList[10]; vxData[vPos++] = vxList[11]; vxData[vPos++] = colorR; vxData[vPos++] = colorG; vxData[vPos++] = colorB; vxData[vPos++] = colorA; vxData[vPos++] = textureIndex.toDouble();
-    vxData[vPos++] = ma1 + mc2; vxData[vPos++] = mb1 + md2; vxData[vPos++] = vxList[14]; vxData[vPos++] = vxList[15]; vxData[vPos++] = colorR; vxData[vPos++] = colorG; vxData[vPos++] = colorB; vxData[vPos++] = colorA; vxData[vPos++] = textureIndex.toDouble();
+    vxData[vPos++] = ma1 + mc1; 
+    vxData[vPos++] = mb1 + md1; 
+    vxData[vPos++] = vxList[2]; 
+    vxData[vPos++] = vxList[3]; 
+    vxData[vPos++] = colorR; 
+    vxData[vPos++] = colorG; 
+    vxData[vPos++] = colorB; 
+    vxData[vPos++] = colorA; 
+    vxData[vPos++] = textureIndex.toDouble();
+    vxData[vPos++] = ma2 + mc1; 
+    vxData[vPos++] = mb2 + md1; 
+    vxData[vPos++] = vxList[6]; 
+    vxData[vPos++] = vxList[7]; 
+    vxData[vPos++] = colorR; 
+    vxData[vPos++] = colorG; 
+    vxData[vPos++] = colorB; 
+    vxData[vPos++] = colorA; 
+    vxData[vPos++] = textureIndex.toDouble();
+    vxData[vPos++] = ma2 + mc2; 
+    vxData[vPos++] = mb2 + md2; 
+    vxData[vPos++] = vxList[10]; 
+    vxData[vPos++] = vxList[11]; 
+    vxData[vPos++] = colorR; 
+    vxData[vPos++] = colorG; 
+    vxData[vPos++] = colorB; 
+    vxData[vPos++] = colorA; 
+    vxData[vPos++] = textureIndex.toDouble();
+    vxData[vPos++] = ma1 + mc2; 
+    vxData[vPos++] = mb1 + md2; 
+    vxData[vPos++] = vxList[14]; 
+    vxData[vPos++] = vxList[15]; 
+    vxData[vPos++] = colorR; 
+    vxData[vPos++] = colorG; 
+    vxData[vPos++] = colorB; 
+    vxData[vPos++] = colorA; 
+    vxData[vPos++] = textureIndex.toDouble();
 
     // Create draw command
     final drawCommand = _DrawCommand(
