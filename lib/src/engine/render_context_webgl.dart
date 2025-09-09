@@ -60,13 +60,19 @@ class RenderContextWebGL extends RenderContext {
 
   //---------------------------------------------------------------------------
 
-  RenderContextWebGL(HTMLCanvasElement canvasElement,
-      {required PowerPreference powerPreference, bool alpha = false, bool antialias = false, bool forceWebGL1 = false,
-      bool resetScissorTest = true, bool resetStencilTest = true, bool resetColor = true})
-      : _canvasElement = canvasElement,
-        _resetScissorTest = resetScissorTest,
-        _resetStencilTest = resetStencilTest,
-        _resetColor = resetColor {
+  RenderContextWebGL(
+    HTMLCanvasElement canvasElement, {
+    required PowerPreference powerPreference,
+    bool alpha = false,
+    bool antialias = false,
+    bool forceWebGL1 = false,
+    bool resetScissorTest = true,
+    bool resetStencilTest = true,
+    bool resetColor = true,
+  }) : _canvasElement = canvasElement,
+       _resetScissorTest = resetScissorTest,
+       _resetStencilTest = resetStencilTest,
+       _resetColor = resetColor {
     _canvasElement.onWebGlContextLost.listen(_onContextLost);
     _canvasElement.onWebGlContextRestored.listen(_onContextRestored);
 
