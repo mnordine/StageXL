@@ -469,9 +469,8 @@ class RenderProgramBatch extends RenderProgram {
       num b,
       num a,
       {BlendMode? blendMode}) {
-    // Ensure we have a reference to the active RenderContextWebGL. See
-    // comment in renderTextureQuad for rationale.
     _renderContextWebGL = renderContext;
+
     final texture = renderTexture; // Use consistent naming
     var textureIndex = getTextureIndexIfAvailable(texture);
     var needsFlush = false;
