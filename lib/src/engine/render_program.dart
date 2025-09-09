@@ -27,12 +27,8 @@ abstract class RenderProgram {
   static final Set<int> _enabledVertexAttribArrays = <int>{};
 
   bool? _isWebGL2;
-
-  bool get isWebGL2 {
-    if (_isWebGL2 != null) return _isWebGL2!;
-
-   return _isWebGL2 = _renderingContext.isA<WebGL2RenderingContext>();
-  } 
+  bool get isWebGL2 => 
+    _isWebGL2 ??= _renderingContext.isA<WebGL2RenderingContext>();
 
   RenderProgram()
       : _attributes = <String, int>{},
