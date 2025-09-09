@@ -264,14 +264,14 @@ class RenderTexture {
 
     // Determine the upload unit (use the last available texture unit)
     // This avoids interfering with units 0, 1, etc., which are used first by the batcher.
-    final uploadUnitIndex = RenderProgramBatch._maxTextures - 1;
-    final uploadUnitEnum = WebGL.TEXTURE0 + uploadUnitIndex;
+    final lastUnitIndex = RenderProgramBatch._maxTextures - 1;
+    final lastUnit = WebGL.TEXTURE0 + lastUnitIndex;
 
     // Save the currently active texture unit. We need to restore this later.
     // Using getParameter is safer here as update() could be called from various places.
-    final savedActiveUnit = (renderingContext.getParameter(WebGL.ACTIVE_TEXTURE) as JSNumber).toDartInt;
+    final activeUnit = (renderingContext.getParameter(WebGL.ACTIVE_TEXTURE) as JSNumber).toDartInt;
 
-    renderingContext.activeTexture(uploadUnitEnum);
+    renderingContext.activeTexture(lastUnit);
     renderingContext.bindTexture(WebGL.TEXTURE_2D, _texture);
 
     _updateTexture(renderContext);
@@ -280,8 +280,8 @@ class RenderTexture {
     // We don't need to restore the texture binding *on* the uploadUnitEnum itself,
     // because it's treated as a temporary slot. The next call to activate()
     // for that slot (if needed) will handle binding the correct texture.
-    if (savedActiveUnit != uploadUnitEnum) {
-       renderingContext.activeTexture(savedActiveUnit);
+    if (activeUnit != lastUnit) {
+       renderingContext.activeTexture(activeUnit);
     }
   }
 
@@ -295,19 +295,17 @@ class RenderTexture {
 
     renderContext.flush();
 
-    final uploadUnitIndex = RenderProgramBatch._maxTextures - 1;
-    final uploadUnitEnum = WebGL.TEXTURE0 + uploadUnitIndex;
-    final savedActiveUnit =
-        (renderingContext.getParameter(WebGL.ACTIVE_TEXTURE) as JSNumber)
-            .toDartInt;
+    final lastUnitIndex = RenderProgramBatch._maxTextures - 1;
+    final lastUnit = WebGL.TEXTURE0 + lastUnitIndex;
+    final activeUnit = (renderingContext.getParameter(WebGL.ACTIVE_TEXTURE) as JSNumber).toDartInt;
 
-    renderingContext.activeTexture(uploadUnitEnum);
+    renderingContext.activeTexture(lastUnit);
     renderingContext.bindTexture(WebGL.TEXTURE_2D, _texture);
 
     apply(renderingContext);
 
-    if (savedActiveUnit != uploadUnitEnum) {
-      renderingContext.activeTexture(savedActiveUnit);
+    if (activeUnit != lastUnit) {
+      renderingContext.activeTexture(activeUnit);
     }
   }
 
