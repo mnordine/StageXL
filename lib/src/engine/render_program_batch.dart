@@ -1,13 +1,13 @@
 part of '../engine.dart';
 
-class DrawCommand {
+class _DrawCommand {
   final int indexCount;
   final int indexOffset;
   final BlendMode blendMode;
   final RenderTexture texture;
   final int textureIndex;
 
-  DrawCommand({
+  _DrawCommand({
     required this.indexCount,
     required this.indexOffset,
     required this.blendMode,
@@ -45,7 +45,7 @@ class RenderProgramBatch extends RenderProgram {
   late final List<RenderTexture?> _textures = List.filled(_maxTextures, null);
   
   // Batching infrastructure
-  final List<DrawCommand> _drawCommands = <DrawCommand>[];
+  final _drawCommands = <_DrawCommand>[];
   RenderContextWebGL? _renderContextWebGL;
   bool _executingBatch = false;
 
@@ -449,7 +449,7 @@ class RenderProgramBatch extends RenderProgram {
     vxData[vPos++] = ma1 + mc2; vxData[vPos++] = mb1 + md2; vxData[vPos++] = vxList[14]; vxData[vPos++] = vxList[15]; vxData[vPos++] = colorR; vxData[vPos++] = colorG; vxData[vPos++] = colorB; vxData[vPos++] = colorA; vxData[vPos++] = textureIndex.toDouble();
 
     // Create draw command
-    final drawCommand = DrawCommand(
+    final drawCommand = _DrawCommand(
       indexCount: ixListCount,
       indexOffset: ixPosition,
       blendMode: renderState.globalBlendMode,
@@ -559,7 +559,7 @@ class RenderProgramBatch extends RenderProgram {
     }
 
     // Create draw command
-    final drawCommand = DrawCommand(
+    final drawCommand = _DrawCommand(
       indexCount: ixListCount,
       indexOffset: ixPosition,
       blendMode: blendMode,
