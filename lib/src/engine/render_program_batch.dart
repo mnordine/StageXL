@@ -23,21 +23,19 @@ class RenderProgramBatch extends RenderProgram {
   // aVertexTexIndex:   Float32(textureIndex)
 
   static int _maxTextures = 8; // Default value, will be updated at runtime
-  // Reintroduce sampler indices cache for WebGL 2 sampler array uniform
   static JSUint32Array? _samplerIndices;
 
-  static int initializeMaxTextures(WebGL renderingContext) {
+  static int initializeMaxTextures(WebGL renderingContext, {required bool isWebGL2}) {
     _maxTextures = (renderingContext.getParameter(WebGL.MAX_TEXTURE_IMAGE_UNITS) as JSNumber?)?.toDartInt ?? 8;
 
     // Cap max texture units, else a large number could result in excessive if/else chains, and the 
     // shader will fail to compile with an "expression too complex" error.
     _maxTextures = math.min(_maxTextures, 16);
 
-    // Limit max textures if necessary (optional)
-    // _maxTextures = math.min(_maxTextures, 16);
-    print('StageXL Batch Renderer - Max texture units: $_maxTextures');
     // Pre-calculate the sampler indices list for WebGL 2
-    _samplerIndices = Uint32List.fromList(List.generate(_maxTextures, (i) => i, growable: false)).toJS;
+    if (isWebGL2) {
+      _samplerIndices = Uint32List.fromList(List.generate(_maxTextures, (i) => i, growable: false)).toJS;
+    }
 
     return _maxTextures;
   }

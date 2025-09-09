@@ -102,7 +102,7 @@ class RenderContextWebGL extends RenderContext {
     _renderingContext = renderingContext;
 
     // Initialize max textures for RenderProgramBatch
-    final maxTextureUnits = RenderProgramBatch.initializeMaxTextures(_renderingContext);
+    final maxTextureUnits = RenderProgramBatch.initializeMaxTextures(_renderingContext, isWebGL2: _isWebGL2);
 
     _activeRenderTextures = List.filled(maxTextureUnits, null);
 
