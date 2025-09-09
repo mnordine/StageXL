@@ -330,13 +330,9 @@ class RenderProgramBatch extends RenderProgram {
   void renderTextureQuad(
       RenderState renderState, RenderContextWebGL renderContext,
       RenderTextureQuad renderTextureQuad, [num r = 1, num g = 1, num b = 1, num a = 1]) {
-    // Ensure we have a reference to the active RenderContextWebGL. Some
-    // integrations (for example stagexl_spine) call this method directly on
-    // the program instance. In those cases the program may not have been
-    // activated via RenderContext.activateRenderProgram, so _renderContextWebGL
-    // could be null. Use the provided renderContext parameter to be resilient
-    // to that usage pattern.
+
     _renderContextWebGL = renderContext;
+
     if (renderTextureQuad.hasCustomVertices) {
       final ixList = renderTextureQuad.ixList;
       final vxList = renderTextureQuad.vxList;
@@ -345,11 +341,10 @@ class RenderProgramBatch extends RenderProgram {
       return;
     }
 
-    final texture = renderTextureQuad.renderTexture;
-    var textureIndex = getTextureIndex(texture);
     var needsFlush = false;
 
-    // --- Texture Slot Management ---
+    final texture = renderTextureQuad.renderTexture;
+    var textureIndex = getTextureIndex(texture);
     if (textureIndex == null) {
       // No slot available OR texture not found -> Need to Flush
       needsFlush = true;
@@ -374,9 +369,8 @@ class RenderProgramBatch extends RenderProgram {
        textureIndex = 0;
     }
 
-    // --- Flush if Needed ---
     if (needsFlush) {
-      flush(); // Flush the current batch
+      flush();
     }
 
     // Update our internal tracking
@@ -484,11 +478,10 @@ class RenderProgramBatch extends RenderProgram {
       {BlendMode? blendMode}) {
     _renderContextWebGL = renderContext;
 
-    final texture = renderTexture; // Use consistent naming
-    var textureIndex = getTextureIndex(texture);
     var needsFlush = false;
 
-    // --- Texture Slot Management ---
+    final texture = renderTexture;
+    var textureIndex = getTextureIndex(texture);
     if (textureIndex == null) {
       needsFlush = true;
       textureIndex = 0;
@@ -513,7 +506,6 @@ class RenderProgramBatch extends RenderProgram {
        textureIndex = 0;
     }
 
-    // --- Flush if Needed ---
     if (needsFlush) {
       flush();
     }
