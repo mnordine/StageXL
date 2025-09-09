@@ -307,8 +307,8 @@ class RenderProgramBatch extends RenderProgram {
   //---------------------------------------------------------------------------
 
   /// Checks if the given texture is already in a slot or if there's an empty slot.
-  /// Returns the texture index if available, or -1 if no slots are available.
-  int? getTextureIndexIfAvailable(RenderTexture texture) {
+  /// Returns the texture index if available, or `null` if no slots are available.
+  int? getTextureIndex(RenderTexture texture) {
     // First check if the texture is already bound
     for (var i = 0; i < _maxTextures; i++) {
       if (identical(_textures[i], texture)) {
@@ -323,7 +323,6 @@ class RenderProgramBatch extends RenderProgram {
       }
     }
 
-    // No slots available
     return null;
   }
 
@@ -348,7 +347,7 @@ class RenderProgramBatch extends RenderProgram {
     }
 
     final texture = renderTextureQuad.renderTexture;
-    var textureIndex = getTextureIndexIfAvailable(texture);
+    var textureIndex = getTextureIndex(texture);
     var needsFlush = false;
 
     // --- Texture Slot Management ---
@@ -487,7 +486,7 @@ class RenderProgramBatch extends RenderProgram {
     _renderContextWebGL = renderContext;
 
     final texture = renderTexture; // Use consistent naming
-    var textureIndex = getTextureIndexIfAvailable(texture);
+    var textureIndex = getTextureIndex(texture);
     var needsFlush = false;
 
     // --- Texture Slot Management ---
