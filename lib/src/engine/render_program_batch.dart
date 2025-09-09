@@ -215,11 +215,11 @@ class RenderProgramBatch extends RenderProgram {
   @override
   void flush() {
     if (_drawCommands.isNotEmpty) {
-      _executeBatchedCommands();
+      _runBatch();
     } else if (renderBufferIndex.position > 0) {
       super.flush(); // Handles buffer updates and draw call
     }
-    _clearTextures(); // Clear local texture tracking for the new batch
+    _clearTextures();
     _clearBatchData();
 
     final lastBlendMode = _lastBlendMode;
@@ -232,7 +232,7 @@ class RenderProgramBatch extends RenderProgram {
 
   var _lastBlendMode = BlendMode.NORMAL;
 
-  void _executeBatchedCommands() {
+  void _runBatch() {
     if (_drawCommands.isEmpty) return;
 
     // Upload all vertex and index data that was accumulated.
@@ -265,8 +265,7 @@ class RenderProgramBatch extends RenderProgram {
         if (!contiguous) break;
 
         // 3. The number of unique textures would exceed the hardware limit.
-        if (!uniqueTextures.containsKey(next.textureIndex) &&
-            uniqueTextures.length >= _maxTextures) {
+        if (!uniqueTextures.containsKey(next.textureIndex) && uniqueTextures.length >= _maxTextures) {
           break;
         }
 
