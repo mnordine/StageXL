@@ -141,15 +141,12 @@ class RenderTexture {
   set filtering(RenderTextureFiltering filtering) {
     if (_filtering == filtering) return;
     _filtering = filtering;
-
-    if (_renderContext == null || _texture == null) return;
-    if (_renderContext!.contextIdentifier != contextIdentifier) return;
-
-    _renderContext!.activateRenderTexture(this);
-    _renderingContext!.texParameteri(
-        WebGL.TEXTURE_2D, WebGL.TEXTURE_MIN_FILTER, _filtering.value);
-    _renderingContext!.texParameteri(
-        WebGL.TEXTURE_2D, WebGL.TEXTURE_MAG_FILTER, _filtering.value);
+    _applyTextureParameters((gl) {
+      gl.texParameteri(
+          WebGL.TEXTURE_2D, WebGL.TEXTURE_MIN_FILTER, _filtering.value);
+      gl.texParameteri(
+          WebGL.TEXTURE_2D, WebGL.TEXTURE_MAG_FILTER, _filtering.value);
+    });
   }
 
   //-----------------------------------------------------------------------------------------------
@@ -159,13 +156,9 @@ class RenderTexture {
   set wrappingX(RenderTextureWrapping wrapping) {
     if (_wrappingX == wrapping) return;
     _wrappingX = wrapping;
-
-    if (_renderContext == null || _texture == null) return;
-    if (_renderContext!.contextIdentifier != contextIdentifier) return;
-
-    _renderContext!.activateRenderTexture(this);
-    _renderingContext!.texParameteri(
-        WebGL.TEXTURE_2D, WebGL.TEXTURE_WRAP_S, _wrappingX.value);
+    _applyTextureParameters((gl) {
+      gl.texParameteri(WebGL.TEXTURE_2D, WebGL.TEXTURE_WRAP_S, _wrappingX.value);
+    });
   }
 
   //-----------------------------------------------------------------------------------------------
@@ -175,13 +168,9 @@ class RenderTexture {
   set wrappingY(RenderTextureWrapping wrapping) {
     if (_wrappingY == wrapping) return;
     _wrappingY = wrapping;
-
-    if (_renderContext == null || _texture == null) return;
-    if (_renderContext!.contextIdentifier != contextIdentifier) return;
-
-    _renderContext!.activateRenderTexture(this);
-    _renderingContext!.texParameteri(
-        WebGL.TEXTURE_2D, WebGL.TEXTURE_WRAP_T, _wrappingY.value);
+    _applyTextureParameters((gl) {
+      gl.texParameteri(WebGL.TEXTURE_2D, WebGL.TEXTURE_WRAP_T, _wrappingY.value);
+    });
   }
 
   int get pixelFormat => _pixelFormat;
@@ -266,18 +255,58 @@ class RenderTexture {
   /// RenderTexture and you don't need to call the [update] method.
 
   void update() {
-    if (_renderContext == null || _texture == null) return;
+    final renderContext = _renderContext;
+    final renderingContext = _renderingContext;
+    if (renderContext == null || renderingContext == null || _texture == null) return;
     if (_renderContext!.contextIdentifier != contextIdentifier) return;
 
-    _renderContext!.flush();
-    _renderContext!.activateRenderTexture(this);
+    renderContext.flush();
 
-    final scissors = _renderingContext!.isEnabled(WebGL.SCISSOR_TEST);
-    if (scissors) _renderingContext!.disable(WebGL.SCISSOR_TEST);
+    // Determine the upload unit (use the last available texture unit)
+    // This avoids interfering with units 0, 1, etc., which are used first by the batcher.
+    final lastUnitIndex = RenderProgramBatch._maxTextures - 1;
+    final lastUnit = WebGL.TEXTURE0 + lastUnitIndex;
 
-    _updateTexture(_renderContext!);
+    // Save the currently active texture unit. We need to restore this later.
+    // Using getParameter is safer here as update() could be called from various places.
+    final activeUnit = (renderingContext.getParameter(WebGL.ACTIVE_TEXTURE) as JSNumber).toDartInt;
 
-    if (scissors) _renderingContext!.enable(WebGL.SCISSOR_TEST);
+    renderingContext.activeTexture(lastUnit);
+    renderingContext.bindTexture(WebGL.TEXTURE_2D, _texture);
+
+    _updateTexture(renderContext);
+
+    // Restore the originally active texture unit.
+    // We don't need to restore the texture binding *on* the uploadUnitEnum itself,
+    // because it's treated as a temporary slot. The next call to activate()
+    // for that slot (if needed) will handle binding the correct texture.
+    if (activeUnit != lastUnit) {
+      renderingContext.activeTexture(activeUnit);
+    }
+  }
+
+  void _applyTextureParameters(void Function(WebGL renderingContext) apply) {
+    final renderContext = _renderContext;
+    final renderingContext = _renderingContext;
+    if (renderContext == null || renderingContext == null || _texture == null) {
+      return;
+    }
+    if (renderContext.contextIdentifier != contextIdentifier) return;
+
+    renderContext.flush();
+
+    final lastUnitIndex = RenderProgramBatch._maxTextures - 1;
+    final lastUnit = WebGL.TEXTURE0 + lastUnitIndex;
+    final activeUnit = (renderingContext.getParameter(WebGL.ACTIVE_TEXTURE) as JSNumber).toDartInt;
+
+    renderingContext.activeTexture(lastUnit);
+    renderingContext.bindTexture(WebGL.TEXTURE_2D, _texture);
+
+    apply(renderingContext);
+
+    if (activeUnit != lastUnit) {
+      renderingContext.activeTexture(activeUnit);
+    }
   }
 
   void _updateTexture(RenderContextWebGL renderContext) {
@@ -299,17 +328,22 @@ class RenderTexture {
   //-----------------------------------------------------------------------------------------------
 
   void activate(RenderContextWebGL renderContext, int textureSlot) {
-    if (contextIdentifier != renderContext.contextIdentifier) {
+    final renderingContext = _renderingContext = renderContext.rawContext;
+
+    final needsInitialization = contextIdentifier != renderContext.contextIdentifier;
+    if (needsInitialization) {
+      // Store context info and create WebGL texture object ONLY once per context
       _renderContext = renderContext;
       _contextIdentifier = renderContext.contextIdentifier;
-      final renderingContext = _renderingContext = renderContext.rawContext;
       _texture = renderingContext.createTexture();
+    }
 
-      const target = WebGL.TEXTURE_2D;
+    const target = WebGL.TEXTURE_2D;
 
-      renderingContext.activeTexture(textureSlot);
-      renderingContext.bindTexture(target, _texture);
+    renderingContext.activeTexture(textureSlot);
+    renderingContext.bindTexture(target, _texture);
 
+    if (needsInitialization) {
       final scissors = renderingContext.isEnabled(WebGL.SCISSOR_TEST);
       if (scissors) renderingContext.disable(WebGL.SCISSOR_TEST);
 
@@ -325,9 +359,6 @@ class RenderTexture {
           WebGL.TEXTURE_2D, WebGL.TEXTURE_MIN_FILTER, _filtering.value);
       renderingContext.texParameteri(
           WebGL.TEXTURE_2D, WebGL.TEXTURE_MAG_FILTER, _filtering.value);
-    } else {
-      _renderingContext!.activeTexture(textureSlot);
-      _renderingContext!.bindTexture(WebGL.TEXTURE_2D, _texture);
     }
   }
 
