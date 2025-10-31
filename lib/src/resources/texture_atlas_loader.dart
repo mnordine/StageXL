@@ -68,8 +68,13 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
       renderTexture = await _loadCompressedTexture(imageUrl);
     } else {
       final match = RegExp(r'\.(png|jpg|jpeg)$').firstMatch(filename);
-      if (_loadOptions.webp && match != null && await env.isWebpSupported) {
-        filename = '${filename.substring(match.start)}.webp';
+      if (match != null) {
+        final baseName = filename.substring(0, match.start);
+        if (_loadOptions.avif && await env.isAvifSupported) {
+          filename = '$baseName.avif';
+        } else if (_loadOptions.webp && await env.isWebpSupported) {
+          filename = '$baseName.webp';
+        }
       }
 
       final imageUrl = _manifest.mapUrl(replaceFilename(loaderUrl, filename));
