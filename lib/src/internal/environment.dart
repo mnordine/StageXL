@@ -1,6 +1,7 @@
 library;
 
 import 'dart:async';
+import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
 import 'package:web/web.dart' hide Int32List;
 import 'dart:typed_data';
@@ -59,7 +60,24 @@ bool _checkAutoHiDPI() {
 
 //-------------------------------------------------------------------------------------
 
-Future<bool> _checkWebpSupport() {
+@JS('ImageDecoder')
+extension type _ImageDecoder._(JSObject _) implements JSObject {
+  @JS('isTypeSupported')
+  external static JSPromise<JSBoolean> _isTypeSupported(String type);
+
+  static Future<bool> isTypeSupported(String type) async {
+    final result = await _isTypeSupported(type).toDart;
+    return result.toDart;
+  }
+}
+
+bool get _hasImageDecoder => window.has('ImageDecoder');
+
+Future<bool> _checkWebpSupport() async {
+  try {
+    if (_hasImageDecoder) return await _ImageDecoder.isTypeSupported('image/webp');
+  } catch (_) {}
+
   final completer = Completer<bool>();
   final img = HTMLImageElement();
 
@@ -75,7 +93,11 @@ Future<bool> _checkWebpSupport() {
 
 //-------------------------------------------------------------------------------------
 
-Future<bool> _checkAvifSupport() {
+Future<bool> _checkAvifSupport() async {
+  try {
+    if (_hasImageDecoder) return await _ImageDecoder.isTypeSupported('image/avif');
+  } catch (_) {}
+
   final completer = Completer<bool>();
   final img = HTMLImageElement();
 
