@@ -2,7 +2,6 @@ library;
 
 import 'dart:async';
 import 'dart:js_interop';
-import 'dart:typed_data';
 
 import 'package:web/web.dart';
 
@@ -19,6 +18,7 @@ class VideoLoader {
   late StreamSubscription<Event> _onErrorSubscription;
   final _urls = <String>[];
   var _loadData = false;
+  String? _activeObjectUrl;
 
   VideoLoader(List<String> urls, bool loadData, bool corsEnabled) {
     if (corsEnabled) video.crossOrigin = 'anonymous';
@@ -61,6 +61,7 @@ class VideoLoader {
   void _loadFailed() {
     _onCanPlaySubscription.cancel();
     _onErrorSubscription.cancel();
+    _revokeActiveObjectUrl();
     if (aggregateError.errors.isEmpty) {
       final loadError = LoadError('No configured video type is supported.');
       aggregateError.errors.add(loadError);
@@ -76,11 +77,9 @@ class VideoLoader {
         throw LoadError('Failed to load $url. (${response.status} ${response.statusText})');
       }
 
-      final buffer = (await response.arrayBuffer().toDart).toDart;
-      final bytes = Uint8List.view(buffer);
-      final dataUrl = Uri.dataFromBytes(bytes);
-
-      _loadVideoSource(dataUrl.toString());
+      final blob = await response.blob().toDart;
+      final objectUrl = URL.createObjectURL(blob);
+      _setVideoSource(objectUrl);
     } catch (error) {
       final loadError = error is LoadError
           ? error
@@ -91,9 +90,26 @@ class VideoLoader {
   }
 
   void _loadVideoSource(String url) {
+    _revokeActiveObjectUrl();
     video.preload = 'auto';
     video.src = url;
     video.load();
+  }
+
+  void _setVideoSource(String objectUrl) {
+    _revokeActiveObjectUrl();
+    _activeObjectUrl = objectUrl;
+    video.preload = 'auto';
+    video.src = objectUrl;
+    video.load();
+  }
+
+  void _revokeActiveObjectUrl() {
+    final url = _activeObjectUrl;
+    if (url != null) {
+      URL.revokeObjectURL(url);
+      _activeObjectUrl = null;
+    }
   }
 
   //---------------------------------------------------------------------------
