@@ -21,8 +21,13 @@ class SoundSprite {
       [SoundLoadOptions? soundLoadOptions]) async {
     final soundSprite = SoundSprite();
 
-    final soundSpriteJson = await http.get(.parse(url));
-    final data = json.decode(soundSpriteJson.body) as Map;
+    final response = await window.fetch(url.toJS).toDart;
+    if (!response.ok) {
+      throw LoadError('Failed to load sound sprite: ${response.status} ${response.statusText}');
+    }
+
+    final jsonText = (await response.text().toDart).toDart;
+    final data = json.decode(jsonText) as Map;
     final urls = (data['urls'] as List).cast<String>();
     final segments = data['sprite'];
     final soundUrls = <String>[];
