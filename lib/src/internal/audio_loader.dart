@@ -1,8 +1,10 @@
 library;
 
 import 'dart:async';
+import 'dart:js_interop';
+import 'dart:typed_data';
+
 import 'package:web/web.dart';
-import 'package:http/http.dart' as http;
 
 import '../errors.dart';
 
@@ -70,15 +72,26 @@ class AudioLoader {
     _completer.completeError(aggregateError);
   }
 
-  void _loadAudioData(String url) {
-    http.get(.parse(url)).then((request) {
-      final url = Uri.dataFromBytes(request.bodyBytes);
-      _loadAudioSource(url.toString());
-    }).catchError((Object error) {
-      final loadError = LoadError('Failed to load $url.', error);
+  Future<void> _loadAudioData(String url) async {
+    try {
+      final response = await window.fetch(url.toJS).toDart;
+
+      if (!response.ok) {
+        throw LoadError('Failed to load $url. (${response.status} ${response.statusText})');
+      }
+
+      final buffer = (await response.arrayBuffer().toDart).toDart;
+      final bytes = Uint8List.view(buffer);
+      final dataUrl = Uri.dataFromBytes(bytes);
+
+      _loadAudioSource(dataUrl.toString());
+    } catch (error) {
+      final loadError = error is LoadError
+          ? error
+          : LoadError('Failed to load $url.', error);
       aggregateError.errors.add(loadError);
       _loadNextUrl();
-    });
+    }
   }
 
   void _loadAudioSource(String url) {
