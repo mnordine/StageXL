@@ -46,6 +46,8 @@ export 'src/ui.dart';
 ///     StageXL.environment.isMobileDevice
 ///     StageXL.environment.isLittleEndianSystem
 ///     StageXL.environment.isTouchEventSupported
+///     StageXL.environment.isWebpSupported
+///     StageXL.environment.isAvifSupported
 ///
 /// The default [StageOptions] used by the [Stage] constructor:
 ///
@@ -68,6 +70,7 @@ export 'src/ui.dart';
 ///     StageXL.bitmapDataLoadOptions.jpg = true;
 ///     StageXL.bitmapDataLoadOptions.png = true;
 ///     StageXL.bitmapDataLoadOptions.webp = false;
+///     StageXL.bitmapDataLoadOptions.avif = false;
 ///     StageXL.bitmapDataLoadOptions.maxPixelRatio = 2;
 ///     StageXL.bitmapDataLoadOptions.corsEnabled = false;
 ///
@@ -192,4 +195,5 @@ class Environment {
   final bool isImageBitmapSupported = env.isImageBitmapSupported;
 
   final Future<bool> isWebpSupported = env.isWebpSupported;
+  final Future<bool> isAvifSupported = env.isAvifSupported;
 }

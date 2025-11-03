@@ -36,11 +36,17 @@ class BitmapDataLoadInfo {
   String get loaderUrl => _loaderUrl;
   double get pixelRatio => _pixelRatio;
 
-  bool get canReplaceWithWebp => RegExp(r'\.(png|jpg|jpeg)$').firstMatch(loaderUrl) != null;
-  String get loaderUrlWebp {
-    final match = RegExp(r'\.(png|jpg|jpeg)$').firstMatch(loaderUrl);
+  bool get canReplaceExtension => _extensionPattern.firstMatch(loaderUrl) != null;
+
+  String get loaderUrlWebp => _loaderUrlFor('webp');
+  String get loaderUrlAvif => _loaderUrlFor('avif');
+
+  static final _extensionPattern = RegExp(r'\.(png|jpg|jpeg)$');
+
+  String _loaderUrlFor(String extension) {
+    final match = _extensionPattern.firstMatch(loaderUrl);
     if (match != null) {
-      return '${loaderUrl.substring(0, match.start)}.webp';
+      return '${loaderUrl.substring(0, match.start)}.$extension';
     } else {
       return loaderUrl;
     }

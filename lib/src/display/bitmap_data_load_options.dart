@@ -23,6 +23,13 @@ class BitmapDataLoadOptions {
 
   bool webp = false;
 
+  /// The application provides *avif* files for lossless and lossy images.
+  ///
+  /// If *avif* is supported, the loader will automatically switch from *png*
+  /// and *jpg* files to this more efficient file format.
+
+  bool avif = false;
+
   /// The maximum pixel ratio for images on HiDPI displays.
   ///
   /// The loader automatically detects the device's display pixel ratio
@@ -84,6 +91,7 @@ class BitmapDataLoadOptions {
     options.png = png;
     options.jpg = jpg;
     options.webp = webp;
+    options.avif = avif;
     options.pixelRatios = List<double>.from(pixelRatios);
     options.corsEnabled = corsEnabled;
     return options;

@@ -73,7 +73,9 @@ class BitmapData implements BitmapDrawable {
     final bitmapDataFileInfo = BitmapDataLoadInfo(url, options.pixelRatios);
     final String loaderUrl;
 
-    if (bitmapDataFileInfo.canReplaceWithWebp && options.webp && await env.isWebpSupported) {
+    if (bitmapDataFileInfo.canReplaceExtension && options.avif && await env.isAvifSupported) {
+      loaderUrl = bitmapDataFileInfo.loaderUrlAvif;
+    } else if (bitmapDataFileInfo.canReplaceExtension && options.webp && await env.isWebpSupported) {
       loaderUrl = bitmapDataFileInfo.loaderUrlWebp;
     } else {
       loaderUrl = bitmapDataFileInfo.loaderUrl;

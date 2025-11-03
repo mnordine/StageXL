@@ -1,6 +1,7 @@
 library;
 
 import 'dart:async';
+import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
 import 'package:web/web.dart' hide Int32List;
 import 'dart:typed_data';
@@ -8,6 +9,7 @@ import 'dart:typed_data';
 final bool autoHiDPI = _checkAutoHiDPI();
 final num devicePixelRatio = _checkDevicePixelRatio();
 final Future<bool> isWebpSupported = _checkWebpSupport();
+final Future<bool> isAvifSupported = _checkAvifSupport();
 final bool isMobileDevice = _checkMobileDevice();
 final bool isLittleEndianSystem = _checkLittleEndianSystem();
 final bool isTouchEventSupported = _checkTouchEventSupport();
@@ -58,7 +60,24 @@ bool _checkAutoHiDPI() {
 
 //-------------------------------------------------------------------------------------
 
-Future<bool> _checkWebpSupport() {
+@JS('ImageDecoder')
+extension type _ImageDecoder._(JSObject _) implements JSObject {
+  @JS('isTypeSupported')
+  external static JSPromise<JSBoolean> _isTypeSupported(String type);
+
+  static Future<bool> isTypeSupported(String type) async {
+    final result = await _isTypeSupported(type).toDart;
+    return result.toDart;
+  }
+}
+
+bool get _hasImageDecoder => window.has('ImageDecoder');
+
+Future<bool> _checkWebpSupport() async {
+  try {
+    if (_hasImageDecoder) return await _ImageDecoder.isTypeSupported('image/webp');
+  } catch (_) {}
+
   final completer = Completer<bool>();
   final img = HTMLImageElement();
 
@@ -68,6 +87,28 @@ Future<bool> _checkWebpSupport() {
 
   img.src = 'data:image/webp;base64,UklGRjoAAABXRUJQVlA4IC4AAACyAg'
       'CdASoCAAIALmk0mk0iIiIiIgBoSygABc6WWgAA/veff/0PP8bA//LwYAAA';
+
+  return completer.future;
+}
+
+//-------------------------------------------------------------------------------------
+
+Future<bool> _checkAvifSupport() async {
+  try {
+    if (_hasImageDecoder) return await _ImageDecoder.isTypeSupported('image/avif');
+  } catch (_) {}
+
+  final completer = Completer<bool>();
+  final img = HTMLImageElement();
+
+  img.onLoad
+      .listen((_) => completer.complete(img.width == 2 && img.height == 2));
+  img.onError.listen((_) => completer.complete(false));
+
+  img.src = 'data:image/avif;base64,AAAAIGZ0eXBhdmlmAAAAAGF2aWZtaWYxbWlhZk1BMUIAAADybWV0YQAAAAAAAAAoaGRscgAAAAAAAAAAc'
+    'GljdAAAAAAAAAAAAAAAAGxpYmF2aWYAAAAADnBpdG0AAAAAAAEAAAAeaWxvYwAAAABEAAABAAEAAAABAAABGgAAAB0AAAAoaWluZgAAAAAAAQAAA'
+    'BppbmZlAgAAAAABAABhdjAxQ29sb3IAAAAAamlwcnAAAABLaXBjbwAAABRpc3BlAAAAAAAAAAIAAAACAAAAEHBpeGkAAAAAAwgICAAAAAxhdjFDg'
+    'Q0MAAAAABNjb2xybmNseAACAAIAAYAAAAAXaXBtYQAAAAAAAAABAAEEAQKDBAAAACVtZGF0EgAKCBgANogQEAwgMg8f8D///8WfhwB8+ErK42A=';
 
   return completer.future;
 }
