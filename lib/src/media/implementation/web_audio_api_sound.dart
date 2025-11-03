@@ -1,9 +1,16 @@
 part of '../../media.dart';
 
+class _LoadTask {
+  _LoadTask(this.controller, this.completer);
+
+  final AbortController controller;
+  final Completer<Sound> completer;
+}
+
 class WebAudioApiSound extends Sound {
   final AudioBuffer _audioBuffer;
 
-  static final _loaders = <String, Future<void>>{};
+  static final _loaders = <String, _LoadTask>{};
 
   WebAudioApiSound._(this._audioBuffer);
 
@@ -34,40 +41,66 @@ class WebAudioApiSound extends Sound {
 
   static Future<Sound> _tryAudioUrl(String key, String audioUrl) {
     final completer = Completer<Sound>();
+    final controller = AbortController();
+    final task = _LoadTask(controller, completer);
+    _loaders[key] = task;
 
-    _loaders[key] = http.get(.parse(audioUrl)).then((response) async {
-      if (response.statusCode == 200) {
+    Future<void> load() async {
+      try {
+        final response = await window.fetch(audioUrl.toJS, RequestInit(signal: controller.signal)).toDart;
 
-        if (!_loaders.containsKey(key)) {
-          completer.completeError('sound already cancelled');
+        if (!identical(_loaders[key], task)) {
+          // Load cancelled or superseded.
+          return;
         }
 
-        try {
-          final buffer = response.bodyBytes.buffer;
-          final audioContext = WebAudioApiMixer.audioContext;
-          final audioBuffer = await audioContext.decodeAudioData(buffer.toJS).toDart;
-          final sound = WebAudioApiSound._(audioBuffer);
-
-          if (!_loaders.containsKey(key)) {
-            completer.completeError('sound already cancelled');
-          }
-
-          unawaited(_loaders.remove(key));
-          completer.complete(sound);
-
-        } catch (e) {
-          if (!completer.isCompleted) completer.completeError('caught error loading $audioUrl');
+        if (!response.ok) {
+          throw LoadError('Failed to load $audioUrl. (${response.status} ${response.statusText})');
         }
+
+        final audioData = (await response.arrayBuffer().toDart).toDart;
+
+        if (!identical(_loaders[key], task)) {
+          return;
+        }
+
+        final audioContext = WebAudioApiMixer.audioContext;
+        final audioBuffer = await audioContext.decodeAudioData(audioData.toJS).toDart;
+
+        final currentTask = _loaders.remove(key);
+        if (currentTask == null || currentTask.completer.isCompleted) {
+          return;
+        }
+
+        currentTask.completer.complete(WebAudioApiSound._(audioBuffer));
+      } catch (error, stackTrace) {
+        final currentTask = _loaders.remove(key);
+        if (currentTask == null || currentTask.completer.isCompleted) {
+          return;
+        }
+
+        final loadError = error is LoadError
+            ? error
+            : LoadError('Failed to load $audioUrl.', error);
+        currentTask.completer.completeError(loadError, stackTrace);
       }
-    });
+    }
+
+    load();
 
     return completer.future;
   }
 
   static void cancel(String key) {
-    if (!_loaders.containsKey(key)) return;
+    final task = _loaders.remove(key);
+    if (task == null) {
+      return;
+    }
 
-    _loaders.remove(key);
+    task.controller.abort();
+    if (!task.completer.isCompleted) {
+      task.completer.completeError('sound already cancelled');
+    }
   }
 
   //---------------------------------------------------------------------------
