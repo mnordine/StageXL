@@ -168,7 +168,7 @@ class Stage extends DisplayObjectContainer {
 
     if (console) _console = StageConsole()..visible = false;
 
-    print('StageXL render engine : ${_renderContext.renderEngine}');
+    print('StageXL render engine : ${_renderContext.renderEngine.name}');
 
     canvas.onKeyDown.listen(_onKeyEvent);
     canvas.onKeyUp.listen(_onKeyEvent);

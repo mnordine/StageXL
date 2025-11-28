@@ -98,6 +98,6 @@ class SoundMixer {
       _engineDetected = SoundEngine.Mockup;
     }
 
-    print('StageXL sound engine  : $engine');
+    print('StageXL sound engine  : ${engine.name}');
   }
 }
