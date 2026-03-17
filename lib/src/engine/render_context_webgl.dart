@@ -100,6 +100,33 @@ class RenderContextWebGL extends RenderContext {
     final maxTextureUnits = RenderProgramBatch.initializeMaxTextures(_renderingContext, isWebGL2: _isWebGL2);
     _activeRenderTextures = List.filled(maxTextureUnits, null);
 
+    _contextValid = true;
+    _contextIdentifier = ++_globalContextIdentifier;
+
+    _initializeAfterContextChange();
+
+    reset();
+  }
+
+  void _initializeAfterContextChange() {
+    _configureRenderingContext();
+    _invalidateCachedState();
+
+    _activeRenderProgram = renderProgramBatch;
+    _activeRenderProgram.activate(this);
+
+    CompressedTexture.initExtensions(_renderingContext);
+
+    if (!isWebGL2) {
+      _vaoExtension = _renderingContext.getExtension('OES_vertex_array_object') as OES_vertex_array_object?;
+
+      _setupWebGL1Features();
+    }
+
+    if (_isWebGL2) _setupWebGL2Features();
+  }
+
+  void _configureRenderingContext() {
     _renderingContext.enable(WebGL.BLEND);
     _renderingContext.disable(WebGL.STENCIL_TEST);
     _renderingContext.disable(WebGL.DEPTH_TEST);
@@ -107,24 +134,32 @@ class RenderContextWebGL extends RenderContext {
     _renderingContext.pixelStorei(WebGL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
     _renderingContext.blendFunc(WebGL.ONE, WebGL.ONE_MINUS_SRC_ALPHA);
     _renderingContext.blendEquation(WebGL.FUNC_ADD);
+  }
 
-    _activeRenderProgram = renderProgramBatch;
-    _activeRenderProgram.activate(this);
+  void _invalidateCachedState() {
+    _activeRenderFrameBuffer = null;
+    _activeRenderStencilBuffer = null;
+    _activeBlendMode = null;
+    _viewportWidth = null;
+    _viewportHeight = null;
+    renderBufferIndex.position = 0;
+    renderBufferIndex.count = 0;
+    renderBufferVertex.position = 0;
+    renderBufferVertex.count = 0;
 
-    _contextValid = true;
-    _contextIdentifier = ++_globalContextIdentifier;
+    renderProgramBatch._clearBatchData();
 
-    CompressedTexture.initExtensions(_renderingContext);
-
-    if (!isWebGL2) {
-      _vaoExtension = renderingContext.getExtension('OES_vertex_array_object') as OES_vertex_array_object?;
-
-      _setupWebGL1Features();
+    _maskStates.clear();
+    for (final renderFrameBuffer in _renderFrameBufferPool) {
+      renderFrameBuffer._maskStates.clear();
     }
 
-    if (_isWebGL2) _setupWebGL2Features();
+    for (var i = 0; i < _activeRenderTextures.length; i++) {
+      _activeRenderTextures[i] = null;
+    }
 
-    reset();
+    RenderProgram.currentVao = null;
+    RenderProgram.currentVaoOes = null;
   }
 
   // Add this method to set up VAO for WebGL 1
@@ -157,6 +192,7 @@ class RenderContextWebGL extends RenderContext {
 
     // Unbind VAO
     _vaoExtension!.bindVertexArrayOES(null);
+    RenderProgram.currentVaoOes = null;
 
     // Restore previous program
     _activeRenderProgram.activate(this);
@@ -189,6 +225,7 @@ class RenderContextWebGL extends RenderContext {
 
     // Unbind VAO to prevent accidental modifications
     gl2.bindVertexArray(null);
+    RenderProgram.currentVao = null;
 
     // Restore previous program
     _activeRenderProgram.activate(this);
@@ -427,8 +464,10 @@ class RenderContextWebGL extends RenderContext {
 
         // Use VAO for efficient rendering
         _vaoExtension!.bindVertexArrayOES(_maskQuadVAOWebGL1);
+        RenderProgram.currentVaoOes = _maskQuadVAOWebGL1;
         _renderingContext.drawElements(WebGL.TRIANGLES, 6, WebGL.UNSIGNED_SHORT, 0);
         _vaoExtension!.bindVertexArrayOES(null);
+        RenderProgram.currentVaoOes = null;
 
         // Restore previous program if there was one
         if (currentProgram != null) {
@@ -471,12 +510,14 @@ class RenderContextWebGL extends RenderContext {
       // Use our minimal mask program and VAO
       gl2.useProgram(_maskProgram);
       gl2.bindVertexArray(_maskQuadVao);
+      RenderProgram.currentVao = _maskQuadVao;
 
       // Draw the quad
       gl2.drawElements(WebGL.TRIANGLES, 6, WebGL.UNSIGNED_SHORT, 0);
 
       // Restore state
       gl2.bindVertexArray(null);
+      RenderProgram.currentVao = null;
       gl2.useProgram(currentProgram);
     } else {
       gl2.clearStencil(0);
@@ -881,14 +922,14 @@ class RenderContextWebGL extends RenderContext {
   void _onContextLost(WebGLContextEvent contextEvent) {
     contextEvent.preventDefault();
     _contextValid = false;
+    _invalidateCachedState();
 
     // Clean up WebGL 2 resources
-    if (_isWebGL2) {
-      _maskQuadVao = null;
-      _maskProgram = null;
-    }  else if (_vaoExtension != null) {
-      _maskQuadVAOWebGL1 = null;
-    }
+    _maskQuadVao = null;
+    _maskQuadVAOWebGL1 = null;
+    _maskProgram = null;
+
+    _vaoExtension = null;
 
     _contextLostEvent.add(RenderContextEvent());
   }
@@ -897,12 +938,8 @@ class RenderContextWebGL extends RenderContext {
     _contextValid = true;
     _contextIdentifier = ++_globalContextIdentifier;
 
-    // Re-initialize WebGL 2 features
-    if (_isWebGL2) {
-      _setupWebGL2Features();
-    }  else if (_vaoExtension != null) {
-      _setupWebGL1Features();
-    }
+    _initializeAfterContextChange();
+    reset();
 
     _contextRestoredEvent.add(RenderContextEvent());
   }

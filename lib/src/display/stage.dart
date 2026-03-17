@@ -78,6 +78,8 @@ class Stage extends DisplayObjectContainer {
 
   late RenderState _renderState;
   InputEventMode _inputEventMode = InputEventMode.MouseOnly;
+  bool _renderContextLost = false;
+  bool _renderAfterContextRestore = false;
 
   /// Gets and sets the render mode of this Stage. You can choose between
   /// three different modes defined in [StageRenderMode].
@@ -165,6 +167,18 @@ class Stage extends DisplayObjectContainer {
     _pixelRatio = min(options.maxPixelRatio, env.devicePixelRatio);
     _renderContext = _createRenderContext(canvas, options);
     _renderState = RenderState(_renderContext);
+
+    _renderContext.onContextLost.listen((_) {
+      _renderContextLost = true;
+      _renderAfterContextRestore = false;
+      _invalid = true;
+    });
+
+    _renderContext.onContextRestored.listen((_) {
+      _renderContextLost = false;
+      _renderAfterContextRestore = true;
+      _invalid = true;
+    });
 
     if (console) _console = StageConsole()..visible = false;
 
@@ -396,9 +410,14 @@ class Stage extends DisplayObjectContainer {
   /// on your own and therefore get full control of the rendering of this Stage.
 
   void materialize(num currentTime, num deltaTime) {
-    if (renderMode == StageRenderMode.AUTO ||
+    if (_renderContextLost) return;
+
+    final shouldRender = _renderAfterContextRestore ||
+        renderMode == StageRenderMode.AUTO ||
         renderMode == StageRenderMode.AUTO_INVALID && _invalid ||
-        renderMode == StageRenderMode.ONCE) {
+        renderMode == StageRenderMode.ONCE;
+
+    if (shouldRender) {
       final stopwatch = Stopwatch()..start();
 
       _updateCanvasSize();
@@ -411,6 +430,7 @@ class Stage extends DisplayObjectContainer {
       _renderState.deltaTime = deltaTime;
       _renderState.renderObject(this);
       _renderState.flush();
+      _renderAfterContextRestore = false;
       _invalid = false;
 
       final stats = _renderContext.renderStatistics;
