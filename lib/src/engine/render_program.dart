@@ -90,6 +90,8 @@ abstract class RenderProgram {
     }
 
     if (!_supportsVao) {
+      _renderBufferIndex.activate(renderContext);
+      _renderBufferVertex.activate(renderContext);
       setupAttributes();
     }
 

@@ -112,11 +112,6 @@ class RenderContextWebGL extends RenderContext {
     _configureRenderingContext();
     _invalidateCachedState();
 
-    _activeRenderProgram = renderProgramBatch;
-    _activeRenderProgram.activate(this);
-
-    CompressedTexture.initExtensions(_renderingContext);
-
     if (!isWebGL2) {
       _vaoExtension = _renderingContext.getExtension('OES_vertex_array_object') as OES_vertex_array_object?;
 
@@ -124,6 +119,11 @@ class RenderContextWebGL extends RenderContext {
     }
 
     if (_isWebGL2) _setupWebGL2Features();
+
+    _activeRenderProgram = renderProgramBatch;
+    _activeRenderProgram.activate(this);
+
+    CompressedTexture.initExtensions(_renderingContext);
   }
 
   void _configureRenderingContext() {
@@ -166,6 +166,8 @@ class RenderContextWebGL extends RenderContext {
   void _setupWebGL1Features() {
     if (_vaoExtension == null) return;
 
+    final currentProgram = _renderingContext.getParameter(WebGL.CURRENT_PROGRAM) as WebGLProgram?;
+
     final maskProgram = _maskProgram = _createMaskProgram();
 
     final positionLocation = _renderingContext.getAttribLocation(maskProgram, 'aPosition');
@@ -195,11 +197,12 @@ class RenderContextWebGL extends RenderContext {
     RenderProgram.currentVaoOes = null;
 
     // Restore previous program
-    _activeRenderProgram.activate(this);
+    _renderingContext.useProgram(currentProgram);
   }
 
   void _setupWebGL2Features() {
     final gl2 = _renderingContext as WebGL2RenderingContext;
+    final currentProgram = gl2.getParameter(WebGL.CURRENT_PROGRAM) as WebGLProgram?;
 
     // Create a VAO for our mask quad
     _maskQuadVao = gl2.createVertexArray();
@@ -227,8 +230,7 @@ class RenderContextWebGL extends RenderContext {
     gl2.bindVertexArray(null);
     RenderProgram.currentVao = null;
 
-    // Restore previous program
-    _activeRenderProgram.activate(this);
+    gl2.useProgram(currentProgram);
   }
 
   // Create a minimal shader program for mask operations
@@ -459,12 +461,10 @@ class RenderContextWebGL extends RenderContext {
         // Save current program state
         final currentProgram = _renderingContext.getParameter(WebGL.CURRENT_PROGRAM) as WebGLProgram?;
 
-        // Use triangle program for the quad
-        activateRenderProgram(renderProgramTriangle);
-
         // Use VAO for efficient rendering
         _vaoExtension!.bindVertexArrayOES(_maskQuadVAOWebGL1);
         RenderProgram.currentVaoOes = _maskQuadVAOWebGL1;
+        _renderingContext.useProgram(_maskProgram);
         _renderingContext.drawElements(WebGL.TRIANGLES, 6, WebGL.UNSIGNED_SHORT, 0);
         _vaoExtension!.bindVertexArrayOES(null);
         RenderProgram.currentVaoOes = null;

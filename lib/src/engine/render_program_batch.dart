@@ -243,6 +243,14 @@ class RenderProgramBatch extends RenderProgram {
     if (_drawCommands.isEmpty) return;
     _executingBatch = true;
 
+    _bindVAO();
+    if (renderBufferIndex._buffer != null) {
+      renderingContext.bindBuffer(WebGL.ELEMENT_ARRAY_BUFFER, renderBufferIndex._buffer);
+    }
+    if (renderBufferVertex._buffer != null) {
+      renderingContext.bindBuffer(WebGL.ARRAY_BUFFER, renderBufferVertex._buffer);
+    }
+
     // Upload all vertex and index data that was accumulated.
     renderBufferVertex.update();
     renderBufferIndex.update();
