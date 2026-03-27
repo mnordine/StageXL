@@ -22,6 +22,7 @@ class RenderContextWebGL extends RenderContext {
   static const Duration _contextRestoreRetryDelay = Duration(milliseconds: 16);
   int _contextRestoreRetryCount = 0;
   bool _contextRestoreRetryScheduled = false;
+  bool _contextRestorePending = false;
 
   OES_vertex_array_object? _vaoExtension;
 
@@ -965,6 +966,7 @@ class RenderContextWebGL extends RenderContext {
     _contextValid = false;
     _contextRestoreRetryCount = 0;
     _contextRestoreRetryScheduled = false;
+    _contextRestorePending = false;
     _invalidateCachedState();
     _disposeContextResources();
 
@@ -972,7 +974,7 @@ class RenderContextWebGL extends RenderContext {
   }
 
   void _onContextRestored(WebGLContextEvent contextEvent) {
-    _restoreContext();
+    _contextRestorePending = true;
   }
 
   void _restoreContext() {
@@ -994,6 +996,7 @@ class RenderContextWebGL extends RenderContext {
 
     _contextRestoreRetryCount = 0;
     _contextRestoreRetryScheduled = false;
+    _contextRestorePending = false;
 
     _contextRestoredEvent.add(RenderContextEvent());
   }
@@ -1013,6 +1016,11 @@ class RenderContextWebGL extends RenderContext {
       _contextRestoreRetryScheduled = false;
       _restoreContext();
     });
+  }
+
+  void restoreIfPending() {
+    if (!_contextRestorePending || _contextRestoreRetryScheduled) return;
+    _restoreContext();
   }
 
   void _disposeContextResources() {

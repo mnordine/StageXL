@@ -410,7 +410,17 @@ class Stage extends DisplayObjectContainer {
   /// on your own and therefore get full control of the rendering of this Stage.
 
   void materialize(num currentTime, num deltaTime) {
-    if (_renderContextLost) return;
+    if (_renderContextLost) {
+      if (_renderContext is! RenderContextWebGL) return;
+      if (html.window.document.visibilityState != 'visible') return;
+      _renderContext.restoreIfPending();
+      if (_renderContextLost) return;
+    }
+
+    if (_renderContext is RenderContextWebGL) {
+      if (html.window.document.visibilityState != 'visible') return;
+      _renderContext.restoreIfPending();
+    }
 
     final shouldRender = _renderAfterContextRestore ||
         renderMode == StageRenderMode.AUTO ||
