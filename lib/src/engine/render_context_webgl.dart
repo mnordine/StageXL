@@ -18,6 +18,10 @@ class RenderContextWebGL extends RenderContext {
   late final bool _isWebGL2;
 
   bool get isWebGL2 => _isWebGL2;
+  static const int _maxContextRestoreRetries = 5;
+  static const Duration _contextRestoreRetryDelay = Duration(milliseconds: 16);
+  int _contextRestoreRetryCount = 0;
+  bool _contextRestoreRetryScheduled = false;
 
   OES_vertex_array_object? _vaoExtension;
 
@@ -959,25 +963,62 @@ class RenderContextWebGL extends RenderContext {
   void _onContextLost(WebGLContextEvent contextEvent) {
     contextEvent.preventDefault();
     _contextValid = false;
+    _contextRestoreRetryCount = 0;
+    _contextRestoreRetryScheduled = false;
     _invalidateCachedState();
-
-    // Clean up WebGL 2 resources
-    _maskQuadVao = null;
-    _maskQuadVAOWebGL1 = null;
-    _maskProgram = null;
-
-    _vaoExtension = null;
+    _disposeContextResources();
 
     _contextLostEvent.add(RenderContextEvent());
   }
 
   void _onContextRestored(WebGLContextEvent contextEvent) {
+    _restoreContext();
+  }
+
+  void _restoreContext() {
     _contextValid = true;
     _contextIdentifier = ++_globalContextIdentifier;
 
-    _initializeAfterContextChange();
-    reset();
+    try {
+      _initializeAfterContextChange();
+      reset();
+    } on StateError catch (e) { // ignore: avoid_catching_errors
+      if (!_shouldRetryContextRestore(e) || _contextRestoreRetryCount >= _maxContextRestoreRetries) rethrow;
+
+      _contextValid = false;
+      _invalidateCachedState();
+      _disposeContextResources();
+      _scheduleContextRestoreRetry();
+      return;
+    }
+
+    _contextRestoreRetryCount = 0;
+    _contextRestoreRetryScheduled = false;
 
     _contextRestoredEvent.add(RenderContextEvent());
+  }
+
+  bool _shouldRetryContextRestore(StateError error) {
+    final message = error.message;
+    return message == 'ContextLost' || message == 'ProgramLinkFailed' || message == 'ShaderCompileFailed';
+  }
+
+  void _scheduleContextRestoreRetry() {
+    if (_contextRestoreRetryScheduled) return;
+
+    _contextRestoreRetryScheduled = true;
+    _contextRestoreRetryCount += 1;
+
+    Timer(_contextRestoreRetryDelay * _contextRestoreRetryCount, () {
+      _contextRestoreRetryScheduled = false;
+      _restoreContext();
+    });
+  }
+
+  void _disposeContextResources() {
+    _maskQuadVao = null;
+    _maskQuadVAOWebGL1 = null;
+    _maskProgram = null;
+    _vaoExtension = null;
   }
 }

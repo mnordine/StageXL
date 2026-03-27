@@ -180,7 +180,8 @@ abstract class RenderProgram {
     if (status == true) return program;
 
     final cl = rc.isContextLost();
-    throw StateError(cl ? 'ContextLost' : rc.getProgramInfoLog(program)!);
+    final infoLog = rc.getProgramInfoLog(program);
+    throw StateError(cl ? 'ContextLost' : (infoLog?.isNotEmpty == true ? infoLog! : 'ProgramLinkFailed'));
   }
 
   //---------------------------------------------------------------------------
@@ -194,7 +195,8 @@ abstract class RenderProgram {
     if (status == true) return shader;
 
     final cl = rc.isContextLost();
-    throw StateError(cl ? 'ContextLost' : rc.getShaderInfoLog(shader)!);
+    final infoLog = rc.getShaderInfoLog(shader);
+    throw StateError(cl ? 'ContextLost' : (infoLog?.isNotEmpty == true ? infoLog! : 'ShaderCompileFailed'));
   }
 
   //---------------------------------------------------------------------------
