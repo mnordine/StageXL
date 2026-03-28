@@ -192,8 +192,7 @@ class RenderContextWebGL extends RenderContext {
       _activeRenderTextures[i] = null;
     }
 
-    RenderProgram.currentVao = null;
-    RenderProgram.currentVaoOes = null;
+    RenderProgram.resetGlobalState();
   }
 
   OES_vertex_array_object? get vaoExtension => _vaoExtension;

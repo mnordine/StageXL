@@ -2,6 +2,7 @@ part of '../engine.dart';
 
 abstract class RenderProgram {
   int _contextIdentifier = -1;
+  int _maxVertexAttribs = 0;
 
   late WebGL _renderingContext;
   late WebGLProgram _program;
@@ -26,6 +27,12 @@ abstract class RenderProgram {
   // leftover vertex attribute state from other programs (for example
   // filter programs) causing incorrect vertex attribute pointers.
   static final Set<int> _enabledVertexAttribArrays = <int>{};
+
+  static void resetGlobalState() {
+    currentVao = null;
+    currentVaoOes = null;
+    _enabledVertexAttribArrays.clear();
+  }
 
   bool? _isWebGL2;
   bool get isWebGL2 => 
@@ -66,6 +73,8 @@ abstract class RenderProgram {
     if (contextIdentifier != renderContext.contextIdentifier) {
       _contextIdentifier = renderContext.contextIdentifier;
       _renderingContext = renderContext.rawContext;
+      _maxVertexAttribs =
+          (_renderingContext.getParameter(WebGL.MAX_VERTEX_ATTRIBS) as JSNumber?)?.toDartInt ?? 0;
       _renderStatistics = renderContext.renderStatistics;
       _renderBufferIndex = renderContext.renderBufferIndex;
       _renderBufferVertex = renderContext.renderBufferVertex;
@@ -215,7 +224,7 @@ abstract class RenderProgram {
       for (var i = 0; i < count; i++) {
         final activeInfo = rc.getActiveAttrib(program, i)!;
         final location = rc.getAttribLocation(program, activeInfo.name);
-        if (location < 0) continue;
+        if (!_isValidAttribLocation(location)) continue;
         try {
           rc.enableVertexAttribArray(location);
         } catch (_) {}
@@ -231,15 +240,15 @@ abstract class RenderProgram {
     for (var i = 0; i < count; i++) {
       final activeInfo = rc.getActiveAttrib(program, i)!;
       final location = rc.getAttribLocation(program, activeInfo.name);
-      if (location < 0) continue;
+      if (!_isValidAttribLocation(location)) continue;
       newAttributes[activeInfo.name] = location;
       newLocations.add(location);
     }
 
     for (final loc in _enabledVertexAttribArrays.toList()) {
-      if (!newLocations.contains(loc)) {
+      if (!_isValidAttribLocation(loc) || !newLocations.contains(loc)) {
         try {
-          rc.disableVertexAttribArray(loc);
+          if (_isValidAttribLocation(loc)) rc.disableVertexAttribArray(loc);
         } catch (_) {
           // ignore errors when disabling invalid locations
         }
@@ -249,7 +258,7 @@ abstract class RenderProgram {
 
     _attributes.clear();
     newAttributes.forEach((name, location) {
-      if (location < 0) return;
+      if (!_isValidAttribLocation(location)) return;
       try {
         rc.enableVertexAttribArray(location);
       } catch (_) {}
@@ -257,6 +266,9 @@ abstract class RenderProgram {
       _attributes[name] = location;
     });
   }
+
+  bool _isValidAttribLocation(int location) =>
+      location >= 0 && location < _maxVertexAttribs;
 
   //---------------------------------------------------------------------------
 

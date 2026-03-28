@@ -10,6 +10,7 @@ class RenderBufferVertex {
   int _contextIdentifier = -1;
   WebGLBuffer? _buffer;
   WebGL? _renderingContext;
+  int _maxVertexAttribs = 0;
   late RenderStatistics _renderStatistics;
 
   //---------------------------------------------------------------------------
@@ -36,6 +37,8 @@ class RenderBufferVertex {
       _contextIdentifier = renderContext.contextIdentifier;
       _renderStatistics = renderContext.renderStatistics;
       _renderingContext = renderContext.rawContext;
+      _maxVertexAttribs =
+          (_renderingContext!.getParameter(WebGL.MAX_VERTEX_ATTRIBS) as JSNumber?)?.toDartInt ?? 0;
       _buffer = _renderingContext!.createBuffer();
       _renderingContext!.bindBuffer(WebGL.ARRAY_BUFFER, _buffer);
       _renderingContext!.bufferData(WebGL.ARRAY_BUFFER, data.toJS, usage);
@@ -53,7 +56,7 @@ class RenderBufferVertex {
   }
 
   void bindAttribute(int? index, int size, int stride, int offset) {
-    if (index == null || index < 0) return;
+    if (index == null || index < 0 || index >= _maxVertexAttribs) return;
     _renderingContext!.vertexAttribPointer(
         index, size, WebGL.FLOAT, false, stride, offset);
   }
