@@ -537,26 +537,7 @@ class RenderContextWebGL extends RenderContext {
     if (stencilValue > 0) {
       _renderingContext.stencilFunc(WebGL.ALWAYS, stencilValue, 0xFF);
       _renderingContext.stencilOp(WebGL.KEEP, WebGL.KEEP, WebGL.REPLACE);
-
-      if (_vaoExtension != null && _maskProgram != null && _maskQuadVAOWebGL1 != null) {
-        // Save current program state
-        final currentProgram = _renderingContext.getParameter(WebGL.CURRENT_PROGRAM) as WebGLProgram?;
-
-        // Use VAO for efficient rendering
-        _vaoExtension!.bindVertexArrayOES(_maskQuadVAOWebGL1);
-        RenderProgram.currentVaoOes = _maskQuadVAOWebGL1;
-        _renderingContext.useProgram(_maskProgram);
-        _renderingContext.drawElements(WebGL.TRIANGLES, 6, WebGL.UNSIGNED_SHORT, 0);
-        _vaoExtension!.bindVertexArrayOES(null);
-        RenderProgram.currentVaoOes = null;
-
-        // Restore previous program if there was one
-        if (currentProgram != null) {
-          _renderingContext.useProgram(currentProgram);
-        }
-      } else {
-        _renderFullScreenQuadFallback();
-      }
+      _renderFullScreenQuadFallback();
     } else {
       _renderingContext.clearStencil(0);
       _renderingContext.clear(WebGL.STENCIL_BUFFER_BIT);
@@ -575,26 +556,7 @@ class RenderContextWebGL extends RenderContext {
     if (stencilValue > 0) {
       gl2.stencilFunc(WebGL.ALWAYS, stencilValue, 0xFF);
       gl2.stencilOp(WebGL.KEEP, WebGL.KEEP, WebGL.REPLACE);
-
-      if (_maskProgram != null && _maskQuadVao != null) {
-        // Save current program
-        final currentProgram = gl2.getParameter(WebGL.CURRENT_PROGRAM) as WebGLProgram?;
-
-        // Use our minimal mask program and VAO
-        gl2.useProgram(_maskProgram);
-        gl2.bindVertexArray(_maskQuadVao);
-        RenderProgram.currentVao = _maskQuadVao;
-
-        // Draw the quad
-        gl2.drawElements(WebGL.TRIANGLES, 6, WebGL.UNSIGNED_SHORT, 0);
-
-        // Restore state
-        gl2.bindVertexArray(null);
-        RenderProgram.currentVao = null;
-        gl2.useProgram(currentProgram);
-      } else {
-        _renderFullScreenQuadFallback();
-      }
+      _renderFullScreenQuadFallback();
     } else {
       gl2.clearStencil(0);
       gl2.clear(WebGL.STENCIL_BUFFER_BIT);

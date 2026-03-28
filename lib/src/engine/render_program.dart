@@ -215,6 +215,7 @@ abstract class RenderProgram {
       for (var i = 0; i < count; i++) {
         final activeInfo = rc.getActiveAttrib(program, i)!;
         final location = rc.getAttribLocation(program, activeInfo.name);
+        if (location < 0) continue;
         try {
           rc.enableVertexAttribArray(location);
         } catch (_) {}
@@ -230,6 +231,7 @@ abstract class RenderProgram {
     for (var i = 0; i < count; i++) {
       final activeInfo = rc.getActiveAttrib(program, i)!;
       final location = rc.getAttribLocation(program, activeInfo.name);
+      if (location < 0) continue;
       newAttributes[activeInfo.name] = location;
       newLocations.add(location);
     }
@@ -247,6 +249,7 @@ abstract class RenderProgram {
 
     _attributes.clear();
     newAttributes.forEach((name, location) {
+      if (location < 0) return;
       try {
         rc.enableVertexAttribArray(location);
       } catch (_) {}

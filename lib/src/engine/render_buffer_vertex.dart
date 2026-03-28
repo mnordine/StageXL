@@ -53,7 +53,7 @@ class RenderBufferVertex {
   }
 
   void bindAttribute(int? index, int size, int stride, int offset) {
-    if (index == null) return;
+    if (index == null || index < 0) return;
     _renderingContext!.vertexAttribPointer(
         index, size, WebGL.FLOAT, false, stride, offset);
   }
