@@ -40,6 +40,7 @@ class RenderContextWebGL extends RenderContext {
   WebGLProgram? _maskProgram;
 
   WebGLVertexArrayObjectOES? _maskQuadVAOWebGL1;
+  WebGLTexture? _fallbackTexture;
 
   //---------------------------------------------------------------------------
 
@@ -116,6 +117,7 @@ class RenderContextWebGL extends RenderContext {
   void _initializeAfterContextChange() {
     _configureRenderingContext();
     _invalidateCachedState();
+    _initializeFallbackTexture();
 
     if (!isWebGL2) {
       _vaoExtension = _renderingContext.getExtension('OES_vertex_array_object') as OES_vertex_array_object?;
@@ -139,6 +141,44 @@ class RenderContextWebGL extends RenderContext {
     _renderingContext.pixelStorei(WebGL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
     _renderingContext.blendFunc(WebGL.ONE, WebGL.ONE_MINUS_SRC_ALPHA);
     _renderingContext.blendEquation(WebGL.FUNC_ADD);
+  }
+
+  void _initializeFallbackTexture() {
+    final fallbackTexture = _renderingContext.createTexture();
+    if (fallbackTexture == null) {
+      throw StateError(_renderingContext.isContextLost() ? 'ContextLost' : 'Failed to create fallback texture.');
+    }
+
+    final activeTexture =
+        (_renderingContext.getParameter(WebGL.ACTIVE_TEXTURE) as JSNumber).toDartInt;
+    final pixel = Uint8List.fromList([0, 0, 0, 0]);
+
+    _fallbackTexture = fallbackTexture;
+
+    for (var i = 0; i < _activeRenderTextures.length; i++) {
+      _renderingContext.activeTexture(WebGL.TEXTURE0 + i);
+      _renderingContext.bindTexture(WebGL.TEXTURE_2D, fallbackTexture);
+      _renderingContext.texParameteri(
+          WebGL.TEXTURE_2D, WebGL.TEXTURE_WRAP_S, WebGL.CLAMP_TO_EDGE);
+      _renderingContext.texParameteri(
+          WebGL.TEXTURE_2D, WebGL.TEXTURE_WRAP_T, WebGL.CLAMP_TO_EDGE);
+      _renderingContext.texParameteri(
+          WebGL.TEXTURE_2D, WebGL.TEXTURE_MIN_FILTER, WebGL.NEAREST);
+      _renderingContext.texParameteri(
+          WebGL.TEXTURE_2D, WebGL.TEXTURE_MAG_FILTER, WebGL.NEAREST);
+      _renderingContext.texImage2D(
+          WebGL.TEXTURE_2D,
+          0,
+          WebGL.RGBA,
+          1.toJS,
+          1.toJS,
+          0.toJS,
+          WebGL.RGBA,
+          WebGL.UNSIGNED_BYTE,
+          pixel.toJS);
+    }
+
+    _renderingContext.activeTexture(activeTexture);
   }
 
   void _invalidateCachedState() {
@@ -889,10 +929,8 @@ class RenderContextWebGL extends RenderContext {
   }
 
   void _unbindTextureAt(int index) {
-    if (_activeRenderTextures[index] == null) return;
-
     _renderingContext.activeTexture(WebGL.TEXTURE0 + index);
-    _renderingContext.bindTexture(WebGL.TEXTURE_2D, null);
+    _renderingContext.bindTexture(WebGL.TEXTURE_2D, _fallbackTexture);
     _activeRenderTextures[index] = null;
   }
 
@@ -1028,5 +1066,6 @@ class RenderContextWebGL extends RenderContext {
     _maskQuadVAOWebGL1 = null;
     _maskProgram = null;
     _vaoExtension = null;
+    _fallbackTexture = null;
   }
 }
