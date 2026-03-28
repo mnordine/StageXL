@@ -34,12 +34,6 @@ class RenderContextWebGL extends RenderContext {
      1.0,  1.0,  // Top-right
     -1.0,  1.0   // Top-left
   ]);
-
-  // WebGL 2 specific properties
-  WebGLVertexArrayObject? _maskQuadVao;
-  WebGLProgram? _maskProgram;
-
-  WebGLVertexArrayObjectOES? _maskQuadVAOWebGL1;
   WebGLTexture? _fallbackTexture;
 
   //---------------------------------------------------------------------------
@@ -80,7 +74,6 @@ class RenderContextWebGL extends RenderContext {
     WebGLRenderingContext? renderingContext;
 
     if (!forceWebGL1) {
-      // Try WebGL 2 first
       renderingContext = _canvasElement.getContext('webgl2', {
         'alpha': alpha,
         'antialias': antialias,
@@ -92,7 +85,6 @@ class RenderContextWebGL extends RenderContext {
 
     _isWebGL2 = renderingContext != null;
 
-    // Fall back to WebGL 1 if WebGL 2 is not available
     renderingContext ??= _canvasElement.getContext3d(
         alpha: alpha, antialias: antialias, depth: false, stencil: true) as WebGL?;
 
@@ -102,8 +94,8 @@ class RenderContextWebGL extends RenderContext {
 
     _renderingContext = renderingContext;
 
-    // Initialize max textures for RenderProgramBatch
-    final maxTextureUnits = RenderProgramBatch.initializeMaxTextures(_renderingContext, isWebGL2: _isWebGL2);
+    final maxTextureUnits =
+        RenderProgramBatch.initializeMaxTextures(_renderingContext, isWebGL2: _isWebGL2);
     _activeRenderTextures = List.filled(maxTextureUnits, null);
 
     _contextValid = true;
@@ -120,12 +112,9 @@ class RenderContextWebGL extends RenderContext {
     _initializeFallbackTexture();
 
     if (!isWebGL2) {
-      _vaoExtension = _renderingContext.getExtension('OES_vertex_array_object') as OES_vertex_array_object?;
-
-      _setupWebGL1Features();
+      _vaoExtension =
+          _renderingContext.getExtension('OES_vertex_array_object') as OES_vertex_array_object?;
     }
-
-    if (_isWebGL2) _setupWebGL2Features();
 
     _activeRenderProgram = renderProgramBatch;
     _activeRenderProgram.activate(this);
@@ -205,178 +194,6 @@ class RenderContextWebGL extends RenderContext {
 
     RenderProgram.currentVao = null;
     RenderProgram.currentVaoOes = null;
-  }
-
-  // Add this method to set up VAO for WebGL 1
-  void _setupWebGL1Features() {
-    if (_vaoExtension == null) return;
-
-    final currentProgram = _renderingContext.getParameter(WebGL.CURRENT_PROGRAM) as WebGLProgram?;
-
-    final maskProgram = _createMaskProgramOrNull();
-    if (maskProgram == null) return;
-
-    final positionLocation = _renderingContext.getAttribLocation(maskProgram, 'aPosition');
-    if (positionLocation < 0) return;
-
-    // Create a VAO for mask quad using the extension
-    _maskQuadVAOWebGL1 = _vaoExtension!.createVertexArrayOES() as WebGLVertexArrayObjectOES;
-    if (_maskQuadVAOWebGL1 == null) return;
-
-    _maskProgram = maskProgram;
-    _vaoExtension!.bindVertexArrayOES(_maskQuadVAOWebGL1);
-
-    // Set up vertex buffer
-    final vertexBuffer = _renderingContext.createBuffer();
-    _renderingContext.bindBuffer(WebGL.ARRAY_BUFFER, vertexBuffer);
-    _renderingContext.bufferData(WebGL.ARRAY_BUFFER, _maskQuadVertices.toJS, WebGL.STATIC_DRAW);
-
-    // Set up index buffer
-    final indexBuffer = _renderingContext.createBuffer();
-    _renderingContext.bindBuffer(WebGL.ELEMENT_ARRAY_BUFFER, indexBuffer);
-    _renderingContext.bufferData(WebGL.ELEMENT_ARRAY_BUFFER, _maskQuadIndices.toJS, WebGL.STATIC_DRAW);
-
-    _renderingContext.enableVertexAttribArray(positionLocation);
-    _renderingContext.vertexAttribPointer(positionLocation, 2, WebGL.FLOAT, false, 8, 0);
-
-    // Save the program for later use
-    _renderingContext.useProgram(_maskProgram);
-
-    // Unbind VAO
-    _vaoExtension!.bindVertexArrayOES(null);
-    RenderProgram.currentVaoOes = null;
-
-    // Restore previous program
-    _renderingContext.useProgram(currentProgram);
-  }
-
-  void _setupWebGL2Features() {
-    final gl2 = _renderingContext as WebGL2RenderingContext;
-    final currentProgram = gl2.getParameter(WebGL.CURRENT_PROGRAM) as WebGLProgram?;
-
-    final maskProgram = _createMaskProgramOrNull();
-    if (maskProgram == null) return;
-
-    final positionLocation = gl2.getAttribLocation(maskProgram, 'aPosition');
-    if (positionLocation < 0) return;
-
-    // Create a VAO for our mask quad
-    _maskQuadVao = gl2.createVertexArray();
-    if (_maskQuadVao == null) return;
-
-    _maskProgram = maskProgram;
-    gl2.bindVertexArray(_maskQuadVao);
-
-    // Set up vertex buffer
-    final vertexBuffer = gl2.createBuffer();
-    gl2.bindBuffer(WebGL.ARRAY_BUFFER, vertexBuffer);
-    gl2.bufferData(WebGL.ARRAY_BUFFER, _maskQuadVertices.toJS, WebGL.STATIC_DRAW);
-
-    // Set up index buffer
-    final indexBuffer = gl2.createBuffer();
-    gl2.bindBuffer(WebGL.ELEMENT_ARRAY_BUFFER, indexBuffer);
-    gl2.bufferData(WebGL.ELEMENT_ARRAY_BUFFER, _maskQuadIndices.toJS, WebGL.STATIC_DRAW);
-
-    gl2.useProgram(_maskProgram);
-
-    // Set up vertex attributes
-    gl2.enableVertexAttribArray(positionLocation);
-    gl2.vertexAttribPointer(positionLocation, 2, WebGL.FLOAT, false, 8, 0);
-
-    // Unbind VAO to prevent accidental modifications
-    gl2.bindVertexArray(null);
-    RenderProgram.currentVao = null;
-
-    gl2.useProgram(currentProgram);
-  }
-
-  // Create a minimal shader program for mask operations.
-  // This is an optimization for stencil-mask teardown, so failures should
-  // fall back to the triangle program instead of aborting context restore.
-  WebGLProgram? _createMaskProgramOrNull() {
-    final gl = _renderingContext;
-
-    // Vertex shader - just pass through positions
-    final vShader = gl.createShader(WebGL.VERTEX_SHADER);
-    if (vShader == null) return null;
-
-    if (isWebGL2) {
-      gl.shaderSource(vShader, '''
-        #version 300 es
-        layout(location = 0) in vec2 aPosition;
-        void main() {
-          gl_Position = vec4(aPosition, 0.0, 1.0);
-        }
-      ''');
-    } else {
-      gl.shaderSource(vShader, '''
-        attribute vec2 aPosition;
-        void main() {
-          gl_Position = vec4(aPosition, 0.0, 1.0);
-        }
-      ''');
-    }
-    gl.compileShader(vShader);
-
-    final vShaderStatus = (gl.getShaderParameter(vShader, WebGL.COMPILE_STATUS) as JSBoolean?)?.toDart;
-    if (vShaderStatus != true) {
-      gl.deleteShader(vShader);
-      return null;
-    }
-
-    // Fragment shader - outputs nothing (we only care about stencil)
-    final fShader = gl.createShader(WebGL.FRAGMENT_SHADER);
-    if (fShader == null) {
-      gl.deleteShader(vShader);
-      return null;
-    }
-
-    if (isWebGL2) {
-      gl.shaderSource(fShader, '''
-        #version 300 es
-        precision mediump float;
-        out vec4 fragColor;
-        void main() {
-          fragColor = vec4(0.0);
-        }
-      ''');
-    } else {
-      gl.shaderSource(fShader, '''
-        precision mediump float;
-        void main() {
-          gl_FragColor = vec4(0.0);
-        }
-      ''');
-    }
-    gl.compileShader(fShader);
-
-    final fShaderStatus = (gl.getShaderParameter(fShader, WebGL.COMPILE_STATUS) as JSBoolean?)?.toDart;
-    if (fShaderStatus != true) {
-      gl.deleteShader(vShader);
-      gl.deleteShader(fShader);
-      return null;
-    }
-
-    // Create and link program
-    final program = gl.createProgram()!;
-    gl.attachShader(program, vShader);
-    gl.attachShader(program, fShader);
-    gl.linkProgram(program);
-
-    // Check for compilation errors
-    final compileStatus = (gl.getProgramParameter(program, WebGL.LINK_STATUS) as JSBoolean?)?.toDart; 
-    if (compileStatus != true) {
-      gl.deleteProgram(program);
-      gl.deleteShader(vShader);
-      gl.deleteShader(fShader);
-      return null;
-    }
-
-    // Clean up shaders
-    gl.deleteShader(vShader);
-    gl.deleteShader(fShader);
-
-    return program;
   }
 
   OES_vertex_array_object? get vaoExtension => _vaoExtension;
@@ -1030,9 +847,6 @@ class RenderContextWebGL extends RenderContext {
   }
 
   void _disposeContextResources() {
-    _maskQuadVao = null;
-    _maskQuadVAOWebGL1 = null;
-    _maskProgram = null;
     _vaoExtension = null;
     _fallbackTexture = null;
   }
