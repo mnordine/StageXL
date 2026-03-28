@@ -216,12 +216,14 @@ class RenderContextWebGL extends RenderContext {
     final maskProgram = _createMaskProgramOrNull();
     if (maskProgram == null) return;
 
-    _maskProgram = maskProgram;
-
     final positionLocation = _renderingContext.getAttribLocation(maskProgram, 'aPosition');
+    if (positionLocation < 0) return;
 
     // Create a VAO for mask quad using the extension
     _maskQuadVAOWebGL1 = _vaoExtension!.createVertexArrayOES() as WebGLVertexArrayObjectOES;
+    if (_maskQuadVAOWebGL1 == null) return;
+
+    _maskProgram = maskProgram;
     _vaoExtension!.bindVertexArrayOES(_maskQuadVAOWebGL1);
 
     // Set up vertex buffer
@@ -255,10 +257,14 @@ class RenderContextWebGL extends RenderContext {
     final maskProgram = _createMaskProgramOrNull();
     if (maskProgram == null) return;
 
-    _maskProgram = maskProgram;
+    final positionLocation = gl2.getAttribLocation(maskProgram, 'aPosition');
+    if (positionLocation < 0) return;
 
     // Create a VAO for our mask quad
     _maskQuadVao = gl2.createVertexArray();
+    if (_maskQuadVao == null) return;
+
+    _maskProgram = maskProgram;
     gl2.bindVertexArray(_maskQuadVao);
 
     // Set up vertex buffer
@@ -274,8 +280,8 @@ class RenderContextWebGL extends RenderContext {
     gl2.useProgram(_maskProgram);
 
     // Set up vertex attributes
-    gl2.enableVertexAttribArray(0);
-    gl2.vertexAttribPointer(0, 2, WebGL.FLOAT, false, 8, 0);
+    gl2.enableVertexAttribArray(positionLocation);
+    gl2.vertexAttribPointer(positionLocation, 2, WebGL.FLOAT, false, 8, 0);
 
     // Unbind VAO to prevent accidental modifications
     gl2.bindVertexArray(null);
