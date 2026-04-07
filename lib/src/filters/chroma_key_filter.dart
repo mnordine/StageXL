@@ -120,7 +120,7 @@ class ChromaKeyFilterProgram extends RenderProgramSimple {
     uniform float invisibleThreshold;
     uniform float weight;
 
-    out vec2 vTextCoord;
+    in vec2 vTextCoord;
     out vec4 fragColor;
 
     void main() {
