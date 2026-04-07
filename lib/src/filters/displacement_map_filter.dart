@@ -134,8 +134,8 @@ class DisplacementMapFilterProgram extends RenderProgramSimple {
     uniform mat3 uMapMatrix;
     uniform mat3 uDisMatrix;
 
-    out vec2 vTextCoord;
-    out float vAlpha;
+    in vec2 vTextCoord;
+    in float vAlpha;
     out vec4 fragColor;
 
     void main() {
