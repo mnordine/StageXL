@@ -272,7 +272,7 @@ class Stage extends DisplayObjectContainer {
 
   /// Get the max texture size from the current WebGL canvas.
   /// Will return null if called on Canvas2D
-  int? get maxTextureSize => _renderContext.maxTextureSize as int?;
+  int? get maxTextureSize => _renderContext.maxTextureSize;
 
   /// Access WebGL parameters, you need to get the int's for access through
   /// dart:web_gl. Will return null if called on Canvas2D

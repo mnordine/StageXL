@@ -338,8 +338,7 @@ class RenderContextWebGL extends RenderContext {
   RenderEngine get renderEngine => _isWebGL2 ? RenderEngine.WebGL2 : RenderEngine.WebGL;
 
   @override
-  Object? get maxTextureSize =>
-    _renderingContext.getParameter(WebGL.MAX_TEXTURE_SIZE);
+  int? get maxTextureSize => (_renderingContext.getParameter(WebGL.MAX_TEXTURE_SIZE) as JSNumber?)?.toDartInt;
 
   RenderTexture? get activeRenderTexture => _activeRenderTextures[0];
   RenderProgram get activeRenderProgram => _activeRenderProgram;
