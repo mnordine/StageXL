@@ -411,6 +411,10 @@ class Stage extends DisplayObjectContainer {
 
   void materialize(num currentTime, num deltaTime) {
     if (_renderContextLost) return;
+    if (renderMode == StageRenderMode.STOP) {
+      _renderAfterContextRestore = false;
+      return;
+    }
 
     final shouldRender = _renderAfterContextRestore ||
         renderMode == StageRenderMode.AUTO ||

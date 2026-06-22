@@ -171,12 +171,16 @@ class RenderContextWebGL extends RenderContext {
     final maskProgram = _createMaskProgramOrNull();
     if (maskProgram == null) return;
 
-    _maskProgram = maskProgram;
-
     final positionLocation = _renderingContext.getAttribLocation(maskProgram, 'aPosition');
 
     // Create a VAO for mask quad using the extension
-    _maskQuadVAOWebGL1 = _vaoExtension!.createVertexArrayOES() as WebGLVertexArrayObjectOES;
+    final maskQuadVao = _vaoExtension!.createVertexArrayOES();
+    if (maskQuadVao == null) {
+      _renderingContext.deleteProgram(maskProgram);
+      return;
+    }
+    _maskProgram = maskProgram;
+    _maskQuadVAOWebGL1 = maskQuadVao;
     _vaoExtension!.bindVertexArrayOES(_maskQuadVAOWebGL1);
 
     // Set up vertex buffer
@@ -210,10 +214,14 @@ class RenderContextWebGL extends RenderContext {
     final maskProgram = _createMaskProgramOrNull();
     if (maskProgram == null) return;
 
-    _maskProgram = maskProgram;
-
     // Create a VAO for our mask quad
-    _maskQuadVao = gl2.createVertexArray();
+    final maskQuadVao = gl2.createVertexArray();
+    if (maskQuadVao == null) {
+      gl2.deleteProgram(maskProgram);
+      return;
+    }
+    _maskProgram = maskProgram;
+    _maskQuadVao = maskQuadVao;
     gl2.bindVertexArray(_maskQuadVao);
 
     // Set up vertex buffer
@@ -307,7 +315,12 @@ class RenderContextWebGL extends RenderContext {
     }
 
     // Create and link program
-    final program = gl.createProgram()!;
+    final program = gl.createProgram();
+    if (program == null) {
+      gl.deleteShader(vShader);
+      gl.deleteShader(fShader);
+      return null;
+    }
     gl.attachShader(program, vShader);
     gl.attachShader(program, fShader);
     gl.linkProgram(program);

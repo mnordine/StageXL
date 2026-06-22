@@ -242,20 +242,17 @@ class RenderProgramBatch extends RenderProgram {
   void _executeBatchedCommands() {
     if (_drawCommands.isEmpty) return;
     _executingBatch = true;
+    final renderContext = _renderContextWebGL!;
 
     _bindVAO();
-    if (renderBufferIndex._buffer != null) {
-      renderingContext.bindBuffer(WebGL.ELEMENT_ARRAY_BUFFER, renderBufferIndex._buffer);
-    }
-    if (renderBufferVertex._buffer != null) {
-      renderingContext.bindBuffer(WebGL.ARRAY_BUFFER, renderBufferVertex._buffer);
-    }
+    renderBufferIndex.activate(renderContext);
+    renderBufferVertex.activate(renderContext);
 
     // Upload all vertex and index data that was accumulated.
     renderBufferVertex.update();
     renderBufferIndex.update();
 
-    final gl = _renderContextWebGL!.rawContext;
+    final gl = renderContext.rawContext;
     var cmdIndex = 0;
     while (cmdIndex < _drawCommands.length) {
       final first = _drawCommands[cmdIndex];
