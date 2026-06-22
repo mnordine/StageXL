@@ -313,7 +313,7 @@ class RenderContextWebGL extends RenderContext {
     gl.linkProgram(program);
 
     // Check for compilation errors
-    final compileStatus = (gl.getProgramParameter(program, WebGL.LINK_STATUS) as JSBoolean?)?.toDart; 
+    final compileStatus = (gl.getProgramParameter(program, WebGL.LINK_STATUS) as JSBoolean?)?.toDart;
     if (compileStatus != true) {
       gl.deleteProgram(program);
       gl.deleteShader(vShader);
@@ -959,23 +959,33 @@ class RenderContextWebGL extends RenderContext {
     contextEvent.preventDefault();
     _contextValid = false;
     _invalidateCachedState();
+    _clearContextResources();
 
-    // Clean up WebGL 2 resources
+    _contextLostEvent.add(RenderContextEvent());
+  }
+
+  void _clearContextResources() {
     _maskQuadVao = null;
     _maskQuadVAOWebGL1 = null;
     _maskProgram = null;
 
     _vaoExtension = null;
-
-    _contextLostEvent.add(RenderContextEvent());
   }
 
   void _onContextRestored(WebGLContextEvent contextEvent) {
     _contextValid = true;
     _contextIdentifier = ++_globalContextIdentifier;
 
-    _initializeAfterContextChange();
-    reset();
+    try {
+      _initializeAfterContextChange();
+      reset();
+    } on StateError catch (e) { // ignore: avoid_catching_errors
+      if (e.message != 'ContextLost') rethrow;
+      _contextValid = false;
+      _invalidateCachedState();
+      _clearContextResources();
+      return;
+    }
 
     _contextRestoredEvent.add(RenderContextEvent());
   }
