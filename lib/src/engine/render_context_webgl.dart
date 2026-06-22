@@ -168,7 +168,7 @@ class RenderContextWebGL extends RenderContext {
 
     final currentProgram = _renderingContext.getParameter(WebGL.CURRENT_PROGRAM) as WebGLProgram?;
 
-    final maskProgram = _createMaskProgramOrNull();
+    final maskProgram = _createMaskProgram();
     if (maskProgram == null) return;
 
     final positionLocation = _renderingContext.getAttribLocation(maskProgram, 'aPosition');
@@ -211,7 +211,7 @@ class RenderContextWebGL extends RenderContext {
     final gl2 = _renderingContext as WebGL2RenderingContext;
     final currentProgram = gl2.getParameter(WebGL.CURRENT_PROGRAM) as WebGLProgram?;
 
-    final maskProgram = _createMaskProgramOrNull();
+    final maskProgram = _createMaskProgram();
     if (maskProgram == null) return;
 
     // Create a VAO for our mask quad
@@ -250,15 +250,15 @@ class RenderContextWebGL extends RenderContext {
   // Create a minimal shader program for mask operations.
   // This is an optimization for stencil-mask teardown, so failures should
   // fall back to the triangle program instead of aborting context restore.
-  WebGLProgram? _createMaskProgramOrNull() {
+  WebGLProgram? _createMaskProgram() {
     final gl = _renderingContext;
 
     // Vertex shader - just pass through positions
-    final vShader = gl.createShader(WebGL.VERTEX_SHADER);
-    if (vShader == null) return null;
+    final vertexShader = gl.createShader(WebGL.VERTEX_SHADER);
+    if (vertexShader == null) return null;
 
     if (isWebGL2) {
-      gl.shaderSource(vShader, '''
+      gl.shaderSource(vertexShader, '''
         #version 300 es
         layout(location = 0) in vec2 aPosition;
         void main() {
@@ -266,30 +266,30 @@ class RenderContextWebGL extends RenderContext {
         }
       ''');
     } else {
-      gl.shaderSource(vShader, '''
+      gl.shaderSource(vertexShader, '''
         attribute vec2 aPosition;
         void main() {
           gl_Position = vec4(aPosition, 0.0, 1.0);
         }
       ''');
     }
-    gl.compileShader(vShader);
+    gl.compileShader(vertexShader);
 
-    final vShaderStatus = (gl.getShaderParameter(vShader, WebGL.COMPILE_STATUS) as JSBoolean?)?.toDart;
-    if (vShaderStatus != true) {
-      gl.deleteShader(vShader);
+    final vertexCompileStatus = (gl.getShaderParameter(vertexShader, WebGL.COMPILE_STATUS) as JSBoolean?)?.toDart;
+    if (vertexCompileStatus != true) {
+      gl.deleteShader(vertexShader);
       return null;
     }
 
     // Fragment shader - outputs nothing (we only care about stencil)
-    final fShader = gl.createShader(WebGL.FRAGMENT_SHADER);
-    if (fShader == null) {
-      gl.deleteShader(vShader);
+    final fragShader = gl.createShader(WebGL.FRAGMENT_SHADER);
+    if (fragShader == null) {
+      gl.deleteShader(vertexShader);
       return null;
     }
 
     if (isWebGL2) {
-      gl.shaderSource(fShader, '''
+      gl.shaderSource(fragShader, '''
         #version 300 es
         precision mediump float;
         out vec4 fragColor;
@@ -298,45 +298,45 @@ class RenderContextWebGL extends RenderContext {
         }
       ''');
     } else {
-      gl.shaderSource(fShader, '''
+      gl.shaderSource(fragShader, '''
         precision mediump float;
         void main() {
           gl_FragColor = vec4(0.0);
         }
       ''');
     }
-    gl.compileShader(fShader);
+    gl.compileShader(fragShader);
 
-    final fShaderStatus = (gl.getShaderParameter(fShader, WebGL.COMPILE_STATUS) as JSBoolean?)?.toDart;
-    if (fShaderStatus != true) {
-      gl.deleteShader(vShader);
-      gl.deleteShader(fShader);
+    final fragmentCompileStatus = (gl.getShaderParameter(fragShader, WebGL.COMPILE_STATUS) as JSBoolean?)?.toDart;
+    if (fragmentCompileStatus != true) {
+      gl.deleteShader(vertexShader);
+      gl.deleteShader(fragShader);
       return null;
     }
 
     // Create and link program
     final program = gl.createProgram();
     if (program == null) {
-      gl.deleteShader(vShader);
-      gl.deleteShader(fShader);
+      gl.deleteShader(vertexShader);
+      gl.deleteShader(fragShader);
       return null;
     }
-    gl.attachShader(program, vShader);
-    gl.attachShader(program, fShader);
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragShader);
     gl.linkProgram(program);
 
     // Check for compilation errors
-    final compileStatus = (gl.getProgramParameter(program, WebGL.LINK_STATUS) as JSBoolean?)?.toDart;
-    if (compileStatus != true) {
+    final linkStatus = (gl.getProgramParameter(program, WebGL.LINK_STATUS) as JSBoolean?)?.toDart;
+    if (linkStatus != true) {
       gl.deleteProgram(program);
-      gl.deleteShader(vShader);
-      gl.deleteShader(fShader);
+      gl.deleteShader(vertexShader);
+      gl.deleteShader(fragShader);
       return null;
     }
 
     // Clean up shaders
-    gl.deleteShader(vShader);
-    gl.deleteShader(fShader);
+    gl.deleteShader(vertexShader);
+    gl.deleteShader(fragShader);
 
     return program;
   }
