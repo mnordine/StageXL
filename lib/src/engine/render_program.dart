@@ -90,6 +90,8 @@ abstract class RenderProgram {
     }
 
     if (!_supportsVao) {
+      _renderBufferIndex.activate(renderContext);
+      _renderBufferVertex.activate(renderContext);
       setupAttributes();
     }
 
@@ -106,9 +108,17 @@ abstract class RenderProgram {
     if (!_supportsVao) return;
 
     if (isWebGL2) {
-      _vao = (_renderingContext as WebGL2RenderingContext).createVertexArray() as WebGLVertexArrayObject;
+      final vao = (_renderingContext as WebGL2RenderingContext).createVertexArray();
+      if (vao == null) {
+        throw StateError(_renderingContext.isContextLost() ? 'ContextLost' : 'Failed to create WebGL vertex array.');
+      }
+      _vao = vao;
     } else {
-      _vaoOes = _vaoExtension?.createVertexArrayOES() as WebGLVertexArrayObjectOES;
+      final vao = _vaoExtension?.createVertexArrayOES();
+      if (vao == null) {
+        throw StateError(_renderingContext.isContextLost() ? 'ContextLost' : 'Failed to create WebGL vertex array.');
+      }
+      _vaoOes = vao;
     }
   }
 
@@ -164,7 +174,11 @@ abstract class RenderProgram {
   //---------------------------------------------------------------------------
 
   WebGLProgram _createProgram(WebGL rc) {
-    final program = rc.createProgram()!;
+    final program = rc.createProgram();
+    if (program == null) {
+      throw StateError(rc.isContextLost() ? 'ContextLost' : 'Failed to create WebGL program.');
+    }
+
     final vShader =
         _createShader(rc, vertexShaderSource, WebGL.VERTEX_SHADER);
     final fShader =
@@ -174,25 +188,29 @@ abstract class RenderProgram {
     rc.attachShader(program, fShader);
     rc.linkProgram(program);
 
-    final status = (rc.getProgramParameter(program, WebGL.LINK_STATUS) as JSBoolean).toDart;
+    final status = (rc.getProgramParameter(program, WebGL.LINK_STATUS) as JSBoolean?)?.toDart;
     if (status == true) return program;
 
     final cl = rc.isContextLost();
-    throw StateError(cl ? 'ContextLost' : rc.getProgramInfoLog(program)!);
+    throw StateError(cl ? 'ContextLost' : rc.getProgramInfoLog(program) ?? 'Failed to link WebGL program.');
   }
 
   //---------------------------------------------------------------------------
 
   WebGLShader _createShader(WebGL rc, String source, int type) {
-    final shader = rc.createShader(type)!;
+    final shader = rc.createShader(type);
+    if (shader == null) {
+      throw StateError(rc.isContextLost() ? 'ContextLost' : 'Failed to create WebGL shader.');
+    }
+
     rc.shaderSource(shader, source);
     rc.compileShader(shader);
 
-    final status = (rc.getShaderParameter(shader, WebGL.COMPILE_STATUS) as JSBoolean).toDart;
+    final status = (rc.getShaderParameter(shader, WebGL.COMPILE_STATUS) as JSBoolean?)?.toDart;
     if (status == true) return shader;
 
     final cl = rc.isContextLost();
-    throw StateError(cl ? 'ContextLost' : rc.getShaderInfoLog(shader)!);
+    throw StateError(cl ? 'ContextLost' : rc.getShaderInfoLog(shader) ?? 'Failed to compile WebGL shader.');
   }
 
   //---------------------------------------------------------------------------

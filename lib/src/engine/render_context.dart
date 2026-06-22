@@ -25,7 +25,7 @@ abstract class RenderContext {
 
   RenderEngine get renderEngine;
 
-  Object? maxTextureSize;
+  int? get maxTextureSize;
   Object? getParameter(int parameter);
 
   void reset();

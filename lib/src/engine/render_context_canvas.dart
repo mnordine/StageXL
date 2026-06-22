@@ -23,6 +23,9 @@ class RenderContextCanvas extends RenderContext {
 
   //---------------------------------------------------------------------------
   @override
+  int? get maxTextureSize => null;
+
+  @override
   Object? getParameter(int parameter) => null;
 
   @override
