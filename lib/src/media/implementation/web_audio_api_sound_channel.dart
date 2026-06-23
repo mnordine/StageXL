@@ -4,6 +4,8 @@ class WebAudioApiSoundChannel extends SoundChannel {
   final WebAudioApiSound _webAudioApiSound;
   late SoundTransform _soundTransform;
   late final WebAudioApiMixer _mixer;
+  final _analyserNode = WebAudioApiMixer.audioContext.createAnalyser();
+  late final WebAudioApiSoundAnalyzer _soundAnalyzer;
 
   late AudioBufferSourceNode _sourceNode;
   StreamSubscription<html.Event>? _sourceNodeEndedSubscription;
@@ -26,6 +28,8 @@ class WebAudioApiSoundChannel extends SoundChannel {
     _loop = loop;
 
     _mixer = WebAudioApiMixer(SoundMixer._webAudioApiMixer!.inputNode);
+    _analyserNode.connect(_mixer.inputNode);
+    _soundAnalyzer = WebAudioApiSoundAnalyzer(_analyserNode);
     _mixer.applySoundTransform(_soundTransform);
 
     paused = false;
@@ -93,7 +97,7 @@ class WebAudioApiSoundChannel extends SoundChannel {
       _sourceNode.loop = true;
       _sourceNode.loopStart = _startTime;
       _sourceNode.loopEnd = _startTime + _duration;
-      _sourceNode.connect(_mixer.inputNode);
+      _sourceNode.connect(_analyserNode);
       _sourceNode.start(0, _startTime + _position);
       _timeOffset = WebAudioApiMixer.audioContext.currentTime - _position;
     } else {
@@ -101,7 +105,7 @@ class WebAudioApiSoundChannel extends SoundChannel {
       _sourceNode = WebAudioApiMixer.audioContext.createBufferSource();
       _sourceNode.buffer = _webAudioApiSound._audioBuffer;
       _sourceNode.loop = false;
-      _sourceNode.connect(_mixer.inputNode);
+      _sourceNode.connect(_analyserNode);
       _sourceNode.start(0, _startTime + _position, _duration - _position);
       _sourceNodeEndedSubscription = _sourceNode.onEnded.listen(_onEnded);
       _timeOffset = WebAudioApiMixer.audioContext.currentTime - _position;
@@ -116,6 +120,9 @@ class WebAudioApiSoundChannel extends SoundChannel {
     _soundTransform = value;
     _mixer.applySoundTransform(_soundTransform);
   }
+
+  @override
+  SoundAnalyzer get soundAnalyzer => _soundAnalyzer;
 
   //---------------------------------------------------------------------------
 
