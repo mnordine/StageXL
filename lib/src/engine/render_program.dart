@@ -191,8 +191,9 @@ abstract class RenderProgram {
     final status = (rc.getProgramParameter(program, WebGL.LINK_STATUS) as JSBoolean?)?.toDart;
     if (status == true) return program;
 
-    final cl = rc.isContextLost();
-    throw StateError(cl ? 'ContextLost' : rc.getProgramInfoLog(program) ?? 'Failed to link WebGL program.');
+    // Some drivers return an empty log when a restored context is already unstable.
+    final infoLog = rc.getProgramInfoLog(program);
+    throw StateError(rc.isContextLost() || infoLog == null || infoLog.isEmpty ? 'ContextLost' : infoLog);
   }
 
   //---------------------------------------------------------------------------
@@ -209,8 +210,9 @@ abstract class RenderProgram {
     final status = (rc.getShaderParameter(shader, WebGL.COMPILE_STATUS) as JSBoolean?)?.toDart;
     if (status == true) return shader;
 
-    final cl = rc.isContextLost();
-    throw StateError(cl ? 'ContextLost' : rc.getShaderInfoLog(shader) ?? 'Failed to compile WebGL shader.');
+    // Some drivers return an empty log when a restored context is already unstable.
+    final infoLog = rc.getShaderInfoLog(shader);
+    throw StateError(rc.isContextLost() || infoLog == null || infoLog.isEmpty ? 'ContextLost' : infoLog);
   }
 
   //---------------------------------------------------------------------------
