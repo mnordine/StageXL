@@ -989,6 +989,11 @@ class RenderContextWebGL extends RenderContext {
     try {
       _initializeAfterContextChange();
       reset();
+    } on _ContextLossException {
+      _contextValid = false;
+      _invalidateCachedState();
+      _clearContextResources();
+      return;
     } on StateError catch (e) { // ignore: avoid_catching_errors
       if (e.message != 'ContextLost') rethrow;
       _contextValid = false;

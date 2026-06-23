@@ -1,5 +1,12 @@
 part of '../engine.dart';
 
+class _ContextLossException implements Exception {
+  const _ContextLossException();
+
+  @override
+  String toString() => 'ContextLossException';
+}
+
 abstract class RenderProgram {
   var _contextIdentifier = -1;
 
@@ -110,13 +117,15 @@ abstract class RenderProgram {
     if (isWebGL2) {
       final vao = (_renderingContext as WebGL2RenderingContext).createVertexArray();
       if (vao == null) {
-        throw StateError(_renderingContext.isContextLost() ? 'ContextLost' : 'Failed to create WebGL vertex array.');
+        if (_renderingContext.isContextLost()) throw const _ContextLossException();
+        throw StateError('Failed to create WebGL vertex array.');
       }
       _vao = vao;
     } else {
       final vao = _vaoExtension?.createVertexArrayOES();
       if (vao == null) {
-        throw StateError(_renderingContext.isContextLost() ? 'ContextLost' : 'Failed to create WebGL vertex array.');
+        if (_renderingContext.isContextLost()) throw const _ContextLossException();
+        throw StateError('Failed to create WebGL vertex array.');
       }
       _vaoOes = vao;
     }
@@ -176,7 +185,8 @@ abstract class RenderProgram {
   WebGLProgram _createProgram(WebGL rc) {
     final program = rc.createProgram();
     if (program == null) {
-      throw StateError(rc.isContextLost() ? 'ContextLost' : 'Failed to create WebGL program.');
+      if (rc.isContextLost()) throw const _ContextLossException();
+      throw StateError('Failed to create WebGL program.');
     }
 
     final vShader =
@@ -193,7 +203,8 @@ abstract class RenderProgram {
 
     // Some drivers return an empty log when a restored context is already unstable.
     final infoLog = rc.getProgramInfoLog(program);
-    throw StateError(rc.isContextLost() || infoLog == null || infoLog.isEmpty ? 'ContextLost' : infoLog);
+    if (rc.isContextLost() || infoLog == null || infoLog.isEmpty) throw const _ContextLossException();
+    throw StateError(infoLog);
   }
 
   //---------------------------------------------------------------------------
@@ -201,7 +212,8 @@ abstract class RenderProgram {
   WebGLShader _createShader(WebGL rc, String source, int type) {
     final shader = rc.createShader(type);
     if (shader == null) {
-      throw StateError(rc.isContextLost() ? 'ContextLost' : 'Failed to create WebGL shader.');
+      if (rc.isContextLost()) throw const _ContextLossException();
+      throw StateError('Failed to create WebGL shader.');
     }
 
     rc.shaderSource(shader, source);
@@ -212,7 +224,8 @@ abstract class RenderProgram {
 
     // Some drivers return an empty log when a restored context is already unstable.
     final infoLog = rc.getShaderInfoLog(shader);
-    throw StateError(rc.isContextLost() || infoLog == null || infoLog.isEmpty ? 'ContextLost' : infoLog);
+    if (rc.isContextLost() || infoLog == null || infoLog.isEmpty) throw const _ContextLossException();
+    throw StateError(infoLog);
   }
 
   //---------------------------------------------------------------------------
