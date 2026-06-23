@@ -184,6 +184,7 @@ abstract class RenderProgram {
     final fShader =
         _createShader(rc, fragmentShaderSource, WebGL.FRAGMENT_SHADER);
 
+    _clearWebGlErrors(rc);
     rc.attachShader(program, vShader);
     rc.attachShader(program, fShader);
     rc.linkProgram(program);
@@ -210,6 +211,7 @@ abstract class RenderProgram {
       throw StateError(rc.isContextLost() ? 'ContextLost' : 'Failed to create WebGL shader.');
     }
 
+    _clearWebGlErrors(rc);
     rc.shaderSource(shader, source);
     rc.compileShader(shader);
 
@@ -225,6 +227,12 @@ abstract class RenderProgram {
     if (error != WebGL.NO_ERROR) throw StateError('Failed to compile shader. WebGL error: $error');
 
     throw StateError('Failed to compile WebGL shader.');
+  }
+
+  void _clearWebGlErrors(WebGL rc) {
+    if (rc.isContextLost()) return;
+
+    while (rc.getError() != WebGL.NO_ERROR) {}
   }
 
   //---------------------------------------------------------------------------
