@@ -191,8 +191,15 @@ abstract class RenderProgram {
     final status = (rc.getProgramParameter(program, WebGL.LINK_STATUS) as JSBoolean?)?.toDart;
     if (status == true) return program;
 
-    final cl = rc.isContextLost();
-    throw StateError(cl ? 'ContextLost' : rc.getProgramInfoLog(program) ?? 'Failed to link WebGL program.');
+    if (rc.isContextLost()) throw StateError('ContextLost');
+
+    final infoLog = rc.getProgramInfoLog(program) ?? '';
+    if (infoLog.isNotEmpty) throw StateError(infoLog);
+
+    final error = rc.getError();
+    if (error != WebGL.NO_ERROR) throw StateError('Failed to link program. WebGL error: $error');
+
+    throw StateError('Failed to link WebGL program.');
   }
 
   //---------------------------------------------------------------------------
@@ -209,8 +216,15 @@ abstract class RenderProgram {
     final status = (rc.getShaderParameter(shader, WebGL.COMPILE_STATUS) as JSBoolean?)?.toDart;
     if (status == true) return shader;
 
-    final cl = rc.isContextLost();
-    throw StateError(cl ? 'ContextLost' : rc.getShaderInfoLog(shader) ?? 'Failed to compile WebGL shader.');
+    if (rc.isContextLost()) throw StateError('ContextLost');
+
+    final infoLog = rc.getShaderInfoLog(shader) ?? '';
+    if (infoLog.isNotEmpty) throw StateError(infoLog);
+
+    final error = rc.getError();
+    if (error != WebGL.NO_ERROR) throw StateError('Failed to compile shader. WebGL error: $error');
+
+    throw StateError('Failed to compile WebGL shader.');
   }
 
   //---------------------------------------------------------------------------
