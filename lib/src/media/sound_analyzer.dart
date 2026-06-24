@@ -18,10 +18,16 @@ abstract class SoundAnalyzer {
 
   void getByteFrequencyData(Uint8List data);
 
+  Uint8List? _byteFrequencyData;
+
   double getFrequencyRangeLevel(num minHz, num maxHz) {
     if (frequencyBinCount <= 0 || fftSize <= 0 || sampleRate <= 0) return 0;
 
-    final data = JSUint8Array.withLength(frequencyBinCount).toDart;
+    if (frequencyBinCount != _byteFrequencyData?.length) {
+      _byteFrequencyData = null;
+    }
+
+    final data = _byteFrequencyData ??= JSUint8Array.withLength(frequencyBinCount).toDart;
     getByteFrequencyData(data);
 
     final hzPerBin = sampleRate / fftSize;
