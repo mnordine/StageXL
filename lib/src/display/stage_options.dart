@@ -132,8 +132,8 @@ class StageOptions {
 
   set shaderPrecision(ShaderPrecision value) {
     switch (value) {
-      case ShaderPrecision.medium: _shaderPrecision = 'mediump'; break;
-      case ShaderPrecision.high: _shaderPrecision = 'highp'; break;
+      case ShaderPrecision.medium: _shaderPrecision = 'mediump';
+      case ShaderPrecision.high: _shaderPrecision = 'highp';
     }
 
     RenderProgram.fragmentPrecision = _shaderPrecision;

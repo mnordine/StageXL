@@ -88,3 +88,4 @@ linter:
     - omit_obvious_property_types
     - unnecessary_ignore
     - simple_directive_paths
+    - unnecessary_breaks

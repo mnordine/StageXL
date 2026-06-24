@@ -132,13 +132,11 @@ class GraphicsCommandDecodeSVG extends GraphicsCommandDecode {
           for (var i = 0; i <= p.length - 2; i += 2) {
             _add(GraphicsCommandLineTo(cx += p[i + 0], cy += p[i + 1]));
           }
-          break;
 
         case 'L': // L x y
           for (var i = 0; i <= p.length - 2; i += 2) {
             _add(GraphicsCommandLineTo(cx = p[i + 0], cy = p[i + 1]));
           }
-          break;
 
         case 'm': // m dx dy
           for (var i = 0; i <= p.length - 2; i += 2) {
@@ -151,7 +149,6 @@ class GraphicsCommandDecodeSVG extends GraphicsCommandDecode {
             startPointY = startPointValid ? startPointY : cy;
             startPointValid = true;
           }
-          break;
 
         case 'M': // M x y
           for (var i = 0; i <= p.length - 2; i += 2) {
@@ -164,31 +161,26 @@ class GraphicsCommandDecodeSVG extends GraphicsCommandDecode {
             startPointY = startPointValid ? startPointY : cy;
             startPointValid = true;
           }
-          break;
 
         case 'h': // h dx
           for (var i = 0; i <= p.length - 1; i += 1) {
             _add(GraphicsCommandLineTo(cx += p[i], cy));
           }
-          break;
 
         case 'H': // H x
           for (var i = 0; i <= p.length - 1; i += 1) {
             _add(GraphicsCommandLineTo(cx = p[i], cy));
           }
-          break;
 
         case 'v': // v dy
           for (var i = 0; i <= p.length - 1; i += 1) {
             _add(GraphicsCommandLineTo(cx, cy += p[i]));
           }
-          break;
 
         case 'V': // V y
           for (var i = 0; i <= p.length - 1; i += 1) {
             _add(GraphicsCommandLineTo(cx, cy = p[i]));
           }
-          break;
 
         case 'c': // c dx1 dy1, dx2 dy2, dx dy
           for (var i = 0; i <= p.length - 6; i += 6) {
@@ -200,7 +192,6 @@ class GraphicsCommandDecodeSVG extends GraphicsCommandDecode {
             final ey = cy += p[i + 5];
             _add(GraphicsCommandBezierCurveTo(x1, y1, x2, y2, ex, ey));
           }
-          break;
 
         case 'C': // C x1 y1, x2 y2, x y
           for (var i = 0; i <= p.length - 6; i += 6) {
@@ -212,7 +203,6 @@ class GraphicsCommandDecodeSVG extends GraphicsCommandDecode {
             final ey = cy = p[i + 5];
             _add(GraphicsCommandBezierCurveTo(x1, y1, x2, y2, ex, ey));
           }
-          break;
 
         case 's': // s dx2 dy2, dx dy
           for (var i = 0; i <= p.length - 4; i += 4) {
@@ -229,7 +219,6 @@ class GraphicsCommandDecodeSVG extends GraphicsCommandDecode {
             final ey = cy += p[i + 3];
             _add(GraphicsCommandBezierCurveTo(x1, y1, x2, y2, ex, ey));
           }
-          break;
 
         case 'S': // S x2 y2, x y
           for (var i = 0; i <= p.length - 4; i += 4) {
@@ -246,7 +235,6 @@ class GraphicsCommandDecodeSVG extends GraphicsCommandDecode {
             final ey = cy = p[i + 3];
             _add(GraphicsCommandBezierCurveTo(x1, y1, x2, y2, ex, ey));
           }
-          break;
 
         case 'q': // q dx1 dy1, dx dy
           for (var i = 0; i <= p.length - 4; i += 4) {
@@ -256,7 +244,6 @@ class GraphicsCommandDecodeSVG extends GraphicsCommandDecode {
             final ey = cy += p[i + 3];
             _add(GraphicsCommandQuadraticCurveTo(x1, y1, ex, ey));
           }
-          break;
 
         case 'Q': // Q x1 y1, x y
           for (var i = 0; i <= p.length - 4; i += 4) {
@@ -266,7 +253,6 @@ class GraphicsCommandDecodeSVG extends GraphicsCommandDecode {
             final ey = cy = p[i + 3];
             _add(GraphicsCommandQuadraticCurveTo(x1, y1, ex, ey));
           }
-          break;
 
         case 't': // t dx dy
           for (var i = 0; i <= p.length - 2; i += 2) {
@@ -281,7 +267,6 @@ class GraphicsCommandDecodeSVG extends GraphicsCommandDecode {
             final ey = cy += p[i + 3];
             _add(GraphicsCommandQuadraticCurveTo(x1, y1, ex, ey));
           }
-          break;
 
         case 'T': // T x y
           for (var i = 0; i <= p.length - 2; i += 2) {
@@ -296,7 +281,6 @@ class GraphicsCommandDecodeSVG extends GraphicsCommandDecode {
             final ey = cy = p[i + 3];
             _add(GraphicsCommandQuadraticCurveTo(x1, y1, ex, ey));
           }
-          break;
 
         case 'a': // a rx ry x-axis-rotation large-arc-flag sweep-flag dx dy
           for (var i = 0; i <= p.length - 7; i += 7) {
@@ -311,7 +295,6 @@ class GraphicsCommandDecodeSVG extends GraphicsCommandDecode {
             final ey = cy += p[i + 6];
             _arcElliptical(sx, sy, rx, ry, ra, fa, fs, ex, ey);
           }
-          break;
 
         case 'A': // A rx ry x-axis-rotation large-arc-flag sweep-flag x y
           for (var i = 0; i <= p.length - 7; i += 7) {
@@ -326,7 +309,6 @@ class GraphicsCommandDecodeSVG extends GraphicsCommandDecode {
             final ey = cy = p[i + 6];
             _arcElliptical(sx, sy, rx, ry, ra, fa, fs, ex, ey);
           }
-          break;
 
         case 'z': // z
         case 'Z': // Z
@@ -335,7 +317,6 @@ class GraphicsCommandDecodeSVG extends GraphicsCommandDecode {
           startPointValid = false;
           _add(GraphicsCommandClosePath());
           _add(GraphicsCommandMoveTo(cx, cy));
-          break;
       }
     }
   }

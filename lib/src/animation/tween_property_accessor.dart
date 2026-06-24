@@ -63,34 +63,24 @@ class TweenPropertyAccessor2D implements TweenPropertyAccessor {
     switch (propertyID) {
       case 0:
         _tweenObject.x = value;
-        break;
       case 1:
         _tweenObject.y = value;
-        break;
       case 2:
         _tweenObject.pivotX = value;
-        break;
       case 3:
         _tweenObject.pivotY = value;
-        break;
       case 4:
         _tweenObject.scaleX = value;
-        break;
       case 5:
         _tweenObject.scaleY = value;
-        break;
       case 6:
         _tweenObject.skewX = value;
-        break;
       case 7:
         _tweenObject.skewY = value;
-        break;
       case 8:
         _tweenObject.rotation = value;
-        break;
       case 9:
         _tweenObject.alpha = value;
-        break;
     }
   }
 }
@@ -137,22 +127,16 @@ class TweenPropertyAccessor3D implements TweenPropertyAccessor {
     switch (propertyID) {
       case 0:
         _tweenObject.offsetX = value;
-        break;
       case 1:
         _tweenObject.offsetY = value;
-        break;
       case 2:
         _tweenObject.offsetZ = value;
-        break;
       case 3:
         _tweenObject.rotationX = value;
-        break;
       case 4:
         _tweenObject.rotationY = value;
-        break;
       case 5:
         _tweenObject.rotationZ = value;
-        break;
     }
   }
 }

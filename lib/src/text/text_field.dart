@@ -412,17 +412,14 @@ class TextField extends InteractiveObject {
         case TextFieldAutoSize.LEFT:
           _width = autoWidth;
           _height = autoHeight;
-          break;
         case TextFieldAutoSize.RIGHT:
           super.x -= autoWidth - _width;
           _width = autoWidth;
           _height = autoHeight;
-          break;
         case TextFieldAutoSize.CENTER:
           super.x -= (autoWidth - _width) / 2;
           _width = autoWidth;
           _height = autoHeight;
-          break;
       }
     }
 
@@ -435,10 +432,8 @@ class TextField extends InteractiveObject {
     switch (textFormatVerticalAlign) {
       case TextFormatVerticalAlign.CENTER:
         heightOffset = (_height - _textHeight) / 2;
-        break;
       case TextFormatVerticalAlign.BOTTOM:
         heightOffset = _height - _textHeight - textFormatStrokeWidth;
-        break;
     }
 
     //-----------------------------------
@@ -451,11 +446,9 @@ class TextField extends InteractiveObject {
         case TextFormatAlign.CENTER:
         case TextFormatAlign.JUSTIFY:
           textLineMetrics._x += (availableWidth - textLineMetrics.width) / 2;
-          break;
         case TextFormatAlign.RIGHT:
         case TextFormatAlign.END:
           textLineMetrics._x += availableWidth - textLineMetrics.width;
-          break;
         default:
           textLineMetrics._x += textFormatStrokeWidth;
       }
@@ -632,10 +625,8 @@ class TextField extends InteractiveObject {
     switch (gradient.type) {
       case GraphicsGradientType.Linear:
         canvasGradient = context.createLinearGradient(sx, sy, ex, ey);
-        break;
       case GraphicsGradientType.Radial:
         canvasGradient = context.createRadialGradient(sx, sy, sr, ex, ey, er);
-        break;
     }
 
     for (var colorStop in gradient.colorStops) {
@@ -669,26 +660,22 @@ class TextField extends InteractiveObject {
                 text.substring(0, caretIndex - 1) + text.substring(caretIndex);
             caretIndexNew = caretIndex - 1;
           }
-          break;
 
         case html.KeyCode.END:
           keyboardEvent.preventDefault();
           final tlm = textLineMetrics[caretLine];
           caretIndexNew = tlm._textIndex + tlm._text.length;
-          break;
 
         case html.KeyCode.HOME:
           keyboardEvent.preventDefault();
           final tlm = textLineMetrics[caretLine];
           caretIndexNew = tlm._textIndex;
-          break;
 
         case html.KeyCode.LEFT:
           keyboardEvent.preventDefault();
           if (caretIndex > 0) {
             caretIndexNew = caretIndex - 1;
           }
-          break;
 
         case html.KeyCode.UP:
           keyboardEvent.preventDefault();
@@ -701,14 +688,12 @@ class TextField extends InteractiveObject {
           } else {
             caretIndexNew = 0;
           }
-          break;
 
         case html.KeyCode.RIGHT:
           keyboardEvent.preventDefault();
           if (caretIndex < textLength) {
             caretIndexNew = caretIndex + 1;
           }
-          break;
 
         case html.KeyCode.DOWN:
           keyboardEvent.preventDefault();
@@ -721,7 +706,6 @@ class TextField extends InteractiveObject {
           } else {
             caretIndexNew = textLength;
           }
-          break;
 
         case html.KeyCode.DELETE:
           keyboardEvent.preventDefault();
@@ -730,7 +714,6 @@ class TextField extends InteractiveObject {
                 text.substring(0, caretIndex) + text.substring(caretIndex + 1);
             caretIndexNew = caretIndex;
           }
-          break;
       }
 
       if (caretIndexNew != -1) {

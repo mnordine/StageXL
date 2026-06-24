@@ -126,7 +126,6 @@ abstract class _GraphicsMeshSegment {
         renderProgram = renderContext.getRenderProgram(
             r'$LinearGraphicsGradientProgram',
             _LinearGraphicsGradientProgram.new);
-        break;
       case GraphicsGradientType.Radial:
         renderProgram = renderContext.getRenderProgram(
             r'$RadialGraphicsGradientProgram',

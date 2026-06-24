@@ -557,16 +557,12 @@ class Stage extends DisplayObjectContainer {
       case StageScaleMode.EXACT_FIT:
         scaleX = ratioWidth;
         scaleY = ratioHeight;
-        break;
       case StageScaleMode.NO_BORDER:
         scaleX = scaleY = (ratioWidth > ratioHeight) ? ratioWidth : ratioHeight;
-        break;
       case StageScaleMode.NO_SCALE:
         scaleX = scaleY = 1.0;
-        break;
       case StageScaleMode.SHOW_ALL:
         scaleX = scaleY = (ratioWidth < ratioHeight) ? ratioWidth : ratioHeight;
-        break;
     }
 
     switch (_stageAlign) {
@@ -574,17 +570,14 @@ class Stage extends DisplayObjectContainer {
       case StageAlign.BOTTOM_LEFT:
       case StageAlign.TOP_LEFT:
         pivotX = 0.0;
-        break;
       case StageAlign.TOP:
       case StageAlign.NONE:
       case StageAlign.BOTTOM:
         pivotX = (clientWidth - sourceWidth * scaleX) / 2;
-        break;
       case StageAlign.TOP_RIGHT:
       case StageAlign.RIGHT:
       case StageAlign.BOTTOM_RIGHT:
         pivotX = clientWidth - sourceWidth * scaleX;
-        break;
     }
 
     switch (_stageAlign) {
@@ -592,17 +585,14 @@ class Stage extends DisplayObjectContainer {
       case StageAlign.TOP:
       case StageAlign.TOP_RIGHT:
         pivotY = 0.0;
-        break;
       case StageAlign.LEFT:
       case StageAlign.NONE:
       case StageAlign.RIGHT:
         pivotY = (clientHeight - sourceHeight * scaleY) / 2;
-        break;
       case StageAlign.BOTTOM_LEFT:
       case StageAlign.BOTTOM:
       case StageAlign.BOTTOM_RIGHT:
         pivotY = clientHeight - sourceHeight * scaleY;
-        break;
     }
 
     //----------------------------

@@ -48,37 +48,30 @@ class _TextureAtlasFormatJson extends TextureAtlasFormat {
       case 'RGBA8888':
         texture.pixelFormat = WebGL.RGBA;
         texture.pixelType = WebGL.UNSIGNED_BYTE;
-        break;
 
       case 'RGBA4444':
         texture.pixelFormat = WebGL.RGBA;
         texture.pixelType = WebGL.UNSIGNED_SHORT_4_4_4_4;
-        break;
 
       case 'RGBA5551':
         texture.pixelFormat = WebGL.RGBA;
         texture.pixelType = WebGL.UNSIGNED_SHORT_5_5_5_1;
-        break;
 
       case 'RGB888':
         texture.pixelFormat = WebGL.RGB;
         texture.pixelType = WebGL.UNSIGNED_BYTE;
-        break;
 
       case 'RGB565':
         texture.pixelFormat = WebGL.RGB;
         texture.pixelType = WebGL.UNSIGNED_SHORT_5_6_5;
-        break;
 
       case 'ALPHA':
         texture.pixelFormat = WebGL.ALPHA;
         texture.pixelType = WebGL.UNSIGNED_SHORT_4_4_4_4;
-        break;
 
       case 'ALPHA_INTENSITY':
         texture.pixelFormat = WebGL.LUMINANCE_ALPHA;
         texture.pixelType = WebGL.UNSIGNED_SHORT_4_4_4_4;
-        break;
     }
   }
 

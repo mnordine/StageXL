@@ -106,10 +106,8 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
     switch (ext) {
       case 'pvr':
         type = CompressedTextureFileTypes.pvr;
-        break;
       case 'ktx':
         type = CompressedTextureFileTypes.ktx;
-        break;
       default:
         throw LoadError('unknown extension $ext');
     }
