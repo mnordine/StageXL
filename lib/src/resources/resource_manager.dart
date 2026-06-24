@@ -6,11 +6,8 @@ class _SoundData {
 }
 
 class ResourceManager {
-  final Map<String, ResourceManagerResource> _resourceMap =
-      <String, ResourceManagerResource>{};
-  
-  final Map<String, ResourceRegistry<dynamic>> _registries =
-    <String, ResourceRegistry<dynamic>>{};
+  final _resourceMap = <String, ResourceManagerResource>{};
+  final _registries = <String, ResourceRegistry<dynamic>>{};
 
   final AssetManifest _manifest;
   AssetManifest get manifest => _manifest;

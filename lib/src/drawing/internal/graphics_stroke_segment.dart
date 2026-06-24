@@ -2,8 +2,8 @@ part of '../../drawing.dart';
 
 class _GraphicsStrokeSegment extends _GraphicsMeshSegment {
   final _GraphicsStroke stroke;
-  int _jointIndex1 = -1;
-  int _jointIndex2 = -1;
+  var _jointIndex1 = -1;
+  var _jointIndex2 = -1;
 
   _GraphicsStrokeSegment(this.stroke, _GraphicsPathSegment pathSegment)
       : super(pathSegment.vertexCount * 4, pathSegment.vertexCount * 6) {

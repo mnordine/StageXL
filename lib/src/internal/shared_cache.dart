@@ -9,7 +9,7 @@ class ObjectReleaseEvent<E> extends Event {
 
 class SharedCacheNode<E> {
   final E _cachedObject;
-  int _shareCount = 1;
+  var _shareCount = 1;
   SharedCacheNode(this._cachedObject);
 }
 
@@ -17,8 +17,8 @@ class SharedCacheNode<E> {
 //------------------------------------------------------------------------------
 
 class SharedCache<K, E> extends EventDispatcher {
-  final Map<K, SharedCacheNode<E>> _cachedObjects = <K, SharedCacheNode<E>>{};
-  bool _autoReleaseUnusedObjects = true;
+  final _cachedObjects = <K, SharedCacheNode<E>>{};
+  var _autoReleaseUnusedObjects = true;
 
   SharedCache([bool autoReleaseUnusedObjects = true]) {
     _autoReleaseUnusedObjects = autoReleaseUnusedObjects;

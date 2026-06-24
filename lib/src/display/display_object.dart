@@ -30,8 +30,8 @@ part of '../display.dart';
 
 abstract class DisplayObject extends EventDispatcher
     implements RenderObject, TweenObject2D, BitmapDrawable {
-  static int _nextID = 0;
-  final int displayObjectID = _nextID++;
+  static var _nextID = 0;
+  final displayObjectID = _nextID++;
 
   num _x = 0.0;
   num _y = 0.0;
@@ -49,7 +49,7 @@ abstract class DisplayObject extends EventDispatcher
   ///
   /// Display objects that are not visible are disabled. For example, if
   /// visible=false for an [InteractiveObject] instance, it cannot be clicked.
-  bool visible = true;
+  var visible = true;
 
   /// The availability and visibility of the display object.
   ///
@@ -58,41 +58,34 @@ abstract class DisplayObject extends EventDispatcher
   /// StageXL_Toolkit to disable a DisplayObject without changing the [visible]
   /// state or removing it from the container. It's recommended that users
   /// do not use [off] but [visible] instead.
-  bool off = false;
+  var off = false;
 
   Mask? _mask;
   BlendMode? _blendMode;
-  List<BitmapFilter> _filters = <BitmapFilter>[];
+  var _filters = <BitmapFilter>[];
   _DisplayObjectCache? _cache;
 
   /// The instance name of this display object.
   ///
   /// The object can be identified in the child list of its parent display
   /// object container by calling [DisplayObjectContainer.getChildByName].
-  String name = '';
+  var name = '';
 
   DisplayObjectParent? _parent;
 
-  final Matrix _transformationMatrix = Matrix.fromIdentity();
-  bool _transformationMatrixRefresh = true;
+  final _transformationMatrix = Matrix.fromIdentity();
+  var _transformationMatrixRefresh = true;
 
   //-------------------------------------------------------------------------------------------------
 
-  static const EventStreamProvider<Event> addedEvent =
-      EventStreamProvider<Event>(Event.ADDED);
-  static const EventStreamProvider<Event> removedEvent =
-      EventStreamProvider<Event>(Event.REMOVED);
-  static const EventStreamProvider<Event> addedToStageEvent =
-      EventStreamProvider<Event>(Event.ADDED_TO_STAGE);
-  static const EventStreamProvider<Event> removedFromStageEvent =
-      EventStreamProvider<Event>(Event.REMOVED_FROM_STAGE);
+  static const addedEvent = EventStreamProvider<Event>(Event.ADDED);
+  static const removedEvent = EventStreamProvider<Event>(Event.REMOVED);
+  static const addedToStageEvent = EventStreamProvider<Event>(Event.ADDED_TO_STAGE);
+  static const removedFromStageEvent = EventStreamProvider<Event>(Event.REMOVED_FROM_STAGE);
 
-  static const EventStreamProvider<EnterFrameEvent> enterFrameEvent =
-      EventStreamProvider<EnterFrameEvent>(Event.ENTER_FRAME);
-  static const EventStreamProvider<ExitFrameEvent> exitFrameEvent =
-      EventStreamProvider<ExitFrameEvent>(Event.EXIT_FRAME);
-  static const EventStreamProvider<RenderEvent> renderEvent =
-      EventStreamProvider<RenderEvent>(Event.RENDER);
+  static const enterFrameEvent = EventStreamProvider<EnterFrameEvent>(Event.ENTER_FRAME);
+  static const exitFrameEvent = EventStreamProvider<ExitFrameEvent>(Event.EXIT_FRAME);
+  static const renderEvent = EventStreamProvider<RenderEvent>(Event.RENDER);
 
   /// Dispatched when a display object is added to the display list.
   ///

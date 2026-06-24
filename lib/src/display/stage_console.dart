@@ -1,7 +1,7 @@
 part of '../display.dart';
 
 class StageConsole extends DisplayObject {
-  final String _fontImage =
+  final _fontImage =
       'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAcAAAAAOAQAAAACQy/GuAAABsE'
       'lEQVR4Aa3OMWsTUQDA8f97eV6fEpvT6YZgX4qDYwoOAdE+IQ5OfoXzG7S46KA8HZSC1PQLaN'
       'Cln8ElFxyaQWg3XZQLBAyi5BqjJDHeE7whoE7i7xP8+He1Wq38WGkLIFmyphryV2JQAQnIhw'
@@ -13,12 +13,12 @@ class StageConsole extends DisplayObject {
       'MweTtq+7tMhnin9YTDF4/chDftUsKcoW97B2RQEIC24GDJWsNvDAWRVrjHUgmWhOMPEf/DT5'
       'NSmGlKVHTvAAAAAElFTkSuQmCC';
 
-  final List<RenderTextureQuad> _glyphs = <RenderTextureQuad>[];
-  final Matrix _matrix = Matrix.fromIdentity();
-  final List<String> _lines = <String>[];
+  final _glyphs = <RenderTextureQuad>[];
+  final _matrix = Matrix.fromIdentity();
+  final _lines = <String>[];
 
-  int _consoleWidth = 0;
-  int _consoleHeight = 0;
+  var _consoleWidth = 0;
+  var _consoleHeight = 0;
 
   StageConsole() {
     BitmapData.load(_fontImage).then(_calculateGlyphs);

@@ -12,7 +12,7 @@ abstract class Sound {
 
   /// The default loading options for the [Sound.load] method.
 
-  static SoundLoadOptions defaultLoadOptions = SoundLoadOptions();
+  static var defaultLoadOptions = SoundLoadOptions();
 
   /// Loads a sound from a file url.
   ///

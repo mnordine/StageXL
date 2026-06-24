@@ -13,7 +13,7 @@ abstract class BaseImageLoader<T> {
 
 class ImageLoader implements BaseImageLoader<HTMLImageElement> {
   final String _url;
-  final HTMLImageElement image = HTMLImageElement();
+  final image = HTMLImageElement();
   final _completer = Completer<HTMLImageElement>();
   late final StreamSubscription _onLoadSubscription;
   late final StreamSubscription _onErrorSubscription;

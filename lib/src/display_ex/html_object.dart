@@ -36,9 +36,9 @@ class HtmlObject<T extends HTMLElement> extends DisplayObject {
   final T element;
 
   late final CSSStyleDeclaration _style;
-  String _styleOpacity = '';
-  String _styleTransform = '';
-  String _styleVisibility = '';
+  var _styleOpacity = '';
+  var _styleTransform = '';
+  var _styleVisibility = '';
 
   HtmlObject(this.element) {
     _style = element.style;

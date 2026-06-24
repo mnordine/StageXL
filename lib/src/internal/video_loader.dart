@@ -9,14 +9,14 @@ import '../errors.dart';
 class VideoLoader {
   static final List<String> supportedTypes = _getSupportedTypes();
 
-  final HTMLVideoElement video = HTMLVideoElement();
-  final AggregateError aggregateError = AggregateError('Error loading video.');
-  final Completer<HTMLVideoElement> _completer = Completer<HTMLVideoElement>();
+  final video = HTMLVideoElement();
+  final aggregateError = AggregateError('Error loading video.');
+  final _completer = Completer<HTMLVideoElement>();
 
   late StreamSubscription<Event> _onCanPlaySubscription;
   late StreamSubscription<Event> _onErrorSubscription;
-  final List<String> _urls = <String>[];
-  bool _loadData = false;
+  final _urls = <String>[];
+  var _loadData = false;
 
   VideoLoader(List<String> urls, bool loadData, bool corsEnabled) {
     if (corsEnabled) video.crossOrigin = 'anonymous';

@@ -11,7 +11,7 @@ import 'package:http/http.dart' as http;
 class ImageBitmapLoader implements BaseImageLoader<ImageBitmap> {
   final String _url;
   final _completer = Completer<ImageBitmap>();
-  bool _cancelled = false;
+  var _cancelled = false;
 
   ImageBitmapLoader(this._url) {
     _load(_url);

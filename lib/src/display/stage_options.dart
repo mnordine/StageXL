@@ -59,7 +59,7 @@ class StageOptions {
   /// The WebGL render engine supports transparency but there is performance
   /// penalty for setting this flag to 'true'.
 
-  bool transparent = false;
+  var transparent = false;
 
   /// Initialize the render engine to support anti-aliasing for the [Stage].
   ///
@@ -68,7 +68,7 @@ class StageOptions {
   /// The WebGL render engine supports anti-aliasing but there is performance
   /// penalty fo setting this flag to 'true'.
 
-  bool antialias = false;
+  var antialias = false;
 
   /// The maximum pixel ratio used to initialize the [Stage].
   ///
@@ -87,7 +87,7 @@ class StageOptions {
   /// browser will ignore the event. This does not affect the event
   /// propagation from the Stage to the display objects.
 
-  bool preventDefaultOnTouch = true;
+  var preventDefaultOnTouch = true;
 
   /// Prevents the browser's default behavior for mouse events.
   ///
@@ -96,7 +96,7 @@ class StageOptions {
   /// browser will ignore the event. This does not affect the event
   /// propagation from the Stage to the display objects.
 
-  bool preventDefaultOnMouse = true;
+  var preventDefaultOnMouse = true;
 
   /// Prevents the browser's default behavior for wheel events.
   ///
@@ -105,7 +105,7 @@ class StageOptions {
   /// browser will ignore the event. This does not affect the event
   /// propagation from the Stage to the display objects.
 
-  bool preventDefaultOnWheel = false;
+  var preventDefaultOnWheel = false;
 
   /// Prevents the browser's default behavior for keyboard events.
   ///
@@ -114,12 +114,12 @@ class StageOptions {
   /// browser will ignore the event. This does not affect the event
   /// propagation from the Stage to the display objects.
 
-  bool preventDefaultOnKeyboard = false;
+  var preventDefaultOnKeyboard = false;
 
   /// The power preference for the WebGL render engine.
   PowerPreference powerPreference = PowerPreference.normal;
 
-  String _shaderPrecision = 'mediump';
+  var _shaderPrecision = 'mediump';
 
   ShaderPrecision get shaderPrecision {
     switch (_shaderPrecision) {
@@ -139,9 +139,9 @@ class StageOptions {
     RenderProgram.fragmentPrecision = _shaderPrecision;
   }
 
-  bool resetScissorTestOnRenderStart = true;
-  bool resetStencilTestOnRenderStart = true;
-  bool resetColorOnRenderStart = true;
+  var resetScissorTestOnRenderStart = true;
+  var resetStencilTestOnRenderStart = true;
+  var resetColorOnRenderStart = true;
 
   //---------------------------------------------------------------------------
 

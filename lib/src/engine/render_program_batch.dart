@@ -22,7 +22,7 @@ class RenderProgramBatch extends RenderProgram {
   // aVertexColor:      Float32(r), Float32(g), Float32(b), Float32(a)
   // aVertexTexIndex:   Float32(textureIndex)
 
-  static int _maxTextures = 8; // Default value, will be updated at runtime
+  static var _maxTextures = 8; // Default value, will be updated at runtime
   static JSUint32Array? _samplerIndices;
 
   static int initializeMaxTextures(WebGL renderingContext, {required bool isWebGL2}) {
@@ -44,7 +44,7 @@ class RenderProgramBatch extends RenderProgram {
   
   final _drawCommands = <_DrawCommand>[];
   RenderContextWebGL? _renderContextWebGL;
-  bool _executingBatch = false;
+  var _executingBatch = false;
 
   @override
   String get vertexShaderSource => isWebGL2 ? '''

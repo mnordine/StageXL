@@ -4,15 +4,15 @@ abstract class _GraphicsMeshSegment {
   Float32List _vertexBuffer;
   Int16List _indexBuffer;
 
-  int _vertexCount = 0;
-  int _indexCount = 0;
+  var _vertexCount = 0;
+  var _indexCount = 0;
 
   double _minX = 0.0 + double.maxFinite;
   double _minY = 0.0 + double.maxFinite;
   double _maxX = 0.0 - double.maxFinite;
   double _maxY = 0.0 - double.maxFinite;
 
-  final Matrix _tmpMatrix = Matrix.fromIdentity();
+  final _tmpMatrix = Matrix.fromIdentity();
 
   //---------------------------------------------------------------------------
 

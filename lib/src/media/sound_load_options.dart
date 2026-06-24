@@ -10,27 +10,27 @@ part of '../media.dart';
 class SoundLoadOptions {
   /// The application provides *mp3* files as an option to load audio files.
 
-  bool mp3 = true;
+  var mp3 = true;
 
   /// The application provides *mp4* files as an option to load audio files.
 
-  bool mp4 = true;
+  var mp4 = true;
 
   /// The application provides *ogg* files as an option to load audio files.
 
-  bool ogg = true;
+  var ogg = true;
 
   /// The application provides *opus* files as an option to load audio files.
 
-  bool opus = false;
+  var opus = false;
 
   /// The application provides *ac3* files as an option to load audio files.
 
-  bool ac3 = true;
+  var ac3 = true;
 
   /// The application provides *wav* files as an option to load audio files.
 
-  bool wav = true;
+  var wav = true;
 
   /// A list of alternative urls for sound samples in the case where the
   /// primary url does not work or the file type is not supported by the
@@ -41,12 +41,12 @@ class SoundLoadOptions {
 
   /// Ignore loading errors and use a silent audio sample instead.
 
-  bool ignoreErrors = true;
+  var ignoreErrors = true;
 
   /// Use CORS to download the audio file. This is often necessary when you have
   /// to download audio files from a third party server.
 
-  bool corsEnabled = false;
+  var corsEnabled = false;
 
   /// Ignore the [SoundMixer.engine] and use this sound engine instead.
 

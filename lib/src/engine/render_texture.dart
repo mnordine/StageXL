@@ -1,8 +1,8 @@
 part of '../engine.dart';
 
 class RenderTexture {
-  int _width = 0;
-  int _height = 0;
+  var _width = 0;
+  var _height = 0;
 
   CanvasImageSource? _source;
   HTMLCanvasElement? _canvas;
@@ -11,7 +11,7 @@ class RenderTexture {
   RenderTextureWrapping _wrappingY = RenderTextureWrapping.CLAMP;
   RenderContextWebGL? _renderContext;
 
-  int _contextIdentifier = -1;
+  var _contextIdentifier = -1;
 
   CompressedTexture? _compressedTexture;
   WebGL? _renderingContext;

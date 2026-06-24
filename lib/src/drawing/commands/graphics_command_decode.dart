@@ -3,8 +3,8 @@ part of '../../drawing.dart';
 enum PathEncoding { SVG, EaselJS }
 
 abstract class GraphicsCommandDecode extends GraphicsCommand {
-  String _path = '';
-  final List<GraphicsCommand> _commands = <GraphicsCommand>[];
+  var _path = '';
+  final _commands = <GraphicsCommand>[];
 
   String get path => _path;
 
@@ -93,10 +93,10 @@ class GraphicsCommandDecodeEaselJS extends GraphicsCommandDecode {
 //------------------------------------------------------------------------------
 
 class GraphicsCommandDecodeSVG extends GraphicsCommandDecode {
-  static final RegExp _commandRegExp =
+  static final _commandRegExp =
       RegExp(r'([AaCcHhLlMmQqSsTtVvZz])([^a-df-zA-DF-Z]+|$)');
-  static final RegExp _parameterRegExp = RegExp('[, ]');
-  static final RegExp _lineBreakRegExp = RegExp(r'\r\n|\r|\n');
+  static final _parameterRegExp = RegExp('[, ]');
+  static final _lineBreakRegExp = RegExp(r'\r\n|\r|\n');
 
   // https://developer.mozilla.org/en-US/docs/Web/SVG/Tutorial/Paths
   // https://svgwg.org/svg2-draft/paths.html

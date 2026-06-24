@@ -8,14 +8,14 @@ part of '../display_ex.dart';
 /// time gauges used in games.
 ///
 class TimeGauge extends Gauge implements Animatable {
-  static const String TIME_OUT = 'TIME_OUT';
-  static const String TIME_SHORT = 'TIME_SHORT';
+  static const TIME_OUT = 'TIME_OUT';
+  static const TIME_SHORT = 'TIME_SHORT';
 
-  bool _isStarted = false;
+  var _isStarted = false;
   num _totalTime = 0.0;
 
   late Map<String, num> _alarms;
-  bool alarmsEnabled = true;
+  var alarmsEnabled = true;
 
   TimeGauge(num time, BitmapData bitmapData,
       [String direction = Gauge.DIRECTION_LEFT])

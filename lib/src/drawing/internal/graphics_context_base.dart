@@ -1,7 +1,7 @@
 part of '../../drawing.dart';
 
 abstract class _GraphicsContextBase extends GraphicsContext {
-  _GraphicsPath _path = _GraphicsPath();
+  var _path = _GraphicsPath();
 
   @override
   void beginPath() {

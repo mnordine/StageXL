@@ -23,15 +23,15 @@ part of '../animation.dart';
 ///        ..onComplete = () => print("complete");
 ///
 class AnimationChain implements Animatable {
-  final List<Animatable> _animatables = <Animatable>[];
+  final _animatables = <Animatable>[];
 
   void Function()? _onStart;
   void Function()? _onComplete;
 
   num _time = 0.0;
   num _delay = 0.0;
-  bool _started = false;
-  bool _completed = false;
+  var _started = false;
+  var _completed = false;
   final _completer = Completer<AnimationChain>();
 
   Future<AnimationChain> get done => _completer.future;

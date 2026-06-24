@@ -16,9 +16,9 @@ part of '../display.dart';
 
 class BitmapContainer extends DisplayObject
     implements DisplayObjectParent<Bitmap> {
-  final List<Bitmap> _children = <Bitmap>[];
-  final Matrix3D _tmpMatrix1 = Matrix3D.fromIdentity();
-  final Matrix3D _tmpMatrix2 = Matrix3D.fromIdentity();
+  final _children = <Bitmap>[];
+  final _tmpMatrix1 = Matrix3D.fromIdentity();
+  final _tmpMatrix2 = Matrix3D.fromIdentity();
 
   //---------------------------------------------------------------------------
 

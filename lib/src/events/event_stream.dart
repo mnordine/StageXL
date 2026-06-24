@@ -13,7 +13,7 @@ class EventStream<T extends Event> extends Stream<T> {
   // This is safe and gives good performance in JavaScript.
 
   List<EventStreamSubscription<T>?> _subscriptions = [];
-  int _capturingSubscriptionCount = 0;
+  var _capturingSubscriptionCount = 0;
 
   EventStream._(this.target, this.eventType);
 

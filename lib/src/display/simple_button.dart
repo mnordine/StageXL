@@ -75,7 +75,7 @@ class SimpleButton extends InteractiveObject {
     }
   }
 
-  bool _enabled = true;
+  var _enabled = true;
 
   /// The current state of the button (Up, Over, Down).
   ///

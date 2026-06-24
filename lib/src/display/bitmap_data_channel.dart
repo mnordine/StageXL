@@ -1,10 +1,10 @@
 part of '../display.dart';
 
 class BitmapDataChannel {
-  static const int RED = 1;
-  static const int GREEN = 2;
-  static const int BLUE = 4;
-  static const int ALPHA = 8;
+  static const RED = 1;
+  static const GREEN = 2;
+  static const BLUE = 4;
+  static const ALPHA = 8;
 
   static int getCanvasIndex(int bitmapDataChannel) {
     final isLittleEndianSystem = env.isLittleEndianSystem;

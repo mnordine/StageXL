@@ -4,8 +4,8 @@ class _ContextState {
   double alpha = 1;
   BlendMode blendMode = BlendMode.NORMAL;
 
-  final Matrix matrix = Matrix.fromIdentity();
-  final Matrix3D matrix3D = Matrix3D.fromIdentity();
+  final matrix = Matrix.fromIdentity();
+  final matrix3D = Matrix3D.fromIdentity();
   final _ContextState? previousContextState;
 
   _ContextState(this.previousContextState);

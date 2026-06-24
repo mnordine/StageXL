@@ -1,7 +1,7 @@
 part of '../../drawing.dart';
 
 class _GraphicsContextHitTest extends _GraphicsContextBase {
-  bool _hit = false;
+  var _hit = false;
   final double _localX;
   final double _localY;
 

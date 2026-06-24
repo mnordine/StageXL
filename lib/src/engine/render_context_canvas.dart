@@ -4,7 +4,7 @@ class RenderContextCanvas extends RenderContext {
   final HTMLCanvasElement _canvasElement;
   final CanvasRenderingContext2D _renderingContext;
 
-  final Matrix _identityMatrix = Matrix.fromIdentity();
+  final _identityMatrix = Matrix.fromIdentity();
   BlendMode _activeBlendMode = BlendMode.NORMAL;
   double _activeAlpha = 1;
 

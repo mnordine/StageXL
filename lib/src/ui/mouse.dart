@@ -4,28 +4,28 @@ import 'dart:async';
 import 'dart:math';
 
 class MouseCursor {
-  static const String AUTO = 'auto';
-  static const String DEFAULT = 'default';
-  static const String POINTER = 'pointer';
-  static const String MOVE = 'move';
-  static const String CROSSHAIR = 'crosshair';
-  static const String TEXT = 'text';
-  static const String VERTICAL_TEXT = 'vertical-text';
-  static const String PROGRESS = 'progress';
-  static const String WAIT = 'wait';
-  static const String RESIZE_COLUMN = 'col-resize';
-  static const String RESIZE_ROW = 'row-resize';
-  static const String RESIZE_NORTH = 'n-resize';
-  static const String RESIZE_SOUTH = 's-resize';
-  static const String RESIZE_EAST = 'e-resize';
-  static const String RESIZE_WEST = 'w-resize';
-  static const String RESIZE_NORTHWEST = 'nw-resize';
-  static const String RESIZE_NORTHEAST = 'ne-resize';
-  static const String RESIZE_SOUTHWEST = 'sw-resize';
-  static const String RESIZE_SOUTHEAST = 'se-resize';
-  static const String NOT_ALLOWED = 'not-allowed';
-  static const String NO_DROP = 'no-drop';
-  static const String ALL_SCROLL = 'all-scroll';
+  static const AUTO = 'auto';
+  static const DEFAULT = 'default';
+  static const POINTER = 'pointer';
+  static const MOVE = 'move';
+  static const CROSSHAIR = 'crosshair';
+  static const TEXT = 'text';
+  static const VERTICAL_TEXT = 'vertical-text';
+  static const PROGRESS = 'progress';
+  static const WAIT = 'wait';
+  static const RESIZE_COLUMN = 'col-resize';
+  static const RESIZE_ROW = 'row-resize';
+  static const RESIZE_NORTH = 'n-resize';
+  static const RESIZE_SOUTH = 's-resize';
+  static const RESIZE_EAST = 'e-resize';
+  static const RESIZE_WEST = 'w-resize';
+  static const RESIZE_NORTHWEST = 'nw-resize';
+  static const RESIZE_NORTHEAST = 'ne-resize';
+  static const RESIZE_SOUTHWEST = 'sw-resize';
+  static const RESIZE_SOUTHEAST = 'se-resize';
+  static const NOT_ALLOWED = 'not-allowed';
+  static const NO_DROP = 'no-drop';
+  static const ALL_SCROLL = 'all-scroll';
 }
 
 class MouseCursorData {
@@ -38,7 +38,7 @@ class MouseCursorData {
 /// the appearance of the mouse cursor.
 
 class Mouse {
-  static bool _cursorHidden = false;
+  static var _cursorHidden = false;
   static String _cursorName = MouseCursor.AUTO;
   static final _cursorDatas = <String, MouseCursorData>{};
 

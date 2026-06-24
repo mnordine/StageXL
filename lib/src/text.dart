@@ -30,7 +30,7 @@ part 'text/text_format.dart';
 part 'text/text_format_align.dart';
 part 'text/text_line_metrics.dart';
 
-final HTMLCanvasElement _dummyCanvas = HTMLCanvasElement()
+final _dummyCanvas = HTMLCanvasElement()
   ..width = 16
   ..height = 16;
 final CanvasRenderingContext2D _dummyCanvasContext = _dummyCanvas.context2D;

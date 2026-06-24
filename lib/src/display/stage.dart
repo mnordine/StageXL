@@ -51,35 +51,35 @@ enum StageAlign {
 ///     var stage = Stage(canvas, width: 800, height: 600);
 
 class Stage extends DisplayObjectContainer {
-  static StageOptions defaultOptions = StageOptions();
+  static var defaultOptions = StageOptions();
 
   late HTMLCanvasElement _canvas;
   late final RenderContext _renderContext;
   RenderLoop? _renderLoop;
   StageConsole? _console;
 
-  int _sourceWidth = 0;
-  int _sourceHeight = 0;
-  int _stageWidth = 0;
-  int _stageHeight = 0;
+  var _sourceWidth = 0;
+  var _sourceHeight = 0;
+  var _stageWidth = 0;
+  var _stageHeight = 0;
   num _pixelRatio = 1.0;
-  bool _invalid = false;
+  var _invalid = false;
 
   double _avgFrameTime = 0;
   double _avgDrawCalls = 0;
   double _avgVertexCount = 0;
   double _avgIdexCount = 0;
 
-  final Rectangle<num> _contentRectangle = Rectangle<num>(0.0, 0.0, 0.0, 0.0);
-  final Matrix _clientTransformation = Matrix.fromIdentity();
-  final Matrix _stageTransformation = Matrix.fromIdentity();
-  final Matrix _consoleTransformation = Matrix.fromIdentity();
-  final RenderEvent _renderEvent = RenderEvent();
+  final _contentRectangle = Rectangle<num>(0.0, 0.0, 0.0, 0.0);
+  final _clientTransformation = Matrix.fromIdentity();
+  final _stageTransformation = Matrix.fromIdentity();
+  final _consoleTransformation = Matrix.fromIdentity();
+  final _renderEvent = RenderEvent();
 
   late RenderState _renderState;
   InputEventMode _inputEventMode = InputEventMode.MouseOnly;
-  bool _renderContextLost = false;
-  bool _renderAfterContextRestore = false;
+  var _renderContextLost = false;
+  var _renderAfterContextRestore = false;
 
   /// Gets and sets the render mode of this Stage. You can choose between
   /// three different modes defined in [StageRenderMode].
@@ -89,10 +89,10 @@ class Stage extends DisplayObjectContainer {
   StageAlign _stageAlign = StageAlign.NONE;
 
   String _mouseCursor = MouseCursor.DEFAULT;
-  Point<num> _mousePosition = Point<num>(0.0, 0.0);
+  var _mousePosition = Point<num>(0.0, 0.0);
   InteractiveObject? _mouseTarget;
 
-  final List<_Drag> _drags = <_Drag>[];
+  final _drags = <_Drag>[];
   final Map<int, _TouchPoint> _touchPoints = {};
   final List<_MouseButton> _mouseButtons = _MouseButton.createDefaults();
 
@@ -102,7 +102,7 @@ class Stage extends DisplayObjectContainer {
   /// [RenderLoop] where this Stage is added to. If this Stage is not added
   /// to a RenderLoop, the [Juggler] will not advance in time.
 
-  final Juggler juggler = Juggler();
+  final juggler = Juggler();
 
   /// The interactive object with keyboard focus or null if focus is not set.
 
@@ -114,27 +114,25 @@ class Stage extends DisplayObjectContainer {
 
   /// Prevents the browser's default behavior for touch events.
 
-  bool preventDefaultOnTouch = true;
+  var preventDefaultOnTouch = true;
 
   /// Prevents the browser's default behavior for mouse events.
 
-  bool preventDefaultOnMouse = true;
+  var preventDefaultOnMouse = true;
 
   /// Prevents the browser's default behavior for wheel events.
 
-  bool preventDefaultOnWheel = false;
+  var preventDefaultOnWheel = false;
 
   /// Prevents the browser's default behavior for keyboard events.
 
-  bool preventDefaultOnKeyboard = false;
+  var preventDefaultOnKeyboard = false;
 
   //----------------------------------------------------------------------------
 
-  static const EventStreamProvider<Event> resizeEvent =
-    EventStreamProvider<Event>(Event.RESIZE);
+  static const resizeEvent = EventStreamProvider<Event>(Event.RESIZE);
 
-  static const EventStreamProvider<Event> mouseLeaveEvent =
-    EventStreamProvider<Event>(Event.MOUSE_LEAVE);
+  static const mouseLeaveEvent = EventStreamProvider<Event>(Event.MOUSE_LEAVE);
 
   EventStream<Event> get onResize => Stage.resizeEvent.forTarget(this);
 

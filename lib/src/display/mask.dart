@@ -18,23 +18,23 @@ abstract class Mask implements RenderMask {
   /// You can use the [transformationMatrix] to change the size,
   /// position, scale, rotation etc. from the Mask.
 
-  final Matrix transformationMatrix = Matrix.fromIdentity();
+  final transformationMatrix = Matrix.fromIdentity();
 
   /// Set to `true` to place the [Mask] relative to the DisplayObjects
   /// parent. The default value is `false` and therefore the mask is
   /// placed relative to the DisplayObject where it is applied to.
 
   @override
-  bool relativeToParent = false;
+  var relativeToParent = false;
 
   @override
-  bool border = false;
+  var border = false;
 
   @override
-  int borderColor = 0xFF000000;
+  var borderColor = 0xFF000000;
 
   @override
-  int borderWidth = 1;
+  var borderWidth = 1;
 
   Mask();
 

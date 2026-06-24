@@ -39,7 +39,7 @@ part of '../media.dart';
 
 class Video {
   final HTMLVideoElement videoElement;
-  bool loop = false;
+  var loop = false;
 
   final _endedEvent = StreamController<Video>.broadcast();
   final _pauseEvent = StreamController<Video>.broadcast();
@@ -64,7 +64,7 @@ class Video {
   /// are provided for the [load] method. This default video load options
   /// enable all supported video file formats: mp4, webm and ogg.
 
-  static VideoLoadOptions defaultLoadOptions = VideoLoadOptions();
+  static var defaultLoadOptions = VideoLoadOptions();
 
   /// Use this method to load a video from a given [url]. If you don't
   /// provide [videoLoadOptions] the [defaultLoadOptions] will be used.

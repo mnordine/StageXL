@@ -16,27 +16,27 @@ part of '../events.dart';
 /// or [stopImmediatePropagation] method.
 class Event {
   // DiplayObject events
-  static const String ADDED = 'added';
-  static const String ADDED_TO_STAGE = 'addedToStage';
-  static const String ENTER_FRAME = 'enterFrame';
-  static const String EXIT_FRAME = 'exitFrame';
-  static const String REMOVED = 'removed';
-  static const String REMOVED_FROM_STAGE = 'removedFromStage';
-  static const String RESIZE = 'resize';
-  static const String RENDER = 'render';
-  static const String MOUSE_LEAVE = 'mouseLeave';
+  static const ADDED = 'added';
+  static const ADDED_TO_STAGE = 'addedToStage';
+  static const ENTER_FRAME = 'enterFrame';
+  static const EXIT_FRAME = 'exitFrame';
+  static const REMOVED = 'removed';
+  static const REMOVED_FROM_STAGE = 'removedFromStage';
+  static const RESIZE = 'resize';
+  static const RENDER = 'render';
+  static const MOUSE_LEAVE = 'mouseLeave';
 
   // Common events
-  static const String OKAY = 'okay';
-  static const String CANCEL = 'cancel';
-  static const String CHANGE = 'change';
-  static const String CONFIRM = 'confirm';
-  static const String SCROLL = 'scroll';
-  static const String OPEN = 'open';
-  static const String CLOSE = 'close';
-  static const String SELECT = 'select';
-  static const String COMPLETE = 'complete';
-  static const String PROGRESS = 'progress';
+  static const OKAY = 'okay';
+  static const CANCEL = 'cancel';
+  static const CHANGE = 'change';
+  static const CONFIRM = 'confirm';
+  static const SCROLL = 'scroll';
+  static const OPEN = 'open';
+  static const CLOSE = 'close';
+  static const SELECT = 'select';
+  static const COMPLETE = 'complete';
+  static const PROGRESS = 'progress';
 
   //----------------------------------------------------------------------------
   //----------------------------------------------------------------------------
@@ -48,8 +48,8 @@ class Event {
   EventPhase _eventPhase = EventPhase.AT_TARGET;
   EventDispatcher? _target;
   EventDispatcher? _currentTarget;
-  bool _isPropagationStopped = false;
-  bool _isImmediatePropagationStopped = false;
+  var _isPropagationStopped = false;
+  var _isImmediatePropagationStopped = false;
 
   /// Creates an [Event] of specified [type].
   Event(String type, [bool bubbles = false])

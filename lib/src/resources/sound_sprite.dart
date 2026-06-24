@@ -12,7 +12,7 @@ part of '../resources.dart';
 /// https://github.com/realbluesky/soundsprite
 
 class SoundSprite {
-  final List<SoundSpriteSegment> _segments = <SoundSpriteSegment>[];
+  final _segments = <SoundSpriteSegment>[];
   late final Sound _sound;
 
   //----------------------------------------------------------------------------

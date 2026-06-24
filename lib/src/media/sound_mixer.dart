@@ -5,7 +5,7 @@ bool _isAudioContextSupported() => window.has('AudioContext');
 class SoundMixer {
   static SoundEngine? _engineDetected;
   static SoundEngine? _engineOverride;
-  static SoundTransform _soundTransform = SoundTransform();
+  static var _soundTransform = SoundTransform();
 
   static WebAudioApiMixer? _webAudioApiMixer;
   static AudioElementMixer? _audioElementMixer;

@@ -13,26 +13,26 @@ part of '../events.dart';
 ///     sprite.onMouseClick.listen(_onMouseClick);
 
 class MouseEvent extends InputEvent {
-  static const String CLICK = 'click';
-  static const String DOUBLE_CLICK = 'doubleClick';
+  static const CLICK = 'click';
+  static const DOUBLE_CLICK = 'doubleClick';
 
-  static const String MOUSE_DOWN = 'mouseDown';
-  static const String MOUSE_UP = 'mouseUp';
-  static const String MOUSE_MOVE = 'mouseMove';
-  static const String MOUSE_OUT = 'mouseOut';
-  static const String MOUSE_OVER = 'mouseOver';
-  static const String MOUSE_WHEEL = 'mouseWheel';
+  static const MOUSE_DOWN = 'mouseDown';
+  static const MOUSE_UP = 'mouseUp';
+  static const MOUSE_MOVE = 'mouseMove';
+  static const MOUSE_OUT = 'mouseOut';
+  static const MOUSE_OVER = 'mouseOver';
+  static const MOUSE_WHEEL = 'mouseWheel';
 
-  static const String MIDDLE_CLICK = 'middleClick';
-  static const String MIDDLE_MOUSE_DOWN = 'middleMouseDown';
-  static const String MIDDLE_MOUSE_UP = 'middleMouseUp';
-  static const String RIGHT_CLICK = 'rightClick';
-  static const String RIGHT_MOUSE_DOWN = 'rightMouseDown';
-  static const String RIGHT_MOUSE_UP = 'rightMouseUp';
+  static const MIDDLE_CLICK = 'middleClick';
+  static const MIDDLE_MOUSE_DOWN = 'middleMouseDown';
+  static const MIDDLE_MOUSE_UP = 'middleMouseUp';
+  static const RIGHT_CLICK = 'rightClick';
+  static const RIGHT_MOUSE_DOWN = 'rightMouseDown';
+  static const RIGHT_MOUSE_UP = 'rightMouseUp';
 
-  static const String CONTEXT_MENU = 'contextMenu';
-  static const String ROLL_OUT = 'rollOut';
-  static const String ROLL_OVER = 'rollOver';
+  static const CONTEXT_MENU = 'contextMenu';
+  static const ROLL_OUT = 'rollOut';
+  static const ROLL_OVER = 'rollOver';
 
   //---------------------------------------------------------------------------
 

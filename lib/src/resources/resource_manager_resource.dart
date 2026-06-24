@@ -6,8 +6,7 @@ class ResourceManagerResource {
   final String url;
   Object? _value;
   Object? _error;
-  final Completer<ResourceManagerResource> _completer =
-      Completer<ResourceManagerResource>();
+  final _completer = Completer<ResourceManagerResource>();
 
   ResourceManagerResource(this.kind, this.name, this.url, Future<Object?> loader) {
     loader.then((resource) {

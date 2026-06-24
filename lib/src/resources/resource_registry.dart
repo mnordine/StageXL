@@ -25,7 +25,7 @@ abstract class ResourceRegistry<T> {
 
 class BitmapDataResourceRegistry extends ResourceRegistry<BitmapData> {
   @override
-  final String kind = 'BitmapData';
+  final kind = 'BitmapData';
 
   BitmapDataResourceRegistry(super.resources);
 
@@ -49,7 +49,7 @@ class BitmapDataResourceRegistry extends ResourceRegistry<BitmapData> {
 
 class TextureAtlasResourceRegistry extends ResourceRegistry<TextureAtlas> {
   @override
-  final String kind = 'TextureAtlas';
+  final kind = 'TextureAtlas';
 
   final _loaders = <String, _TextureAtlasLoaderFile>{};
 
@@ -87,7 +87,7 @@ class TextureAtlasResourceRegistry extends ResourceRegistry<TextureAtlas> {
 
 class VideoResourceRegistry extends ResourceRegistry<Video> {
   @override
-  final String kind = 'Video';
+  final kind = 'Video';
 
   VideoResourceRegistry(super.resources);
 
@@ -99,7 +99,7 @@ class VideoResourceRegistry extends ResourceRegistry<Video> {
 
 class SoundResourceRegistry extends ResourceRegistry<Sound> {
   @override
-  final String kind = 'Sound';
+  final kind = 'Sound';
 
   // Key is name
   final _soundDatas = <String, _SoundData>{};
@@ -139,7 +139,7 @@ class SoundResourceRegistry extends ResourceRegistry<Sound> {
 
 class SoundSpriteResourceRegistry extends ResourceRegistry<SoundSprite> {
   @override
-  final String kind = 'SoundSprite';
+  final kind = 'SoundSprite';
 
   SoundSpriteResourceRegistry(super.resources);
 
@@ -151,7 +151,7 @@ class SoundSpriteResourceRegistry extends ResourceRegistry<SoundSprite> {
 
 class TextResourceRegistry extends ResourceRegistry<String> {
   @override
-  final String kind = 'Text';
+  final kind = 'Text';
 
   TextResourceRegistry(super.resources);
 
@@ -162,7 +162,7 @@ class TextResourceRegistry extends ResourceRegistry<String> {
 
 class TextFileResourceRegistry extends ResourceRegistry<String> {
   @override
-  final String kind = 'TextFile';
+  final kind = 'TextFile';
 
   TextFileResourceRegistry(super.resources);
 
@@ -177,7 +177,7 @@ class TextFileResourceRegistry extends ResourceRegistry<String> {
 
 class AssetManifestResourceRegistry extends ResourceRegistry<AssetManifest> {
   @override
-  final String kind = 'AssetManifest';
+  final kind = 'AssetManifest';
 
   AssetManifestResourceRegistry(super.resources);
 
@@ -196,7 +196,7 @@ class AssetManifestResourceRegistry extends ResourceRegistry<AssetManifest> {
 
 class CustomObjectResourceRegistry extends ResourceRegistry<dynamic> {
   @override
-  final String kind = 'CustomObject';
+  final kind = 'CustomObject';
 
   CustomObjectResourceRegistry(super.resources);
 

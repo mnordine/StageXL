@@ -7,12 +7,12 @@ class RenderTextureQuad {
   final int rotation;
   final num pixelRatio;
 
-  final Int16List ixListQuad = Int16List(6);
-  final Float32List vxListQuad = Float32List(16);
+  final ixListQuad = Int16List(6);
+  final vxListQuad = Float32List(16);
 
   late Int16List _ixList;
   late Float32List _vxList;
-  bool _hasCustomVertices = false;
+  var _hasCustomVertices = false;
 
   //---------------------------------------------------------------------------
 

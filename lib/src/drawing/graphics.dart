@@ -14,8 +14,8 @@ part of '../drawing.dart';
 /// drawing operations.
 
 class Graphics {
-  final List<GraphicsCommand> _originalCommands = <GraphicsCommand>[];
-  final List<GraphicsCommand> _compiledCommands = <GraphicsCommand>[];
+  final _originalCommands = <GraphicsCommand>[];
+  final _compiledCommands = <GraphicsCommand>[];
 
   Rectangle<num>? _bounds;
 

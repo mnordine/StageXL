@@ -13,7 +13,7 @@ class RenderContextEvent {}
 /// The interface for all implementations of a render context.
 
 abstract class RenderContext {
-  final RenderStatistics renderStatistics = RenderStatistics();
+  final renderStatistics = RenderStatistics();
 
   final _contextLostEvent = StreamController<RenderContextEvent>.broadcast();
   final _contextRestoredEvent =

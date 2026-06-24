@@ -1,13 +1,13 @@
 part of '../engine.dart';
 
 abstract class RenderProgram {
-  int _contextIdentifier = -1;
+  var _contextIdentifier = -1;
 
   late WebGL _renderingContext;
   late WebGLProgram _program;
   WebGLVertexArrayObject? _vao;
   WebGLVertexArrayObjectOES? _vaoOes;
-  bool _supportsVao = false;
+  var _supportsVao = false;
   OES_vertex_array_object? _vaoExtension;
 
   final Map<String, int> _attributes;
@@ -25,7 +25,7 @@ abstract class RenderProgram {
   // that are not used by the newly activated program. This avoids
   // leftover vertex attribute state from other programs (for example
   // filter programs) causing incorrect vertex attribute pointers.
-  static final Set<int> _enabledVertexAttribArrays = <int>{};
+  static final _enabledVertexAttribArrays = <int>{};
 
   bool? _isWebGL2;
   bool get isWebGL2 => 

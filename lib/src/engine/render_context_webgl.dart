@@ -1,20 +1,20 @@
 part of '../engine.dart';
 
 class RenderContextWebGL extends RenderContext {
-  static int _globalContextIdentifier = 0;
+  static var _globalContextIdentifier = 0;
   final HTMLCanvasElement _canvasElement;
 
   late final WebGL _renderingContext;
-  final Matrix3D _projectionMatrix = Matrix3D.fromIdentity();
-  final List<_MaskState> _maskStates = <_MaskState>[];
+  final _projectionMatrix = Matrix3D.fromIdentity();
+  final _maskStates = <_MaskState>[];
 
   late RenderProgram _activeRenderProgram;
   RenderFrameBuffer? _activeRenderFrameBuffer;
   RenderStencilBuffer? _activeRenderStencilBuffer;
   BlendMode? _activeBlendMode;
 
-  bool _contextValid = true;
-  int _contextIdentifier = 0;
+  var _contextValid = true;
+  var _contextIdentifier = 0;
   late final bool _isWebGL2;
 
   bool get isWebGL2 => _isWebGL2;
@@ -38,16 +38,16 @@ class RenderContextWebGL extends RenderContext {
 
   //---------------------------------------------------------------------------
 
-  final RenderProgramTinted renderProgramTinted = RenderProgramTinted();
-  final RenderProgramTriangle renderProgramTriangle = RenderProgramTriangle();
-  final RenderProgramBatch renderProgramBatch = RenderProgramBatch();
+  final renderProgramTinted = RenderProgramTinted();
+  final renderProgramTriangle = RenderProgramTriangle();
+  final renderProgramBatch = RenderProgramBatch();
 
-  final RenderBufferIndex renderBufferIndex = RenderBufferIndex(16384 * 2);
-  final RenderBufferVertex renderBufferVertex = RenderBufferVertex(32768 * 2);
+  final renderBufferIndex = RenderBufferIndex(16384 * 2);
+  final renderBufferVertex = RenderBufferVertex(32768 * 2);
 
   late final List<RenderTexture?> _activeRenderTextures;
-  final List<RenderFrameBuffer> _renderFrameBufferPool = <RenderFrameBuffer>[];
-  final Map<String, RenderProgram> _renderPrograms = <String, RenderProgram>{};
+  final _renderFrameBufferPool = <RenderFrameBuffer>[];
+  final _renderPrograms = <String, RenderProgram>{};
 
   final bool _resetScissorTest;
   final bool _resetStencilTest;

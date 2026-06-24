@@ -10,15 +10,15 @@ part of '../media.dart';
 class VideoLoadOptions {
   /// The application provides *mp4* files as an option to load video files.
 
-  bool mp4 = true;
+  var mp4 = true;
 
   /// The application provides *webm* files as an option to load video files.
 
-  bool webm = true;
+  var webm = true;
 
   /// The application provides *ogg* files as an option to load video files.
 
-  bool ogg = true;
+  var ogg = true;
 
   /// A list of alternative urls for video files in the case where the
   /// primary url does not work or the file type is not supported by the
@@ -30,12 +30,12 @@ class VideoLoadOptions {
   /// Do not stream the video but download the video file as a whole.
   /// A DataUrl string will be used for the VideoElement source.
 
-  bool loadData = false;
+  var loadData = false;
 
   /// Use CORS to download the video. This is often necessary when you have
   /// to download video from a third party server.
 
-  bool corsEnabled = false;
+  var corsEnabled = false;
 
   //---------------------------------------------------------------------------
 

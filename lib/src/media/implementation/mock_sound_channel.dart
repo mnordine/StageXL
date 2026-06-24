@@ -2,9 +2,9 @@ part of '../../media.dart';
 
 class MockSoundChannel extends SoundChannel {
   final MockSound _mockSound;
-  bool _stopped = false;
-  bool _paused = false;
-  bool _loop = false;
+  var _stopped = false;
+  var _paused = false;
+  var _loop = false;
 
   late SoundTransform _soundTransform;
 

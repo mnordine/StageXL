@@ -22,14 +22,14 @@ part of '../animation.dart';
 ///        ..onComplete = () => print("complete");
 ///
 class AnimationGroup implements Animatable {
-  final List<Animatable> _animatables = <Animatable>[];
+  final _animatables = <Animatable>[];
 
   void Function()? _onStart;
   void Function()? _onComplete;
 
   num _time = 0.0;
   num _delay = 0.0;
-  bool _started = false;
+  var _started = false;
   
   final _done = Completer<void>();
   

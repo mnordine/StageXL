@@ -7,16 +7,16 @@ import 'package:http/http.dart' as http;
 import '../errors.dart';
 
 class AudioLoader {
-  static final List<String> supportedTypes = _getSupportedTypes();
+  static final supportedTypes = _getSupportedTypes();
 
-  final HTMLAudioElement audio = HTMLAudioElement();
-  final AggregateError aggregateError = AggregateError('Error loading sound.');
-  final Completer<HTMLAudioElement> _completer = Completer<HTMLAudioElement>();
+  final audio = HTMLAudioElement();
+  final aggregateError = AggregateError('Error loading sound.');
+  final _completer = Completer<HTMLAudioElement>();
 
   late StreamSubscription<Event> _onCanPlaySubscription;
   late StreamSubscription<Event> _onErrorSubscription;
-  final List<String> _urls = <String>[];
-  bool _loadData = false;
+  final _urls = <String>[];
+  var _loadData = false;
 
   AudioLoader(List<String> urls, bool loadData, bool corsEnabled) {
     // we have to add the AudioElement to the document,

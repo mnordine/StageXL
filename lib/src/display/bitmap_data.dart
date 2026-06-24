@@ -21,7 +21,7 @@ class BitmapData implements BitmapDrawable {
   final num height;
   final RenderTextureQuad renderTextureQuad;
 
-  static BitmapDataLoadOptions defaultLoadOptions = BitmapDataLoadOptions();
+  static var defaultLoadOptions = BitmapDataLoadOptions();
 
   factory BitmapData(num width, num height,
       [int fillColor = 0xFFFFFFFF, num pixelRatio = 1.0]) {

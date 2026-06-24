@@ -84,3 +84,5 @@ linter:
     - use_string_buffers
     - use_super_parameters
     - invalid_runtime_check_with_js_interop_types
+    - omit_obvious_local_variable_types
+    - omit_obvious_property_types

@@ -66,12 +66,9 @@ class RenderEvent extends BroadcastEvent {
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
-final List<EventStreamSubscription<EnterFrameEvent>> _enterFrameSubscriptions =
-    <EventStreamSubscription<EnterFrameEvent>>[];
-final List<EventStreamSubscription<ExitFrameEvent>> _exitFrameSubscriptions =
-    <EventStreamSubscription<ExitFrameEvent>>[];
-final List<EventStreamSubscription<RenderEvent>> _renderSubscriptions =
-    <EventStreamSubscription<RenderEvent>>[];
+final _enterFrameSubscriptions = <EventStreamSubscription<EnterFrameEvent>>[];
+final _exitFrameSubscriptions = <EventStreamSubscription<ExitFrameEvent>>[];
+final _renderSubscriptions = <EventStreamSubscription<RenderEvent>>[];
 
 void _dispatchBroadcastEvent<T extends BroadcastEvent>(
     T broadcastEvent, List<EventStreamSubscription<T>> subscriptions) {

@@ -10,25 +10,25 @@ part of '../display.dart';
 class BitmapDataLoadOptions {
   /// The application provides *png* files for lossless images.
 
-  bool png = true;
+  var png = true;
 
   /// The application provides *jpg* files for lossy images.
 
-  bool jpg = true;
+  var jpg = true;
 
   /// The application provides *webp* files for lossless and lossy images.
   ///
   /// If *webp* is supported, the loader will automatically switch from *png*
   /// and *jpg* files to this more efficient file format.
 
-  bool webp = false;
+  var webp = false;
 
   /// The application provides *avif* files for lossless and lossy images.
   ///
   /// If *avif* is supported, the loader will automatically switch from *png*
   /// and *jpg* files to this more efficient file format.
 
-  bool avif = false;
+  var avif = false;
 
   /// The maximum pixel ratio for images on HiDPI displays.
   ///
@@ -75,12 +75,12 @@ class BitmapDataLoadOptions {
   ///     var resourceManager = new ResourceManager();
   ///     resourceManager.addBitmapData("test", "images/test@1.00x.png");
 
-  List<double> pixelRatios = <double>[1, 2];
+  var pixelRatios = <double>[1, 2];
 
   /// Use CORS to download the image. This is often necessary when you have
   /// to download images from a third party server.
 
-  bool corsEnabled = false;
+  var corsEnabled = false;
 
   //---------------------------------------------------------------------------
 

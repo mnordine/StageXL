@@ -28,7 +28,7 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
   final AssetManifest _manifest;
 
   BaseImageLoader? _imageLoader;
-  bool _cancelled = false;
+  var _cancelled = false;
 
   static const compressedTextureFormats = {'.pvr', '.pvr.gz', '.ktx'};
 

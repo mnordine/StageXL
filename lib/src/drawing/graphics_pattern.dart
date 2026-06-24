@@ -8,17 +8,10 @@ class GraphicsPatternType {
 
   const GraphicsPatternType(this.value, this.wrappingX, this.wrappingY);
 
-  static final GraphicsPatternType Repeat = GraphicsPatternType(
-      'repeat', RenderTextureWrapping.REPEAT, RenderTextureWrapping.REPEAT);
-
-  static final GraphicsPatternType RepeatX = GraphicsPatternType(
-      'repeat-x', RenderTextureWrapping.REPEAT, RenderTextureWrapping.CLAMP);
-
-  static final GraphicsPatternType RepeatY = GraphicsPatternType(
-      'repeat-y', RenderTextureWrapping.CLAMP, RenderTextureWrapping.REPEAT);
-
-  static final GraphicsPatternType NoRepeat = GraphicsPatternType(
-      'no-repeat', RenderTextureWrapping.CLAMP, RenderTextureWrapping.CLAMP);
+  static final Repeat = GraphicsPatternType('repeat', RenderTextureWrapping.REPEAT, RenderTextureWrapping.REPEAT);
+  static final RepeatX = GraphicsPatternType('repeat-x', RenderTextureWrapping.REPEAT, RenderTextureWrapping.CLAMP);
+  static final RepeatY = GraphicsPatternType('repeat-y', RenderTextureWrapping.CLAMP, RenderTextureWrapping.REPEAT);
+  static final NoRepeat = GraphicsPatternType('no-repeat', RenderTextureWrapping.CLAMP, RenderTextureWrapping.CLAMP);
 }
 
 //------------------------------------------------------------------------------
@@ -43,11 +36,9 @@ class _CanvasPatternKey {
 //------------------------------------------------------------------------------
 
 class GraphicsPattern {
-  static final SharedCache<_CanvasPatternKey, CanvasPattern?>
-      _canvasPatternCache = SharedCache<_CanvasPatternKey, CanvasPattern?>();
+  static final _canvasPatternCache = SharedCache<_CanvasPatternKey, CanvasPattern?>();
 
-  static final SharedCache<RenderTextureQuad?, RenderTexture?>
-      _patternTextureCache = SharedCache<RenderTextureQuad?, RenderTexture?>()
+  static final _patternTextureCache = SharedCache<RenderTextureQuad?, RenderTexture?>()
         ..onObjectReleased.listen((e) => e.object!.dispose());
 
   /// cached by the canvas2D renderer

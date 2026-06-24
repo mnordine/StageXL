@@ -21,8 +21,7 @@ class BlendMode {
   /// The display object appears in front of the background. Pixel values of the
   /// display object override those of the background. Where the display object
   /// is transparent, the background is visible.
-  static final BlendMode NORMAL =
-      BlendMode(WebGL.ONE, WebGL.ONE_MINUS_SRC_ALPHA, 'source-over');
+  static final NORMAL = BlendMode(WebGL.ONE, WebGL.ONE_MINUS_SRC_ALPHA, 'source-over');
 
   /// Adds the values of the constituent colors of the display object to the
   /// colors of its background, applying a ceiling of 0xFF.
@@ -34,7 +33,7 @@ class BlendMode {
   /// 0xAAA633, and the background pixel has an RGB value of 0xDD2200, the
   /// resulting RGB value for the displayed pixel is 0xFFC833 (because 0xAA +
   /// 0xDD > 0xFF, 0xA6 + 0x22 = 0xC8, and 0x33 + 0x00 = 0x33).
-  static final BlendMode ADD = BlendMode(WebGL.ONE, WebGL.ONE, 'lighter');
+  static final ADD = BlendMode(WebGL.ONE, WebGL.ONE, 'lighter');
 
   /// Multiplies the values of the display object constituent colors by the
   /// colors of the background color, and then normalizes by dividing by 0xFF,
@@ -47,36 +46,30 @@ class BlendMode {
   /// both have the value 0x88, the multiplied result is 0x4840. Dividing by
   /// 0xFF yields a value of 0x48 for that constituent color, which is a darker
   /// shade than the color of the display object or the color of the background.
-  static final BlendMode MULTIPLY =
-      BlendMode(WebGL.DST_COLOR, WebGL.ONE_MINUS_SRC_ALPHA, 'multiply');
+  static final MULTIPLY = BlendMode(WebGL.DST_COLOR, WebGL.ONE_MINUS_SRC_ALPHA, 'multiply');
 
   /// Multiplies the complement (inverse) of the display object color by the
   /// complement of the background color, resulting in a bleaching effect.
   ///
   /// This setting is commonly used for highlights or to remove black areas of
   /// the display object.
-  static final BlendMode SCREEN =
-      BlendMode(WebGL.ONE, WebGL.ONE_MINUS_SRC_COLOR, 'screen');
+  static final SCREEN = BlendMode(WebGL.ONE, WebGL.ONE_MINUS_SRC_COLOR, 'screen');
 
   /// Erases the background based on the alpha value of the display object.
-  static final BlendMode ERASE =
-      BlendMode(WebGL.ZERO, WebGL.ONE_MINUS_SRC_ALPHA, 'destination-out');
+  static final ERASE = BlendMode(WebGL.ZERO, WebGL.ONE_MINUS_SRC_ALPHA, 'destination-out');
 
   /// The display object appears in behind the background. Pixel values of the
   /// background object override those of the display object. Where the
   /// background is transparent, the display object is visible.
-  static final BlendMode BELOW =
-      BlendMode(WebGL.ONE_MINUS_DST_ALPHA, WebGL.ONE, 'destination-over');
+  static final BELOW = BlendMode(WebGL.ONE_MINUS_DST_ALPHA, WebGL.ONE, 'destination-over');
 
   /// The display object appears above the background. Pixel values of the
   /// display object are invisible where the backround is transparent.
-  static final BlendMode ABOVE = BlendMode(
-      WebGL.DST_ALPHA, WebGL.ONE_MINUS_SRC_ALPHA, 'source-atop');
+  static final ABOVE = BlendMode(WebGL.DST_ALPHA, WebGL.ONE_MINUS_SRC_ALPHA, 'source-atop');
 
   /// Works only in WebGL and may improve performance for big background images
   /// withoug alpha. The source pixels are not blended with the destination
   /// pixels and therefore the GPU does not read the color from the destination
   /// pixels.
-  static final BlendMode NONE =
-      BlendMode(WebGL.ONE, WebGL.ZERO, 'source-over');
+  static final NONE = BlendMode(WebGL.ONE, WebGL.ZERO, 'source-over');
 }

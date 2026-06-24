@@ -11,14 +11,12 @@ class GraphicsGradientColorStop {
 enum GraphicsGradientType { Linear, Radial }
 
 class GraphicsGradient {
-  static const int GRADIENT_TEXTURE_SIZE = 512;
+  static const GRADIENT_TEXTURE_SIZE = 512;
 
-  static final SharedCache<String, CanvasGradient> _canvasGradientCache =
-      SharedCache<String, CanvasGradient>();
+  static final _canvasGradientCache = SharedCache<String, CanvasGradient>();
 
-  static final SharedCache<String, RenderTexture> _gradientTextureCache =
-      SharedCache<String, RenderTexture>()
-        ..onObjectReleased.listen((e) => e.object.dispose());
+  static final _gradientTextureCache = SharedCache<String, RenderTexture>()
+      ..onObjectReleased.listen((e) => e.object.dispose());
 
   /// cached by the Canvas2D renderer
   CanvasGradient? _canvasGradient;

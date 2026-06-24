@@ -3,38 +3,38 @@
 part of '../text.dart';
 
 class TextField extends InteractiveObject {
-  String _text = '';
+  var _text = '';
   late TextFormat _defaultTextFormat;
 
   String _autoSize = TextFieldAutoSize.NONE;
   String _type = TextFieldType.DYNAMIC;
 
-  int _caretIndex = 0;
-  int _caretLine = 0;
+  var _caretIndex = 0;
+  var _caretLine = 0;
   num _caretTime = 0.0;
   num _caretX = 0.0;
   num _caretY = 0.0;
   num _caretWidth = 0.0;
   num _caretHeight = 0.0;
 
-  bool _wordWrap = false;
-  bool _multiline = false;
-  bool _displayAsPassword = false;
-  bool _background = false;
-  bool _border = false;
-  String _passwordChar = '•';
+  var _wordWrap = false;
+  var _multiline = false;
+  var _displayAsPassword = false;
+  var _background = false;
+  var _border = false;
+  var _passwordChar = '•';
   int _backgroundColor = Color.White;
   int _borderColor = Color.Black;
-  int maxChars = 0;
+  var maxChars = 0;
   num _width = 100;
   num _height = 100;
 
   num _textWidth = 0.0;
   num _textHeight = 0.0;
-  final List<TextLineMetrics> _textLineMetrics = <TextLineMetrics>[];
+  final _textLineMetrics = <TextLineMetrics>[];
 
-  int _refreshPending = 3; // bit 0: textLineMetrics, bit 1: cache
-  bool _cacheAsBitmap = true;
+  var _refreshPending = 3; // bit 0: textLineMetrics, bit 1: cache
+  var _cacheAsBitmap = true;
 
   RenderTexture? _renderTexture;
   RenderTextureQuad? _renderTextureQuad;
