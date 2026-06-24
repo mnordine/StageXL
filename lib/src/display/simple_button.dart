@@ -118,16 +118,11 @@ class SimpleButton extends InteractiveObject {
 
   //---------------------------------------------------------------------------
 
-  DisplayObject? _getDisplayObject() {
-    switch (_state) {
-      case .Up:
-        return upState;
-      case .Over:
-        return overState;
-      case .Down:
-        return downState;
-    }
-  }
+  DisplayObject? _getDisplayObject() => switch (_state) {
+    .Up => upState,
+    .Over => overState,
+    .Down => downState,
+  };
 
   void _onMouseEvent(MouseEvent mouseEvent) {
     if (_enabled == false) {

@@ -119,18 +119,10 @@ abstract class _GraphicsMeshSegment {
     final renderContext = renderState.renderContext as RenderContextWebGL;
     final renderTexture = gradient.getRenderTexture();
 
-    _GraphicsGradientProgram renderProgram;
-
-    switch (gradient.type) {
-      case .Linear:
-        renderProgram = renderContext.getRenderProgram(
-            r'$LinearGraphicsGradientProgram',
-            _LinearGraphicsGradientProgram.new);
-      case .Radial:
-        renderProgram = renderContext.getRenderProgram(
-            r'$RadialGraphicsGradientProgram',
-            _RadialGraphicsGradientProgram.new);
-    }
+    final renderProgram = switch (gradient.type) {
+      .Linear => renderContext.getRenderProgram(r'$LinearGraphicsGradientProgram', _LinearGraphicsGradientProgram.new),
+      .Radial => renderContext.getRenderProgram(r'$RadialGraphicsGradientProgram', _RadialGraphicsGradientProgram.new),
+    };
 
     if (renderProgram.activeGradient != gradient) {
       renderProgram.activeGradient = gradient;

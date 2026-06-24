@@ -31,32 +31,19 @@ class TweenPropertyAccessor2D implements TweenPropertyAccessor {
   TweenProperty get alpha => _tween._createTweenProperty(this, 9);
 
   @override
-  num _getValue(int propertyID) {
-    switch (propertyID) {
-      case 0:
-        return _tweenObject.x;
-      case 1:
-        return _tweenObject.y;
-      case 2:
-        return _tweenObject.pivotX;
-      case 3:
-        return _tweenObject.pivotY;
-      case 4:
-        return _tweenObject.scaleX;
-      case 5:
-        return _tweenObject.scaleY;
-      case 6:
-        return _tweenObject.skewX;
-      case 7:
-        return _tweenObject.skewY;
-      case 8:
-        return _tweenObject.rotation;
-      case 9:
-        return _tweenObject.alpha;
-      default:
-        return 0.0;
-    }
-  }
+  num _getValue(int propertyID) => switch (propertyID) {
+    0 => _tweenObject.x,
+    1 => _tweenObject.y,
+    2 => _tweenObject.pivotX,
+    3 => _tweenObject.pivotY,
+    4 => _tweenObject.scaleX,
+    5 => _tweenObject.scaleY,
+    6 => _tweenObject.skewX,
+    7 => _tweenObject.skewY,
+    8 => _tweenObject.rotation,
+    9 => _tweenObject.alpha,
+    _ => 0.0,
+  };
 
   @override
   void _setValue(int propertyID, num value) {
@@ -103,24 +90,15 @@ class TweenPropertyAccessor3D implements TweenPropertyAccessor {
   TweenProperty get rotationZ => _tween._createTweenProperty(this, 5);
 
   @override
-  num _getValue(int propertyID) {
-    switch (propertyID) {
-      case 0:
-        return _tweenObject.offsetX;
-      case 1:
-        return _tweenObject.offsetY;
-      case 2:
-        return _tweenObject.offsetZ;
-      case 3:
-        return _tweenObject.rotationX;
-      case 4:
-        return _tweenObject.rotationY;
-      case 5:
-        return _tweenObject.rotationZ;
-      default:
-        return 0.0;
-    }
-  }
+  num _getValue(int propertyID) =>  switch (propertyID) {
+    0 => _tweenObject.offsetX,
+    1 => _tweenObject.offsetY,
+    2 => _tweenObject.offsetZ,
+    3 => _tweenObject.rotationX,
+    4 => _tweenObject.rotationY,
+    5 => _tweenObject.rotationZ,
+    _ => 0.0,
+  };
 
   @override
   void _setValue(int propertyID, num value) {

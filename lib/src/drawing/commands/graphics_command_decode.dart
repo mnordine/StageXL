@@ -37,14 +37,14 @@ class GraphicsCommandDecodeEaselJS extends GraphicsCommandDecode {
     this.path = path;
   }
 
-  int _base64(int codeUnit) {
-    if (codeUnit >= 0x41 && codeUnit <= 0x5A) return codeUnit - 0x41 + 0;
-    if (codeUnit >= 0x61 && codeUnit <= 0x7A) return codeUnit - 0x61 + 26;
-    if (codeUnit >= 0x30 && codeUnit <= 0x39) return codeUnit - 0x30 + 52;
-    if (codeUnit == 0x2B) return 62;
-    if (codeUnit == 0x2F) return 63;
-    return 0;
-  }
+  int _base64(int codeUnit) => switch (codeUnit) {
+    >= 0x41 && <= 0x5A => codeUnit - 0x41 + 0,
+    >= 0x61 && <= 0x7A => codeUnit - 0x61 + 26,
+    >= 0x30 && <= 0x39 => codeUnit - 0x30 + 52,
+    0x2B => 62,
+    0x2F => 63,
+    _ => 0
+  };
 
   @override
   void _decodePath() {

@@ -101,16 +101,11 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
       ext = filenameParts[filenameParts.length - 2];
     }
 
-    CompressedTextureFileTypes type;
-
-    switch (ext) {
-      case 'pvr':
-        type = .pvr;
-      case 'ktx':
-        type = .ktx;
-      default:
-        throw LoadError('unknown extension $ext');
-    }
+    final type = switch (ext) {
+      'pvr' => CompressedTextureFileTypes.pvr,
+      'ktx' => CompressedTextureFileTypes.ktx,
+      _ => throw LoadError('unknown extension $ext'),
+    };
 
     return http.get(.parse(filename))
       .then((response) {
@@ -128,14 +123,10 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
       });
   }
 
-  RenderTexture _decodeCompressedTexture(ByteBuffer buffer, CompressedTextureFileTypes type) {
-    switch (type) {
-      case .pvr:
-        return _decodePvr(buffer);
-      case .ktx:
-        return _decodeKtx(buffer);
-    }
-  }
+  RenderTexture _decodeCompressedTexture(ByteBuffer buffer, CompressedTextureFileTypes type) => switch (type) {
+    .pvr => _decodePvr(buffer),
+    .ktx => _decodeKtx(buffer),
+  };
 
   RenderTexture _decodePvr(ByteBuffer buffer) {
     final tex = PvrTexture(buffer);

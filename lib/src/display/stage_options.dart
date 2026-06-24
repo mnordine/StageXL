@@ -121,20 +121,17 @@ class StageOptions {
 
   var _shaderPrecision = 'mediump';
 
-  ShaderPrecision get shaderPrecision {
-    switch (_shaderPrecision) {
-      case 'mediump': return ShaderPrecision.medium;
-      case 'highp': return ShaderPrecision.high;
-    }
-
-    throw ArgumentError('cannot get here');
-  }
+  ShaderPrecision get shaderPrecision => switch (_shaderPrecision) {
+    'mediump' => .medium,
+    'highp' => .high,
+    _ => throw ArgumentError('cannot get here'),
+  };
 
   set shaderPrecision(ShaderPrecision value) {
-    switch (value) {
-      case .medium: _shaderPrecision = 'mediump';
-      case .high: _shaderPrecision = 'highp';
-    }
+    _shaderPrecision = switch (value) {
+      .medium => 'mediump',
+      .high => 'highp',
+    };
 
     RenderProgram.fragmentPrecision = _shaderPrecision;
   }
