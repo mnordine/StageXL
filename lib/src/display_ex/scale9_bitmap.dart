@@ -10,7 +10,7 @@ class Scale9Bitmap extends Bitmap {
   num _width = 0.0;
   num _height = 0.0;
 
-  final List<RenderTextureQuad?> _slices = List.filled(9, null);
+  final List<RenderTextureQuad?> _slices = .filled(9, null);
 
   Scale9Bitmap(BitmapData bitmapData, Rectangle<num> grid)
       : _grid = grid,

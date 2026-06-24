@@ -17,7 +17,7 @@ class MockSound extends Sound {
   //-------------------------------------------------------------------------------------------------
 
   @override
-  SoundEngine get engine => SoundEngine.Mockup;
+  SoundEngine get engine => .Mockup;
 
   @override
   num get length => double.nan;

@@ -18,7 +18,7 @@ class ImageBitmapLoader implements BaseImageLoader<ImageBitmap> {
   }
 
   void _load(String url) {
-    http.get(Uri.parse(url)).then((response) {
+    http.get(.parse(url)).then((response) {
       if (_cancelled) {
         _completer.completeError(LoadError('image bitmap load cancelled'));
         return;

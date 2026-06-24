@@ -43,7 +43,7 @@ class _RenderTextureQuadObject implements RenderObject {
   final transformationMatrix = Matrix.fromIdentity();
 
   @override
-  final BlendMode blendMode = BlendMode.NORMAL;
+  final BlendMode blendMode = .NORMAL;
 
   @override
   final RenderTextureQuad? cache;

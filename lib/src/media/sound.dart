@@ -28,9 +28,9 @@ abstract class Sound {
   static Future<Sound> load(String url, [SoundLoadOptions? soundLoadOptions, AssetManifest? manifest]) {
     final options = soundLoadOptions ?? Sound.defaultLoadOptions;
     switch (options.engine ?? SoundMixer.engine) {
-      case SoundEngine.WebAudioApi:
+      case .WebAudioApi:
         return WebAudioApiSound.load(url, options, manifest);
-      case SoundEngine.AudioElement:
+      case .AudioElement:
         return AudioElementSound.load(url, options, manifest);
       default:
         return MockSound.load(url, options);
@@ -49,9 +49,9 @@ abstract class Sound {
       [SoundLoadOptions? soundLoadOptions]) {
     final options = soundLoadOptions ?? Sound.defaultLoadOptions;
     switch (options.engine ?? SoundMixer.engine) {
-      case SoundEngine.WebAudioApi:
+      case .WebAudioApi:
         return WebAudioApiSound.loadDataUrl(dataUrl, options);
-      case SoundEngine.AudioElement:
+      case .AudioElement:
         return AudioElementSound.loadDataUrl(dataUrl, options);
       default:
         return MockSound.loadDataUrl(dataUrl, options);

@@ -52,7 +52,7 @@ class AudioElementSound extends Sound {
   //---------------------------------------------------------------------------
 
   @override
-  SoundEngine get engine => SoundEngine.AudioElement;
+  SoundEngine get engine => .AudioElement;
 
   @override
   num get length => _audioElement.duration;

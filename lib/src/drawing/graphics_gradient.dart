@@ -131,7 +131,7 @@ class GraphicsGradient {
       _canvasGradient = _canvasGradientCache.getObject(_canvasCacheKey!);
     }
 
-    if (_canvasGradient == null && _type == GraphicsGradientType.Linear) {
+    if (_canvasGradient == null && _type == .Linear) {
       _canvasGradient =
           context.createLinearGradient(_startX, _startY, _endX, _endY);
       _colorStops.forEach((cs) =>
@@ -139,7 +139,7 @@ class GraphicsGradient {
       _canvasGradientCache.addObject(_canvasCacheKey!, _canvasGradient!);
     }
 
-    if (_canvasGradient == null && _type == GraphicsGradientType.Radial) {
+    if (_canvasGradient == null && _type == .Radial) {
       _canvasGradient = context.createRadialGradient(
           _startX, _startY, _startRadius, _endX, _endY, _endRadius);
       _colorStops.forEach((cs) =>
@@ -166,7 +166,7 @@ class GraphicsGradient {
           (cs) => canvasGradient.addColorStop(cs.offset, color2rgba(cs.color)));
       canvas.context2D.fillStyle = canvasGradient;
       canvas.context2D.fillRect(0, 0, 1, GRADIENT_TEXTURE_SIZE);
-      _gradientTexture = RenderTexture.fromCanvasElement(canvas);
+      _gradientTexture = .fromCanvasElement(canvas);
       _gradientTextureCache.addObject(_textureCacheKey!, _gradientTexture!);
     }
 
@@ -177,13 +177,13 @@ class GraphicsGradient {
     // TODO: Profile to see if using a StringBuffer is faster here.
     var key = '';
 
-    if (_type == GraphicsGradientType.Linear) {
+    if (_type == .Linear) {
       key += 'L';
       key += '_' + _startX.toStringAsFixed(3);
       key += '_' + _startY.toStringAsFixed(3);
       key += '_' + _endX.toStringAsFixed(3);
       key += '_' + _endY.toStringAsFixed(3);
-    } else if (_type == GraphicsGradientType.Radial) {
+    } else if (_type == .Radial) {
       key += 'R';
       key += '_' + _startX.toStringAsFixed(3);
       key += '_' + _startY.toStringAsFixed(3);

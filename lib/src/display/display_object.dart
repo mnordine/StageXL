@@ -667,7 +667,7 @@ abstract class DisplayObject extends EventDispatcher
   /// you are working with 3D display objects.
 
   Matrix3D getTransformationMatrix3D(DisplayObject targetSpace) {
-    if (targetSpace == this) return Matrix3D.fromIdentity();
+    if (targetSpace == this) return .fromIdentity();
 
     final ancestor = _getCommonAncestor(targetSpace);
 
@@ -740,15 +740,15 @@ abstract class DisplayObject extends EventDispatcher
   /// Aligns the display object's pivot point relative to the current bounds.
 
   void alignPivot(
-      [HorizontalAlign hAlign = HorizontalAlign.Center,
-      VerticalAlign vAlign = VerticalAlign.Center]) {
+      [HorizontalAlign hAlign = .Center,
+      VerticalAlign vAlign = .Center]) {
     final b = bounds;
-    if (hAlign == HorizontalAlign.Left) pivotX = b.left;
-    if (hAlign == HorizontalAlign.Center) pivotX = b.left + b.width / 2;
-    if (hAlign == HorizontalAlign.Right) pivotX = b.right;
-    if (vAlign == VerticalAlign.Top) pivotY = b.top;
-    if (vAlign == VerticalAlign.Center) pivotY = b.top + b.height / 2;
-    if (vAlign == VerticalAlign.Bottom) pivotY = b.bottom;
+    if (hAlign == .Left) pivotX = b.left;
+    if (hAlign == .Center) pivotX = b.left + b.width / 2;
+    if (hAlign == .Right) pivotX = b.right;
+    if (vAlign == .Top) pivotY = b.top;
+    if (vAlign == .Center) pivotY = b.top + b.height / 2;
+    if (vAlign == .Bottom) pivotY = b.bottom;
   }
 
   //----------------------------------------------------------------------------
@@ -924,15 +924,15 @@ abstract class DisplayObject extends EventDispatcher
     }
 
     for (var i = ancestors.length - 1; i >= 0 && event.captures; i--) {
-      ancestors[i].dispatchEventRaw(event, this, EventPhase.CAPTURING_PHASE);
+      ancestors[i].dispatchEventRaw(event, this, .CAPTURING_PHASE);
       if (event.isPropagationStopped) return;
     }
 
-    dispatchEventRaw(event, this, EventPhase.AT_TARGET);
+    dispatchEventRaw(event, this, .AT_TARGET);
     if (event.isPropagationStopped) return;
 
     for (var i = 0; i < ancestors.length && event.bubbles; i++) {
-      ancestors[i].dispatchEventRaw(event, this, EventPhase.BUBBLING_PHASE);
+      ancestors[i].dispatchEventRaw(event, this, .BUBBLING_PHASE);
       if (event.isPropagationStopped) return;
     }
   }

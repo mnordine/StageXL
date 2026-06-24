@@ -12,8 +12,8 @@ class RenderFrameBuffer {
   final _maskStates = <_MaskState>[];
 
   RenderFrameBuffer.rawWebGL(int width, int height) {
-    _renderTexture = RenderTexture.rawWebGL(width, height);
-    _renderStencilBuffer = RenderStencilBuffer.rawWebGL(width, height);
+    _renderTexture = .rawWebGL(width, height);
+    _renderStencilBuffer = .rawWebGL(width, height);
   }
 
   //---------------------------------------------------------------------------

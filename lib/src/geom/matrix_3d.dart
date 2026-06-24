@@ -26,7 +26,7 @@ class Matrix3D {
     copyFrom(matrix);
   }
 
-  Matrix3D clone() => Matrix3D.fromMatrix3D(this);
+  Matrix3D clone() => .fromMatrix3D(this);
 
   //-----------------------------------------------------------------------------------------------
 

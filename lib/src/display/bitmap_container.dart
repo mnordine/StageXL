@@ -23,8 +23,7 @@ class BitmapContainer extends DisplayObject
   //---------------------------------------------------------------------------
 
   @override
-  DisplayObjectChildren<Bitmap> get children =>
-      DisplayObjectChildren<Bitmap>._(this, _children);
+  DisplayObjectChildren<Bitmap> get children => ._(this, _children);
 
   @override
   int get numChildren => _children.length;

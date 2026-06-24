@@ -86,7 +86,7 @@ void _dispatchBroadcastEvent<T extends BroadcastEvent>(
       broadcastEvent._isImmediatePropagationStopped = false;
       broadcastEvent._target = subscription.eventStream.target;
       broadcastEvent._currentTarget = subscription.eventStream.target;
-      broadcastEvent._eventPhase = EventPhase.AT_TARGET;
+      broadcastEvent._eventPhase = .AT_TARGET;
       if (subscription.eventListener != null) {
         subscription.eventListener!(broadcastEvent);
       }

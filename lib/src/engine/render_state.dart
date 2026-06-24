@@ -2,7 +2,7 @@ part of '../engine.dart';
 
 class _ContextState {
   double alpha = 1;
-  BlendMode blendMode = BlendMode.NORMAL;
+  BlendMode blendMode = .NORMAL;
 
   final matrix = Matrix.fromIdentity();
   final matrix3D = Matrix3D.fromIdentity();
@@ -62,7 +62,7 @@ class RenderState {
     final currentContextState = _currentContextState = _firstContextState;
     currentContextState.matrix.identity();
     currentContextState.alpha = 1.0;
-    currentContextState.blendMode = BlendMode.NORMAL;
+    currentContextState.blendMode = .NORMAL;
 
     if (matrix is Matrix) _firstContextState.matrix.copyFrom(matrix);
     if (alpha is num) _firstContextState.alpha = alpha.toDouble();

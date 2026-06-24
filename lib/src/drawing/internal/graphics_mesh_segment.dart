@@ -122,11 +122,11 @@ abstract class _GraphicsMeshSegment {
     _GraphicsGradientProgram renderProgram;
 
     switch (gradient.type) {
-      case GraphicsGradientType.Linear:
+      case .Linear:
         renderProgram = renderContext.getRenderProgram(
             r'$LinearGraphicsGradientProgram',
             _LinearGraphicsGradientProgram.new);
-      case GraphicsGradientType.Radial:
+      case .Radial:
         renderProgram = renderContext.getRenderProgram(
             r'$RadialGraphicsGradientProgram',
             _RadialGraphicsGradientProgram.new);

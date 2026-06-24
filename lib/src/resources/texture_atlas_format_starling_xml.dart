@@ -65,7 +65,7 @@ class _TextureAtlasFormatStarlingXml extends TextureAtlasFormat {
 
   int _getInt(XmlElement xml, String name, int defaultValue) {
     final value = _getAttributeValue(xml, name);
-    return value is String ? int.parse(value) : defaultValue;
+    return value is String ? .parse(value) : defaultValue;
   }
 
   bool _getBool(XmlElement xml, String name, bool defaultValue) {

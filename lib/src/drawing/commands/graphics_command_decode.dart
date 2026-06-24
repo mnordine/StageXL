@@ -123,7 +123,7 @@ class GraphicsCommandDecodeSVG extends GraphicsCommandDecode {
       for (var parameterMatch in parameter.split(_parameterRegExp)) {
         parameterMatch = parameterMatch.trim();
         if (parameterMatch.isNotEmpty) {
-          p.add(double.parse(parameterMatch));
+          p.add(.parse(parameterMatch));
         }
       }
 

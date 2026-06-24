@@ -13,7 +13,7 @@ class StageOptions {
   /// Setting the render engine to WebGL will automatically fallback
   /// to Canvas2D if WebGL is not supported.
 
-  RenderEngine renderEngine = RenderEngine.WebGL2;
+  RenderEngine renderEngine = .WebGL2;
 
   /// The [InputEventMode] used for input events on the [Stage].
   ///
@@ -22,11 +22,11 @@ class StageOptions {
   /// you won't get any input events if you choose `TouchOnly` when
   /// there is no touch screen available.
 
-  InputEventMode inputEventMode = InputEventMode.MouseOnly;
+  InputEventMode inputEventMode = .MouseOnly;
 
   /// The [StageRenderMode] used to render the [Stage].
 
-  StageRenderMode stageRenderMode = StageRenderMode.AUTO;
+  StageRenderMode stageRenderMode = .AUTO;
 
   /// The [StageScaleMode] used to render the [Stage].
   ///
@@ -35,7 +35,7 @@ class StageOptions {
   /// can change the behavior at runtime by changing the [Stage.scaleMode]
   /// property.
 
-  StageScaleMode stageScaleMode = StageScaleMode.SHOW_ALL;
+  StageScaleMode stageScaleMode = .SHOW_ALL;
 
   /// The [StageAlign] used to render the [Stage].
   ///
@@ -43,7 +43,7 @@ class StageOptions {
   /// is aligned on the canvas element. You can change the behavior at
   /// runtime by changing the [Stage.align] property.
 
-  StageAlign stageAlign = StageAlign.NONE;
+  StageAlign stageAlign = .NONE;
 
   /// The background color for the [Stage].
   ///
@@ -117,7 +117,7 @@ class StageOptions {
   var preventDefaultOnKeyboard = false;
 
   /// The power preference for the WebGL render engine.
-  PowerPreference powerPreference = PowerPreference.normal;
+  PowerPreference powerPreference = .normal;
 
   var _shaderPrecision = 'mediump';
 
@@ -132,8 +132,8 @@ class StageOptions {
 
   set shaderPrecision(ShaderPrecision value) {
     switch (value) {
-      case ShaderPrecision.medium: _shaderPrecision = 'mediump';
-      case ShaderPrecision.high: _shaderPrecision = 'highp';
+      case .medium: _shaderPrecision = 'mediump';
+      case .high: _shaderPrecision = 'highp';
     }
 
     RenderProgram.fragmentPrecision = _shaderPrecision;

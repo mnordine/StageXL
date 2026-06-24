@@ -53,7 +53,7 @@ class BitmapDataLoadOptions {
 
   @Deprecated('Use pixelRatios instead')
   set maxPixelRatio(int value) {
-    pixelRatios = List<double>.generate(value, (v) => 1.0 + v);
+    pixelRatios = .generate(value, (v) => 1.0 + v);
   }
 
   /// The available pixel ratios for images on HiDPI displays.
@@ -92,7 +92,7 @@ class BitmapDataLoadOptions {
     options.jpg = jpg;
     options.webp = webp;
     options.avif = avif;
-    options.pixelRatios = List<double>.from(pixelRatios);
+    options.pixelRatios = .from(pixelRatios);
     options.corsEnabled = corsEnabled;
     return options;
   }

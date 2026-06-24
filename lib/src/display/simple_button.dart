@@ -71,7 +71,7 @@ class SimpleButton extends InteractiveObject {
   set enabled(bool value) {
     if (_enabled != value) {
       _enabled = value;
-      _state = SimpleButtonState.Up;
+      _state = .Up;
     }
   }
 
@@ -84,7 +84,7 @@ class SimpleButton extends InteractiveObject {
 
   SimpleButtonState get state => _state;
 
-  SimpleButtonState _state = SimpleButtonState.Up;
+  SimpleButtonState _state = .Up;
 
   //---------------------------------------------------------------------------
 
@@ -120,11 +120,11 @@ class SimpleButton extends InteractiveObject {
 
   DisplayObject? _getDisplayObject() {
     switch (_state) {
-      case SimpleButtonState.Up:
+      case .Up:
         return upState;
-      case SimpleButtonState.Over:
+      case .Over:
         return overState;
-      case SimpleButtonState.Down:
+      case .Down:
         return downState;
     }
   }
@@ -134,11 +134,11 @@ class SimpleButton extends InteractiveObject {
       // don't change the state
     }
     if (mouseEvent.type == MouseEvent.MOUSE_OUT) {
-      _state = SimpleButtonState.Up;
+      _state = .Up;
     } else if (mouseEvent.buttonDown) {
-      _state = SimpleButtonState.Down;
+      _state = .Down;
     } else {
-      _state = SimpleButtonState.Over;
+      _state = .Over;
     }
   }
 
@@ -149,13 +149,13 @@ class SimpleButton extends InteractiveObject {
     if (touchEvent.isPrimaryTouchPoint == false) {
       // don't change the state
     } else if (touchEvent.type == TouchEvent.TOUCH_OVER) {
-      _state = SimpleButtonState.Down;
+      _state = .Down;
     } else if (touchEvent.type == TouchEvent.TOUCH_OUT) {
-      _state = SimpleButtonState.Up;
+      _state = .Up;
     } else if (touchEvent.type == TouchEvent.TOUCH_BEGIN) {
-      _state = SimpleButtonState.Down;
+      _state = .Down;
     } else if (touchEvent.type == TouchEvent.TOUCH_END) {
-      _state = SimpleButtonState.Up;
+      _state = .Up;
     }
   }
 }

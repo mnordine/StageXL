@@ -132,7 +132,7 @@ class Rectangle<T extends num> implements math.MutableRectangle<T> {
     final rTop = min(top, other.top);
     final rRight = max(right, other.right);
     final rBottom = max(bottom, other.bottom);
-    return Rectangle<T>(rLeft, rTop, rRight - rLeft as T, rBottom - rTop as T);
+    return .new(rLeft, rTop, rRight - rLeft as T, rBottom - rTop as T);
   }
 
   /// Tests whether `this` entirely contains [another].
@@ -178,7 +178,7 @@ class Rectangle<T extends num> implements math.MutableRectangle<T> {
     final rTop = max(top, rect.top);
     final rRight = min(right, rect.right);
     final rBottom = min(bottom, rect.bottom);
-    return Rectangle<T>(rLeft, rTop, rRight - rLeft as T, rBottom - rTop as T);
+    return .new(rLeft, rTop, rRight - rLeft as T, rBottom - rTop as T);
   }
 
   Rectangle<int> align() {
@@ -186,6 +186,6 @@ class Rectangle<T extends num> implements math.MutableRectangle<T> {
     final rTop = top.floor();
     final rRight = right.ceil();
     final rBottom = bottom.ceil();
-    return Rectangle<int>(rLeft, rTop, rRight - rLeft, rBottom - rTop);
+    return .new(rLeft, rTop, rRight - rLeft, rBottom - rTop);
   }
 }

@@ -5,9 +5,9 @@ import 'package:stagexl/stagexl.dart';
 
 void main() {
   final options = StageOptions()
-    ..stageAlign = StageAlign.TOP_LEFT
-    ..stageScaleMode = StageScaleMode.NO_SCALE
-    ..renderEngine = RenderEngine.WebGL;
+    ..stageAlign = .TOP_LEFT
+    ..stageScaleMode = .NO_SCALE
+    ..renderEngine = .WebGL;
 
   final canvas = html.document.querySelector('#stage') as html.HTMLCanvasElement;
   final stage = Stage(canvas, width: 990, height: 620, options: options);

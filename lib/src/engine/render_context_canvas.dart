@@ -5,7 +5,7 @@ class RenderContextCanvas extends RenderContext {
   final CanvasRenderingContext2D _renderingContext;
 
   final _identityMatrix = Matrix.fromIdentity();
-  BlendMode _activeBlendMode = BlendMode.NORMAL;
+  BlendMode _activeBlendMode = .NORMAL;
   double _activeAlpha = 1;
 
   RenderContextCanvas(this._canvasElement)
@@ -18,7 +18,7 @@ class RenderContextCanvas extends RenderContext {
   CanvasRenderingContext2D get rawContext => _renderingContext;
 
   @override
-  RenderEngine get renderEngine => RenderEngine.Canvas2D;
+  RenderEngine get renderEngine => .Canvas2D;
 
   //---------------------------------------------------------------------------
   @override
@@ -30,14 +30,14 @@ class RenderContextCanvas extends RenderContext {
   @override
   void reset() {
     setTransform(_identityMatrix);
-    setBlendMode(BlendMode.NORMAL);
+    setBlendMode(.NORMAL);
     setAlpha(1);
   }
 
   @override
   void clear(int color) {
     setTransform(_identityMatrix);
-    setBlendMode(BlendMode.NORMAL);
+    setBlendMode(.NORMAL);
     setAlpha(1);
 
     final alpha = colorGetA(color);

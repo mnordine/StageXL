@@ -29,7 +29,7 @@ class BitmapData implements BitmapDrawable {
     final textureHeight = (height * pixelRatio).round();
     final renderTexture = RenderTexture(textureWidth, textureHeight, fillColor);
     final renderTextureQuad = renderTexture.quad.withPixelRatio(pixelRatio);
-    return BitmapData.fromRenderTextureQuad(renderTextureQuad);
+    return .fromRenderTextureQuad(renderTextureQuad);
   }
 
   BitmapData.fromRenderTextureQuad(this.renderTextureQuad)
@@ -40,27 +40,27 @@ class BitmapData implements BitmapDrawable {
       [num pixelRatio = 1.0]) {
     final renderTexture = RenderTexture.fromImageElement(imageElement);
     final renderTextureQuad = renderTexture.quad.withPixelRatio(pixelRatio);
-    return BitmapData.fromRenderTextureQuad(renderTextureQuad);
+    return .fromRenderTextureQuad(renderTextureQuad);
   }
 
   factory BitmapData.fromImageBitmap(ImageBitmap imageBitmap,
       [num pixelRatio = 1.0]) {
     final renderTexture = RenderTexture.fromImageBitmap(imageBitmap);
     final renderTextureQuad = renderTexture.quad.withPixelRatio(pixelRatio);
-    return BitmapData.fromRenderTextureQuad(renderTextureQuad);
+    return .fromRenderTextureQuad(renderTextureQuad);
   }
 
   factory BitmapData.fromVideoElement(HTMLVideoElement videoElement,
       [num pixelRatio = 1.0]) {
     final renderTexture = RenderTexture.fromVideoElement(videoElement);
     final renderTextureQuad = renderTexture.quad.withPixelRatio(pixelRatio);
-    return BitmapData.fromRenderTextureQuad(renderTextureQuad);
+    return .fromRenderTextureQuad(renderTextureQuad);
   }
 
   factory BitmapData.fromBitmapData(
       BitmapData bitmapData, Rectangle<num> rectangle) {
     final renderTextureQuad = bitmapData.renderTextureQuad.cut(rectangle);
-    return BitmapData.fromRenderTextureQuad(renderTextureQuad);
+    return .fromRenderTextureQuad(renderTextureQuad);
   }
 
   //----------------------------------------------------------------------------
@@ -87,11 +87,11 @@ class BitmapData implements BitmapDrawable {
     if (env.isImageBitmapSupported) {
       final loader = ImageBitmapLoader(targetUrl);
       final imageBitmap = await loader.done;
-      return BitmapData.fromImageBitmap(imageBitmap, pixelRatio);
+      return .fromImageBitmap(imageBitmap, pixelRatio);
     }
 
     final loader = ImageLoader(targetUrl, options.corsEnabled);
-    return loader.done.then((i) => BitmapData.fromImageElement(i, pixelRatio));
+    return loader.done.then((i) => .fromImageElement(i, pixelRatio));
   }
 
   //----------------------------------------------------------------------------

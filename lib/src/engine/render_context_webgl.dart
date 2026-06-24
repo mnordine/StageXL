@@ -95,7 +95,7 @@ class RenderContextWebGL extends RenderContext {
 
     // Initialize max textures for RenderProgramBatch
     final maxTextureUnits = RenderProgramBatch.initializeMaxTextures(_renderingContext, isWebGL2: _isWebGL2);
-    _activeRenderTextures = List.filled(maxTextureUnits, null);
+    _activeRenderTextures = .filled(maxTextureUnits, null);
 
     _contextValid = true;
     _contextIdentifier = ++_globalContextIdentifier;
@@ -345,7 +345,7 @@ class RenderContextWebGL extends RenderContext {
   GLContext get rawContext => _renderingContext;
 
   @override
-  RenderEngine get renderEngine => _isWebGL2 ? RenderEngine.WebGL2 : RenderEngine.WebGL;
+  RenderEngine get renderEngine => _isWebGL2 ? .WebGL2 : .WebGL;
 
   @override
   int? get maxTextureSize => (_renderingContext.getParameter(WebGL.MAX_TEXTURE_SIZE) as JSNumber?)?.toDartInt;
@@ -387,8 +387,8 @@ class RenderContextWebGL extends RenderContext {
       _activeRenderProgram.projectionMatrix = _projectionMatrix;
     }
 
-    if (_activeBlendMode != BlendMode.NORMAL) {
-      _activeBlendMode = BlendMode.NORMAL;
+    if (_activeBlendMode != .NORMAL) {
+      _activeBlendMode = .NORMAL;
       _renderingContext.blendFunc(WebGL.ONE, WebGL.ONE_MINUS_SRC_ALPHA);
     }
   }
@@ -561,7 +561,7 @@ class RenderContextWebGL extends RenderContext {
 
   void _renderFullScreenQuadFallback() {
     activateRenderProgram(renderProgramTriangle);
-    activateBlendMode(BlendMode.NONE);
+    activateBlendMode(.NONE);
 
     renderProgramTriangle.renderTriangleMesh(
       RenderState(this),
@@ -693,7 +693,7 @@ class RenderContextWebGL extends RenderContext {
 
     activateRenderFrameBuffer(filterRenderFrameBuffer);
     activateProjectionMatrix(filterProjectionMatrix);
-    activateBlendMode(BlendMode.NORMAL);
+    activateBlendMode(.NORMAL);
     clear(0);
 
     if (filters.isEmpty) {
@@ -753,13 +753,13 @@ class RenderContextWebGL extends RenderContext {
         } else if (renderFrameBufferMap.containsKey(renderPassTarget)) {
           filterRenderFrameBuffer = renderFrameBufferMap[renderPassTarget];
           activateRenderFrameBuffer(filterRenderFrameBuffer);
-          activateBlendMode(BlendMode.NORMAL);
+          activateBlendMode(.NORMAL);
         } else {
           filterRenderFrameBuffer =
               getRenderFrameBuffer(boundsWidth, boundsHeight);
           renderFrameBufferMap[renderPassTarget] = filterRenderFrameBuffer;
           activateRenderFrameBuffer(filterRenderFrameBuffer);
-          activateBlendMode(BlendMode.NORMAL);
+          activateBlendMode(.NORMAL);
           clear(0);
         }
 

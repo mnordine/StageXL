@@ -43,8 +43,7 @@ abstract class DisplayObjectContainer extends InteractiveObject
   //----------------------------------------------------------------------------
 
   @override
-  DisplayObjectChildren<DisplayObject> get children =>
-      DisplayObjectChildren<DisplayObject>._(this, _children);
+  DisplayObjectChildren<DisplayObject> get children => ._(this, _children);
 
   /// The number of children of this container.
 

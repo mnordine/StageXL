@@ -71,7 +71,7 @@ class AudioLoader {
   }
 
   void _loadAudioData(String url) {
-    http.get(Uri.parse(url)).then((request) {
+    http.get(.parse(url)).then((request) {
       final url = Uri.dataFromBytes(request.bodyBytes);
       _loadAudioSource(url.toString());
     }).catchError((Object error) {

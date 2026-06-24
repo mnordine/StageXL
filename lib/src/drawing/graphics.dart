@@ -187,8 +187,8 @@ class Graphics {
   /// Apply a stroke color to the **previously drawn** vector object.
   GraphicsCommandStrokeColor strokeColor(int color,
       [num width = 1.0,
-      JointStyle jointStyle = JointStyle.MITER,
-      CapsStyle capsStyle = CapsStyle.NONE]) {
+      JointStyle jointStyle = .MITER,
+      CapsStyle capsStyle = .NONE]) {
     final command =
         GraphicsCommandStrokeColor(color, width, jointStyle, capsStyle);
     addCommand(command);
@@ -198,8 +198,8 @@ class Graphics {
   /// Apply a stroke color to the **previously drawn** vector object.
   GraphicsCommandStrokeGradient strokeGradient(GraphicsGradient gradient,
       [num width = 1.0,
-      JointStyle jointStyle = JointStyle.MITER,
-      CapsStyle capsStyle = CapsStyle.NONE]) {
+      JointStyle jointStyle = .MITER,
+      CapsStyle capsStyle = .NONE]) {
     final command =
         GraphicsCommandStrokeGradient(gradient, width, jointStyle, capsStyle);
     addCommand(command);
@@ -209,8 +209,8 @@ class Graphics {
   /// Apply a stroke pattern to the **previously drawn** vector object.
   GraphicsCommandStrokePattern strokePattern(GraphicsPattern pattern,
       [num width = 1.0,
-      JointStyle jointStyle = JointStyle.MITER,
-      CapsStyle capsStyle = CapsStyle.NONE]) {
+      JointStyle jointStyle = .MITER,
+      CapsStyle capsStyle = .NONE]) {
     final command =
         GraphicsCommandStrokePattern(pattern, width, jointStyle, capsStyle);
     addCommand(command);
@@ -230,11 +230,11 @@ class Graphics {
   }
 
   GraphicsCommandDecode decodePath(String path,
-      [PathEncoding pathEncoding = PathEncoding.SVG]) {
+      [PathEncoding pathEncoding = .SVG]) {
     GraphicsCommandDecode command;
-    if (pathEncoding == PathEncoding.EaselJS) {
+    if (pathEncoding == .EaselJS) {
       command = GraphicsCommandDecodeEaselJS(path);
-    } else if (pathEncoding == PathEncoding.SVG) {
+    } else if (pathEncoding == .SVG) {
       command = GraphicsCommandDecodeSVG(path);
     } else {
       throw ArgumentError('Unknown path encoding.');

@@ -67,7 +67,7 @@ class VideoLoader {
   }
 
   void _loadVideoData(String url) {
-    http.get(Uri.parse(url)).then((response) {
+    http.get(.parse(url)).then((response) {
       _loadVideoSource(Uri.dataFromBytes(response.bodyBytes).toString());
     }).catchError((Object error) {
       final loadError = LoadError('Failed to load $url.', error);

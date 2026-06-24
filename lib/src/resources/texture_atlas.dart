@@ -23,7 +23,7 @@ class TextureAtlas {
       BitmapDataLoadOptions? bitmapDataLoadOptions,
       AssetManifest? manifest])
   {
-    textureAtlasFormat ??= TextureAtlasFormat.jsonArray;
+    textureAtlasFormat ??= .jsonArray;
 
     final loader = _TextureAtlasLoaderFile(url, bitmapDataLoadOptions, manifest);
     return LoaderTuple._(loader, textureAtlasFormat.load(loader));
@@ -32,21 +32,21 @@ class TextureAtlas {
   static Future<TextureAtlas> fromTextureAtlas(
       TextureAtlas textureAtlas, String namePrefix, String source, [TextureAtlasFormat? textureAtlasFormat])
   {
-    textureAtlasFormat ??= TextureAtlasFormat.jsonArray;
+    textureAtlasFormat ??= .jsonArray;
     return textureAtlasFormat.load(_TextureAtlasLoaderTextureAtlas(textureAtlas, namePrefix, source));
   }
 
   static Future<TextureAtlas> fromBitmapData(
       BitmapData bitmapData, String source, [TextureAtlasFormat? textureAtlasFormat])
   {
-    textureAtlasFormat ??= TextureAtlasFormat.jsonArray;
+    textureAtlasFormat ??= .jsonArray;
     return textureAtlasFormat.load(_TextureAtlasLoaderBitmapData(bitmapData, source));
   }
 
   static Future<TextureAtlas> withLoader(
       TextureAtlasLoader textureAtlasLoader, [TextureAtlasFormat? textureAtlasFormat])
   {
-    textureAtlasFormat ??= TextureAtlasFormat.jsonArray;
+    textureAtlasFormat ??= .jsonArray;
     return textureAtlasFormat.load(textureAtlasLoader);
   }
 

@@ -8,7 +8,7 @@ class _GraphicsPath extends _GraphicsMesh<_GraphicsPathSegment> {
   _GraphicsPath.clone(_GraphicsPath path) {
     for (final segment in path.segments) {
       if (segment.indexCount == 0) segment.calculateIndices();
-      segments.add(_GraphicsPathSegment.clone(segment));
+      segments.add(.clone(segment));
     }
   }
 

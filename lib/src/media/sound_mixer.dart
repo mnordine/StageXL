@@ -53,7 +53,7 @@ class SoundMixer {
   ///     });
 
   static void unlockMobileAudio() {
-    if (engine == SoundEngine.WebAudioApi) {
+    if (engine == .WebAudioApi) {
       try {
         final context = WebAudioApiMixer.audioContext;
         final source = context.createBufferSource();
@@ -72,11 +72,11 @@ class SoundMixer {
   static void _initEngine() {
     if (_engineDetected != null) return;
 
-    _engineDetected = SoundEngine.AudioElement;
+    _engineDetected = .AudioElement;
     _audioElementMixer = AudioElementMixer();
 
     if (_isAudioContextSupported()) {
-      _engineDetected = SoundEngine.WebAudioApi;
+      _engineDetected = .WebAudioApi;
       _webAudioApiMixer = WebAudioApiMixer();
     }
 
@@ -84,18 +84,18 @@ class SoundMixer {
 
     if (ua.contains('IEMobile')) {
       if (ua.contains('9.0')) {
-        _engineDetected = SoundEngine.Mockup;
+        _engineDetected = .Mockup;
       }
     }
 
     if (ua.contains('iPhone') || ua.contains('iPad') || ua.contains('iPod')) {
       if (ua.contains('OS 3') || ua.contains('OS 4') || ua.contains('OS 5')) {
-        _engineDetected = SoundEngine.Mockup;
+        _engineDetected = .Mockup;
       }
     }
 
     if (AudioLoader.supportedTypes.isEmpty) {
-      _engineDetected = SoundEngine.Mockup;
+      _engineDetected = .Mockup;
     }
 
     print('StageXL sound engine  : ${engine.name}');

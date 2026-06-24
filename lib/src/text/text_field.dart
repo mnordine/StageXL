@@ -325,7 +325,7 @@ class TextField extends InteractiveObject {
 
       if (_wordWrap == false) {
         paragraph = _passwordEncoder(paragraph);
-        _textLineMetrics.add(TextLineMetrics._internal(paragraph, startIndex));
+        _textLineMetrics.add(._internal(paragraph, startIndex));
         startIndex += paragraph.length + 1;
       } else {
         checkLine = null;
@@ -344,13 +344,13 @@ class TextField extends InteractiveObject {
           if (lineIndent + lineWidth >= availableWidth) {
             if (validLine == null) {
               _textLineMetrics
-                  .add(TextLineMetrics._internal(checkLine, startIndex));
+                  .add(._internal(checkLine, startIndex));
               startIndex += checkLine.length + 1;
               checkLine = null;
               lineIndent = 0;
             } else {
               _textLineMetrics
-                  .add(TextLineMetrics._internal(validLine, startIndex));
+                  .add(._internal(validLine, startIndex));
               startIndex += validLine.length + 1;
               checkLine = _passwordEncoder(word);
               lineIndent = 0;
@@ -360,7 +360,7 @@ class TextField extends InteractiveObject {
 
         if (checkLine != null) {
           _textLineMetrics
-              .add(TextLineMetrics._internal(checkLine, startIndex));
+              .add(._internal(checkLine, startIndex));
           startIndex += checkLine.length + 1;
         }
       }
@@ -623,9 +623,9 @@ class TextField extends InteractiveObject {
     CanvasGradient canvasGradient;
 
     switch (gradient.type) {
-      case GraphicsGradientType.Linear:
+      case .Linear:
         canvasGradient = context.createLinearGradient(sx, sy, ex, ey);
-      case GraphicsGradientType.Radial:
+      case .Radial:
         canvasGradient = context.createRadialGradient(sx, sy, sr, ex, ey, er);
     }
 

@@ -6,9 +6,9 @@ class RenderTexture {
 
   CanvasImageSource? _source;
   HTMLCanvasElement? _canvas;
-  RenderTextureFiltering _filtering = RenderTextureFiltering.LINEAR;
-  RenderTextureWrapping _wrappingX = RenderTextureWrapping.CLAMP;
-  RenderTextureWrapping _wrappingY = RenderTextureWrapping.CLAMP;
+  RenderTextureFiltering _filtering = .LINEAR;
+  RenderTextureWrapping _wrappingX = .CLAMP;
+  RenderTextureWrapping _wrappingY = .CLAMP;
   RenderContextWebGL? _renderContext;
 
   var _contextIdentifier = -1;
@@ -85,7 +85,7 @@ class RenderTexture {
 
   ImageBitmap? get imageBitmap => _source.isA<ImageBitmap>() ? _source as ImageBitmap : null;
 
-  RenderTextureQuad get quad => RenderTextureQuad(
+  RenderTextureQuad get quad => .new(
       this,
       Rectangle<int>(0, 0, _width, _height),
       Rectangle<int>(0, 0, _width, _height),
