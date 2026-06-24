@@ -30,34 +30,19 @@ class GraphicsGradient {
 
   num _startX;
   num _startY;
-  num _startRadius;
   num _endX;
   num _endY;
-  num _endRadius;
+  num _startRadius = 0;
+  num _endRadius = 0;
 
-  final List<GraphicsGradientColorStop> _colorStops;
+  final _colorStops = <GraphicsGradientColorStop>[];
   GraphicsGradientType _type;
 
-  GraphicsGradient.linear(num startX, num startY, num endX, num endY)
-      : _startX = startX,
-        _startY = startY,
-        _startRadius = 0,
-        _endX = endX,
-        _endY = endY,
-        _endRadius = 0,
-        _colorStops = <GraphicsGradientColorStop>[],
-        _type = GraphicsGradientType.Linear;
+  GraphicsGradient.linear(this._startX, this._startY, this._endX, this._endY)
+      : _type = .Linear;
 
-  GraphicsGradient.radial(num startX, num startY, num startRadius, num endX,
-      num endY, num endRadius)
-      : _startX = startX,
-        _startY = startY,
-        _startRadius = startRadius,
-        _endX = endX,
-        _endY = endY,
-        _endRadius = endRadius,
-        _colorStops = <GraphicsGradientColorStop>[],
-        _type = GraphicsGradientType.Radial;
+  GraphicsGradient.radial(this._startX, this._startY, this._startRadius, this._endX, this._endY, this._endRadius)
+      : _type = .Radial;
 
   //---------------------------------------------------------------------------
 

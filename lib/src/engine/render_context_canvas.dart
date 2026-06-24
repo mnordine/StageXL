@@ -8,9 +8,8 @@ class RenderContextCanvas extends RenderContext {
   BlendMode _activeBlendMode = BlendMode.NORMAL;
   double _activeAlpha = 1;
 
-  RenderContextCanvas(HTMLCanvasElement canvasElement)
-      : _canvasElement = canvasElement,
-        _renderingContext = canvasElement.context2D {
+  RenderContextCanvas(this._canvasElement)
+      : _renderingContext = _canvasElement.context2D {
     reset();
   }
 
