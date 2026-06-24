@@ -5,7 +5,7 @@ import 'dart:js_interop';
 import 'package:stagexl/stagexl.dart';
 import 'package:web/web.dart';
 
-import '../internal/image_loader.dart';
+import 'image_loader.dart';
 import 'package:http/http.dart' as http;
 
 class ImageBitmapLoader implements BaseImageLoader<ImageBitmap> {
