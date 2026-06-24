@@ -44,7 +44,6 @@ class Event {
   final String _type;
   final bool _bubbles;
   // The following field is modified from various places in this library.
-  // ignore: prefer_final_fields
   EventPhase _eventPhase = EventPhase.AT_TARGET;
   EventDispatcher? _target;
   EventDispatcher? _currentTarget;

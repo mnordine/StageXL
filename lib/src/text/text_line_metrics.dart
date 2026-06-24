@@ -5,7 +5,6 @@ class TextLineMetrics {
   final int _textIndex;
 
   // These private fields are modified directly elsewhere in this library.
-  // ignore_for_file: prefer_final_fields
   num _x = 0.0;
   num _y = 0.0; // relative to baseline
   num _width = 0.0;
