@@ -89,3 +89,4 @@ linter:
     - unnecessary_ignore
     - simple_directive_paths
     - unnecessary_breaks
+    - eol_at_end_of_file
