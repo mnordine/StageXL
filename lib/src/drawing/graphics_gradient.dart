@@ -197,7 +197,7 @@ class GraphicsGradient {
 
     key += '_' + _colorStops.length.toString();
 
-    for (var colorStop in _colorStops) {
+    for (final colorStop in _colorStops) {
       key += '_' + colorStop.offset.toStringAsPrecision(3);
       key += '_' + colorStop.color.toRadixString(16);
     }
@@ -207,7 +207,7 @@ class GraphicsGradient {
 
   String _createTextureCacheKey() {
     var key = _colorStops.length.toString();
-    for (var colorStop in _colorStops) {
+    for (final colorStop in _colorStops) {
       key += '_' + colorStop.offset.toStringAsPrecision(3);
       key += '_' + colorStop.color.toRadixString(16);
     }

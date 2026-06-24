@@ -41,7 +41,7 @@ class Graphics {
   /// Clear all previously added graphics commands.
 
   void clear() {
-    for (var c in _originalCommands) {
+    for (final c in _originalCommands) {
       c._setGraphics(null);
     }
     _originalCommands.clear();
@@ -296,7 +296,7 @@ class Graphics {
   List<GraphicsCommand> _getCommands(bool useCompiled) {
     if (useCompiled && _compiledCommands.isEmpty) {
       final context = _GraphicsContextCompiler(_compiledCommands);
-      for (var c in _originalCommands) {
+      for (final c in _originalCommands) {
         c.updateContext(context);
       }
     }

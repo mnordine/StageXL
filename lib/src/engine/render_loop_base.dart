@@ -11,7 +11,7 @@ void _globalFrameCallback(double frameTime) {
     _globalFrameCallbackId = -1;
     _globalFrameRequest();
 
-    for (var f in _globalFrameListeners.toList()) {
+    for (final f in _globalFrameListeners.toList()) {
       f(deltaTime);
     }
 }

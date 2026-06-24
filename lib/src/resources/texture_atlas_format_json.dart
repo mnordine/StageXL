@@ -22,7 +22,7 @@ class _TextureAtlasFormatJson extends TextureAtlasFormat {
     }
 
     if (frames is List) {
-      for (var frame in frames) {
+      for (final frame in frames) {
         final frameMap = frame as Map;
         final fileName = frameMap['filename'] as String;
         final frameName = getFilenameWithoutExtension(fileName);
@@ -32,7 +32,7 @@ class _TextureAtlasFormatJson extends TextureAtlasFormat {
     }
 
     if (frames is Map) {
-      for (var fileName in frames.keys as Iterable<String>) {
+      for (final fileName in frames.keys as Iterable<String>) {
         final frameMap = frames[fileName] as Map;
         final frameName = getFilenameWithoutExtension(fileName);
         _createFrame(

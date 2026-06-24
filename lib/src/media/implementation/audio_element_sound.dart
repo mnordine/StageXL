@@ -75,7 +75,7 @@ class AudioElementSound extends Sound {
 
   Future<HTMLAudioElement> _requestAudioElement(
       AudioElementSoundChannel soundChannel) async {
-    for (var audioElement in _soundChannels.keys) {
+    for (final audioElement in _soundChannels.keys) {
       if (_soundChannels[audioElement] == null) {
         _soundChannels[audioElement] = soundChannel;
         return audioElement;

@@ -36,7 +36,7 @@ class ResourceManager {
   }
 
   void dispose() {
-    for (var resource in _resourceMap.values.toList(growable: false)) {
+    for (final resource in _resourceMap.values.toList(growable: false)) {
       final registry = _registries[resource.kind];
       if (registry != null) {
         registry.remove(resource.name, dispose: true);

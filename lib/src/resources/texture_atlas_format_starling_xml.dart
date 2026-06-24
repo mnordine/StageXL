@@ -13,7 +13,7 @@ class _TextureAtlasFormatStarlingXml extends TextureAtlasFormat {
     final imagePath = _getString(xmlRoot, 'imagePath', '');
     final renderTextureQuad = await loader.getRenderTextureQuad(imagePath);
 
-    for (var subTextureXml in xmlRoot.findAllElements('SubTexture')) {
+    for (final subTextureXml in xmlRoot.findAllElements('SubTexture')) {
       final name = _getString(subTextureXml, 'name', '');
       final rotation = _getBool(subTextureXml, 'rotated', false) ? 1 : 0;
 
@@ -52,7 +52,7 @@ class _TextureAtlasFormatStarlingXml extends TextureAtlasFormat {
   //---------------------------------------------------------------------------
 
   String? _getAttributeValue(XmlElement xml, String name) {
-    for (var attribute in xml.attributes) {
+    for (final attribute in xml.attributes) {
       if (attribute.name.local == name) return attribute.value;
     }
     return null;

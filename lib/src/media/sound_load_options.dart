@@ -98,7 +98,7 @@ class SoundLoadOptions {
     if (availableTypes.remove(primaryMatch.group(1))) urls.add(primaryUrl);
 
     if (alternativeUrls != null) {
-      for (var alternativeUrl in alternativeUrls!) {
+      for (final alternativeUrl in alternativeUrls!) {
         final alternativeMatch = regex.firstMatch(alternativeUrl);
         if (alternativeMatch == null) continue;
         if (availableTypes.contains(alternativeMatch.group(1))) {
@@ -106,7 +106,7 @@ class SoundLoadOptions {
         }
       }
     } else {
-      for (var availableType in availableTypes) {
+      for (final availableType in availableTypes) {
         urls.add(primaryUrl.replaceAll(regex, availableType));
       }
     }

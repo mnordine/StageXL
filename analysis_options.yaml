@@ -90,3 +90,6 @@ linter:
     - simple_directive_paths
     - unnecessary_breaks
     - eol_at_end_of_file
+    - prefer_final_fields
+    - prefer_final_in_for_each
+    - prefer_final_locals

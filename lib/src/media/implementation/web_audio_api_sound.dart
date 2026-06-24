@@ -15,7 +15,7 @@ class WebAudioApiSound extends Sound {
     final audioUrls = options.getOptimalAudioUrls(url, manifest);
     final aggregateError = AggregateError('Error loading sound.');
 
-    for (var audioUrl in audioUrls) {
+    for (final audioUrl in audioUrls) {
       try {
         final sound = await _tryAudioUrl(url, audioUrl);
         return sound;

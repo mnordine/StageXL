@@ -22,7 +22,7 @@ class DisplayObjectChildren<T extends DisplayObject> extends IterableBase<T> {
   }
 
   void addAll(Iterable<T> displayObjects) {
-    for (var displayObject in displayObjects) {
+    for (final displayObject in displayObjects) {
       parent.addChild(displayObject);
     }
   }
@@ -34,7 +34,7 @@ class DisplayObjectChildren<T extends DisplayObject> extends IterableBase<T> {
   }
 
   void insertAll(int index, Iterable<T> displayObjects) {
-    for (var displayObject in displayObjects) {
+    for (final displayObject in displayObjects) {
       parent.addChildAt(displayObject, index++);
     }
   }

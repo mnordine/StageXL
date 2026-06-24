@@ -259,7 +259,7 @@ class RenderProgramBatch extends RenderProgram {
       final groupBlend = first.blendMode;
 
       // --- Group consecutive commands ---
-      var groupOffset = first.indexOffset;
+      final groupOffset = first.indexOffset;
       var groupCount = first.indexCount;
       final uniqueTextures = {first.textureIndex: first.texture};
 

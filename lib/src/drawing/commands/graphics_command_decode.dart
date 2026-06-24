@@ -115,7 +115,7 @@ class GraphicsCommandDecodeSVG extends GraphicsCommandDecode {
     final path = this.path.replaceAll(_lineBreakRegExp, ' ');
     final p = <double>[];
 
-    for (var commandMatch in _commandRegExp.allMatches(path)) {
+    for (final commandMatch in _commandRegExp.allMatches(path)) {
       final command = commandMatch.group(1);
       final parameter = commandMatch.group(2)!;
 

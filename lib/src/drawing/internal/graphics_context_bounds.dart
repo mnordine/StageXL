@@ -86,7 +86,7 @@ class _GraphicsContextBounds extends _GraphicsContextBase {
   //---------------------------------------------------------------------------
 
   void _updateBoundsForMesh(_GraphicsMesh mesh) {
-    for (var meshSegment in mesh.segments) {
+    for (final meshSegment in mesh.segments) {
       _minX = _minX > meshSegment.minX ? meshSegment.minX : _minX;
       _minY = _minY > meshSegment.minY ? meshSegment.minY : _minY;
       _maxX = _maxX < meshSegment.maxX ? meshSegment.maxX : _maxX;

@@ -6,7 +6,7 @@ class _GraphicsPath extends _GraphicsMesh<_GraphicsPathSegment> {
   _GraphicsPath();
 
   _GraphicsPath.clone(_GraphicsPath path) {
-    for (var segment in path.segments) {
+    for (final segment in path.segments) {
       if (segment.indexCount == 0) segment.calculateIndices();
       segments.add(_GraphicsPathSegment.clone(segment));
     }
@@ -196,7 +196,7 @@ class _GraphicsPath extends _GraphicsMesh<_GraphicsPathSegment> {
   @override
   void fillColor(RenderState renderState, int color) {
     // not implemented: non-zero winding rule
-    for (var segment in segments) {
+    for (final segment in segments) {
       if (segment.indexCount == 0) segment.calculateIndices();
       segment.fillColor(renderState, color);
     }
@@ -205,7 +205,7 @@ class _GraphicsPath extends _GraphicsMesh<_GraphicsPathSegment> {
   @override
   void fillGradient(RenderState renderState, GraphicsGradient gradient) {
     // not implemented: non-zero winding rule
-    for (var segment in segments) {
+    for (final segment in segments) {
       if (segment.indexCount == 0) segment.calculateIndices();
       segment.fillGradient(renderState, gradient);
     }
@@ -214,7 +214,7 @@ class _GraphicsPath extends _GraphicsMesh<_GraphicsPathSegment> {
   @override
   void fillPattern(RenderState renderState, GraphicsPattern pattern) {
     // not implemented: non-zero winding rule
-    for (var segment in segments) {
+    for (final segment in segments) {
       if (segment.indexCount == 0) segment.calculateIndices();
       segment.fillPattern(renderState, pattern);
     }
@@ -223,7 +223,7 @@ class _GraphicsPath extends _GraphicsMesh<_GraphicsPathSegment> {
   @override
   bool hitTest(double x, double y) {
     var windingCount = 0;
-    for (var segment in segments) {
+    for (final segment in segments) {
       if (segment.checkBounds(x, y) == false) continue;
       if (segment.indexCount == 0) segment.calculateIndices();
       windingCount += segment.windingCountHitTest(x, y);

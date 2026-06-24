@@ -28,7 +28,7 @@ class SoundSprite {
     final soundUrls = <String>[];
 
     if (segments is Map) {
-      for (var segment in segments.keys as Iterable<String>) {
+      for (final segment in segments.keys as Iterable<String>) {
         final segmentList = segments[segment] as List;
         final startTime = segmentList[0] as num;
         final duration = segmentList[1] as num;

@@ -321,7 +321,7 @@ abstract class DisplayObjectContainer extends InteractiveObject
     final result = <DisplayObject>[];
     final temp = Point<num>(0.0, 0.0);
 
-    for (var child in _children) {
+    for (final child in _children) {
       child.parentToLocal(point, temp);
       if (child is DisplayObjectContainer) {
         result.addAll(child.getObjectsUnderPoint(temp));

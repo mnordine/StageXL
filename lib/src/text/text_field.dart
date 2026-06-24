@@ -629,7 +629,7 @@ class TextField extends InteractiveObject {
         canvasGradient = context.createRadialGradient(sx, sy, sr, ex, ey, er);
     }
 
-    for (var colorStop in gradient.colorStops) {
+    for (final colorStop in gradient.colorStops) {
       final offset = colorStop.offset;
       final color = color2rgba(colorStop.color);
       canvasGradient.addColorStop(offset, color);

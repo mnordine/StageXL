@@ -78,7 +78,7 @@ class Juggler implements Animatable {
 
   Future<void> delay(num time) async {
     final nextTime = elapsedTime + time;
-    await for (var elapsedTime in onElapsedTimeChange) {
+    await for (final elapsedTime in onElapsedTimeChange) {
       if (elapsedTime >= nextTime) break;
     }
   }
@@ -101,7 +101,7 @@ class Juggler implements Animatable {
   Stream<int> interval(num time) async* {
     var count = 0;
     var nextTime = elapsedTime + time;
-    await for (var elapsedTime in onElapsedTimeChange) {
+    await for (final elapsedTime in onElapsedTimeChange) {
       while (elapsedTime >= nextTime) {
         yield ++count;
         nextTime = nextTime + time;
@@ -126,7 +126,7 @@ class Juggler implements Animatable {
 
   Stream<num> timespan(num time) async* {
     final startTime = elapsedTime;
-    await for (var elapsedTime in onElapsedTimeChange) {
+    await for (final elapsedTime in onElapsedTimeChange) {
       final currentTime = elapsedTime - startTime;
       final clampedTime = currentTime < time ? currentTime : time;
       yield clampedTime;
@@ -152,7 +152,7 @@ class Juggler implements Animatable {
       [TransitionFunction transition = Transition.linear]) async* {
     final startTime = elapsedTime;
     final deltaValue = targetValue - startValue;
-    await for (var elapsedTime in onElapsedTimeChange) {
+    await for (final elapsedTime in onElapsedTimeChange) {
       final currentTime = elapsedTime - startTime;
       final clampedTime = currentTime < time ? currentTime : time;
       yield startValue + deltaValue * transition(clampedTime / time);
