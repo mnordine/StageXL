@@ -136,6 +136,8 @@ class BitmapContainer extends DisplayObject
   void render(RenderState renderState) {
     if (renderState.renderContext is RenderContextWebGL) {
       _renderWebGL(renderState);
+    } else if (renderState.renderContext is RenderContextWebGPU) {
+      _renderWebGPU(renderState);
     } else {
       _renderCanvas2D(renderState);
     }
@@ -166,6 +168,31 @@ class BitmapContainer extends DisplayObject
 
   void _renderWebGL(RenderState renderState) {
     final context = renderState.renderContext as RenderContextWebGL;
+    final projectionMatrix = context.activeProjectionMatrix;
+    final globalMatrix = renderState.globalMatrix;
+    final localState = _BitmapContainerRenderState(renderState);
+
+    _tmpMatrix1.copyFrom(projectionMatrix);
+    _tmpMatrix2.copyFrom2DAndConcat(globalMatrix, projectionMatrix);
+
+    context.activateProjectionMatrix(_tmpMatrix2);
+
+    for (var i = 0; i < _children.length; i++) {
+      final bitmap = _children[i];
+      if (bitmap.visible) {
+        final bitmapData = bitmap.bitmapData;
+        if (bitmapData != null) {
+          localState.bitmap = bitmap;
+          context.renderTextureQuad(localState, bitmapData.renderTextureQuad);
+        }
+      }
+    }
+
+    context.activateProjectionMatrix(_tmpMatrix1);
+  }
+
+  void _renderWebGPU(RenderState renderState) {
+    final context = renderState.renderContext as RenderContextWebGPU;
     final projectionMatrix = context.activeProjectionMatrix;
     final globalMatrix = renderState.globalMatrix;
     final localState = _BitmapContainerRenderState(renderState);
