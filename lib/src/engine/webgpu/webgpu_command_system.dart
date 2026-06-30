@@ -1,13 +1,20 @@
 part of '../../engine.dart';
 
+class _WebGpuDepthStencilEntry {
+  GPUTexture texture;
+  GPUTextureView view;
+  int width;
+  int height;
+
+  _WebGpuDepthStencilEntry(this.texture, this.view, this.width, this.height);
+}
+
 class WebGpuCommandSystem {
   final RenderContextWebGPU renderContext;
   GPUCommandEncoder? _encoder;
   GPUTexture? _swapTexture;
-  GPUTexture? _depthStencilTexture;
-  GPUTextureView? _depthStencilView;
-  var _depthStencilWidth = 0;
-  var _depthStencilHeight = 0;
+  _WebGpuDepthStencilEntry? _canvasDepthStencilEntry;
+  final _renderTargetDepthStencilEntries = <RenderTexture, _WebGpuDepthStencilEntry>{};
 
   WebGpuCommandSystem(this.renderContext);
 
@@ -21,7 +28,7 @@ class WebGpuCommandSystem {
   }
 
   GPURenderPassEncoder beginColorPass(List<num>? clearColor) {
-    final textureView = swapTexture.createView();
+    final textureView = _getColorView();
     final colorAttachment = clearColor == null
         ? GPURenderPassColorAttachment(view: textureView, loadOp: 'load', storeOp: 'store')
         : GPURenderPassColorAttachment(
@@ -53,7 +60,7 @@ class WebGpuCommandSystem {
   }
 
   GPURenderPassEncoder beginStencilClearPass() {
-    final textureView = swapTexture.createView();
+    final textureView = _getColorView();
     renderContext.renderStatistics.webgpuRenderPassCount++;
     return encoder.beginRenderPass(GPURenderPassDescriptor(
       colorAttachments: [
@@ -70,23 +77,37 @@ class WebGpuCommandSystem {
     ));
   }
 
+  GPUTextureView _getColorView() {
+    final activeRenderTexture = renderContext.activeRenderTexture;
+    return activeRenderTexture == null
+        ? swapTexture.createView()
+        : renderContext.textureSystem.getTextureView(activeRenderTexture);
+  }
+
   GPUTextureView _getDepthStencilView() {
     final width = renderContext.viewportWidth;
     final height = renderContext.viewportHeight;
-    final texture = _depthStencilTexture;
-    if (texture != null && width == _depthStencilWidth && height == _depthStencilHeight) {
-      return _depthStencilView!;
+    final activeRenderTexture = renderContext.activeRenderTexture;
+    final entry = activeRenderTexture == null
+        ? _canvasDepthStencilEntry
+        : _renderTargetDepthStencilEntries[activeRenderTexture];
+    if (entry != null && width == entry.width && height == entry.height) {
+      return entry.view;
     }
 
-    texture?.destroy();
-    _depthStencilWidth = width;
-    _depthStencilHeight = height;
-    _depthStencilTexture = renderContext.device.createTexture(GPUTextureDescriptor(
+    entry?.texture.destroy();
+    final texture = renderContext.device.createTexture(GPUTextureDescriptor(
       size: GPUExtent3DDict(width: width, height: height, depthOrArrayLayers: 1),
       format: 'depth24plus-stencil8',
       usage: $GPUTextureUsage.RENDER_ATTACHMENT,
     ));
-    return _depthStencilView = _depthStencilTexture!.createView();
+    final created = _WebGpuDepthStencilEntry(texture, texture.createView(), width, height);
+    if (activeRenderTexture == null) {
+      _canvasDepthStencilEntry = created;
+    } else {
+      _renderTargetDepthStencilEntries[activeRenderTexture] = created;
+    }
+    return created.view;
   }
 
   void submit() {
@@ -94,5 +115,10 @@ class WebGpuCommandSystem {
     if (commandEncoder == null) return;
     renderContext.device.queue.submit([commandEncoder.finish()].toJS);
     _encoder = null;
+  }
+
+  void disposeRenderTexture(RenderTexture renderTexture) {
+    final entry = _renderTargetDepthStencilEntries.remove(renderTexture);
+    entry?.texture.destroy();
   }
 }

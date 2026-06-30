@@ -60,8 +60,77 @@ class WebGpuFilterSystem {
   }
 
   void renderObjectFiltered(RenderState renderState, RenderObject renderObject) {
-    if (renderObject.filters.isEmpty) return;
-    _throwUnsupported();
+    final filters = renderObject.filters;
+    final firstFilter = filters.length == 1 ? filters[0] : null;
+    if (filters.isEmpty) return;
+    if (firstFilter == null || !firstFilter.isSimple || !firstFilter.supportsWebGPU) {
+      _throwUnsupported();
+    }
+
+    final bounds = renderObject.bounds;
+    final pixelRatio = math.sqrt(renderState.globalMatrix.det.abs());
+
+    var boundsLeft = bounds.left.floor();
+    var boundsTop = bounds.top.floor();
+    var boundsRight = bounds.right.ceil();
+    var boundsBottom = bounds.bottom.ceil();
+
+    final overlap = firstFilter.overlap;
+    boundsLeft += overlap.left;
+    boundsTop += overlap.top;
+    boundsRight += overlap.right;
+    boundsBottom += overlap.bottom;
+
+    boundsLeft = (boundsLeft * pixelRatio).floor();
+    boundsTop = (boundsTop * pixelRatio).floor();
+    boundsRight = (boundsRight * pixelRatio).ceil();
+    boundsBottom = (boundsBottom * pixelRatio).ceil();
+
+    final boundsWidth = boundsRight - boundsLeft;
+    final boundsHeight = boundsBottom - boundsTop;
+    if (boundsWidth <= 0 || boundsHeight <= 0) return;
+
+    final initialRenderTexture = renderContext.activeRenderTexture;
+    final initialProjectionMatrix = renderContext.activeProjectionMatrix.clone();
+    final maskSnapshot = renderContext.maskSystem._detach();
+    final renderTexture = RenderTexture.rawWebGL(boundsWidth, boundsHeight);
+
+    try {
+      final filterProjectionMatrix = Matrix3D.fromIdentity();
+      filterProjectionMatrix.scale(2 / boundsWidth, -2 / boundsHeight, 1);
+      filterProjectionMatrix.translate(-1, 1, 0);
+
+      final filterRenderState = RenderState(renderContext);
+      filterRenderState.globalMatrix.scale(pixelRatio, pixelRatio);
+      filterRenderState.globalMatrix.translate(-boundsLeft, -boundsTop);
+
+      renderContext.activateRenderTexture(renderTexture);
+      renderContext.activateProjectionMatrix(filterProjectionMatrix);
+      renderContext.clearActiveRenderTexture(0);
+      renderObject.render(filterRenderState);
+      renderContext.flush();
+      renderContext.maskSystem.resetFrame();
+
+      final sourceRenderTextureQuad = RenderTextureQuad(
+        renderTexture,
+        Rectangle<int>(0, 0, boundsWidth, boundsHeight),
+        Rectangle<int>(-boundsLeft, -boundsTop, boundsWidth, boundsHeight),
+        0,
+        pixelRatio,
+      );
+
+      renderContext.activateRenderTexture(initialRenderTexture);
+      renderContext.activateProjectionMatrix(initialProjectionMatrix);
+      renderContext.maskSystem._restore(maskSnapshot);
+      firstFilter.renderFilter(renderState, sourceRenderTextureQuad, 0);
+    } finally {
+      renderContext.activateRenderTexture(initialRenderTexture);
+      renderContext.activateProjectionMatrix(initialProjectionMatrix);
+      renderContext.maskSystem._restore(maskSnapshot);
+      renderContext.commandSystem.disposeRenderTexture(renderTexture);
+      renderContext.textureSystem.disposeTexture(renderTexture);
+      renderTexture.dispose();
+    }
   }
 
   void renderColorMatrixFilterQuad(
@@ -264,7 +333,7 @@ class WebGpuFilterSystem {
     _indexBuffer = _createIndexBuffer(size * 2);
   }
 
-  void _throwUnsupported() {
+  Never _throwUnsupported() {
     renderContext.renderStatistics.webgpuFallbackCount++;
     throw UnsupportedError('WebGPU filter parity requires the WGSL multi-pass filter implementation.');
   }

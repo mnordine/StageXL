@@ -34,6 +34,28 @@ class WebGpuMaskSystem {
     _renderingStencilMask = false;
   }
 
+  _WebGpuMaskSnapshot _detach() {
+    final snapshot = _WebGpuMaskSnapshot(
+      List<Rectangle<num>>.of(_scissorStack),
+      List<_WebGpuMaskState>.of(_maskStates),
+      _activeScissor,
+      _renderingStencilMask,
+    );
+    resetFrame();
+    return snapshot;
+  }
+
+  void _restore(_WebGpuMaskSnapshot snapshot) {
+    _scissorStack
+      ..clear()
+      ..addAll(snapshot.scissorStack);
+    _maskStates
+      ..clear()
+      ..addAll(snapshot.maskStates);
+    _activeScissor = snapshot.activeScissor;
+    _renderingStencilMask = snapshot.renderingStencilMask;
+  }
+
   void beginMask(RenderState renderState, RenderMask mask) {
     if (mask is ScissorRenderMask) {
       final rectangle = mask.getScissorRectangle(renderState);
@@ -214,4 +236,13 @@ class _WebGpuMaskState {
   final Float32List? stencilVertices;
 
   _WebGpuMaskState(this.stencilValue, [this.stencilVertices]);
+}
+
+class _WebGpuMaskSnapshot {
+  final List<Rectangle<num>> scissorStack;
+  final List<_WebGpuMaskState> maskStates;
+  final Rectangle<num>? activeScissor;
+  final bool renderingStencilMask;
+
+  _WebGpuMaskSnapshot(this.scissorStack, this.maskStates, this.activeScissor, this.renderingStencilMask);
 }

@@ -77,6 +77,13 @@ class WebGpuTextureSystem {
         : cached;
 
     if (entry.version != version || needsTexture) {
+      if (renderTexture.source == null && renderTexture.imageBitmap == null) {
+        entry.version = version;
+        entry.bindGroup = null;
+        entry.view = null;
+        return entry;
+      }
+
       _upload(renderTexture, entry.texture);
       entry.version = version;
       entry.bindGroup = null;

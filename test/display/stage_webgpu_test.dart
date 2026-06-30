@@ -120,4 +120,27 @@ void main() {
     expect(() => stage.materialize(0, 16), returnsNormally);
     expect(stage.renderContext.renderStatistics.webgpuRenderPassCount, greaterThanOrEqualTo(1));
   });
+
+  test('WebGPU renders simple filtered display objects when available', () async {
+    final options = StageOptions()
+      ..renderEngine = .WebGPU
+      ..backgroundColor = Color.Transparent
+      ..stageRenderMode = .ONCE;
+    final canvas = HTMLCanvasElement()
+      ..width = 64
+      ..height = 64;
+    final stage = await Stage.create(canvas, width: 64, height: 64, options: options);
+
+    if (stage.renderEngine != RenderEngine.WebGPU) return;
+
+    final sprite = Sprite()
+      ..x = 8
+      ..y = 8
+      ..filters = [TintFilter.fromColor(0xFF66CCFF)];
+    sprite.addChild(Bitmap(BitmapData(48, 48, Color.Red)));
+    stage.addChild(sprite);
+
+    expect(() => stage.materialize(0, 16), returnsNormally);
+    expect(stage.renderContext.renderStatistics.webgpuRenderPassCount, greaterThanOrEqualTo(2));
+  });
 }

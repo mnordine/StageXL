@@ -13,6 +13,7 @@ class RenderContextWebGPU extends RenderContext {
   final _solidFillIndexList = Int16List.fromList([0, 1, 2]);
   final _solidFillVertexList = Float32List(6);
   RenderTexture? _solidFillTexture;
+  RenderTexture? _activeRenderTexture;
   List<num>? _clearColor;
 
   RenderContextWebGPU._(this._canvasElement, this.deviceSystem) {
@@ -45,8 +46,9 @@ class RenderContextWebGPU extends RenderContext {
   GPUDevice get device => deviceSystem.device;
   GPUCanvasContext get canvasContext => deviceSystem.canvasContext;
   GPUTextureFormat get preferredTextureFormat => deviceSystem.preferredTextureFormat;
-  int get viewportWidth => _canvasElement.width;
-  int get viewportHeight => _canvasElement.height;
+  int get viewportWidth => _activeRenderTexture?.width ?? _canvasElement.width;
+  int get viewportHeight => _activeRenderTexture?.height ?? _canvasElement.height;
+  RenderTexture? get activeRenderTexture => _activeRenderTexture;
   Matrix3D get activeProjectionMatrix => _projectionMatrix;
 
   @override
@@ -67,6 +69,14 @@ class RenderContextWebGPU extends RenderContext {
   void clear(int color) {
     commandSystem.beginFrame();
     maskSystem.resetFrame();
+    _setClearColor(color);
+  }
+
+  void clearActiveRenderTexture(int color) {
+    _setClearColor(color);
+  }
+
+  void _setClearColor(int color) {
     const inv255 = 1 / 255;
     _clearColor = [
       colorGetR(color) * inv255,
@@ -85,6 +95,12 @@ class RenderContextWebGPU extends RenderContext {
   void activateProjectionMatrix(Matrix3D matrix) {
     flush();
     _projectionMatrix.copyFrom(matrix);
+  }
+
+  void activateRenderTexture(RenderTexture? renderTexture) {
+    if (identical(renderTexture, _activeRenderTexture)) return;
+    flush();
+    _activeRenderTexture = renderTexture;
   }
 
   void _updateStageProjection() {
@@ -133,7 +149,12 @@ class RenderContextWebGPU extends RenderContext {
 
   @override
   void renderTextureMapping(
-      RenderState renderState, RenderTexture renderTexture, Matrix mappingMatrix, Int16List ixList, Float32List vxList) {
+    RenderState renderState,
+    RenderTexture renderTexture,
+    Matrix mappingMatrix,
+    Int16List ixList,
+    Float32List vxList,
+  ) {
     final vertexCount = vxList.length >> 1;
     if (vertexCount == 0 || ixList.isEmpty) return;
 
