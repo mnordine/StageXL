@@ -16,6 +16,7 @@ class RenderTexture {
   CompressedTexture? _compressedTexture;
   WebGL? _renderingContext;
   WebGLTexture? _texture;
+  var _webGpuVersion = 0;
 
   int _pixelFormat = WebGL.RGBA;
   int _pixelType = WebGL.UNSIGNED_BYTE;
@@ -132,6 +133,7 @@ class RenderTexture {
   set filtering(RenderTextureFiltering filtering) {
     if (_filtering == filtering) return;
     _filtering = filtering;
+    _webGpuVersion++;
     _applyTextureParameters((gl) {
       gl.texParameteri(
           WebGL.TEXTURE_2D, WebGL.TEXTURE_MIN_FILTER, _filtering.value);
@@ -147,6 +149,7 @@ class RenderTexture {
   set wrappingX(RenderTextureWrapping wrapping) {
     if (_wrappingX == wrapping) return;
     _wrappingX = wrapping;
+    _webGpuVersion++;
     _applyTextureParameters((gl) {
       gl.texParameteri(WebGL.TEXTURE_2D, WebGL.TEXTURE_WRAP_S, _wrappingX.value);
     });
@@ -159,6 +162,7 @@ class RenderTexture {
   set wrappingY(RenderTextureWrapping wrapping) {
     if (_wrappingY == wrapping) return;
     _wrappingY = wrapping;
+    _webGpuVersion++;
     _applyTextureParameters((gl) {
       gl.texParameteri(WebGL.TEXTURE_2D, WebGL.TEXTURE_WRAP_T, _wrappingY.value);
     });
@@ -191,6 +195,7 @@ class RenderTexture {
       _renderingContext?.deleteTexture(_texture);
     }
 
+    _webGpuVersion++;
     if (_source.isA<ImageBitmap>()) {
       try {
         (_source as ImageBitmap).close();
@@ -215,8 +220,11 @@ class RenderTexture {
       throw StateError('RenderTexture is not resizeable.');
     } else if (_width == width && _height == height) {
       // there is no need to resize the texture
+      return;
+    }
 
-    } else if (_source == null) {
+    _webGpuVersion++;
+    if (_source == null) {
       _width = width;
       _height = height;
 
@@ -246,6 +254,7 @@ class RenderTexture {
   /// RenderTexture and you don't need to call the [update] method.
 
   void update() {
+    _webGpuVersion++;
     final renderContext = _renderContext;
     final renderingContext = _renderingContext;
     if (renderContext == null || renderingContext == null || _texture == null) return;

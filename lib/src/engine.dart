@@ -15,11 +15,14 @@ library;
 
 import 'dart:async';
 import 'dart:js_interop';
-import 'package:web/web.dart' hide Float32List, Int32List, Uint32List;
+import 'package:web/web.dart'
+    hide Float32List, Int32List, Uint32List, $GPUShaderStage, $GPUBufferUsage, $GPUTextureUsage;
 import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:byte_array/byte_array.dart';
+import 'package:webgpu_interop/generated.dart';
+import 'package:webgpu_interop/webgpu_interop.dart' hide GPUSupportedFeatures;
 
 import 'errors.dart';
 import 'geom/matrix.dart';
@@ -34,6 +37,7 @@ part 'engine/render_buffer_index.dart';
 part 'engine/render_buffer_vertex.dart';
 part 'engine/render_context.dart';
 part 'engine/render_context_canvas.dart';
+part 'engine/render_context_webgpu.dart';
 part 'engine/render_context_webgl.dart';
 part 'engine/render_filter.dart';
 part 'engine/render_frame_buffer.dart';
@@ -56,6 +60,13 @@ part 'engine/texture_info.dart';
 part 'engine/compressed_texture.dart';
 part 'engine/compressed_texture_formats/pvr_texture.dart';
 part 'engine/compressed_texture_formats/ktx_texture.dart';
+part 'engine/webgpu/webgpu_batch_system.dart';
+part 'engine/webgpu/webgpu_command_system.dart';
+part 'engine/webgpu/webgpu_device_system.dart';
+part 'engine/webgpu/webgpu_filter_system.dart';
+part 'engine/webgpu/webgpu_mask_system.dart';
+part 'engine/webgpu/webgpu_pipeline_system.dart';
+part 'engine/webgpu/webgpu_texture_system.dart';
 
 typedef WebGL = WebGLRenderingContext;
 typedef WebGL2 = WebGL2RenderingContext;

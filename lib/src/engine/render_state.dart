@@ -147,6 +147,14 @@ class RenderState {
       cs2.matrix3D.prepend(renderObject3D.projectionMatrix3D);
       cs2.matrix3D.prependInverse2D(cs2.matrix);
       renderContextWebGL.activateProjectionMatrix(cs2.matrix3D);
+    } else if (renderObject is RenderObject3D && renderContext is RenderContextWebGPU) {
+      final renderObject3D = renderObject;
+      final renderContextWebGPU = renderContext as RenderContextWebGPU;
+      cs1.matrix3D.copyFrom(renderContextWebGPU.activeProjectionMatrix);
+      cs2.matrix3D.copyFrom2DAndConcat(cs2.matrix, cs1.matrix3D);
+      cs2.matrix3D.prepend(renderObject3D.projectionMatrix3D);
+      cs2.matrix3D.prependInverse2D(cs2.matrix);
+      renderContextWebGPU.activateProjectionMatrix(cs2.matrix3D);
     }
 
     _currentContextState = cs2;
@@ -172,6 +180,9 @@ class RenderState {
     if (renderObject is RenderObject3D && renderContext is RenderContextWebGL) {
       final renderContextWebGL = renderContext as RenderContextWebGL;
       renderContextWebGL.activateProjectionMatrix(cs1.matrix3D);
+    } else if (renderObject is RenderObject3D && renderContext is RenderContextWebGPU) {
+      final renderContextWebGPU = renderContext as RenderContextWebGPU;
+      renderContextWebGPU.activateProjectionMatrix(cs1.matrix3D);
     }
 
     if (maskBefore) renderContext.endRenderMask(this, mask);

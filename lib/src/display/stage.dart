@@ -142,9 +142,44 @@ class Stage extends DisplayObjectContainer {
 
   Stage(HTMLCanvasElement canvas,
       {int? width, int? height, StageOptions? options, bool console = false}) {
+    options ??= Stage.defaultOptions;
+    if (options.renderEngine == .WebGPU) {
+      throw StateError(
+          'RenderEngine.WebGPU requires async initialization. Use Stage.create(...) instead of Stage(...).');
+    }
+
+    final renderContext = _createRenderContext(canvas, options);
+    _initialize(canvas, renderContext, width: width, height: height, options: options, console: console);
+  }
+
+  Stage._withRenderContext(HTMLCanvasElement canvas, RenderContext renderContext,
+      {required StageOptions options, int? width, int? height, bool console = false}) {
+    _initialize(canvas, renderContext, width: width, height: height, options: options, console: console);
+  }
+
+  /// Creates a [Stage] asynchronously.
+  ///
+  /// This factory is required for [RenderEngine.WebGPU] because WebGPU adapter
+  /// and device creation is asynchronous. Existing WebGL and Canvas2D callers
+  /// can keep using the synchronous [Stage] constructor.
+  static Future<Stage> create(HTMLCanvasElement canvas,
+      {int? width, int? height, StageOptions? options, bool console = false}) async {
+    options ??= Stage.defaultOptions;
+    final renderContext = await _createRenderContextAsync(canvas, options);
+    return Stage._withRenderContext(
+      canvas,
+      renderContext,
+      width: width,
+      height: height,
+      options: options,
+      console: console,
+    );
+  }
+
+  void _initialize(HTMLCanvasElement canvas, RenderContext renderContext,
+      {required StageOptions options, int? width, int? height, bool console = false}) {
     if (canvas.tabIndex <= 0) canvas.tabIndex = 1;
     if (canvas.style.outline == '') canvas.style.outline = 'none';
-    options ??= Stage.defaultOptions;
     width ??= canvas.width;
     height ??= canvas.height;
 
@@ -163,7 +198,7 @@ class Stage extends DisplayObjectContainer {
     _sourceWidth = width;
     _sourceHeight = height;
     _pixelRatio = min(options.maxPixelRatio, env.devicePixelRatio);
-    _renderContext = _createRenderContext(canvas, options);
+    _renderContext = renderContext;
     _renderState = RenderState(_renderContext);
 
     _renderContext.onContextLost.listen((_) {
@@ -467,7 +502,24 @@ class Stage extends DisplayObjectContainer {
   //----------------------------------------------------------------------------
   //----------------------------------------------------------------------------
 
-  RenderContext _createRenderContext(
+  static Future<RenderContext> _createRenderContextAsync(
+      HTMLCanvasElement canvas, StageOptions options) async {
+    if (options.renderEngine == .WebGPU) {
+      final webgpuContext = await RenderContextWebGPU.create(
+        canvas,
+        alpha: options.transparent,
+        antialias: options.antialias,
+        powerPreference: options.powerPreference,
+      );
+      if (webgpuContext != null) return webgpuContext;
+    }
+
+    return _createRenderContext(canvas, options.renderEngine == .WebGPU
+        ? (options.clone()..renderEngine = .WebGL2)
+        : options);
+  }
+
+  static RenderContext _createRenderContext(
       HTMLCanvasElement canvas, StageOptions options) {
     switch (options.renderEngine) {
       case .WebGL || .WebGL2:
@@ -507,6 +559,10 @@ class Stage extends DisplayObjectContainer {
 
       case .Canvas2D:
         return RenderContextCanvas(canvas);
+
+      case .WebGPU:
+        throw StateError(
+            'RenderEngine.WebGPU requires async initialization. Use Stage.create(...) instead of Stage(...).');
     }
   }
 

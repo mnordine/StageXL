@@ -1,16 +1,17 @@
-import 'package:web/web.dart' as html;
+import 'package:web/web.dart';
 import 'dart:math' as math;
 
 import 'package:stagexl/stagexl.dart';
 
-void main() {
+Future<void> main() async {
   final options = StageOptions()
     ..stageAlign = .TOP_LEFT
     ..stageScaleMode = .NO_SCALE
-    ..renderEngine = .WebGL;
+    ..renderEngine = .WebGPU;
 
-  final canvas = html.document.querySelector('#stage') as html.HTMLCanvasElement;
-  final stage = Stage(canvas, width: 990, height: 620, options: options);
+  final canvas = document.querySelector('#stage') as HTMLCanvasElement;
+  // final stage = Stage(canvas, width: 990, height: 620, options: options);
+  final stage = await Stage.create(canvas, width: 990, height: 620, options: options);
   final renderLoop = RenderLoop();
   renderLoop.addStage(stage);
 
