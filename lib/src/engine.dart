@@ -16,7 +16,7 @@ library;
 import 'dart:async';
 import 'dart:js_interop';
 import 'package:web/web.dart'
-    hide Float32List, Int32List, Uint32List, $GPUShaderStage, $GPUBufferUsage, $GPUTextureUsage;
+    hide Float32List, Int32List, Uint32List, $GPUColorWrite, $GPUShaderStage, $GPUBufferUsage, $GPUTextureUsage;
 import 'dart:math' as math;
 import 'dart:typed_data';
 

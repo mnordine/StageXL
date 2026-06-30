@@ -123,6 +123,11 @@ class RenderContextWebGPU extends RenderContext {
   @override
   void renderTextureMesh(
       RenderState renderState, RenderTexture renderTexture, Int16List ixList, Float32List vxList) {
+    if (maskSystem.isRenderingStencilMask) {
+      maskSystem.renderTriangleMesh(renderState, ixList, vxList);
+      return;
+    }
+
     batchSystem.renderTextureMesh(renderState, renderTexture, ixList, vxList);
   }
 
@@ -160,6 +165,11 @@ class RenderContextWebGPU extends RenderContext {
 
   @override
   void renderTriangleMesh(RenderState renderState, Int16List ixList, Float32List vxList, int color) {
+    if (maskSystem.isRenderingStencilMask) {
+      maskSystem.renderTriangleMesh(renderState, ixList, vxList);
+      return;
+    }
+
     final vertexCount = vxList.length >> 1;
     if (vertexCount == 0 || ixList.isEmpty) return;
 

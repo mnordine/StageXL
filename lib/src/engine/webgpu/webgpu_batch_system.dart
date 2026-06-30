@@ -201,8 +201,12 @@ class WebGpuBatchSystem {
       ..setIndexBuffer(_indexBuffer, 'uint16', 0, indexBytes);
 
     GPURenderPipeline? activePipeline;
+    final stencilValue = renderContext.maskSystem.activeStencilValue;
+    if (stencilValue > 0) {
+      pass.setStencilReference(stencilValue);
+    }
     for (final run in runs) {
-      final pipeline = renderContext.pipelineSystem.getPipeline(run.blendMode);
+      final pipeline = renderContext.pipelineSystem.getPipeline(run.blendMode, stencilTest: stencilValue > 0);
       if (!identical(pipeline, activePipeline)) {
         pass.setPipeline(pipeline);
         activePipeline = pipeline;

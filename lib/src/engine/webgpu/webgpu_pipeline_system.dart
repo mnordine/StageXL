@@ -6,8 +6,11 @@ class WebGpuPipelineSystem {
   final RenderContextWebGPU renderContext;
   late final GPUBindGroupLayout textureBindGroupLayout;
   late final GPUPipelineLayout pipelineLayout;
+  late final GPUPipelineLayout stencilPipelineLayout;
   late final GPUShaderModule shaderModule;
-  final _pipelineCache = <BlendMode, GPURenderPipeline>{};
+  late final GPUShaderModule stencilShaderModule;
+  final _pipelineCache = <BlendMode, Map<int, GPURenderPipeline>>{};
+  GPURenderPipeline? _stencilWritePipeline;
 
   WebGpuPipelineSystem(this.renderContext) {
     final device = renderContext.device;
@@ -25,13 +28,22 @@ class WebGpuPipelineSystem {
     ].toJS));
     pipelineLayout =
         device.createPipelineLayout(GPUPipelineLayoutDescriptor(bindGroupLayouts: [textureBindGroupLayout].toJS));
+    stencilPipelineLayout =
+        device.createPipelineLayout(GPUPipelineLayoutDescriptor(bindGroupLayouts: <GPUBindGroupLayout>[].toJS));
     shaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _shaderSource));
+    stencilShaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _stencilShaderSource));
   }
 
-  GPURenderPipeline getPipeline(BlendMode blendMode) =>
-      _pipelineCache.putIfAbsent(blendMode, () => _createPipeline(blendMode));
+  GPURenderPipeline getPipeline(BlendMode blendMode, {required bool stencilTest}) {
+    final stencilMode = stencilTest ? 1 : 0;
+    final blendPipelines = _pipelineCache.putIfAbsent(blendMode, () => <int, GPURenderPipeline>{});
+    return blendPipelines.putIfAbsent(stencilMode, () => _createPipeline(blendMode, stencilMode: stencilMode));
+  }
 
-  GPURenderPipeline _createPipeline(BlendMode blendMode) {
+  GPURenderPipeline getStencilWritePipeline() =>
+      _stencilWritePipeline ??= _createStencilWritePipeline();
+
+  GPURenderPipeline _createPipeline(BlendMode blendMode, {required int stencilMode}) {
     renderContext.renderStatistics.webgpuPipelineCreateCount++;
     final blend = _blendFor(blendMode);
     return renderContext.device.createRenderPipeline(GPURenderPipelineDescriptor(
@@ -58,10 +70,62 @@ class WebGpuPipelineSystem {
           GPUColorTargetState(
             format: renderContext.preferredTextureFormat,
             blend: blend,
+            writeMask: stencilMode == 2 ? 0 : $GPUColorWrite.ALL,
           ),
         ].toJS,
       ),
       primitive: GPUPrimitiveState(topology: 'triangle-list'),
+      depthStencil: _depthStencilState(stencilMode),
+      multisample: GPUMultisampleState(count: 1),
+    ));
+  }
+
+  GPUDepthStencilState _depthStencilState(int stencilMode) {
+    final stencilFace = switch (stencilMode) {
+      0 => GPUStencilFaceState(compare: 'always', failOp: 'keep', depthFailOp: 'keep', passOp: 'keep'),
+      1 => GPUStencilFaceState(compare: 'equal', failOp: 'keep', depthFailOp: 'keep', passOp: 'keep'),
+      _ => GPUStencilFaceState(compare: 'always', failOp: 'keep', depthFailOp: 'keep', passOp: 'replace'),
+    };
+    return GPUDepthStencilState(
+      format: 'depth24plus-stencil8',
+      depthWriteEnabled: false,
+      depthCompare: 'always',
+      stencilFront: stencilFace,
+      stencilBack: stencilFace,
+      stencilReadMask: 0xFF,
+      stencilWriteMask: stencilMode == 2 ? 0xFF : 0,
+    );
+  }
+
+  GPURenderPipeline _createStencilWritePipeline() {
+    renderContext.renderStatistics.webgpuPipelineCreateCount++;
+    return renderContext.device.createRenderPipeline(GPURenderPipelineDescriptor(
+      label: 'StageXL stencil write pipeline',
+      layout: stencilPipelineLayout,
+      vertex: GPUVertexState(
+        module: stencilShaderModule,
+        entryPoint: 'vs_main',
+        buffers: [
+          GPUVertexBufferLayout(
+            arrayStride: _vertexStride,
+            attributes: [
+              GPUVertexAttribute(format: 'float32x4', offset: 0, shaderLocation: 0),
+            ].toJS,
+          ),
+        ].toJS,
+      ),
+      fragment: GPUFragmentState(
+        module: stencilShaderModule,
+        entryPoint: 'fs_main',
+        targets: [
+          GPUColorTargetState(
+            format: renderContext.preferredTextureFormat,
+            writeMask: 0,
+          ),
+        ].toJS,
+      ),
+      primitive: GPUPrimitiveState(topology: 'triangle-list'),
+      depthStencil: _depthStencilState(2),
       multisample: GPUMultisampleState(count: 1),
     ));
   }
@@ -119,6 +183,22 @@ class WebGpuPipelineSystem {
     @fragment
     fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
       return textureSample(stageTexture, stageSampler, input.uv) * input.color;
+    }
+  ''';
+
+  static const _stencilShaderSource = '''
+    struct VertexInput {
+      @location(0) clip: vec4<f32>,
+    };
+
+    @vertex
+    fn vs_main(input: VertexInput) -> @builtin(position) vec4<f32> {
+      return input.clip;
+    }
+
+    @fragment
+    fn fs_main() -> @location(0) vec4<f32> {
+      return vec4<f32>(0.0);
     }
   ''';
 }
