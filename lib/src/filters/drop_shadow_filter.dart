@@ -49,6 +49,9 @@ class DropShadowFilter extends BitmapFilter {
       distance, angle, color, blurX, blurY, quality, knockout, hideObject);
 
   @override
+  bool get supportsWebGPU => true;
+
+  @override
   Rectangle<int> get overlap {
     final shiftX = (distance * cos(angle)).round();
     final shiftY = (distance * sin(angle)).round();
@@ -160,13 +163,35 @@ class DropShadowFilter extends BitmapFilter {
   @override
   void renderFilter(
       RenderState renderState, RenderTextureQuad renderTextureQuad, int pass) {
-    final renderContext = renderState.renderContext as RenderContextWebGL;
+    final renderContext = renderState.renderContext;
     final renderTexture = renderTextureQuad.renderTexture;
     final passCount = _renderPassSources.length;
     final passScale = pow(0.5, pass >> 1);
     final pixelRatio = sqrt(renderState.globalMatrix.det.abs());
     final pixelRatioScale = pixelRatio * passScale;
     final pixelRatioDistance = pixelRatio * distance;
+
+    if (renderContext is RenderContextWebGPU) {
+      if (pass == passCount - 1) {
+        if (!knockout && !hideObject) {
+          renderContext.renderTextureQuad(renderState, renderTextureQuad);
+        }
+      } else {
+        renderContext.filterSystem.renderDropShadowFilterQuad(
+          renderState,
+          renderTextureQuad,
+          pass == passCount - 2 ? color : color | 0xFF000000,
+          pass == passCount - 2 ? renderState.globalAlpha : 1.0,
+          pass == 0 ? pixelRatioDistance * cos(angle) / renderTexture.width : 0.0,
+          pass == 0 ? pixelRatioDistance * sin(angle) / renderTexture.height : 0.0,
+          pass.isEven ? pixelRatioScale * blurX / renderTexture.width : 0.0,
+          pass.isEven ? 0.0 : pixelRatioScale * blurY / renderTexture.height,
+        );
+      }
+      return;
+    }
+
+    renderContext as RenderContextWebGL;
 
     if (pass == passCount - 1) {
       if (!knockout && !hideObject) {
