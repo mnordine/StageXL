@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:stagexl/stagexl.dart';
 import 'package:web/web.dart';
 
-const _stageWidth = 760;
+const _stageWidth = 940;
 const _stageHeight = 460;
 
 Future<void> main() async {
@@ -18,39 +18,47 @@ Future<void> main() async {
   final renderLoop = RenderLoop();
   renderLoop.addStage(stage);
 
-  _addLabel(stage, 'StageXL WebGPU direct bitmap filters', 28, 26, 26, 0xFFFFFFFF);
+  _addLabel(stage, 'StageXL WebGPU direct filters', 28, 26, 26, 0xFFFFFFFF);
   _addLabel(stage, 'Renderer: ${stage.renderEngine.name}', 28, 60, 15, 0xFFB9C7D8);
   _addLabel(stage, 'Original', 70, 354, 14, 0xFFB9C7D8);
-  _addLabel(stage, 'Grayscale', 290, 354, 14, 0xFFB9C7D8);
-  _addLabel(stage, 'TintFilter + rotated', 510, 354, 14, 0xFFB9C7D8);
+  _addLabel(stage, 'Bitmap ColorMatrixFilter', 270, 354, 14, 0xFFB9C7D8);
+  _addLabel(stage, 'Bitmap TintFilter', 500, 354, 14, 0xFFB9C7D8);
+  _addLabel(stage, 'Sprite TintFilter', 710, 354, 14, 0xFFB9C7D8);
 
   final bitmapData = _filterBitmapData();
   final originalBitmap = Bitmap(bitmapData)
     ..x = 70
     ..y = 160;
   final grayscaleBitmap = Bitmap(bitmapData)
-    ..x = 290
+    ..x = 270
     ..y = 160
     ..filters = [ColorMatrixFilter.grayscale()];
   final tintedBitmap = Bitmap(bitmapData)
-    ..x = 585
+    ..x = 500
+    ..y = 160
+    ..filters = [TintFilter.fromColor(0xFF66CCFF)];
+  final tintedSprite = Sprite()
+    ..x = 795
     ..y = 220
     ..pivotX = bitmapData.width / 2
     ..pivotY = bitmapData.height / 2
     ..filters = [TintFilter.fromColor(0xFF66CCFF)];
+  tintedSprite.addChild(Bitmap(bitmapData));
 
   stage
     ..addChild(_backing(54, 144))
-    ..addChild(_backing(274, 144))
-    ..addChild(_backing(494, 144))
+    ..addChild(_backing(254, 144))
+    ..addChild(_backing(484, 144))
+    ..addChild(_backing(694, 144))
     ..addChild(originalBitmap)
     ..addChild(grayscaleBitmap)
-    ..addChild(tintedBitmap);
+    ..addChild(tintedBitmap)
+    ..addChild(tintedSprite);
 
   var elapsed = 0.0;
   stage.onEnterFrame.listen((event) {
     elapsed += event.passedTime.toDouble();
-    tintedBitmap.rotation = math.sin(elapsed * 0.8) * 0.18;
+    tintedSprite.rotation = math.sin(elapsed * 0.8) * 0.18;
   });
 }
 
