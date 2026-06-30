@@ -112,3 +112,10 @@ linter:
     - avoid_shadowing_type_parameters
     - avoid_types_on_closure_parameters
     - prefer_iterable_whereType
+    - collection_methods_unrelated_type
+    - prefer_spread_collections
+    - prefer_const_literals_to_create_immutables
+    - prefer_collection_literals
+    - prefer_contains
+    - prefer_conditional_assignment
+    - unnecessary_to_list_in_spreads
