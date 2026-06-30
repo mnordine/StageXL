@@ -33,6 +33,9 @@ class BlurFilter extends BitmapFilter {
   BitmapFilter clone() => BlurFilter(blurX, blurY);
 
   @override
+  bool get supportsWebGPU => true;
+
+  @override
   Rectangle<int> get overlap =>
       Rectangle<int>(-blurX, -blurY, 2 * blurX, 2 * blurY);
 
@@ -127,12 +130,25 @@ class BlurFilter extends BitmapFilter {
   @override
   void renderFilter(
       RenderState renderState, RenderTextureQuad renderTextureQuad, int pass) {
-    final renderContext = renderState.renderContext as RenderContextWebGL;
+    final renderContext = renderState.renderContext;
     final renderTexture = renderTextureQuad.renderTexture;
     final passCount = _renderPassSources.length;
     final passScale = pow(0.5, pass >> 1);
     final pixelRatio = sqrt(renderState.globalMatrix.det.abs());
     final pixelRatioScale = pixelRatio * passScale;
+
+    if (renderContext is RenderContextWebGPU) {
+      renderContext.filterSystem.renderBlurFilterQuad(
+        renderState,
+        renderTextureQuad,
+        pass == passCount - 1 ? renderState.globalAlpha : 1.0,
+        pass.isEven ? pixelRatioScale * blurX / renderTexture.width : 0.0,
+        pass.isEven ? 0.0 : pixelRatioScale * blurY / renderTexture.height,
+      );
+      return;
+    }
+
+    renderContext as RenderContextWebGL;
 
     final renderProgram = renderContext.getRenderProgram(
         r'$BlurFilterProgram', BlurFilterProgram.new);

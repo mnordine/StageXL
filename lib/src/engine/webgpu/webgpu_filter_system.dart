@@ -8,10 +8,13 @@ class WebGpuFilterSystem {
   late final GPUBindGroupLayout _colorMatrixBindGroupLayout;
   late final GPUPipelineLayout _colorMatrixPipelineLayout;
   late final GPUShaderModule _colorMatrixShaderModule;
+  late final GPUShaderModule _blurShaderModule;
   late GPUBuffer _vertexBuffer;
   late GPUBuffer _indexBuffer;
   late GPUBuffer _uniformBuffer;
+  late GPUBuffer _blurUniformBuffer;
   final _colorMatrixPipelines = <BlendMode, Map<bool, GPURenderPipeline>>{};
+  final _blurPipelines = <BlendMode, Map<bool, GPURenderPipeline>>{};
   var _vertexCapacity = 0;
   var _indexCapacity = 0;
 
@@ -37,10 +40,15 @@ class WebGpuFilterSystem {
     _colorMatrixPipelineLayout =
         device.createPipelineLayout(GPUPipelineLayoutDescriptor(bindGroupLayouts: [_colorMatrixBindGroupLayout].toJS));
     _colorMatrixShaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _colorMatrixShaderSource));
+    _blurShaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _blurShaderSource));
     _vertexBuffer = _createVertexBuffer(_bytesPerVertex * 4);
     _indexBuffer = _createIndexBuffer(12);
     _uniformBuffer = device.createBuffer(GPUBufferDescriptor(
       size: 80,
+      usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.UNIFORM,
+    ));
+    _blurUniformBuffer = device.createBuffer(GPUBufferDescriptor(
+      size: 16,
       usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.UNIFORM,
     ));
   }
@@ -56,6 +64,11 @@ class WebGpuFilterSystem {
       return;
     }
 
+    if (firstFilter != null && firstFilter.supportsWebGPU) {
+      renderObjectFiltered(renderState, _RenderTextureQuadObject(renderTextureQuad, renderFilters));
+      return;
+    }
+
     _throwUnsupported();
   }
 
@@ -63,7 +76,7 @@ class WebGpuFilterSystem {
     final filters = renderObject.filters;
     final firstFilter = filters.length == 1 ? filters[0] : null;
     if (filters.isEmpty) return;
-    if (firstFilter == null || !firstFilter.isSimple || !firstFilter.supportsWebGPU) {
+    if (firstFilter == null || !firstFilter.supportsWebGPU) {
       _throwUnsupported();
     }
 
@@ -93,12 +106,14 @@ class WebGpuFilterSystem {
     final initialRenderTexture = renderContext.activeRenderTexture;
     final initialProjectionMatrix = renderContext.activeProjectionMatrix.clone();
     final maskSnapshot = renderContext.maskSystem._detach();
+    final renderTextures = <int, RenderTexture>{};
     final renderTexture = RenderTexture.rawWebGL(boundsWidth, boundsHeight);
+    renderTextures[0] = renderTexture;
 
     try {
       final filterProjectionMatrix = Matrix3D.fromIdentity();
-      filterProjectionMatrix.scale(2 / boundsWidth, -2 / boundsHeight, 1);
-      filterProjectionMatrix.translate(-1, 1, 0);
+      filterProjectionMatrix.scale(2 / boundsWidth, 2 / boundsHeight, 1);
+      filterProjectionMatrix.translate(-1, -1, 0);
 
       final filterRenderState = RenderState(renderContext);
       filterRenderState.globalMatrix.scale(pixelRatio, pixelRatio);
@@ -111,27 +126,119 @@ class WebGpuFilterSystem {
       renderContext.flush();
       renderContext.maskSystem.resetFrame();
 
-      final sourceRenderTextureQuad = RenderTextureQuad(
+      if (firstFilter.isSimple) {
+        final sourceRenderTextureQuad = _createFilterSourceQuad(
+          renderTexture,
+          boundsLeft,
+          boundsTop,
+          boundsWidth,
+          boundsHeight,
+          pixelRatio,
+        );
+        renderContext.activateRenderTexture(initialRenderTexture);
+        renderContext.activateProjectionMatrix(initialProjectionMatrix);
+        renderContext.maskSystem._restore(maskSnapshot);
+        firstFilter.renderFilter(renderState, sourceRenderTextureQuad, 0);
+      } else {
+        _renderFilterPasses(
+          firstFilter,
+          renderState,
+          filterRenderState,
+          initialRenderTexture,
+          initialProjectionMatrix,
+          filterProjectionMatrix,
+          maskSnapshot,
+          renderTextures,
+          boundsLeft,
+          boundsTop,
+          boundsWidth,
+          boundsHeight,
+          pixelRatio,
+        );
+      }
+    } finally {
+      renderContext.activateRenderTexture(initialRenderTexture);
+      renderContext.activateProjectionMatrix(initialProjectionMatrix);
+      renderContext.maskSystem._restore(maskSnapshot);
+      for (final renderTexture in renderTextures.values) {
+        _disposeRenderTextureAfterSubmittedWork(renderTexture);
+      }
+    }
+  }
+
+  void _disposeRenderTextureAfterSubmittedWork(RenderTexture renderTexture) {
+    unawaited(renderContext.device.queue.onSubmittedWorkDone().toDart.then((_) {
+      renderContext.commandSystem.disposeRenderTexture(renderTexture);
+      renderContext.textureSystem.disposeTexture(renderTexture);
+      renderTexture.dispose();
+    }));
+  }
+
+  void _renderFilterPasses(
+    RenderFilter filter,
+    RenderState finalRenderState,
+    RenderState filterRenderState,
+    RenderTexture? initialRenderTexture,
+    Matrix3D initialProjectionMatrix,
+    Matrix3D filterProjectionMatrix,
+    _WebGpuMaskSnapshot maskSnapshot,
+    Map<int, RenderTexture> renderTextures,
+    int boundsLeft,
+    int boundsTop,
+    int boundsWidth,
+    int boundsHeight,
+    num pixelRatio,
+  ) {
+    final renderPassSources = filter.renderPassSources;
+    final renderPassTargets = filter.renderPassTargets;
+
+    for (var pass = 0; pass < renderPassSources.length; pass++) {
+      final source = renderTextures[renderPassSources[pass]];
+      if (source == null) throw StateError('Invalid renderPassSource!');
+
+      final targetId = renderPassTargets[pass];
+      final isFinalPass = targetId == renderPassTargets.last;
+      final RenderState passRenderState;
+      if (isFinalPass) {
+        passRenderState = finalRenderState;
+        renderContext.activateRenderTexture(initialRenderTexture);
+        renderContext.activateProjectionMatrix(initialProjectionMatrix);
+        renderContext.maskSystem._restore(maskSnapshot);
+      } else {
+        passRenderState = filterRenderState;
+        final target = renderTextures.putIfAbsent(targetId, () => RenderTexture.rawWebGL(boundsWidth, boundsHeight));
+        renderContext.activateRenderTexture(target);
+        renderContext.activateProjectionMatrix(filterProjectionMatrix);
+        renderContext.clearActiveRenderTexture(0);
+      }
+
+      final sourceRenderTextureQuad = _createFilterSourceQuad(
+        source,
+        boundsLeft,
+        boundsTop,
+        boundsWidth,
+        boundsHeight,
+        pixelRatio,
+      );
+      filter.renderFilter(passRenderState, sourceRenderTextureQuad, pass);
+    }
+  }
+
+  RenderTextureQuad _createFilterSourceQuad(
+    RenderTexture renderTexture,
+    int boundsLeft,
+    int boundsTop,
+    int boundsWidth,
+    int boundsHeight,
+    num pixelRatio,
+  ) =>
+      RenderTextureQuad(
         renderTexture,
         Rectangle<int>(0, 0, boundsWidth, boundsHeight),
         Rectangle<int>(-boundsLeft, -boundsTop, boundsWidth, boundsHeight),
         0,
         pixelRatio,
       );
-
-      renderContext.activateRenderTexture(initialRenderTexture);
-      renderContext.activateProjectionMatrix(initialProjectionMatrix);
-      renderContext.maskSystem._restore(maskSnapshot);
-      firstFilter.renderFilter(renderState, sourceRenderTextureQuad, 0);
-    } finally {
-      renderContext.activateRenderTexture(initialRenderTexture);
-      renderContext.activateProjectionMatrix(initialProjectionMatrix);
-      renderContext.maskSystem._restore(maskSnapshot);
-      renderContext.commandSystem.disposeRenderTexture(renderTexture);
-      renderContext.textureSystem.disposeTexture(renderTexture);
-      renderTexture.dispose();
-    }
-  }
 
   void renderColorMatrixFilterQuad(
     RenderState renderState,
@@ -176,10 +283,59 @@ class WebGpuFilterSystem {
     _renderTextureQuadWithColorMatrixUniform(renderState, renderTextureQuad, uniformData);
   }
 
+  void renderBlurFilterQuad(
+    RenderState renderState,
+    RenderTextureQuad renderTextureQuad,
+    num alpha,
+    num radiusX,
+    num radiusY,
+  ) {
+    final uniformData = Float32List.fromList([
+      radiusX.toDouble(),
+      radiusY.toDouble(),
+      alpha.toDouble(),
+      0,
+    ]);
+    _renderTextureQuadWithBlurUniform(renderState, renderTextureQuad, uniformData);
+  }
+
   void _renderTextureQuadWithColorMatrixUniform(
     RenderState renderState,
     RenderTextureQuad renderTextureQuad,
     Float32List uniformData,
+  ) {
+    _renderTextureQuadWithUniform(
+      renderState,
+      renderTextureQuad,
+      uniformData,
+      _uniformBuffer,
+      _getColorMatrixPipeline,
+      80,
+    );
+  }
+
+  void _renderTextureQuadWithBlurUniform(
+    RenderState renderState,
+    RenderTextureQuad renderTextureQuad,
+    Float32List uniformData,
+  ) {
+    _renderTextureQuadWithUniform(
+      renderState,
+      renderTextureQuad,
+      uniformData,
+      _blurUniformBuffer,
+      _getBlurPipeline,
+      16,
+    );
+  }
+
+  void _renderTextureQuadWithUniform(
+    RenderState renderState,
+    RenderTextureQuad renderTextureQuad,
+    Float32List uniformData,
+    GPUBuffer uniformBuffer,
+    GPURenderPipeline Function(BlendMode blendMode, bool stencilTest) getPipeline,
+    int uniformByteSize,
   ) {
     final ixList = renderTextureQuad.ixList;
     final vxList = renderTextureQuad.vxList;
@@ -218,7 +374,7 @@ class WebGpuFilterSystem {
     renderContext.device.queue
       ..writeBuffer(_vertexBuffer, 0, vertices.buffer.toJS)
       ..writeBuffer(_indexBuffer, 0, indices.buffer.toJS)
-      ..writeBuffer(_uniformBuffer, 0, uniformData.buffer.toJS);
+      ..writeBuffer(uniformBuffer, 0, uniformData.buffer.toJS);
 
     final texture = renderTextureQuad.renderTexture;
     final bindGroup = renderContext.device.createBindGroup(GPUBindGroupDescriptor(
@@ -226,15 +382,18 @@ class WebGpuFilterSystem {
       entries: [
         GPUBindGroupEntry(binding: 0, resource: renderContext.textureSystem.getSampler(texture)),
         GPUBindGroupEntry(binding: 1, resource: renderContext.textureSystem.getTextureView(texture)),
-        GPUBindGroupEntry(binding: 2, resource: GPUBufferBinding(buffer: _uniformBuffer, offset: 0, size: 80)),
+        GPUBindGroupEntry(
+          binding: 2,
+          resource: GPUBufferBinding(buffer: uniformBuffer, offset: 0, size: uniformByteSize),
+        ),
       ].toJS,
     ));
     renderContext.renderStatistics.webgpuBindGroupCreateCount++;
 
     final stencilValue = renderContext.maskSystem.activeStencilValue;
-    final pass = renderContext.commandSystem.beginColorPass(null);
+    final pass = renderContext.commandSystem.beginColorPass(renderContext.consumeClearColor());
     pass
-      ..setPipeline(_getColorMatrixPipeline(renderState.globalBlendMode, stencilValue > 0))
+      ..setPipeline(getPipeline(renderState.globalBlendMode, stencilValue > 0))
       ..setBindGroup(0, bindGroup)
       ..setVertexBuffer(0, _vertexBuffer, 0, vertexBytes)
       ..setIndexBuffer(_indexBuffer, 'uint16', 0, indexBytes);
@@ -256,13 +415,37 @@ class WebGpuFilterSystem {
     return blendPipelines.putIfAbsent(stencilTest, () => _createColorMatrixPipeline(blendMode, stencilTest));
   }
 
-  GPURenderPipeline _createColorMatrixPipeline(BlendMode blendMode, bool stencilTest) {
+  GPURenderPipeline _getBlurPipeline(BlendMode blendMode, bool stencilTest) {
+    final blendPipelines = _blurPipelines.putIfAbsent(blendMode, () => <bool, GPURenderPipeline>{});
+    return blendPipelines.putIfAbsent(stencilTest, () => _createBlurPipeline(blendMode, stencilTest));
+  }
+
+  GPURenderPipeline _createColorMatrixPipeline(BlendMode blendMode, bool stencilTest) => _createFilterPipeline(
+        'StageXL color matrix filter pipeline',
+        _colorMatrixShaderModule,
+        blendMode,
+        stencilTest,
+      );
+
+  GPURenderPipeline _createBlurPipeline(BlendMode blendMode, bool stencilTest) => _createFilterPipeline(
+        'StageXL blur filter pipeline',
+        _blurShaderModule,
+        blendMode,
+        stencilTest,
+      );
+
+  GPURenderPipeline _createFilterPipeline(
+    String label,
+    GPUShaderModule shaderModule,
+    BlendMode blendMode,
+    bool stencilTest,
+  ) {
     renderContext.renderStatistics.webgpuPipelineCreateCount++;
     return renderContext.device.createRenderPipeline(GPURenderPipelineDescriptor(
-      label: 'StageXL color matrix filter pipeline',
+      label: label,
       layout: _colorMatrixPipelineLayout,
       vertex: GPUVertexState(
-        module: _colorMatrixShaderModule,
+        module: shaderModule,
         entryPoint: 'vs_main',
         buffers: [
           GPUVertexBufferLayout(
@@ -275,7 +458,7 @@ class WebGpuFilterSystem {
         ].toJS,
       ),
       fragment: GPUFragmentState(
-        module: _colorMatrixShaderModule,
+        module: shaderModule,
         entryPoint: 'fs_main',
         targets: [
           GPUColorTargetState(
@@ -382,6 +565,51 @@ class WebGpuFilterSystem {
         dot(color, colorMatrix.matrixA)
       );
       return vec4<f32>(transformed.rgb * transformed.a, transformed.a);
+    }
+  ''';
+
+  static const _blurShaderSource = '''
+    @group(0) @binding(0) var stageSampler: sampler;
+    @group(0) @binding(1) var stageTexture: texture_2d<f32>;
+
+    struct BlurUniforms {
+      radius: vec2<f32>,
+      alpha: f32,
+      padding: f32,
+    };
+
+    @group(0) @binding(2) var<uniform> blur: BlurUniforms;
+
+    struct VertexInput {
+      @location(0) clip: vec4<f32>,
+      @location(1) uv: vec2<f32>,
+    };
+
+    struct VertexOutput {
+      @builtin(position) position: vec4<f32>,
+      @location(0) uv: vec2<f32>,
+    };
+
+    @vertex
+    fn vs_main(input: VertexInput) -> VertexOutput {
+      var output: VertexOutput;
+      output.position = input.clip;
+      output.uv = input.uv;
+      return output;
+    }
+
+    @fragment
+    fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
+      let radius = blur.radius;
+      var sum = vec4<f32>(0.0);
+      sum += textureSample(stageTexture, stageSampler, input.uv - radius * 1.2) * 0.00443;
+      sum += textureSample(stageTexture, stageSampler, input.uv - radius * 0.8) * 0.05399;
+      sum += textureSample(stageTexture, stageSampler, input.uv - radius * 0.4) * 0.24197;
+      sum += textureSample(stageTexture, stageSampler, input.uv) * 0.39894;
+      sum += textureSample(stageTexture, stageSampler, input.uv + radius * 0.4) * 0.24197;
+      sum += textureSample(stageTexture, stageSampler, input.uv + radius * 0.8) * 0.05399;
+      sum += textureSample(stageTexture, stageSampler, input.uv + radius * 1.2) * 0.00443;
+      return sum * blur.alpha;
     }
   ''';
 }

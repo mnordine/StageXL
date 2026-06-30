@@ -76,6 +76,12 @@ class RenderContextWebGPU extends RenderContext {
     _setClearColor(color);
   }
 
+  List<num>? consumeClearColor() {
+    final clearColor = _clearColor;
+    _clearColor = null;
+    return clearColor;
+  }
+
   void _setClearColor(int color) {
     const inv255 = 1 / 255;
     _clearColor = [
