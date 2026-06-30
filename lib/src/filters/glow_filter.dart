@@ -40,6 +40,9 @@ class GlowFilter extends BitmapFilter {
       GlowFilter(color, blurX, blurY, quality, knockout, hideObject);
 
   @override
+  bool get supportsWebGPU => true;
+
+  @override
   Rectangle<int> get overlap =>
       Rectangle<int>(-blurX, -blurY, 2 * blurX, 2 * blurY);
 
@@ -141,12 +144,32 @@ class GlowFilter extends BitmapFilter {
   @override
   void renderFilter(
       RenderState renderState, RenderTextureQuad renderTextureQuad, int pass) {
-    final renderContext = renderState.renderContext as RenderContextWebGL;
+    final renderContext = renderState.renderContext;
     final renderTexture = renderTextureQuad.renderTexture;
     final passCount = _renderPassSources.length;
     final passScale = pow(0.5, pass >> 1);
     final pixelRatio = sqrt(renderState.globalMatrix.det.abs());
     final pixelRatioScale = pixelRatio * passScale;
+
+    if (renderContext is RenderContextWebGPU) {
+      if (pass == passCount - 1) {
+        if (!knockout && !hideObject) {
+          renderContext.renderTextureQuad(renderState, renderTextureQuad);
+        }
+      } else {
+        renderContext.filterSystem.renderGlowFilterQuad(
+          renderState,
+          renderTextureQuad,
+          pass == passCount - 2 ? color : color | 0xFF000000,
+          pass == passCount - 2 ? renderState.globalAlpha : 1.0,
+          pass.isEven ? pixelRatioScale * blurX / renderTexture.width : 0.0,
+          pass.isEven ? 0.0 : pixelRatioScale * blurY / renderTexture.height,
+        );
+      }
+      return;
+    }
+
+    renderContext as RenderContextWebGL;
 
     if (pass == passCount - 1) {
       if (!knockout && !hideObject) {

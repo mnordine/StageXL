@@ -9,12 +9,15 @@ class WebGpuFilterSystem {
   late final GPUPipelineLayout _colorMatrixPipelineLayout;
   late final GPUShaderModule _colorMatrixShaderModule;
   late final GPUShaderModule _blurShaderModule;
+  late final GPUShaderModule _glowShaderModule;
   late GPUBuffer _vertexBuffer;
   late GPUBuffer _indexBuffer;
   late GPUBuffer _uniformBuffer;
   late GPUBuffer _blurUniformBuffer;
+  late GPUBuffer _glowUniformBuffer;
   final _colorMatrixPipelines = <BlendMode, Map<bool, GPURenderPipeline>>{};
   final _blurPipelines = <BlendMode, Map<bool, GPURenderPipeline>>{};
+  final _glowPipelines = <BlendMode, Map<bool, GPURenderPipeline>>{};
   var _vertexCapacity = 0;
   var _indexCapacity = 0;
 
@@ -41,6 +44,7 @@ class WebGpuFilterSystem {
         device.createPipelineLayout(GPUPipelineLayoutDescriptor(bindGroupLayouts: [_colorMatrixBindGroupLayout].toJS));
     _colorMatrixShaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _colorMatrixShaderSource));
     _blurShaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _blurShaderSource));
+    _glowShaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _glowShaderSource));
     _vertexBuffer = _createVertexBuffer(_bytesPerVertex * 4);
     _indexBuffer = _createIndexBuffer(12);
     _uniformBuffer = device.createBuffer(GPUBufferDescriptor(
@@ -49,6 +53,10 @@ class WebGpuFilterSystem {
     ));
     _blurUniformBuffer = device.createBuffer(GPUBufferDescriptor(
       size: 16,
+      usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.UNIFORM,
+    ));
+    _glowUniformBuffer = device.createBuffer(GPUBufferDescriptor(
+      size: 32,
       usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.UNIFORM,
     ));
   }
@@ -299,6 +307,27 @@ class WebGpuFilterSystem {
     _renderTextureQuadWithBlurUniform(renderState, renderTextureQuad, uniformData);
   }
 
+  void renderGlowFilterQuad(
+    RenderState renderState,
+    RenderTextureQuad renderTextureQuad,
+    int color,
+    num alpha,
+    num radiusX,
+    num radiusY,
+  ) {
+    final uniformData = Float32List.fromList([
+      radiusX.toDouble(),
+      radiusY.toDouble(),
+      0,
+      0,
+      colorGetR(color) / 255.0,
+      colorGetG(color) / 255.0,
+      colorGetB(color) / 255.0,
+      colorGetA(color) / 255.0 * alpha.toDouble(),
+    ]);
+    _renderTextureQuadWithGlowUniform(renderState, renderTextureQuad, uniformData);
+  }
+
   void _renderTextureQuadWithColorMatrixUniform(
     RenderState renderState,
     RenderTextureQuad renderTextureQuad,
@@ -326,6 +355,21 @@ class WebGpuFilterSystem {
       _blurUniformBuffer,
       _getBlurPipeline,
       16,
+    );
+  }
+
+  void _renderTextureQuadWithGlowUniform(
+    RenderState renderState,
+    RenderTextureQuad renderTextureQuad,
+    Float32List uniformData,
+  ) {
+    _renderTextureQuadWithUniform(
+      renderState,
+      renderTextureQuad,
+      uniformData,
+      _glowUniformBuffer,
+      _getGlowPipeline,
+      32,
     );
   }
 
@@ -420,6 +464,11 @@ class WebGpuFilterSystem {
     return blendPipelines.putIfAbsent(stencilTest, () => _createBlurPipeline(blendMode, stencilTest));
   }
 
+  GPURenderPipeline _getGlowPipeline(BlendMode blendMode, bool stencilTest) {
+    final blendPipelines = _glowPipelines.putIfAbsent(blendMode, () => <bool, GPURenderPipeline>{});
+    return blendPipelines.putIfAbsent(stencilTest, () => _createGlowPipeline(blendMode, stencilTest));
+  }
+
   GPURenderPipeline _createColorMatrixPipeline(BlendMode blendMode, bool stencilTest) => _createFilterPipeline(
         'StageXL color matrix filter pipeline',
         _colorMatrixShaderModule,
@@ -430,6 +479,13 @@ class WebGpuFilterSystem {
   GPURenderPipeline _createBlurPipeline(BlendMode blendMode, bool stencilTest) => _createFilterPipeline(
         'StageXL blur filter pipeline',
         _blurShaderModule,
+        blendMode,
+        stencilTest,
+      );
+
+  GPURenderPipeline _createGlowPipeline(BlendMode blendMode, bool stencilTest) => _createFilterPipeline(
+        'StageXL glow filter pipeline',
+        _glowShaderModule,
         blendMode,
         stencilTest,
       );
@@ -610,6 +666,52 @@ class WebGpuFilterSystem {
       sum += textureSample(stageTexture, stageSampler, input.uv + radius * 0.8) * 0.05399;
       sum += textureSample(stageTexture, stageSampler, input.uv + radius * 1.2) * 0.00443;
       return sum * blur.alpha;
+    }
+  ''';
+
+  static const _glowShaderSource = '''
+    @group(0) @binding(0) var stageSampler: sampler;
+    @group(0) @binding(1) var stageTexture: texture_2d<f32>;
+
+    struct GlowUniforms {
+      radius: vec2<f32>,
+      padding0: vec2<f32>,
+      color: vec4<f32>,
+    };
+
+    @group(0) @binding(2) var<uniform> glow: GlowUniforms;
+
+    struct VertexInput {
+      @location(0) clip: vec4<f32>,
+      @location(1) uv: vec2<f32>,
+    };
+
+    struct VertexOutput {
+      @builtin(position) position: vec4<f32>,
+      @location(0) uv: vec2<f32>,
+    };
+
+    @vertex
+    fn vs_main(input: VertexInput) -> VertexOutput {
+      var output: VertexOutput;
+      output.position = input.clip;
+      output.uv = input.uv;
+      return output;
+    }
+
+    @fragment
+    fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
+      let radius = glow.radius;
+      var alpha = 0.0;
+      alpha += textureSample(stageTexture, stageSampler, input.uv - radius * 1.2).a * 0.00443;
+      alpha += textureSample(stageTexture, stageSampler, input.uv - radius * 0.8).a * 0.05399;
+      alpha += textureSample(stageTexture, stageSampler, input.uv - radius * 0.4).a * 0.24197;
+      alpha += textureSample(stageTexture, stageSampler, input.uv).a * 0.39894;
+      alpha += textureSample(stageTexture, stageSampler, input.uv + radius * 0.4).a * 0.24197;
+      alpha += textureSample(stageTexture, stageSampler, input.uv + radius * 0.8).a * 0.05399;
+      alpha += textureSample(stageTexture, stageSampler, input.uv + radius * 1.2).a * 0.00443;
+      alpha *= glow.color.a;
+      return vec4<f32>(glow.color.rgb * alpha, alpha);
     }
   ''';
 }
