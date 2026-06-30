@@ -24,6 +24,9 @@ class DisplacementMapFilter extends BitmapFilter {
       DisplacementMapFilter(bitmapData, matrix.clone(), scaleX, scaleY);
 
   @override
+  bool get supportsWebGPU => true;
+
+  @override
   Rectangle<int> get overlap {
     final x = (0.5 * scaleX).abs().ceil();
     final y = (0.5 * scaleY).abs().ceil();
@@ -55,7 +58,7 @@ class DisplacementMapFilter extends BitmapFilter {
     final vxList = renderTextureQuad.vxListQuad;
     final pixelRatio = renderTextureQuad.pixelRatio;
     final scaleX = pixelRatio * this.scaleX;
-    final scaleY = pixelRatio * this.scaleX;
+    final scaleY = pixelRatio * this.scaleY;
     final channelX = BitmapDataChannel.getCanvasIndex(BitmapDataChannel.RED);
     final channelY = BitmapDataChannel.getCanvasIndex(BitmapDataChannel.GREEN);
 
@@ -104,7 +107,28 @@ class DisplacementMapFilter extends BitmapFilter {
   @override
   void renderFilter(
       RenderState renderState, RenderTextureQuad renderTextureQuad, int pass) {
-    final renderContext = renderState.renderContext as RenderContextWebGL;
+    final renderContext = renderState.renderContext;
+
+    if (renderContext is RenderContextWebGPU) {
+      final mapMatrix = Matrix.fromIdentity();
+      mapMatrix.copyFromAndConcat(matrix, renderTextureQuad.samplerMatrix);
+      mapMatrix.invertAndConcat(bitmapData.renderTextureQuad.samplerMatrix);
+
+      final disMatrix = Matrix.fromIdentity();
+      disMatrix.copyFrom(renderTextureQuad.samplerMatrix);
+      disMatrix.scale(scaleX, scaleY);
+
+      renderContext.filterSystem.renderDisplacementMapFilterQuad(
+        renderState,
+        renderTextureQuad,
+        bitmapData.renderTextureQuad,
+        mapMatrix,
+        disMatrix,
+      );
+      return;
+    }
+
+    renderContext as RenderContextWebGL;
     final renderTexture = renderTextureQuad.renderTexture;
 
     final renderProgram = renderContext.getRenderProgram(
