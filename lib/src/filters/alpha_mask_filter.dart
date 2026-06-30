@@ -16,6 +16,9 @@ class AlphaMaskFilter extends BitmapFilter {
   @override
   BitmapFilter clone() => AlphaMaskFilter(bitmapData, matrix.clone());
 
+  @override
+  bool get supportsWebGPU => true;
+
   //---------------------------------------------------------------------------
 
   @override
@@ -48,7 +51,24 @@ class AlphaMaskFilter extends BitmapFilter {
   @override
   void renderFilter(
       RenderState renderState, RenderTextureQuad renderTextureQuad, int pass) {
-    final renderContext = renderState.renderContext as RenderContextWebGL;
+    final renderContext = renderState.renderContext;
+
+    if (renderContext is RenderContextWebGPU) {
+      final mskQuad = bitmapData.renderTextureQuad;
+      final mskMatrix = mskQuad.samplerMatrix;
+      mskMatrix.invertAndConcat(matrix);
+      mskMatrix.invert();
+
+      renderContext.filterSystem.renderAlphaMaskFilterQuad(
+        renderState,
+        renderTextureQuad,
+        mskQuad,
+        mskMatrix,
+      );
+      return;
+    }
+
+    renderContext as RenderContextWebGL;
     final renderTexture = renderTextureQuad.renderTexture;
 
     final renderProgram = renderContext.getRenderProgram(
