@@ -18,5 +18,63 @@
 
 <body class="stage-full-window">
     <canvas id="stage" class="stage-full-window"></canvas>
+
+    <div class="normal-map-controls" aria-label="Normal map controls">
+        <h1>Normal Map Controls</h1>
+
+        <label for="ambientColor">Ambient Color</label>
+        <input id="ambientColor" type="color" value="#303844">
+
+        <label for="lightColor">Light Color</label>
+        <input id="lightColor" type="color" value="#fff2cc">
+
+        <label for="lightZ">Light Z: <span id="lightZValue">90</span></label>
+        <input id="lightZ" type="range" min="0" max="220" step="1" value="90">
+
+        <label for="lightRadius">Light Radius: <span id="lightRadiusValue">480</span></label>
+        <input id="lightRadius" type="range" min="80" max="900" step="1" value="480">
+    </div>
+
+    <style>
+        .normal-map-controls {
+            position: fixed;
+            right: 16px;
+            top: 16px;
+            z-index: 10;
+            width: min(280px, calc(100vw - 32px));
+            box-sizing: border-box;
+            padding: 14px 14px 12px;
+            border-radius: 10px;
+            border: 1px solid #3a4a68;
+            background: rgba(24, 33, 49, 0.86);
+            color: #eef4ff;
+            font: 13px/1.4 Arial, sans-serif;
+            backdrop-filter: blur(4px);
+        }
+
+        .normal-map-controls h1 {
+            margin: 0 0 10px;
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .normal-map-controls label {
+            display: block;
+            margin-top: 8px;
+            margin-bottom: 4px;
+        }
+
+        .normal-map-controls input[type="range"],
+        .normal-map-controls input[type="color"] {
+            width: 100%;
+        }
+
+        .normal-map-controls input[type="color"] {
+            height: 34px;
+            padding: 0;
+            background: transparent;
+            border: 0;
+        }
+    </style>
 </body>
 </html>

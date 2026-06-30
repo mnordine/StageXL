@@ -1,3 +1,4 @@
+import 'dart:js_interop';
 import 'dart:math' as math;
 
 import 'package:stagexl/stagexl.dart';
@@ -50,14 +51,12 @@ Future<void> main() async {
     ..addChild(frame)
     ..addChild(bitmap);
 
-  var elapsed = 0.0;
+  _bindNormalMapControls(filter);
+
   stage.onEnterFrame.listen((event) {
-    elapsed += event.passedTime.toDouble();
     final local = bitmap.globalToLocal(stage.mousePosition);
     filter.lightX = local.x;
     filter.lightY = local.y;
-    filter.lightZ = 70 + math.sin(elapsed * 0.8) * 30;
-    filter.lightRadius = 420 + math.cos(elapsed * 0.6) * 120;
   });
 }
 
@@ -67,4 +66,56 @@ void _addLabel(DisplayObjectContainer parent, String text, num x, num y, num siz
     ..y = y
     ..autoSize = TextFieldAutoSize.LEFT;
   parent.addChild(label);
+}
+
+void _bindNormalMapControls(NormalMapFilter filter) {
+  final ambientColorInput = document.querySelector('#ambientColor') as HTMLInputElement?;
+  final lightColorInput = document.querySelector('#lightColor') as HTMLInputElement?;
+  final lightZInput = document.querySelector('#lightZ') as HTMLInputElement?;
+  final lightRadiusInput = document.querySelector('#lightRadius') as HTMLInputElement?;
+  final lightZValue = document.querySelector('#lightZValue') as HTMLElement?;
+  final lightRadiusValue = document.querySelector('#lightRadiusValue') as HTMLElement?;
+
+  if (ambientColorInput == null ||
+      lightColorInput == null ||
+      lightZInput == null ||
+      lightRadiusInput == null) {
+    return;
+  }
+
+  ambientColorInput.value = _rgbHex(filter.ambientColor);
+  lightColorInput.value = _rgbHex(filter.lightColor);
+  lightZInput.value = filter.lightZ.round().toString();
+  lightRadiusInput.value = filter.lightRadius.round().toString();
+
+  void applyControls() {
+    filter.ambientColor = _mergeColorRgb(filter.ambientColor, ambientColorInput.value);
+    filter.lightColor = _mergeColorRgb(filter.lightColor, lightColorInput.value);
+    filter.lightZ = num.tryParse(lightZInput.value) ?? filter.lightZ;
+    filter.lightRadius = num.tryParse(lightRadiusInput.value) ?? filter.lightRadius;
+
+    if (lightZValue != null) lightZValue.textContent = filter.lightZ.round().toString();
+    if (lightRadiusValue != null) lightRadiusValue.textContent = filter.lightRadius.round().toString();
+  }
+
+  final onInput = ((JSAny? _) {
+    applyControls();
+  }).toJS;
+
+  ambientColorInput.addEventListener('input', onInput);
+  lightColorInput.addEventListener('input', onInput);
+  lightZInput.addEventListener('input', onInput);
+  lightRadiusInput.addEventListener('input', onInput);
+  applyControls();
+}
+
+String _rgbHex(int color) {
+  final rgb = color & 0x00FFFFFF;
+  return '#${rgb.toRadixString(16).padLeft(6, '0')}';
+}
+
+int _mergeColorRgb(int color, String hexRgb) {
+  final rgb = int.tryParse(hexRgb.replaceFirst('#', ''), radix: 16);
+  if (rgb == null) return color;
+  return (color & 0xFF000000) | rgb;
 }
