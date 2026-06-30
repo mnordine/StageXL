@@ -120,8 +120,8 @@ class WebGpuFilterSystem {
 
     try {
       final filterProjectionMatrix = Matrix3D.fromIdentity();
-      filterProjectionMatrix.scale(2 / boundsWidth, 2 / boundsHeight, 1);
-      filterProjectionMatrix.translate(-1, -1, 0);
+      filterProjectionMatrix.scale(2 / boundsWidth, -2 / boundsHeight, 1);
+      filterProjectionMatrix.translate(-1, 1, 0);
 
       final filterRenderState = RenderState(renderContext);
       filterRenderState.globalMatrix.scale(pixelRatio, pixelRatio);
