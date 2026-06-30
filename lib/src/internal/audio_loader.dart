@@ -90,28 +90,17 @@ class AudioLoader {
   //-------------------------------------------------------------------------------------------------
 
   static List<String> _getSupportedTypes() {
-    final supportedTypes = <String>[];
     final audio = HTMLAudioElement();
     final valid = ['maybe', 'probably'];
 
-    if (valid.contains(audio.canPlayType('audio/ogg; codecs=opus'))) {
-      supportedTypes.add('opus');
-    }
-    if (valid.contains(audio.canPlayType('audio/mpeg'))) {
-      supportedTypes.add('mp3');
-    }
-    if (valid.contains(audio.canPlayType('audio/mp4'))) {
-      supportedTypes.add('mp4');
-    }
-    if (valid.contains(audio.canPlayType('audio/ogg'))) {
-      supportedTypes.add('ogg');
-    }
-    if (valid.contains(audio.canPlayType('audio/ac3'))) {
-      supportedTypes.add('ac3');
-    }
-    if (valid.contains(audio.canPlayType('audio/wav'))) {
-      supportedTypes.add('wav');
-    }
+    final supportedTypes = [
+      if (valid.contains(audio.canPlayType('audio/ogg; codecs=opus'))) 'opus',
+      if (valid.contains(audio.canPlayType('audio/mpeg'))) 'mp3',
+      if (valid.contains(audio.canPlayType('audio/mp4'))) 'mp4',
+      if (valid.contains(audio.canPlayType('audio/ogg'))) 'ogg',
+      if (valid.contains(audio.canPlayType('audio/ac3'))) 'ac3',
+      if (valid.contains(audio.canPlayType('audio/wav'))) 'wav',
+    ];
 
     print('StageXL audio types   : $supportedTypes');
 
