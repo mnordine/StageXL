@@ -1,3 +1,4 @@
+import 'dart:js_interop';
 import 'dart:math' as math;
 
 import 'package:stagexl/stagexl.dart';
@@ -28,16 +29,18 @@ Future<void> main() async {
   final originalBitmap = Bitmap(bitmapData)
     ..x = 70
     ..y = 160;
+  final bitmapBlurFilter = BlurFilter(6, 6);
   final blurredBitmap = Bitmap(bitmapData)
     ..x = 290
     ..y = 160
-    ..filters = [BlurFilter(6, 6)];
+    ..filters = [bitmapBlurFilter];
+  final spriteBlurFilter = BlurFilter(6, 6);
   final blurredSprite = Sprite()
     ..x = 595
     ..y = 220
     ..pivotX = bitmapData.width / 2
     ..pivotY = bitmapData.height / 2
-    ..filters = [BlurFilter(6, 6)];
+    ..filters = [spriteBlurFilter];
   blurredSprite.addChild(Bitmap(bitmapData));
 
   stage
@@ -53,6 +56,8 @@ Future<void> main() async {
     elapsed += event.passedTime.toDouble();
     blurredSprite.rotation = math.sin(elapsed * 0.75) * 0.18;
   });
+
+  _bindBlurControls(bitmapBlurFilter, spriteBlurFilter);
 }
 
 BitmapData _filterBitmapData() {
@@ -86,4 +91,45 @@ void _addLabel(DisplayObjectContainer parent, String text, num x, num y, num siz
     ..y = y
     ..autoSize = TextFieldAutoSize.LEFT;
   parent.addChild(label);
+}
+
+void _bindBlurControls(BlurFilter bitmapBlurFilter, BlurFilter spriteBlurFilter) {
+  final blurXInput = document.querySelector('#blurX') as HTMLInputElement?;
+  final blurYInput = document.querySelector('#blurY') as HTMLInputElement?;
+  final qualityInput = document.querySelector('#blurQuality') as HTMLInputElement?;
+
+  final blurXValue = document.querySelector('#blurXValue') as HTMLElement?;
+  final blurYValue = document.querySelector('#blurYValue') as HTMLElement?;
+  final qualityValue = document.querySelector('#blurQualityValue') as HTMLElement?;
+
+  if (blurXInput == null || blurYInput == null || qualityInput == null) return;
+
+  void applyValues() {
+    final blurX = int.tryParse(blurXInput.value) ?? bitmapBlurFilter.blurX;
+    final blurY = int.tryParse(blurYInput.value) ?? bitmapBlurFilter.blurY;
+    final quality = int.tryParse(qualityInput.value) ?? bitmapBlurFilter.quality;
+
+    bitmapBlurFilter
+      ..blurX = blurX
+      ..blurY = blurY
+      ..quality = quality;
+
+    spriteBlurFilter
+      ..blurX = blurX
+      ..blurY = blurY
+      ..quality = quality;
+
+    if (blurXValue != null) blurXValue.textContent = blurX.toString();
+    if (blurYValue != null) blurYValue.textContent = blurY.toString();
+    if (qualityValue != null) qualityValue.textContent = quality.toString();
+  }
+
+  final onInput = ((JSAny? _) {
+    applyValues();
+  }).toJS;
+
+  blurXInput.addEventListener('input', onInput);
+  blurYInput.addEventListener('input', onInput);
+  qualityInput.addEventListener('input', onInput);
+  applyValues();
 }

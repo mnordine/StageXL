@@ -18,5 +18,50 @@
 
 <body class="stage-full-window">
     <canvas id="stage" class="stage-full-window"></canvas>
+    <div class="blur-controls" aria-label="Blur filter controls">
+        <h1>Blur Controls</h1>
+        <label for="blurX">Blur X: <span id="blurXValue">6</span></label>
+        <input id="blurX" type="range" min="0" max="64" value="6" step="1">
+
+        <label for="blurY">Blur Y: <span id="blurYValue">6</span></label>
+        <input id="blurY" type="range" min="0" max="64" value="6" step="1">
+
+        <label for="blurQuality">Quality: <span id="blurQualityValue">1</span></label>
+        <input id="blurQuality" type="range" min="1" max="5" value="1" step="1">
+    </div>
+
+    <style>
+        .blur-controls {
+            position: fixed;
+            right: 16px;
+            top: 16px;
+            z-index: 10;
+            width: min(280px, calc(100vw - 32px));
+            box-sizing: border-box;
+            padding: 14px 14px 12px;
+            border-radius: 10px;
+            border: 1px solid #3a4a68;
+            background: rgba(24, 33, 49, 0.86);
+            color: #eef4ff;
+            font: 13px/1.4 Arial, sans-serif;
+            backdrop-filter: blur(4px);
+        }
+
+        .blur-controls h1 {
+            margin: 0 0 10px;
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .blur-controls label {
+            display: block;
+            margin-top: 8px;
+            margin-bottom: 4px;
+        }
+
+        .blur-controls input[type="range"] {
+            width: 100%;
+        }
+    </style>
 </body>
 </html>
