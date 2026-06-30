@@ -105,21 +105,12 @@ class RenderTexture {
       return _canvas!;
     } else if (_source.isA<ImageBitmap>()) {
       final image = _source as ImageBitmap;
-      _source = _canvas = HTMLCanvasElement()
+      final canvas = _source = _canvas = HTMLCanvasElement()
         ..width = _width
         ..height = _height;
 
-      // Note: We need to use js_util.callMethod, because Dart SDK
-      // does not support ImageBitmap as a CanvasImageSource
-      _canvas!.context2D.drawImage(
-        image,
-        0,
-        0,
-        _width,
-        _height,
-      );
-
-      return _canvas!;
+      canvas.context2D.drawImage(image, 0, 0, _width, _height);
+      return canvas;
     } else {
       throw StateError('RenderTexture is read only.');
     }
