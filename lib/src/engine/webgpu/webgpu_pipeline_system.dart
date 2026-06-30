@@ -43,6 +43,8 @@ class WebGpuPipelineSystem {
   GPURenderPipeline getStencilWritePipeline() =>
       _stencilWritePipeline ??= _createStencilWritePipeline();
 
+  GPUBlendState getBlendState(BlendMode blendMode) => _blendFor(blendMode);
+
   GPURenderPipeline _createPipeline(BlendMode blendMode, {required int stencilMode}) {
     renderContext.renderStatistics.webgpuPipelineCreateCount++;
     final blend = _blendFor(blendMode);

@@ -79,6 +79,9 @@ class ColorMatrixFilter extends BitmapFilter {
   @override
   BitmapFilter clone() => ColorMatrixFilter(_colorMatrixList, _colorOffsetList);
 
+  @override
+  bool get supportsWebGPU => true;
+
   //-----------------------------------------------------------------------------------------------
 
   void adjustInversion(num value) {
@@ -257,7 +260,18 @@ class ColorMatrixFilter extends BitmapFilter {
   @override
   void renderFilter(
       RenderState renderState, RenderTextureQuad renderTextureQuad, int pass) {
-    final renderContext = renderState.renderContext as RenderContextWebGL;
+    final renderContext = renderState.renderContext;
+    if (renderContext is RenderContextWebGPU) {
+      renderContext.filterSystem.renderColorMatrixFilterQuad(
+        renderState,
+        renderTextureQuad,
+        _colorMatrixList,
+        _colorOffsetList,
+      );
+      return;
+    }
+
+    renderContext as RenderContextWebGL;
     final renderTexture = renderTextureQuad.renderTexture;
 
     final renderProgram = renderContext.getRenderProgram(

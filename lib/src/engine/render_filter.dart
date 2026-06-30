@@ -14,6 +14,8 @@ abstract class RenderFilter {
     return overlap.width == 0 && overlap.height == 0 && rps.length == 1;
   }
 
+  bool get supportsWebGPU => false;
+
   void renderFilter(
       RenderState renderState, RenderTextureQuad renderTextureQuad, int pass);
 }

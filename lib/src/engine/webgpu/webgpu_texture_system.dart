@@ -44,8 +44,8 @@ class WebGpuTextureSystem {
     final bindGroup = entry.bindGroup;
     if (bindGroup != null) return bindGroup;
 
-    final view = entry.view ??= entry.texture.createView();
-    final sampler = identical(renderTexture.filtering, RenderTextureFiltering.NEAREST) ? nearestSampler : linearSampler;
+    final view = getTextureView(renderTexture);
+    final sampler = getSampler(renderTexture);
     final created = renderContext.device.createBindGroup(GPUBindGroupDescriptor(
       layout: renderContext.pipelineSystem.textureBindGroupLayout,
       entries: [
@@ -55,6 +55,14 @@ class WebGpuTextureSystem {
     ));
     renderContext.renderStatistics.webgpuBindGroupCreateCount++;
     return entry.bindGroup = created;
+  }
+
+  GPUSampler getSampler(RenderTexture renderTexture) =>
+      identical(renderTexture.filtering, RenderTextureFiltering.NEAREST) ? nearestSampler : linearSampler;
+
+  GPUTextureView getTextureView(RenderTexture renderTexture) {
+    final entry = _getEntry(renderTexture);
+    return entry.view ??= entry.texture.createView();
   }
 
   _WebGpuTextureEntry _getEntry(RenderTexture renderTexture) {
