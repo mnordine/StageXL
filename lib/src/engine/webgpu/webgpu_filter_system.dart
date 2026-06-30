@@ -3,23 +3,32 @@ part of '../../engine.dart';
 class WebGpuFilterSystem {
   static const _floatsPerVertex = 6;
   static const _bytesPerVertex = _floatsPerVertex * 4;
+  static const _normalMapFloatsPerVertex = 8;
+  static const _normalMapBytesPerVertex = _normalMapFloatsPerVertex * 4;
 
   final RenderContextWebGPU renderContext;
   late final GPUBindGroupLayout _colorMatrixBindGroupLayout;
   late final GPUPipelineLayout _colorMatrixPipelineLayout;
+  late final GPUBindGroupLayout _normalMapBindGroupLayout;
+  late final GPUPipelineLayout _normalMapPipelineLayout;
   late final GPUShaderModule _colorMatrixShaderModule;
   late final GPUShaderModule _blurShaderModule;
   late final GPUShaderModule _glowShaderModule;
+  late final GPUShaderModule _normalMapShaderModule;
   late GPUBuffer _vertexBuffer;
   late GPUBuffer _indexBuffer;
+  late GPUBuffer _normalMapVertexBuffer;
   late GPUBuffer _uniformBuffer;
   late GPUBuffer _blurUniformBuffer;
   late GPUBuffer _glowUniformBuffer;
+  late GPUBuffer _normalMapUniformBuffer;
   final _colorMatrixPipelines = <BlendMode, Map<bool, GPURenderPipeline>>{};
   final _blurPipelines = <BlendMode, Map<bool, GPURenderPipeline>>{};
   final _glowPipelines = <BlendMode, Map<bool, GPURenderPipeline>>{};
+  final _normalMapPipelines = <BlendMode, Map<bool, GPURenderPipeline>>{};
   var _vertexCapacity = 0;
   var _indexCapacity = 0;
+  var _normalMapVertexCapacity = 0;
 
   WebGpuFilterSystem(this.renderContext) {
     final device = renderContext.device;
@@ -42,11 +51,42 @@ class WebGpuFilterSystem {
     ].toJS));
     _colorMatrixPipelineLayout =
         device.createPipelineLayout(GPUPipelineLayoutDescriptor(bindGroupLayouts: [_colorMatrixBindGroupLayout].toJS));
+    _normalMapBindGroupLayout = device.createBindGroupLayout(GPUBindGroupLayoutDescriptor(entries: [
+      GPUBindGroupLayoutEntry(
+        binding: 0,
+        visibility: $GPUShaderStage.FRAGMENT,
+        sampler: GPUSamplerBindingLayout(type: 'filtering'),
+      ),
+      GPUBindGroupLayoutEntry(
+        binding: 1,
+        visibility: $GPUShaderStage.FRAGMENT,
+        texture: GPUTextureBindingLayout(sampleType: 'float'),
+      ),
+      GPUBindGroupLayoutEntry(
+        binding: 2,
+        visibility: $GPUShaderStage.FRAGMENT,
+        sampler: GPUSamplerBindingLayout(type: 'filtering'),
+      ),
+      GPUBindGroupLayoutEntry(
+        binding: 3,
+        visibility: $GPUShaderStage.FRAGMENT,
+        texture: GPUTextureBindingLayout(sampleType: 'float'),
+      ),
+      GPUBindGroupLayoutEntry(
+        binding: 4,
+        visibility: $GPUShaderStage.FRAGMENT,
+        buffer: GPUBufferBindingLayout(type: 'uniform'),
+      ),
+    ].toJS));
+    _normalMapPipelineLayout =
+        device.createPipelineLayout(GPUPipelineLayoutDescriptor(bindGroupLayouts: [_normalMapBindGroupLayout].toJS));
     _colorMatrixShaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _colorMatrixShaderSource));
     _blurShaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _blurShaderSource));
     _glowShaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _glowShaderSource));
+    _normalMapShaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _normalMapShaderSource));
     _vertexBuffer = _createVertexBuffer(_bytesPerVertex * 4);
     _indexBuffer = _createIndexBuffer(12);
+    _normalMapVertexBuffer = _createNormalMapVertexBuffer(_normalMapBytesPerVertex * 4);
     _uniformBuffer = device.createBuffer(GPUBufferDescriptor(
       size: 80,
       usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.UNIFORM,
@@ -57,6 +97,10 @@ class WebGpuFilterSystem {
     ));
     _glowUniformBuffer = device.createBuffer(GPUBufferDescriptor(
       size: 32,
+      usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.UNIFORM,
+    ));
+    _normalMapUniformBuffer = device.createBuffer(GPUBufferDescriptor(
+      size: 80,
       usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.UNIFORM,
     ));
   }
@@ -328,6 +372,131 @@ class WebGpuFilterSystem {
     _renderTextureQuadWithGlowUniform(renderState, renderTextureQuad, uniformData);
   }
 
+  void renderNormalMapFilterQuad(
+    RenderState renderState,
+    RenderTextureQuad renderTextureQuad,
+    RenderTextureQuad normalMapRenderTextureQuad,
+    int ambientColor,
+    int lightColor,
+    num lightX,
+    num lightY,
+    num lightZ,
+    num lightRadius,
+  ) {
+    final ixList = renderTextureQuad.ixList;
+    final vxList = renderTextureQuad.vxList;
+    final vertexCount = vxList.length >> 2;
+    if (vertexCount == 0 || ixList.isEmpty) return;
+
+    final texMatrix = renderTextureQuad.samplerMatrix;
+    final mapMatrix = normalMapRenderTextureQuad.samplerMatrix;
+    final combined = Matrix3D.fromIdentity()
+      ..copyFrom2DAndConcat(renderState.globalMatrix, renderContext.activeProjectionMatrix);
+
+    final lightSamplerX = texMatrix.tx + lightX * texMatrix.a + lightY * texMatrix.c;
+    final lightSamplerY = texMatrix.ty + lightX * texMatrix.b + lightY * texMatrix.d;
+    final lightScale = math.sqrt(texMatrix.det);
+    final lightSamplerZ = lightScale * lightZ;
+    final lightSamplerRadius = lightScale * lightRadius;
+
+    final uniformData = Float32List(20)
+      ..setRange(0, 4, [
+        colorGetA(ambientColor) / 255.0,
+        colorGetR(ambientColor) / 255.0,
+        colorGetG(ambientColor) / 255.0,
+        colorGetB(ambientColor) / 255.0,
+      ])
+      ..setRange(4, 8, [
+        colorGetA(lightColor) / 255.0,
+        colorGetR(lightColor) / 255.0,
+        colorGetG(lightColor) / 255.0,
+        colorGetB(lightColor) / 255.0,
+      ])
+      ..setRange(8, 12, [
+        lightSamplerX,
+        lightSamplerY,
+        lightSamplerZ,
+        lightSamplerRadius,
+      ])
+      ..setRange(12, 16, [
+        renderState.globalAlpha,
+        0,
+        0,
+        0,
+      ])
+      ..setRange(16, 20, [0, 0, 0, 0]);
+
+    final vertices = Float32List(vertexCount * _normalMapFloatsPerVertex);
+    final indices = Uint16List(ixList.length.isOdd ? ixList.length + 1 : ixList.length);
+
+    var vertexIndex = 0;
+    for (var i = 0, sourceIndex = 0; i < vertexCount; i++, sourceIndex += 4) {
+      final x = vxList[sourceIndex + 0];
+      final y = vxList[sourceIndex + 1];
+      final clipX = combined.m00 * x + combined.m10 * y + combined.m30;
+      final clipY = combined.m01 * x + combined.m11 * y + combined.m31;
+      final clipZ = combined.m02 * x + combined.m12 * y + combined.m32;
+      final clipW = combined.m03 * x + combined.m13 * y + combined.m33;
+      vertices[vertexIndex++] = clipX;
+      vertices[vertexIndex++] = clipY;
+      vertices[vertexIndex++] = clipZ * 0.5 + clipW * 0.5;
+      vertices[vertexIndex++] = clipW;
+      vertices[vertexIndex++] = texMatrix.tx + x * texMatrix.a + y * texMatrix.c;
+      vertices[vertexIndex++] = texMatrix.ty + x * texMatrix.b + y * texMatrix.d;
+      vertices[vertexIndex++] = mapMatrix.tx + x * mapMatrix.a + y * mapMatrix.c;
+      vertices[vertexIndex++] = mapMatrix.ty + x * mapMatrix.b + y * mapMatrix.d;
+    }
+
+    for (var i = 0; i < ixList.length; i++) {
+      indices[i] = ixList[i];
+    }
+
+    final vertexBytes = vertices.lengthInBytes;
+    final indexBytes = indices.lengthInBytes;
+    _ensureNormalMapVertexCapacity(vertexBytes);
+    _ensureIndexCapacity(indexBytes);
+    renderContext.device.queue
+      ..writeBuffer(_normalMapVertexBuffer, 0, vertices.buffer.toJS)
+      ..writeBuffer(_indexBuffer, 0, indices.buffer.toJS)
+      ..writeBuffer(_normalMapUniformBuffer, 0, uniformData.buffer.toJS);
+
+    final texture = renderTextureQuad.renderTexture;
+    final mapTexture = normalMapRenderTextureQuad.renderTexture;
+    final bindGroup = renderContext.device.createBindGroup(GPUBindGroupDescriptor(
+      layout: _normalMapBindGroupLayout,
+      entries: [
+        GPUBindGroupEntry(binding: 0, resource: renderContext.textureSystem.getSampler(texture)),
+        GPUBindGroupEntry(binding: 1, resource: renderContext.textureSystem.getTextureView(texture)),
+        GPUBindGroupEntry(binding: 2, resource: renderContext.textureSystem.getSampler(mapTexture)),
+        GPUBindGroupEntry(binding: 3, resource: renderContext.textureSystem.getTextureView(mapTexture)),
+        GPUBindGroupEntry(
+          binding: 4,
+          resource: GPUBufferBinding(buffer: _normalMapUniformBuffer, offset: 0, size: 80),
+        ),
+      ].toJS,
+    ));
+    renderContext.renderStatistics.webgpuBindGroupCreateCount++;
+
+    final stencilValue = renderContext.maskSystem.activeStencilValue;
+    final pass = renderContext.commandSystem.beginColorPass(renderContext.consumeClearColor());
+    pass
+      ..setPipeline(_getNormalMapPipeline(renderState.globalBlendMode, stencilValue > 0))
+      ..setBindGroup(0, bindGroup)
+      ..setVertexBuffer(0, _normalMapVertexBuffer, 0, vertexBytes)
+      ..setIndexBuffer(_indexBuffer, 'uint16', 0, indexBytes);
+    if (stencilValue > 0) {
+      pass.setStencilReference(stencilValue);
+    }
+    pass.drawIndexed(ixList.length, 1, 0, 0, 0);
+    pass.end();
+    renderContext.commandSystem.submit();
+
+    final statistics = renderContext.renderStatistics;
+    statistics.drawCount++;
+    statistics.vertexCount += vertexCount;
+    statistics.indexCount += ixList.length;
+  }
+
   void _renderTextureQuadWithColorMatrixUniform(
     RenderState renderState,
     RenderTextureQuad renderTextureQuad,
@@ -469,6 +638,11 @@ class WebGpuFilterSystem {
     return blendPipelines.putIfAbsent(stencilTest, () => _createGlowPipeline(blendMode, stencilTest));
   }
 
+  GPURenderPipeline _getNormalMapPipeline(BlendMode blendMode, bool stencilTest) {
+    final blendPipelines = _normalMapPipelines.putIfAbsent(blendMode, () => <bool, GPURenderPipeline>{});
+    return blendPipelines.putIfAbsent(stencilTest, () => _createNormalMapPipeline(blendMode, stencilTest));
+  }
+
   GPURenderPipeline _createColorMatrixPipeline(BlendMode blendMode, bool stencilTest) => _createFilterPipeline(
         'StageXL color matrix filter pipeline',
         _colorMatrixShaderModule,
@@ -489,6 +663,41 @@ class WebGpuFilterSystem {
         blendMode,
         stencilTest,
       );
+
+  GPURenderPipeline _createNormalMapPipeline(BlendMode blendMode, bool stencilTest) {
+    renderContext.renderStatistics.webgpuPipelineCreateCount++;
+    return renderContext.device.createRenderPipeline(GPURenderPipelineDescriptor(
+      label: 'StageXL normal map filter pipeline',
+      layout: _normalMapPipelineLayout,
+      vertex: GPUVertexState(
+        module: _normalMapShaderModule,
+        entryPoint: 'vs_main',
+        buffers: [
+          GPUVertexBufferLayout(
+            arrayStride: _normalMapBytesPerVertex,
+            attributes: [
+              GPUVertexAttribute(format: 'float32x4', offset: 0, shaderLocation: 0),
+              GPUVertexAttribute(format: 'float32x2', offset: 16, shaderLocation: 1),
+              GPUVertexAttribute(format: 'float32x2', offset: 24, shaderLocation: 2),
+            ].toJS,
+          ),
+        ].toJS,
+      ),
+      fragment: GPUFragmentState(
+        module: _normalMapShaderModule,
+        entryPoint: 'fs_main',
+        targets: [
+          GPUColorTargetState(
+            format: renderContext.preferredTextureFormat,
+            blend: renderContext.pipelineSystem.getBlendState(blendMode),
+          ),
+        ].toJS,
+      ),
+      primitive: GPUPrimitiveState(topology: 'triangle-list'),
+      depthStencil: _depthStencilState(stencilTest),
+      multisample: GPUMultisampleState(count: 1),
+    ));
+  }
 
   GPURenderPipeline _createFilterPipeline(
     String label,
@@ -560,6 +769,14 @@ class WebGpuFilterSystem {
     ));
   }
 
+  GPUBuffer _createNormalMapVertexBuffer(int size) {
+    _normalMapVertexCapacity = size;
+    return renderContext.device.createBuffer(GPUBufferDescriptor(
+      size: size,
+      usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.VERTEX,
+    ));
+  }
+
   void _ensureVertexCapacity(int size) {
     if (size <= _vertexCapacity) return;
     _vertexBuffer.destroy();
@@ -570,6 +787,12 @@ class WebGpuFilterSystem {
     if (size <= _indexCapacity) return;
     _indexBuffer.destroy();
     _indexBuffer = _createIndexBuffer(size * 2);
+  }
+
+  void _ensureNormalMapVertexCapacity(int size) {
+    if (size <= _normalMapVertexCapacity) return;
+    _normalMapVertexBuffer.destroy();
+    _normalMapVertexBuffer = _createNormalMapVertexBuffer(size * 2);
   }
 
   Never _throwUnsupported() {
@@ -712,6 +935,67 @@ class WebGpuFilterSystem {
       alpha += textureSample(stageTexture, stageSampler, input.uv + radius * 1.2).a * 0.00443;
       alpha *= glow.color.a;
       return vec4<f32>(glow.color.rgb * alpha, alpha);
+    }
+  ''';
+
+  static const _normalMapShaderSource = '''
+    @group(0) @binding(0) var texSampler: sampler;
+    @group(0) @binding(1) var texTexture: texture_2d<f32>;
+    @group(0) @binding(2) var mapSampler: sampler;
+    @group(0) @binding(3) var mapTexture: texture_2d<f32>;
+
+    struct NormalMapUniforms {
+      ambientColor: vec4<f32>,
+      lightColor: vec4<f32>,
+      lightCoord: vec4<f32>,
+      alpha: f32,
+      padding0: vec3<f32>,
+    };
+
+    @group(0) @binding(4) var<uniform> normalMap: NormalMapUniforms;
+
+    struct VertexInput {
+      @location(0) clip: vec4<f32>,
+      @location(1) texCoord: vec2<f32>,
+      @location(2) mapCoord: vec2<f32>,
+    };
+
+    struct VertexOutput {
+      @builtin(position) position: vec4<f32>,
+      @location(0) texCoord: vec2<f32>,
+      @location(1) mapCoord: vec2<f32>,
+    };
+
+    @vertex
+    fn vs_main(input: VertexInput) -> VertexOutput {
+      var output: VertexOutput;
+      output.position = input.clip;
+      output.texCoord = input.texCoord;
+      output.mapCoord = input.mapCoord;
+      return output;
+    }
+
+    @fragment
+    fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
+      let texColor = textureSample(texTexture, texSampler, input.texCoord);
+      let mapColor = textureSample(mapTexture, mapSampler, input.mapCoord);
+      let mapVector = vec3<f32>(mapColor.r, 1.0 - mapColor.g, mapColor.b);
+      let mapNormal = normalize(mapVector * 2.0 - 1.0);
+
+      let lightDelta = vec3<f32>(normalMap.lightCoord.xy - input.texCoord.xy, normalMap.lightCoord.z);
+      let lightNormal = normalize(lightDelta);
+
+      let diffuse = max(dot(mapNormal, lightNormal), 0.0);
+      let diffuseColor = normalMap.lightColor.rgb * normalMap.lightColor.a * diffuse;
+      let ambientColor = normalMap.ambientColor.rgb * normalMap.ambientColor.a;
+
+      let distance = length(lightDelta.xy);
+      let radius = normalMap.lightCoord.w;
+      let temp = clamp(1.0 - (distance * distance) / (radius * radius), 0.0, 1.0);
+      let attenuation = temp * temp;
+
+      let color = texColor.rgb * (ambientColor + diffuseColor * attenuation);
+      return vec4<f32>(color.rgb, texColor.a) * normalMap.alpha;
     }
   ''';
 }

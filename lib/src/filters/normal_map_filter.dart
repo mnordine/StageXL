@@ -24,6 +24,9 @@ class NormalMapFilter extends BitmapFilter {
   @override
   BitmapFilter clone() => NormalMapFilter(bitmapData);
 
+  @override
+  bool get supportsWebGPU => true;
+
   //-----------------------------------------------------------------------------------------------
 
   @override
@@ -34,7 +37,24 @@ class NormalMapFilter extends BitmapFilter {
   @override
   void renderFilter(
       RenderState renderState, RenderTextureQuad renderTextureQuad, int pass) {
-    final renderContext = renderState.renderContext as RenderContextWebGL;
+    final renderContext = renderState.renderContext;
+
+    if (renderContext is RenderContextWebGPU) {
+      renderContext.filterSystem.renderNormalMapFilterQuad(
+        renderState,
+        renderTextureQuad,
+        bitmapData.renderTextureQuad,
+        ambientColor,
+        lightColor,
+        lightX,
+        lightY,
+        lightZ,
+        lightRadius,
+      );
+      return;
+    }
+
+    renderContext as RenderContextWebGL;
     final renderTexture = renderTextureQuad.renderTexture;
 
     final renderProgram = renderContext.getRenderProgram(
