@@ -25,6 +25,9 @@ class TintFilter extends BitmapFilter {
   @override
   BitmapFilter clone() => TintFilter(factorR, factorG, factorB, factorA);
 
+  @override
+  bool get supportsWebGPU => true;
+
   //---------------------------------------------------------------------------
 
   @override
@@ -62,7 +65,21 @@ class TintFilter extends BitmapFilter {
   @override
   void renderFilter(
       RenderState renderState, RenderTextureQuad renderTextureQuad, int pass) {
-    final renderContext = renderState.renderContext as RenderContextWebGL;
+    final renderContext = renderState.renderContext;
+
+    if (renderContext is RenderContextWebGPU) {
+      renderContext.filterSystem.renderTintFilterQuad(
+        renderState,
+        renderTextureQuad,
+        factorR,
+        factorG,
+        factorB,
+        factorA,
+      );
+      return;
+    }
+
+    renderContext as RenderContextWebGL;
     final renderProgram = renderContext.renderProgramBatch;
 
     renderContext.activateRenderProgram(renderProgram);

@@ -70,6 +70,48 @@ class WebGpuFilterSystem {
     Float32List colorMatrixList,
     Float32List colorOffsetList,
   ) {
+    final uniformData = Float32List(20);
+    final alpha = renderState.globalAlpha;
+    uniformData
+      ..setRange(0, 12, colorMatrixList, 0)
+      ..setRange(12, 16, [
+        colorMatrixList[12] * alpha,
+        colorMatrixList[13] * alpha,
+        colorMatrixList[14] * alpha,
+        colorMatrixList[15] * alpha,
+      ])
+      ..setRange(16, 20, [
+        colorOffsetList[0] / 255,
+        colorOffsetList[1] / 255,
+        colorOffsetList[2] / 255,
+        colorOffsetList[3] / 255 * alpha,
+      ]);
+
+    _renderTextureQuadWithColorMatrixUniform(renderState, renderTextureQuad, uniformData);
+  }
+
+  void renderTintFilterQuad(
+    RenderState renderState,
+    RenderTextureQuad renderTextureQuad,
+    num factorR,
+    num factorG,
+    num factorB,
+    num factorA,
+  ) {
+    final alpha = renderState.globalAlpha;
+    final uniformData = Float32List(20);
+    uniformData[0] = factorR.toDouble();
+    uniformData[5] = factorG.toDouble();
+    uniformData[10] = factorB.toDouble();
+    uniformData[15] = factorA.toDouble() * alpha;
+    _renderTextureQuadWithColorMatrixUniform(renderState, renderTextureQuad, uniformData);
+  }
+
+  void _renderTextureQuadWithColorMatrixUniform(
+    RenderState renderState,
+    RenderTextureQuad renderTextureQuad,
+    Float32List uniformData,
+  ) {
     final ixList = renderTextureQuad.ixList;
     final vxList = renderTextureQuad.vxList;
     final vertexCount = vxList.length >> 2;
@@ -99,23 +141,6 @@ class WebGpuFilterSystem {
     for (var i = 0; i < ixList.length; i++) {
       indices[i] = ixList[i];
     }
-
-    final uniformData = Float32List(20);
-    final alpha = renderState.globalAlpha;
-    uniformData
-      ..setRange(0, 12, colorMatrixList, 0)
-      ..setRange(12, 16, [
-        colorMatrixList[12] * alpha,
-        colorMatrixList[13] * alpha,
-        colorMatrixList[14] * alpha,
-        colorMatrixList[15] * alpha,
-      ])
-      ..setRange(16, 20, [
-        colorOffsetList[0] / 255,
-        colorOffsetList[1] / 255,
-        colorOffsetList[2] / 255,
-        colorOffsetList[3] / 255 * alpha,
-      ]);
 
     final vertexBytes = vertices.lengthInBytes;
     final indexBytes = indices.lengthInBytes;

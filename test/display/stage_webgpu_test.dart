@@ -98,4 +98,26 @@ void main() {
     expect(() => stage.materialize(0, 16), returnsNormally);
     expect(stage.renderContext.renderStatistics.webgpuRenderPassCount, greaterThanOrEqualTo(1));
   });
+
+  test('WebGPU renders TintFilter bitmap quads when available', () async {
+    final options = StageOptions()
+      ..renderEngine = .WebGPU
+      ..backgroundColor = Color.Transparent
+      ..stageRenderMode = .ONCE;
+    final canvas = HTMLCanvasElement()
+      ..width = 64
+      ..height = 64;
+    final stage = await Stage.create(canvas, width: 64, height: 64, options: options);
+
+    if (stage.renderEngine != RenderEngine.WebGPU) return;
+
+    final bitmap = Bitmap(BitmapData(48, 48, Color.Red))
+      ..x = 8
+      ..y = 8
+      ..filters = [TintFilter.fromColor(0xFF66CCFF)];
+    stage.addChild(bitmap);
+
+    expect(() => stage.materialize(0, 16), returnsNormally);
+    expect(stage.renderContext.renderStatistics.webgpuRenderPassCount, greaterThanOrEqualTo(1));
+  });
 }

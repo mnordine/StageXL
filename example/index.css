@@ -6,6 +6,57 @@ canvas.stage-full-window { width: 100%; height: 100%; position:fixed; }
 /* stage-fixed-size */
 canvas.stage-fixed-size { width: 800px; height: 600px; border: 1px dotted black; }
 
+/* example-index */
+body.example-index {
+  margin: 0;
+  min-height: 100vh;
+  color: #eef4ff;
+  background: #10141d;
+  font-family: Arial, sans-serif;
+}
+
+.example-list {
+  box-sizing: border-box;
+  width: min(760px, 100%);
+  padding: 48px 28px;
+}
+
+.example-list h1 {
+  margin: 0 0 28px;
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.example-list a {
+  display: block;
+  margin: 0 0 14px;
+  padding: 18px 20px;
+  color: inherit;
+  text-decoration: none;
+  background: #182131;
+  border: 1px solid #31405a;
+  border-radius: 6px;
+}
+
+.example-list a:focus,
+.example-list a:hover {
+  border-color: #6d86b8;
+  background: #1f2b40;
+}
+
+.example-list strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 18px;
+}
+
+.example-list span {
+  display: block;
+  color: #b9c7d8;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
 /* stage-full-screen */
 /* https://dvcs.w3.org/hg/fullscreen/raw-file/tip/Overview.html#:fullscreen-pseudo-class */
 canvas.stage-full-screen:-webkit-full-screen {
