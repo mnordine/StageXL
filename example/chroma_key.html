@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>StageXL WebGPU ChromaKeyFilter Example</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+    <meta property="og:image" content="http://www.stagexl.org/samples/common/img/stagexl064.png">
+    <meta property="og:title" content="StageXL WebGPU ChromaKeyFilter Example">
+    <meta property="og:type" content="website">
+    <meta property="og:description" content="StageXL WebGPU ChromaKeyFilter example with threshold controls.">
+
+    <link rel="stylesheet" href="index.css">
+    <script defer src="chroma_key.dart.js"></script>
+</head>
+
+<body class="stage-full-window">
+    <canvas id="stage" class="stage-full-window"></canvas>
+
+    <div class="chroma-controls" aria-label="Chroma key controls">
+        <h1>ChromaKey Controls</h1>
+
+        <label for="solidThreshold">Solid threshold: <span id="solidThresholdValue">140</span></label>
+        <input id="solidThreshold" type="range" min="1" max="255" value="140" step="1">
+
+        <label for="invisibleThreshold">Invisible threshold: <span id="invisibleThresholdValue">20</span></label>
+        <input id="invisibleThreshold" type="range" min="0" max="200" value="20" step="1">
+
+        <p>Green pixels close to the key color become transparent. Increase solid threshold to keep more edge detail.</p>
+    </div>
+
+    <style>
+        .chroma-controls {
+            position: fixed;
+            right: 16px;
+            top: 16px;
+            z-index: 10;
+            width: min(300px, calc(100vw - 32px));
+            box-sizing: border-box;
+            padding: 14px 14px 12px;
+            border-radius: 10px;
+            border: 1px solid #3a4a68;
+            background: rgba(24, 33, 49, 0.86);
+            color: #eef4ff;
+            font: 13px/1.4 Arial, sans-serif;
+            backdrop-filter: blur(4px);
+        }
+
+        .chroma-controls h1 {
+            margin: 0 0 10px;
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .chroma-controls label {
+            display: block;
+            margin-top: 8px;
+            margin-bottom: 4px;
+        }
+
+        .chroma-controls input[type="range"] {
+            width: 100%;
+        }
+
+        .chroma-controls p {
+            margin: 10px 0 0;
+            color: #c4d2e8;
+        }
+    </style>
+</body>
+</html>
