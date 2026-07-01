@@ -13,6 +13,7 @@ class WebGpuCommandSystem {
   final RenderContextWebGPU renderContext;
   GPUCommandEncoder? _encoder;
   GPUTexture? _swapTexture;
+  GPUTextureView? _swapTextureView;
   _WebGpuDepthStencilEntry? _canvasDepthStencilEntry;
   final _renderTargetDepthStencilEntries = <RenderTexture, _WebGpuDepthStencilEntry>{};
 
@@ -25,6 +26,7 @@ class WebGpuCommandSystem {
   void beginFrame() {
     _encoder = null;
     _swapTexture = null;
+    _swapTextureView = null;
   }
 
   GPURenderPassEncoder beginColorPass(List<num>? clearColor) {
@@ -80,7 +82,7 @@ class WebGpuCommandSystem {
   GPUTextureView _getColorView() {
     final activeRenderTexture = renderContext.activeRenderTexture;
     return activeRenderTexture == null
-        ? swapTexture.createView()
+        ? (_swapTextureView ??= swapTexture.createView())
         : renderContext.textureSystem.getTextureView(activeRenderTexture);
   }
 
