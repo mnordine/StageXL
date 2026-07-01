@@ -165,4 +165,29 @@ void main() {
     expect(() => stage.materialize(0, 16), returnsNormally);
     expect(stage.renderContext.renderStatistics.webgpuRenderPassCount, greaterThanOrEqualTo(3));
   });
+
+  test('WebGPU renders stacked bitmap filters when available', () async {
+    final options = StageOptions()
+      ..renderEngine = .WebGPU
+      ..backgroundColor = Color.Transparent
+      ..stageRenderMode = .ONCE;
+    final canvas = HTMLCanvasElement()
+      ..width = 64
+      ..height = 64;
+    final stage = await Stage.create(canvas, width: 64, height: 64, options: options);
+
+    if (stage.renderEngine != RenderEngine.WebGPU) return;
+
+    final bitmap = Bitmap(BitmapData(32, 32, Color.Red))
+      ..x = 16
+      ..y = 16
+      ..filters = [
+        BlurFilter(5),
+        TintFilter.fromColor(0xFF66CCFF),
+      ];
+    stage.addChild(bitmap);
+
+    expect(() => stage.materialize(0, 16), returnsNormally);
+    expect(stage.renderContext.renderStatistics.webgpuRenderPassCount, greaterThanOrEqualTo(4));
+  });
 }
