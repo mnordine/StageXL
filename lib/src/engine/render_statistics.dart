@@ -2,6 +2,7 @@ part of '../engine.dart';
 
 class RenderStatistics {
   var drawCount = 0;
+  var frameTimeMicroseconds = 0;
   var vertexCount = 0;
   var indexCount = 0;
   var webgpuBindGroupCreateCount = 0;
@@ -20,6 +21,7 @@ class RenderStatistics {
 
   void reset() {
     drawCount = 0;
+    frameTimeMicroseconds = 0;
     vertexCount = 0;
     indexCount = 0;
     webgpuBindGroupCreateCount = 0;

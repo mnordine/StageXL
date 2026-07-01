@@ -470,6 +470,7 @@ class Stage extends DisplayObjectContainer {
 
       final stats = _renderContext.renderStatistics;
       final frameTime = stopwatch.elapsedMilliseconds;
+      stats.frameTimeMicroseconds = stopwatch.elapsedMicroseconds;
       _avgDrawCalls = _avgDrawCalls * 0.75 + stats.drawCount * 0.25;
       _avgVertexCount = _avgVertexCount * 0.75 + stats.vertexCount * 0.25;
       _avgIdexCount = _avgIdexCount * 0.75 + stats.indexCount * 0.25;
