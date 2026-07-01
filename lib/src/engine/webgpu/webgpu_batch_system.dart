@@ -22,12 +22,11 @@ class _WebGpuRun {
 }
 
 class WebGpuBatchSystem {
-  static const _floatsPerVertex = 11;
+  static const _floatsPerVertex = 9;
   static const _bytesPerVertex = _floatsPerVertex * 4;
 
   final RenderContextWebGPU renderContext;
   final _runs = <_WebGpuRun>[];
-  final _combined = Matrix3D.fromIdentity();
   late Float32List _vertices;
   late Uint16List _indices;
   late GPUBuffer _vertexBuffer;
@@ -130,8 +129,13 @@ class WebGpuBatchSystem {
     num b = 1,
     num a = 1,
   ]) {
-    final combined = _combined
-      ..copyFrom2DAndConcat(renderState.globalMatrix, renderContext.activeProjectionMatrix);
+    final matrix = renderState.globalMatrix;
+    final ma = matrix.a;
+    final mb = matrix.b;
+    final mc = matrix.c;
+    final md = matrix.d;
+    final mx = matrix.tx;
+    final my = matrix.ty;
     final alpha = renderState.globalAlpha * a;
     final red = r * alpha;
     final green = g * alpha;
@@ -145,15 +149,8 @@ class WebGpuBatchSystem {
     for (var i = 0, sourceIndex = 0; i < vertexCount; i++, sourceIndex += 4) {
       final x = vxList[sourceIndex + 0];
       final y = vxList[sourceIndex + 1];
-      final clipX = combined.m00 * x + combined.m10 * y + combined.m30;
-      final clipY = combined.m01 * x + combined.m11 * y + combined.m31;
-      final clipZ = combined.m02 * x + combined.m12 * y + combined.m32;
-      final clipW = combined.m03 * x + combined.m13 * y + combined.m33;
-
-      _vertices[writeIndex++] = clipX;
-      _vertices[writeIndex++] = clipY;
-      _vertices[writeIndex++] = clipZ * 0.5 + clipW * 0.5;
-      _vertices[writeIndex++] = clipW;
+      _vertices[writeIndex++] = mx + ma * x + mc * y;
+      _vertices[writeIndex++] = my + mb * x + md * y;
       _vertices[writeIndex++] = red;
       _vertices[writeIndex++] = green;
       _vertices[writeIndex++] = blue;
@@ -179,6 +176,7 @@ class WebGpuBatchSystem {
     final indexBytes = (_indexPosition.isOdd ? _indexPosition + 1 : _indexPosition) * 2;
     _ensureVertexCapacity(vertexBytes);
     _ensureIndexCapacity(indexBytes);
+    renderContext.pipelineSystem.uploadProjectionMatrix(renderContext.activeProjectionMatrix);
     renderContext.device.queue
       ..writeBuffer(_vertexBuffer, 0, _vertices.buffer.toJS, 0, vertexBytes)
       ..writeBuffer(_indexBuffer, 0, _indices.buffer.toJS, 0, indexBytes);
@@ -186,7 +184,8 @@ class WebGpuBatchSystem {
     final pass = renderContext.commandSystem.beginColorPass(clearColor);
     pass
       ..setVertexBuffer(0, _vertexBuffer, 0, vertexBytes)
-      ..setIndexBuffer(_indexBuffer, 'uint16', 0, indexBytes);
+      ..setIndexBuffer(_indexBuffer, 'uint16', 0, indexBytes)
+      ..setBindGroup(1, renderContext.pipelineSystem.projectionBindGroup);
 
     GPURenderPipeline? activePipeline;
     final stencilValue = renderContext.maskSystem.activeStencilValue;

@@ -2,15 +2,18 @@ part of '../../engine.dart';
 
 class WebGpuPipelineSystem {
   static const maxBatchTextures = 8;
-  static const _batchVertexStride = 44;
+  static const _batchVertexStride = 36;
   static const _stencilVertexStride = 40;
 
   final RenderContextWebGPU renderContext;
   late final GPUBindGroupLayout textureBindGroupLayout;
+  late final GPUBindGroupLayout projectionBindGroupLayout;
   late final GPUPipelineLayout pipelineLayout;
   late final GPUPipelineLayout stencilPipelineLayout;
   late final GPUShaderModule shaderModule;
   late final GPUShaderModule stencilShaderModule;
+  late final GPUBuffer projectionBuffer;
+  late final GPUBindGroup projectionBindGroup;
   final _pipelineCache = <BlendMode, Map<int, GPURenderPipeline>>{};
   GPURenderPipeline? _stencilWritePipeline;
 
@@ -30,12 +33,36 @@ class WebGpuPipelineSystem {
         ),
       ],
     ].toJS));
+    projectionBindGroupLayout = device.createBindGroupLayout(GPUBindGroupLayoutDescriptor(entries: [
+      GPUBindGroupLayoutEntry(
+        binding: 0,
+        visibility: $GPUShaderStage.VERTEX,
+        buffer: GPUBufferBindingLayout(type: 'uniform'),
+      ),
+    ].toJS));
     pipelineLayout =
-        device.createPipelineLayout(GPUPipelineLayoutDescriptor(bindGroupLayouts: [textureBindGroupLayout].toJS));
+        device.createPipelineLayout(GPUPipelineLayoutDescriptor(bindGroupLayouts: [
+      textureBindGroupLayout,
+      projectionBindGroupLayout,
+    ].toJS));
     stencilPipelineLayout =
         device.createPipelineLayout(GPUPipelineLayoutDescriptor(bindGroupLayouts: <GPUBindGroupLayout>[].toJS));
     shaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _shaderSource));
     stencilShaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _stencilShaderSource));
+    projectionBuffer = device.createBuffer(GPUBufferDescriptor(
+      size: 64,
+      usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.UNIFORM,
+    ));
+    projectionBindGroup = device.createBindGroup(GPUBindGroupDescriptor(
+      layout: projectionBindGroupLayout,
+      entries: [
+        GPUBindGroupEntry(binding: 0, resource: GPUBufferBinding(buffer: projectionBuffer)),
+      ].toJS,
+    ));
+  }
+
+  void uploadProjectionMatrix(Matrix3D matrix) {
+    renderContext.device.queue.writeBuffer(projectionBuffer, 0, matrix.data.buffer.toJS, 0, 64);
   }
 
   GPURenderPipeline getPipeline(BlendMode blendMode, {required bool stencilTest}) {
@@ -62,10 +89,10 @@ class WebGpuPipelineSystem {
           GPUVertexBufferLayout(
             arrayStride: _batchVertexStride,
             attributes: [
-              GPUVertexAttribute(format: 'float32x4', offset: 0, shaderLocation: 0),
-              GPUVertexAttribute(format: 'float32x4', offset: 16, shaderLocation: 1),
-              GPUVertexAttribute(format: 'float32x2', offset: 32, shaderLocation: 2),
-              GPUVertexAttribute(format: 'float32', offset: 40, shaderLocation: 3),
+              GPUVertexAttribute(format: 'float32x2', offset: 0, shaderLocation: 0),
+              GPUVertexAttribute(format: 'float32x4', offset: 8, shaderLocation: 1),
+              GPUVertexAttribute(format: 'float32x2', offset: 24, shaderLocation: 2),
+              GPUVertexAttribute(format: 'float32', offset: 32, shaderLocation: 3),
             ].toJS,
           ),
         ].toJS,
@@ -182,9 +209,10 @@ class WebGpuPipelineSystem {
 
     return '''
     $bindings
+    @group(1) @binding(0) var<uniform> projectionMatrix: mat4x4<f32>;
 
     struct VertexInput {
-      @location(0) clip: vec4<f32>,
+      @location(0) position: vec2<f32>,
       @location(1) color: vec4<f32>,
       @location(2) uv: vec2<f32>,
       @location(3) textureIndex: f32,
@@ -200,7 +228,8 @@ class WebGpuPipelineSystem {
     @vertex
     fn vs_main(input: VertexInput) -> VertexOutput {
       var output: VertexOutput;
-      output.position = input.clip;
+      output.position = vec4<f32>(input.position, 0.0, 1.0) * projectionMatrix;
+      output.position.z = output.position.z * 0.5 + output.position.w * 0.5;
       output.color = input.color;
       output.uv = input.uv;
       output.textureIndex = input.textureIndex;
