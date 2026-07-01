@@ -1,0 +1,18 @@
+{
+  "frames": {
+    "AcornCrunch@2x_astc.pvr": {
+      "filename": "AcornCrunch@2x_astc.pvr",
+      "frame": { "x": 0, "y": 0, "w": 396, "h": 396 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 396, "h": 396 },
+      "sourceSize": { "w": 396, "h": 396 }
+    }
+  },
+  "meta": {
+    "image": "AcornCrunch@2x_astc.pvr",
+    "format": "RGBA8888",
+    "size": { "w": 396, "h": 396 },
+    "scale": "1"
+  }
+}
