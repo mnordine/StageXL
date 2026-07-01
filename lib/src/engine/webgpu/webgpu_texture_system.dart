@@ -85,6 +85,12 @@ class WebGpuTextureSystem {
   }
 
   _WebGpuTextureEntry _getEntry(RenderTexture renderTexture) {
+    if (renderTexture._compressedTexture != null) {
+      renderContext.renderStatistics.addWebGpuFallbackCause('compressed texture');
+      throw UnsupportedError(
+          'WebGPU compressed texture upload is not implemented. Provide an uncompressed image fallback for WebGPU.');
+    }
+
     final cached = _textures[renderTexture];
     final expectedWidth = renderTexture.width;
     final expectedHeight = renderTexture.height;

@@ -11,6 +11,12 @@ class RenderStatistics {
   var webgpuRenderBundleCacheHitCount = 0;
   var webgpuRenderPassCount = 0;
   var webgpuTextureUploadCount = 0;
+  final webgpuFallbackCauses = <String>[];
+
+  void addWebGpuFallbackCause(String cause) {
+    webgpuFallbackCount++;
+    webgpuFallbackCauses.add(cause);
+  }
 
   void reset() {
     drawCount = 0;
@@ -23,6 +29,7 @@ class RenderStatistics {
     webgpuRenderBundleCacheHitCount = 0;
     webgpuRenderPassCount = 0;
     webgpuTextureUploadCount = 0;
+    webgpuFallbackCauses.clear();
   }
 
   @override

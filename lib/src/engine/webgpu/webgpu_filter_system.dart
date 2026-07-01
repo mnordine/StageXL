@@ -1294,7 +1294,7 @@ class WebGpuFilterSystem {
   }
 
   Never _throwUnsupported() {
-    renderContext.renderStatistics.webgpuFallbackCount++;
+    renderContext.renderStatistics.addWebGpuFallbackCause('unsupported filter');
     throw UnsupportedError('WebGPU filter parity requires the WGSL multi-pass filter implementation.');
   }
 
