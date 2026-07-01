@@ -403,6 +403,18 @@ class WebGpuFilterSystem {
         pixelRatio,
       );
 
+  void _scaleTextureMatrix(RenderTexture renderTexture, Matrix matrix) {
+    final textureScaleX = renderContext.textureSystem.textureCoordinateScaleX(renderTexture);
+    final textureScaleY = renderContext.textureSystem.textureCoordinateScaleY(renderTexture);
+    matrix
+      ..a *= textureScaleX
+      ..c *= textureScaleX
+      ..tx *= textureScaleX
+      ..b *= textureScaleY
+      ..d *= textureScaleY
+      ..ty *= textureScaleY;
+  }
+
   void renderColorMatrixFilterQuad(
     RenderState renderState,
     RenderTextureQuad renderTextureQuad,
@@ -542,8 +554,12 @@ class WebGpuFilterSystem {
     final vertexCount = vxList.length >> 2;
     if (vertexCount == 0 || ixList.isEmpty) return;
 
+    final texture = renderTextureQuad.renderTexture;
+    final mapTexture = normalMapRenderTextureQuad.renderTexture;
     final texMatrix = renderTextureQuad.samplerMatrix;
     final mapMatrix = normalMapRenderTextureQuad.samplerMatrix;
+    _scaleTextureMatrix(texture, texMatrix);
+    _scaleTextureMatrix(mapTexture, mapMatrix);
     final combined = Matrix3D.fromIdentity()
       ..copyFrom2DAndConcat(renderState.globalMatrix, renderContext.activeProjectionMatrix);
 
@@ -614,8 +630,6 @@ class WebGpuFilterSystem {
       ..writeBuffer(_indexBuffer, 0, indices.buffer.toJS)
       ..writeBuffer(_normalMapUniformBuffer, 0, uniformData.buffer.toJS);
 
-    final texture = renderTextureQuad.renderTexture;
-    final mapTexture = normalMapRenderTextureQuad.renderTexture;
     final bindGroup = renderContext.device.createBindGroup(GPUBindGroupDescriptor(
       layout: _normalMapBindGroupLayout,
       entries: [
@@ -665,12 +679,25 @@ class WebGpuFilterSystem {
 
     final combined = Matrix3D.fromIdentity()
       ..copyFrom2DAndConcat(renderState.globalMatrix, renderContext.activeProjectionMatrix);
+    final texture = renderTextureQuad.renderTexture;
+    final mapTexture = mapRenderTextureQuad.renderTexture;
+    final textureScaleX = renderContext.textureSystem.textureCoordinateScaleX(texture);
+    final textureScaleY = renderContext.textureSystem.textureCoordinateScaleY(texture);
+    final scaledMapMatrix = mapMatrix.clone();
+    final scaledDisMatrix = disMatrix.clone();
+    _scaleTextureMatrix(mapTexture, scaledMapMatrix);
+    _scaleTextureMatrix(texture, scaledDisMatrix);
+    scaledMapMatrix
+      ..a /= textureScaleX
+      ..b /= textureScaleX
+      ..c /= textureScaleY
+      ..d /= textureScaleY;
 
     final uniformData = Float32List(20)
-      ..setRange(0, 4, [mapMatrix.a, mapMatrix.c, mapMatrix.tx, 0])
-      ..setRange(4, 8, [mapMatrix.b, mapMatrix.d, mapMatrix.ty, 0])
-      ..setRange(8, 12, [disMatrix.a, disMatrix.c, 0, 0])
-      ..setRange(12, 16, [disMatrix.b, disMatrix.d, 0, 0])
+      ..setRange(0, 4, [scaledMapMatrix.a, scaledMapMatrix.c, scaledMapMatrix.tx, 0])
+      ..setRange(4, 8, [scaledMapMatrix.b, scaledMapMatrix.d, scaledMapMatrix.ty, 0])
+      ..setRange(8, 12, [scaledDisMatrix.a, scaledDisMatrix.c, 0, 0])
+      ..setRange(12, 16, [scaledDisMatrix.b, scaledDisMatrix.d, 0, 0])
       ..setRange(16, 20, [renderState.globalAlpha, 0, 0, 0]);
 
     final vertices = Float32List(vertexCount * _floatsPerVertex);
@@ -688,8 +715,8 @@ class WebGpuFilterSystem {
       vertices[vertexIndex++] = clipY;
       vertices[vertexIndex++] = clipZ * 0.5 + clipW * 0.5;
       vertices[vertexIndex++] = clipW;
-      vertices[vertexIndex++] = vxList[sourceIndex + 2];
-      vertices[vertexIndex++] = vxList[sourceIndex + 3];
+      vertices[vertexIndex++] = vxList[sourceIndex + 2] * textureScaleX;
+      vertices[vertexIndex++] = vxList[sourceIndex + 3] * textureScaleY;
     }
 
     for (var i = 0; i < ixList.length; i++) {
@@ -705,8 +732,6 @@ class WebGpuFilterSystem {
       ..writeBuffer(_indexBuffer, 0, indices.buffer.toJS)
       ..writeBuffer(_displacementMapUniformBuffer, 0, uniformData.buffer.toJS);
 
-    final texture = renderTextureQuad.renderTexture;
-    final mapTexture = mapRenderTextureQuad.renderTexture;
     final bindGroup = renderContext.device.createBindGroup(GPUBindGroupDescriptor(
       layout: _displacementMapBindGroupLayout,
       entries: [
@@ -765,6 +790,12 @@ class WebGpuFilterSystem {
 
     final combined = Matrix3D.fromIdentity()
       ..copyFrom2DAndConcat(renderState.globalMatrix, renderContext.activeProjectionMatrix);
+    final texture = renderTextureQuad.renderTexture;
+    final maskTexture = maskRenderTextureQuad.renderTexture;
+    final textureScaleX = renderContext.textureSystem.textureCoordinateScaleX(texture);
+    final textureScaleY = renderContext.textureSystem.textureCoordinateScaleY(texture);
+    final scaledMaskMatrix = maskMatrix.clone();
+    _scaleTextureMatrix(maskTexture, scaledMaskMatrix);
 
     final uniformData = Float32List.fromList([
       mskBoundsX1,
@@ -792,10 +823,10 @@ class WebGpuFilterSystem {
       vertices[vertexIndex++] = clipY;
       vertices[vertexIndex++] = clipZ * 0.5 + clipW * 0.5;
       vertices[vertexIndex++] = clipW;
-      vertices[vertexIndex++] = vxList[sourceIndex + 2];
-      vertices[vertexIndex++] = vxList[sourceIndex + 3];
-      vertices[vertexIndex++] = maskMatrix.tx + x * maskMatrix.a + y * maskMatrix.c;
-      vertices[vertexIndex++] = maskMatrix.ty + x * maskMatrix.b + y * maskMatrix.d;
+      vertices[vertexIndex++] = vxList[sourceIndex + 2] * textureScaleX;
+      vertices[vertexIndex++] = vxList[sourceIndex + 3] * textureScaleY;
+      vertices[vertexIndex++] = scaledMaskMatrix.tx + x * scaledMaskMatrix.a + y * scaledMaskMatrix.c;
+      vertices[vertexIndex++] = scaledMaskMatrix.ty + x * scaledMaskMatrix.b + y * scaledMaskMatrix.d;
     }
 
     for (var i = 0; i < ixList.length; i++) {
@@ -811,8 +842,6 @@ class WebGpuFilterSystem {
       ..writeBuffer(_indexBuffer, 0, indices.buffer.toJS)
       ..writeBuffer(_alphaMaskUniformBuffer, 0, uniformData.buffer.toJS);
 
-    final texture = renderTextureQuad.renderTexture;
-    final maskTexture = maskRenderTextureQuad.renderTexture;
     final bindGroup = renderContext.device.createBindGroup(GPUBindGroupDescriptor(
       layout: _alphaMaskBindGroupLayout,
       entries: [
@@ -938,6 +967,9 @@ class WebGpuFilterSystem {
 
     final vertices = Float32List(vertexCount * _floatsPerVertex);
     final indices = Uint16List(ixList.length.isOdd ? ixList.length + 1 : ixList.length);
+    final texture = renderTextureQuad.renderTexture;
+    final textureScaleX = renderContext.textureSystem.textureCoordinateScaleX(texture);
+    final textureScaleY = renderContext.textureSystem.textureCoordinateScaleY(texture);
     final combined = Matrix3D.fromIdentity()
       ..copyFrom2DAndConcat(renderState.globalMatrix, renderContext.activeProjectionMatrix);
 
@@ -953,8 +985,8 @@ class WebGpuFilterSystem {
       vertices[vertexIndex++] = clipY;
       vertices[vertexIndex++] = clipZ * 0.5 + clipW * 0.5;
       vertices[vertexIndex++] = clipW;
-      vertices[vertexIndex++] = vxList[sourceIndex + 2];
-      vertices[vertexIndex++] = vxList[sourceIndex + 3];
+      vertices[vertexIndex++] = vxList[sourceIndex + 2] * textureScaleX;
+      vertices[vertexIndex++] = vxList[sourceIndex + 3] * textureScaleY;
     }
 
     for (var i = 0; i < ixList.length; i++) {
@@ -970,7 +1002,6 @@ class WebGpuFilterSystem {
       ..writeBuffer(_indexBuffer, 0, indices.buffer.toJS)
       ..writeBuffer(uniformBuffer, 0, uniformData.buffer.toJS);
 
-    final texture = renderTextureQuad.renderTexture;
     final bindGroup = renderContext.device.createBindGroup(GPUBindGroupDescriptor(
       layout: _colorMatrixBindGroupLayout,
       entries: [

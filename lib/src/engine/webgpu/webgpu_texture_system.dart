@@ -84,6 +84,16 @@ class WebGpuTextureSystem {
     return entry.view ??= entry.texture.createView();
   }
 
+  double textureCoordinateScaleX(RenderTexture renderTexture) {
+    final compressedTexture = renderTexture._compressedTexture;
+    return compressedTexture == null ? 1.0 : renderTexture.width / compressedTexture.webGpuWidth;
+  }
+
+  double textureCoordinateScaleY(RenderTexture renderTexture) {
+    final compressedTexture = renderTexture._compressedTexture;
+    return compressedTexture == null ? 1.0 : renderTexture.height / compressedTexture.webGpuHeight;
+  }
+
   _WebGpuTextureEntry _getEntry(RenderTexture renderTexture) {
     final compressedTexture = renderTexture._compressedTexture;
     if (compressedTexture != null && !compressedTexture.supportsWebGpu(renderContext.deviceSystem.enabledFeatures)) {
@@ -145,7 +155,12 @@ class WebGpuTextureSystem {
       GPUExtent3DDict(width: 1, height: 1, depthOrArrayLayers: 1),
     );
 
-    final entry = _WebGpuTextureEntry(texture: texture, width: renderTexture.width, height: renderTexture.height, version: renderTexture._webGpuVersion);
+    final entry = _WebGpuTextureEntry(
+      texture: texture,
+      width: renderTexture.width,
+      height: renderTexture.height,
+      version: renderTexture._webGpuVersion,
+    );
     _textures[renderTexture] = entry;
     return entry;
   }

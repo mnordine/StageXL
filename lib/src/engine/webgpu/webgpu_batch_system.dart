@@ -52,7 +52,7 @@ class WebGpuBatchSystem {
     final renderTexture = renderTextureQuad.renderTexture;
     final vxList = renderTextureQuad.vxList;
     final baked = Float32List(4 * _floatsPerVertex);
-    _bakeVertices(renderState, vxList, 4, baked);
+    _bakeVertices(renderState, renderTexture, vxList, 4, baked);
     _queue.add(_WebGpuQueuedDraw(
       baked,
       Uint16List.fromList([0, 1, 2, 0, 2, 3]),
@@ -76,7 +76,7 @@ class WebGpuBatchSystem {
     if (vertexCount == 0 || ixList.isEmpty) return;
 
     final baked = Float32List(vertexCount * _floatsPerVertex);
-    _bakeVertices(renderState, vxList, vertexCount, baked, r, g, b, a);
+    _bakeVertices(renderState, renderTexture, vxList, vertexCount, baked, r, g, b, a);
     _queue.add(_WebGpuQueuedDraw(
       baked,
       Uint16List.fromList(ixList),
@@ -88,6 +88,7 @@ class WebGpuBatchSystem {
 
   void _bakeVertices(
     RenderState renderState,
+    RenderTexture renderTexture,
     Float32List vxList,
     int vertexCount,
     Float32List target, [
@@ -102,6 +103,8 @@ class WebGpuBatchSystem {
     final red = r * alpha;
     final green = g * alpha;
     final blue = b * alpha;
+    final textureScaleX = renderContext.textureSystem.textureCoordinateScaleX(renderTexture);
+    final textureScaleY = renderContext.textureSystem.textureCoordinateScaleY(renderTexture);
 
     var writeIndex = 0;
     for (var i = 0, sourceIndex = 0; i < vertexCount; i++, sourceIndex += 4) {
@@ -120,8 +123,8 @@ class WebGpuBatchSystem {
       target[writeIndex++] = green;
       target[writeIndex++] = blue;
       target[writeIndex++] = alpha;
-      target[writeIndex++] = vxList[sourceIndex + 2];
-      target[writeIndex++] = vxList[sourceIndex + 3];
+      target[writeIndex++] = vxList[sourceIndex + 2] * textureScaleX;
+      target[writeIndex++] = vxList[sourceIndex + 3] * textureScaleY;
     }
   }
 
