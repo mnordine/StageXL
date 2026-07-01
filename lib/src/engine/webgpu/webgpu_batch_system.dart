@@ -135,6 +135,32 @@ class WebGpuBatchSystem {
       return;
     }
 
+    var start = 0;
+    var passClearColor = clearColor;
+    while (start < _queue.length) {
+      var end = start;
+      var totalVertices = 0;
+      while (end < _queue.length) {
+        final draw = _queue[end];
+        if (draw.vertexCount > 0xFFFF) {
+          throw StateError('WebGPU draw exceeds 16-bit index capacity.');
+        }
+        if (totalVertices > 0 && totalVertices + draw.vertexCount > 0xFFFF) {
+          break;
+        }
+        totalVertices += draw.vertexCount;
+        end++;
+      }
+
+      _flushQueue(start, end, passClearColor);
+      passClearColor = null;
+      start = end;
+    }
+
+    _queue.clear();
+  }
+
+  void _flushQueue(int start, int end, List<num>? clearColor) {
     final runs = <_WebGpuRun>[];
     RenderTexture? currentTexture;
     BlendMode? currentBlendMode;
@@ -142,7 +168,8 @@ class WebGpuBatchSystem {
     var totalVertices = 0;
     var totalIndices = 0;
 
-    for (final draw in _queue) {
+    for (var drawIndex = start; drawIndex < end; drawIndex++) {
+      final draw = _queue[drawIndex];
       if (!identical(draw.texture, currentTexture) || !identical(draw.blendMode, currentBlendMode)) {
         currentTexture = draw.texture;
         currentBlendMode = draw.blendMode;
@@ -170,7 +197,8 @@ class WebGpuBatchSystem {
     RenderTexture? lastTexture;
     BlendMode? lastBlendMode;
 
-    for (final draw in _queue) {
+    for (var drawIndex = start; drawIndex < end; drawIndex++) {
+      final draw = _queue[drawIndex];
       if (!identical(draw.texture, lastTexture) || !identical(draw.blendMode, lastBlendMode)) {
         lastTexture = draw.texture;
         lastBlendMode = draw.blendMode;
@@ -222,7 +250,6 @@ class WebGpuBatchSystem {
 
     pass.end();
     renderContext.commandSystem.submit();
-    _queue.clear();
   }
 
   GPUBuffer _createVertexBuffer(int size) {
