@@ -85,10 +85,10 @@ class WebGpuTextureSystem {
   }
 
   _WebGpuTextureEntry _getEntry(RenderTexture renderTexture) {
-    if (renderTexture._compressedTexture != null) {
-      renderContext.renderStatistics.addWebGpuFallbackCause('compressed texture');
-      throw UnsupportedError(
-          'WebGPU compressed texture upload is not implemented. Provide an uncompressed image fallback for WebGPU.');
+    final compressedTexture = renderTexture._compressedTexture;
+    if (compressedTexture != null && !compressedTexture.supportsWebGpu(renderContext.deviceSystem.enabledFeatures)) {
+      renderContext.renderStatistics.addWebGpuFallbackCause('compressed texture unsupported on device');
+      return _createUnsupportedCompressedEntry(renderTexture);
     }
 
     final cached = _textures[renderTexture];
@@ -98,18 +98,22 @@ class WebGpuTextureSystem {
     final needsTexture = cached == null || cached.width != expectedWidth || cached.height != expectedHeight;
 
     final entry = needsTexture
-        ? _createEntry(renderTexture, expectedWidth, expectedHeight, version)
+        ? _createEntry(renderTexture, expectedWidth, expectedHeight, version, compressedTexture)
         : cached;
 
     if (entry.version != version || needsTexture) {
-      if (renderTexture.source == null && renderTexture.imageBitmap == null) {
+      if (compressedTexture == null && renderTexture.source == null && renderTexture.imageBitmap == null) {
         entry.version = version;
         entry.bindGroup = null;
         entry.view = null;
         return entry;
       }
 
-      _upload(renderTexture, entry.texture);
+      if (compressedTexture != null) {
+        _uploadCompressed(compressedTexture, entry.texture);
+      } else {
+        _upload(renderTexture, entry.texture);
+      }
       entry.version = version;
       entry.bindGroup = null;
       entry.view = null;
@@ -118,12 +122,55 @@ class WebGpuTextureSystem {
     return entry;
   }
 
-  _WebGpuTextureEntry _createEntry(RenderTexture renderTexture, int width, int height, int version) {
+  _WebGpuTextureEntry _createUnsupportedCompressedEntry(
+    RenderTexture renderTexture,
+  ) {
+    final cached = _textures[renderTexture];
+    if (cached != null && cached.width == renderTexture.width && cached.height == renderTexture.height) {
+      return cached;
+    }
+
     _textures.remove(renderTexture)?.texture.destroy();
+
     final texture = renderContext.device.createTexture(GPUTextureDescriptor(
-      size: GPUExtent3DDict(width: width, height: height, depthOrArrayLayers: 1),
+      size: GPUExtent3DDict(width: 1, height: 1, depthOrArrayLayers: 1),
       format: renderContext.preferredTextureFormat,
-      usage: $GPUTextureUsage.COPY_DST | $GPUTextureUsage.TEXTURE_BINDING | $GPUTextureUsage.RENDER_ATTACHMENT,
+      usage: $GPUTextureUsage.COPY_DST | $GPUTextureUsage.TEXTURE_BINDING,
+    ));
+
+    renderContext.device.queue.writeTexture(
+      GPUImageCopyTexture(texture: texture),
+      Uint8List.fromList(const [0, 0, 0, 0]).toJS,
+      GPUImageDataLayout(offset: 0, bytesPerRow: 4, rowsPerImage: 1),
+      GPUExtent3DDict(width: 1, height: 1, depthOrArrayLayers: 1),
+    );
+
+    final entry = _WebGpuTextureEntry(texture: texture, width: renderTexture.width, height: renderTexture.height, version: renderTexture._webGpuVersion);
+    _textures[renderTexture] = entry;
+    return entry;
+  }
+
+  _WebGpuTextureEntry _createEntry(
+    RenderTexture renderTexture,
+    int width,
+    int height,
+    int version,
+    CompressedTexture? compressedTexture,
+  ) {
+    _textures.remove(renderTexture)?.texture.destroy();
+    final textureFormat = compressedTexture?.webGpuTextureFormat ?? renderContext.preferredTextureFormat;
+    final textureWidth = compressedTexture?.webGpuWidth ?? width;
+    final textureHeight = compressedTexture?.webGpuHeight ?? height;
+
+    final usage = compressedTexture == null
+        ? $GPUTextureUsage.COPY_DST | $GPUTextureUsage.TEXTURE_BINDING | $GPUTextureUsage.RENDER_ATTACHMENT
+        : $GPUTextureUsage.COPY_DST | $GPUTextureUsage.TEXTURE_BINDING;
+
+    final texture = renderContext.device.createTexture(GPUTextureDescriptor(
+      size: GPUExtent3DDict(width: textureWidth, height: textureHeight, depthOrArrayLayers: 1),
+      format: textureFormat,
+      mipLevelCount: compressedTexture?.mipLevelCount ?? 1,
+      usage: usage,
     ));
     final entry = _WebGpuTextureEntry(texture: texture, width: width, height: height, version: version - 1);
     _textures[renderTexture] = entry;
@@ -141,6 +188,26 @@ class WebGpuTextureSystem {
       GPUImageCopyTextureTagged(texture: texture, premultipliedAlpha: true),
       GPUExtent3DDict(width: renderTexture.width, height: renderTexture.height, depthOrArrayLayers: 1),
     );
+    renderContext.renderStatistics.webgpuTextureUploadCount++;
+  }
+
+  void _uploadCompressed(CompressedTexture compressedTexture, GPUTexture texture) {
+    final queue = renderContext.device.queue;
+    for (var level = 0; level < compressedTexture.mipLevelCount; level++) {
+      final data = compressedTexture.textureDataForMipLevel(level);
+      final width = compressedTexture.webGpuWidthForMipLevel(level);
+      final height = compressedTexture.webGpuHeightForMipLevel(level);
+      queue.writeTexture(
+        GPUImageCopyTexture(texture: texture, mipLevel: level),
+        data.toJS,
+        GPUImageDataLayout(
+          offset: 0,
+          bytesPerRow: compressedTexture.bytesPerRowForMipLevel(level),
+          rowsPerImage: compressedTexture.rowsPerImageForMipLevel(level),
+        ),
+        GPUExtent3DDict(width: width, height: height, depthOrArrayLayers: 1),
+      );
+    }
     renderContext.renderStatistics.webgpuTextureUploadCount++;
   }
 
