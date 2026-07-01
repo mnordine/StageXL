@@ -16,28 +16,33 @@ class _WebGpuTextureEntry {
   });
 }
 
+class _WebGpuSamplerKey {
+  final int filtering;
+  final int wrappingX;
+  final int wrappingY;
+
+  _WebGpuSamplerKey(RenderTexture renderTexture)
+      : filtering = renderTexture.filtering.value,
+        wrappingX = renderTexture.wrappingX.value,
+        wrappingY = renderTexture.wrappingY.value;
+
+  @override
+  int get hashCode => Object.hash(filtering, wrappingX, wrappingY);
+
+  @override
+  bool operator ==(Object other) =>
+      other is _WebGpuSamplerKey &&
+      other.filtering == filtering &&
+      other.wrappingX == wrappingX &&
+      other.wrappingY == wrappingY;
+}
+
 class WebGpuTextureSystem {
   final RenderContextWebGPU renderContext;
   final _textures = <RenderTexture, _WebGpuTextureEntry>{};
-  late final GPUSampler linearSampler;
-  late final GPUSampler nearestSampler;
+  final _samplers = <_WebGpuSamplerKey, GPUSampler>{};
 
-  WebGpuTextureSystem(this.renderContext) {
-    linearSampler = renderContext.device.createSampler(GPUSamplerDescriptor(
-      magFilter: 'linear',
-      minFilter: 'linear',
-      mipmapFilter: 'linear',
-      addressModeU: 'clamp-to-edge',
-      addressModeV: 'clamp-to-edge',
-    ));
-    nearestSampler = renderContext.device.createSampler(GPUSamplerDescriptor(
-      magFilter: 'nearest',
-      minFilter: 'nearest',
-      mipmapFilter: 'nearest',
-      addressModeU: 'clamp-to-edge',
-      addressModeV: 'clamp-to-edge',
-    ));
-  }
+  WebGpuTextureSystem(this.renderContext);
 
   GPUBindGroup getBindGroup(RenderTexture renderTexture) {
     final entry = _getEntry(renderTexture);
@@ -57,8 +62,22 @@ class WebGpuTextureSystem {
     return entry.bindGroup = created;
   }
 
-  GPUSampler getSampler(RenderTexture renderTexture) =>
-      identical(renderTexture.filtering, RenderTextureFiltering.NEAREST) ? nearestSampler : linearSampler;
+  GPUSampler getSampler(RenderTexture renderTexture) {
+    final key = _WebGpuSamplerKey(renderTexture);
+    return _samplers.putIfAbsent(key, () => renderContext.device.createSampler(GPUSamplerDescriptor(
+          magFilter: _filterMode(renderTexture.filtering),
+          minFilter: _filterMode(renderTexture.filtering),
+          mipmapFilter: _filterMode(renderTexture.filtering),
+          addressModeU: _addressMode(renderTexture.wrappingX),
+          addressModeV: _addressMode(renderTexture.wrappingY),
+        )));
+  }
+
+  String _filterMode(RenderTextureFiltering filtering) =>
+      filtering.value == RenderTextureFiltering.NEAREST.value ? 'nearest' : 'linear';
+
+  String _addressMode(RenderTextureWrapping wrapping) =>
+      wrapping.value == RenderTextureWrapping.REPEAT.value ? 'repeat' : 'clamp-to-edge';
 
   GPUTextureView getTextureView(RenderTexture renderTexture) {
     final entry = _getEntry(renderTexture);
