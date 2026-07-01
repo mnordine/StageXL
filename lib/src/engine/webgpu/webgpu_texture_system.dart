@@ -84,12 +84,40 @@ class WebGpuTextureSystem {
     return entry.view ??= entry.texture.createView();
   }
 
-  double textureCoordinateScaleX(RenderTexture renderTexture) {
+  int writeTextureCoordinates(
+    RenderTexture renderTexture,
+    Float32List source,
+    int sourceIndex,
+    Float32List target,
+    int targetIndex,
+  ) {
+    target[targetIndex++] = source[sourceIndex + 2] * _textureCoordinateScaleX(renderTexture);
+    target[targetIndex++] = source[sourceIndex + 3] * _textureCoordinateScaleY(renderTexture);
+    return targetIndex;
+  }
+
+  Matrix scaledSamplerMatrix(RenderTexture renderTexture, Matrix matrix, {RenderTexture? inputTexture}) {
+    final scaled = matrix.clone();
+    final inputScaleX = inputTexture == null ? 1.0 : _textureCoordinateScaleX(inputTexture);
+    final inputScaleY = inputTexture == null ? 1.0 : _textureCoordinateScaleY(inputTexture);
+    final outputScaleX = _textureCoordinateScaleX(renderTexture);
+    final outputScaleY = _textureCoordinateScaleY(renderTexture);
+    scaled
+      ..a = scaled.a / inputScaleX * outputScaleX
+      ..b = scaled.b / inputScaleX * outputScaleY
+      ..c = scaled.c / inputScaleY * outputScaleX
+      ..d = scaled.d / inputScaleY * outputScaleY
+      ..tx *= outputScaleX
+      ..ty *= outputScaleY;
+    return scaled;
+  }
+
+  double _textureCoordinateScaleX(RenderTexture renderTexture) {
     final compressedTexture = renderTexture._compressedTexture;
     return compressedTexture == null ? 1.0 : renderTexture.width / compressedTexture.webGpuWidth;
   }
 
-  double textureCoordinateScaleY(RenderTexture renderTexture) {
+  double _textureCoordinateScaleY(RenderTexture renderTexture) {
     final compressedTexture = renderTexture._compressedTexture;
     return compressedTexture == null ? 1.0 : renderTexture.height / compressedTexture.webGpuHeight;
   }

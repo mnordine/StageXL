@@ -103,8 +103,6 @@ class WebGpuBatchSystem {
     final red = r * alpha;
     final green = g * alpha;
     final blue = b * alpha;
-    final textureScaleX = renderContext.textureSystem.textureCoordinateScaleX(renderTexture);
-    final textureScaleY = renderContext.textureSystem.textureCoordinateScaleY(renderTexture);
 
     var writeIndex = 0;
     for (var i = 0, sourceIndex = 0; i < vertexCount; i++, sourceIndex += 4) {
@@ -123,8 +121,13 @@ class WebGpuBatchSystem {
       target[writeIndex++] = green;
       target[writeIndex++] = blue;
       target[writeIndex++] = alpha;
-      target[writeIndex++] = vxList[sourceIndex + 2] * textureScaleX;
-      target[writeIndex++] = vxList[sourceIndex + 3] * textureScaleY;
+      writeIndex = renderContext.textureSystem.writeTextureCoordinates(
+        renderTexture,
+        vxList,
+        sourceIndex,
+        target,
+        writeIndex,
+      );
     }
   }
 

@@ -403,18 +403,6 @@ class WebGpuFilterSystem {
         pixelRatio,
       );
 
-  void _scaleTextureMatrix(RenderTexture renderTexture, Matrix matrix) {
-    final textureScaleX = renderContext.textureSystem.textureCoordinateScaleX(renderTexture);
-    final textureScaleY = renderContext.textureSystem.textureCoordinateScaleY(renderTexture);
-    matrix
-      ..a *= textureScaleX
-      ..c *= textureScaleX
-      ..tx *= textureScaleX
-      ..b *= textureScaleY
-      ..d *= textureScaleY
-      ..ty *= textureScaleY;
-  }
-
   void renderColorMatrixFilterQuad(
     RenderState renderState,
     RenderTextureQuad renderTextureQuad,
@@ -556,10 +544,11 @@ class WebGpuFilterSystem {
 
     final texture = renderTextureQuad.renderTexture;
     final mapTexture = normalMapRenderTextureQuad.renderTexture;
-    final texMatrix = renderTextureQuad.samplerMatrix;
-    final mapMatrix = normalMapRenderTextureQuad.samplerMatrix;
-    _scaleTextureMatrix(texture, texMatrix);
-    _scaleTextureMatrix(mapTexture, mapMatrix);
+    final texMatrix = renderContext.textureSystem.scaledSamplerMatrix(texture, renderTextureQuad.samplerMatrix);
+    final mapMatrix = renderContext.textureSystem.scaledSamplerMatrix(
+      mapTexture,
+      normalMapRenderTextureQuad.samplerMatrix,
+    );
     final combined = Matrix3D.fromIdentity()
       ..copyFrom2DAndConcat(renderState.globalMatrix, renderContext.activeProjectionMatrix);
 
@@ -681,17 +670,9 @@ class WebGpuFilterSystem {
       ..copyFrom2DAndConcat(renderState.globalMatrix, renderContext.activeProjectionMatrix);
     final texture = renderTextureQuad.renderTexture;
     final mapTexture = mapRenderTextureQuad.renderTexture;
-    final textureScaleX = renderContext.textureSystem.textureCoordinateScaleX(texture);
-    final textureScaleY = renderContext.textureSystem.textureCoordinateScaleY(texture);
-    final scaledMapMatrix = mapMatrix.clone();
-    final scaledDisMatrix = disMatrix.clone();
-    _scaleTextureMatrix(mapTexture, scaledMapMatrix);
-    _scaleTextureMatrix(texture, scaledDisMatrix);
-    scaledMapMatrix
-      ..a /= textureScaleX
-      ..b /= textureScaleX
-      ..c /= textureScaleY
-      ..d /= textureScaleY;
+    final scaledMapMatrix =
+        renderContext.textureSystem.scaledSamplerMatrix(mapTexture, mapMatrix, inputTexture: texture);
+    final scaledDisMatrix = renderContext.textureSystem.scaledSamplerMatrix(texture, disMatrix);
 
     final uniformData = Float32List(20)
       ..setRange(0, 4, [scaledMapMatrix.a, scaledMapMatrix.c, scaledMapMatrix.tx, 0])
@@ -715,8 +696,13 @@ class WebGpuFilterSystem {
       vertices[vertexIndex++] = clipY;
       vertices[vertexIndex++] = clipZ * 0.5 + clipW * 0.5;
       vertices[vertexIndex++] = clipW;
-      vertices[vertexIndex++] = vxList[sourceIndex + 2] * textureScaleX;
-      vertices[vertexIndex++] = vxList[sourceIndex + 3] * textureScaleY;
+      vertexIndex = renderContext.textureSystem.writeTextureCoordinates(
+        texture,
+        vxList,
+        sourceIndex,
+        vertices,
+        vertexIndex,
+      );
     }
 
     for (var i = 0; i < ixList.length; i++) {
@@ -792,10 +778,7 @@ class WebGpuFilterSystem {
       ..copyFrom2DAndConcat(renderState.globalMatrix, renderContext.activeProjectionMatrix);
     final texture = renderTextureQuad.renderTexture;
     final maskTexture = maskRenderTextureQuad.renderTexture;
-    final textureScaleX = renderContext.textureSystem.textureCoordinateScaleX(texture);
-    final textureScaleY = renderContext.textureSystem.textureCoordinateScaleY(texture);
-    final scaledMaskMatrix = maskMatrix.clone();
-    _scaleTextureMatrix(maskTexture, scaledMaskMatrix);
+    final scaledMaskMatrix = renderContext.textureSystem.scaledSamplerMatrix(maskTexture, maskMatrix);
 
     final uniformData = Float32List.fromList([
       mskBoundsX1,
@@ -823,8 +806,13 @@ class WebGpuFilterSystem {
       vertices[vertexIndex++] = clipY;
       vertices[vertexIndex++] = clipZ * 0.5 + clipW * 0.5;
       vertices[vertexIndex++] = clipW;
-      vertices[vertexIndex++] = vxList[sourceIndex + 2] * textureScaleX;
-      vertices[vertexIndex++] = vxList[sourceIndex + 3] * textureScaleY;
+      vertexIndex = renderContext.textureSystem.writeTextureCoordinates(
+        texture,
+        vxList,
+        sourceIndex,
+        vertices,
+        vertexIndex,
+      );
       vertices[vertexIndex++] = scaledMaskMatrix.tx + x * scaledMaskMatrix.a + y * scaledMaskMatrix.c;
       vertices[vertexIndex++] = scaledMaskMatrix.ty + x * scaledMaskMatrix.b + y * scaledMaskMatrix.d;
     }
@@ -968,8 +956,6 @@ class WebGpuFilterSystem {
     final vertices = Float32List(vertexCount * _floatsPerVertex);
     final indices = Uint16List(ixList.length.isOdd ? ixList.length + 1 : ixList.length);
     final texture = renderTextureQuad.renderTexture;
-    final textureScaleX = renderContext.textureSystem.textureCoordinateScaleX(texture);
-    final textureScaleY = renderContext.textureSystem.textureCoordinateScaleY(texture);
     final combined = Matrix3D.fromIdentity()
       ..copyFrom2DAndConcat(renderState.globalMatrix, renderContext.activeProjectionMatrix);
 
@@ -985,8 +971,13 @@ class WebGpuFilterSystem {
       vertices[vertexIndex++] = clipY;
       vertices[vertexIndex++] = clipZ * 0.5 + clipW * 0.5;
       vertices[vertexIndex++] = clipW;
-      vertices[vertexIndex++] = vxList[sourceIndex + 2] * textureScaleX;
-      vertices[vertexIndex++] = vxList[sourceIndex + 3] * textureScaleY;
+      vertexIndex = renderContext.textureSystem.writeTextureCoordinates(
+        texture,
+        vxList,
+        sourceIndex,
+        vertices,
+        vertexIndex,
+      );
     }
 
     for (var i = 0; i < ixList.length; i++) {
