@@ -22,6 +22,7 @@ class WebGpuFilterSystem {
   late final GPUShaderModule _blurShaderModule;
   late final GPUShaderModule _dropShadowShaderModule;
   late final GPUShaderModule _glowShaderModule;
+  late final GPUShaderModule _chromaKeyShaderModule;
   late final GPUShaderModule _normalMapShaderModule;
   late final GPUShaderModule _displacementMapShaderModule;
   late final GPUShaderModule _alphaMaskShaderModule;
@@ -33,6 +34,7 @@ class WebGpuFilterSystem {
   late GPUBuffer _blurUniformBuffer;
   late GPUBuffer _dropShadowUniformBuffer;
   late GPUBuffer _glowUniformBuffer;
+  late GPUBuffer _chromaKeyUniformBuffer;
   late GPUBuffer _normalMapUniformBuffer;
   late GPUBuffer _displacementMapUniformBuffer;
   late GPUBuffer _alphaMaskUniformBuffer;
@@ -40,6 +42,7 @@ class WebGpuFilterSystem {
   final _blurPipelines = <BlendMode, Map<bool, GPURenderPipeline>>{};
   final _dropShadowPipelines = <BlendMode, Map<bool, GPURenderPipeline>>{};
   final _glowPipelines = <BlendMode, Map<bool, GPURenderPipeline>>{};
+  final _chromaKeyPipelines = <BlendMode, Map<bool, GPURenderPipeline>>{};
   final _normalMapPipelines = <BlendMode, Map<bool, GPURenderPipeline>>{};
   final _displacementMapPipelines = <BlendMode, Map<bool, GPURenderPipeline>>{};
   final _alphaMaskPipelines = <BlendMode, Map<bool, GPURenderPipeline>>{};
@@ -160,6 +163,7 @@ class WebGpuFilterSystem {
     _blurShaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _blurShaderSource));
     _dropShadowShaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _dropShadowShaderSource));
     _glowShaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _glowShaderSource));
+    _chromaKeyShaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _chromaKeyShaderSource));
     _normalMapShaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _normalMapShaderSource));
     _displacementMapShaderModule =
       device.createShaderModule(GPUShaderModuleDescriptor(code: _displacementMapShaderSource));
@@ -181,6 +185,10 @@ class WebGpuFilterSystem {
       usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.UNIFORM,
     ));
     _glowUniformBuffer = device.createBuffer(GPUBufferDescriptor(
+      size: 32,
+      usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.UNIFORM,
+    ));
+    _chromaKeyUniformBuffer = device.createBuffer(GPUBufferDescriptor(
       size: 32,
       usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.UNIFORM,
     ));
@@ -436,6 +444,26 @@ class WebGpuFilterSystem {
     uniformData[10] = factorB.toDouble();
     uniformData[15] = factorA.toDouble() * alpha;
     _renderTextureQuadWithColorMatrixUniform(renderState, renderTextureQuad, uniformData);
+  }
+
+  void renderChromaKeyFilterQuad(
+    RenderState renderState,
+    RenderTextureQuad renderTextureQuad,
+    int backgroundColor,
+    int solidThreshold,
+    int invisibleThreshold,
+  ) {
+    final uniformData = Float32List.fromList([
+      colorGetR(backgroundColor) / 255.0,
+      colorGetG(backgroundColor) / 255.0,
+      colorGetB(backgroundColor) / 255.0,
+      1,
+      solidThreshold / 255.0,
+      invisibleThreshold / 255.0,
+      0.8,
+      0,
+    ]);
+    _renderTextureQuadWithChromaKeyUniform(renderState, renderTextureQuad, uniformData);
   }
 
   void renderBlurFilterQuad(
@@ -880,6 +908,21 @@ class WebGpuFilterSystem {
     );
   }
 
+  void _renderTextureQuadWithChromaKeyUniform(
+    RenderState renderState,
+    RenderTextureQuad renderTextureQuad,
+    Float32List uniformData,
+  ) {
+    _renderTextureQuadWithUniform(
+      renderState,
+      renderTextureQuad,
+      uniformData,
+      _chromaKeyUniformBuffer,
+      _getChromaKeyPipeline,
+      32,
+    );
+  }
+
   void _renderTextureQuadWithUniform(
     RenderState renderState,
     RenderTextureQuad renderTextureQuad,
@@ -981,6 +1024,11 @@ class WebGpuFilterSystem {
     return blendPipelines.putIfAbsent(stencilTest, () => _createDropShadowPipeline(blendMode, stencilTest));
   }
 
+  GPURenderPipeline _getChromaKeyPipeline(BlendMode blendMode, bool stencilTest) {
+    final blendPipelines = _chromaKeyPipelines.putIfAbsent(blendMode, () => <bool, GPURenderPipeline>{});
+    return blendPipelines.putIfAbsent(stencilTest, () => _createChromaKeyPipeline(blendMode, stencilTest));
+  }
+
   GPURenderPipeline _getNormalMapPipeline(BlendMode blendMode, bool stencilTest) {
     final blendPipelines = _normalMapPipelines.putIfAbsent(blendMode, () => <bool, GPURenderPipeline>{});
     return blendPipelines.putIfAbsent(stencilTest, () => _createNormalMapPipeline(blendMode, stencilTest));
@@ -1020,6 +1068,13 @@ class WebGpuFilterSystem {
   GPURenderPipeline _createDropShadowPipeline(BlendMode blendMode, bool stencilTest) => _createFilterPipeline(
         'StageXL drop shadow filter pipeline',
         _dropShadowShaderModule,
+        blendMode,
+        stencilTest,
+      );
+
+  GPURenderPipeline _createChromaKeyPipeline(BlendMode blendMode, bool stencilTest) => _createFilterPipeline(
+        'StageXL chroma key filter pipeline',
+        _chromaKeyShaderModule,
         blendMode,
         stencilTest,
       );
@@ -1332,6 +1387,65 @@ class WebGpuFilterSystem {
       sum += textureSample(stageTexture, stageSampler, input.uv + radius * 0.8) * 0.05399;
       sum += textureSample(stageTexture, stageSampler, input.uv + radius * 1.2) * 0.00443;
       return sum * blur.alpha;
+    }
+  ''';
+
+  static const _chromaKeyShaderSource = '''
+    @group(0) @binding(0) var stageSampler: sampler;
+    @group(0) @binding(1) var stageTexture: texture_2d<f32>;
+
+    struct ChromaKeyUniforms {
+      backgroundColor: vec4<f32>,
+      thresholds: vec4<f32>,
+    };
+
+    @group(0) @binding(2) var<uniform> chromaKey: ChromaKeyUniforms;
+
+    struct VertexInput {
+      @location(0) clip: vec4<f32>,
+      @location(1) uv: vec2<f32>,
+    };
+
+    struct VertexOutput {
+      @builtin(position) position: vec4<f32>,
+      @location(0) uv: vec2<f32>,
+    };
+
+    @vertex
+    fn vs_main(input: VertexInput) -> VertexOutput {
+      var output: VertexOutput;
+      output.position = input.clip;
+      output.uv = input.uv;
+      return output;
+    }
+
+    @fragment
+    fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
+      let pixelColor = textureSample(stageTexture, stageSampler, input.uv);
+      let colorDiff = abs(pixelColor.rgb - chromaKey.backgroundColor.rgb);
+      let invisibleThreshold = chromaKey.thresholds.y;
+      let solidThreshold = chromaKey.thresholds.x;
+
+      if (any(colorDiff > vec3<f32>(solidThreshold))) {
+        return pixelColor;
+      }
+
+      if (all(colorDiff < vec3<f32>(invisibleThreshold))) {
+        return pixelColor * 0.0;
+      }
+
+      let thresholdRange = solidThreshold - invisibleThreshold;
+      let channelAlpha = clamp(
+        (colorDiff - vec3<f32>(invisibleThreshold)) / thresholdRange,
+        vec3<f32>(0),
+        vec3<f32>(1)
+      );
+      let alpha = min(channelAlpha.b, min(channelAlpha.r, channelAlpha.g));
+      let weight = chromaKey.thresholds.z;
+      let correctedColor = pixelColor.rgb - (vec3<f32>(1) - colorDiff) * (1.0 - alpha) *
+        chromaKey.backgroundColor.rgb * weight;
+
+      return vec4<f32>(correctedColor, alpha);
     }
   ''';
 

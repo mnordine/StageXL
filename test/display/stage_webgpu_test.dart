@@ -121,6 +121,29 @@ void main() {
     expect(stage.renderContext.renderStatistics.webgpuRenderPassCount, greaterThanOrEqualTo(1));
   });
 
+  test('WebGPU renders ChromaKeyFilter bitmap quads when available', () async {
+    final options = StageOptions()
+      ..renderEngine = .WebGPU
+      ..backgroundColor = Color.Transparent
+      ..stageRenderMode = .ONCE;
+    final canvas = HTMLCanvasElement()
+      ..width = 64
+      ..height = 64;
+    final stage = await Stage.create(canvas, width: 64, height: 64, options: options);
+
+    if (stage.renderEngine != RenderEngine.WebGPU) return;
+
+    final bitmapData = BitmapData(48, 48, 0xFF00FF00)..fillRect(Rectangle<num>(12, 12, 24, 24), Color.Red);
+    final bitmap = Bitmap(bitmapData)
+      ..x = 8
+      ..y = 8
+      ..filters = [ChromaKeyFilter()];
+    stage.addChild(bitmap);
+
+    expect(() => stage.materialize(0, 16), returnsNormally);
+    expect(stage.renderContext.renderStatistics.webgpuRenderPassCount, greaterThanOrEqualTo(1));
+  });
+
   test('WebGPU renders simple filtered display objects when available', () async {
     final options = StageOptions()
       ..renderEngine = .WebGPU
