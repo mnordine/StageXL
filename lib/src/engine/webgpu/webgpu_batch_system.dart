@@ -1,17 +1,28 @@
 part of '../../engine.dart';
 
 class _WebGpuRun {
-  final RenderTexture texture;
   final BlendMode blendMode;
+  final textures = <RenderTexture>[];
   var firstIndex = 0;
   var indexCount = 0;
   var vertexCount = 0;
 
-  _WebGpuRun(this.texture, this.blendMode);
+  _WebGpuRun(RenderTexture texture, this.blendMode) {
+    textures.add(texture);
+  }
+
+  int? textureIndex(RenderTexture texture) {
+    for (var i = 0; i < textures.length; i++) {
+      if (identical(textures[i], texture)) return i;
+    }
+    if (textures.length >= WebGpuPipelineSystem.maxBatchTextures) return null;
+    textures.add(texture);
+    return textures.length - 1;
+  }
 }
 
 class WebGpuBatchSystem {
-  static const _floatsPerVertex = 10;
+  static const _floatsPerVertex = 11;
   static const _bytesPerVertex = _floatsPerVertex * 4;
 
   final RenderContextWebGPU renderContext;
@@ -49,8 +60,8 @@ class WebGpuBatchSystem {
 
     final renderTexture = renderTextureQuad.renderTexture;
     final vxList = renderTextureQuad.vxList;
-    _prepareForDraw(renderTexture, renderState.globalBlendMode, 4, 6);
-    _bakeVertices(renderState, renderTexture, vxList, 4);
+    final textureIndex = _prepareForDraw(renderTexture, renderState.globalBlendMode, 4, 6);
+    _bakeVertices(renderState, renderTexture, vxList, 4, textureIndex);
     final baseVertex = _vertexCount - 4;
     _indices[_indexPosition++] = baseVertex + 0;
     _indices[_indexPosition++] = baseVertex + 1;
@@ -74,8 +85,8 @@ class WebGpuBatchSystem {
     final vertexCount = vxList.length >> 2;
     if (vertexCount == 0 || ixList.isEmpty) return;
 
-    _prepareForDraw(renderTexture, renderState.globalBlendMode, vertexCount, ixList.length);
-    _bakeVertices(renderState, renderTexture, vxList, vertexCount, r, g, b, a);
+    final textureIndex = _prepareForDraw(renderTexture, renderState.globalBlendMode, vertexCount, ixList.length);
+    _bakeVertices(renderState, renderTexture, vxList, vertexCount, textureIndex, r, g, b, a);
     final baseVertex = _vertexCount - vertexCount;
     for (var i = 0; i < ixList.length; i++) {
       _indices[_indexPosition++] = baseVertex + ixList[i];
@@ -83,7 +94,7 @@ class WebGpuBatchSystem {
     _runs.last.indexCount += ixList.length;
   }
 
-  void _prepareForDraw(RenderTexture texture, BlendMode blendMode, int vertexCount, int indexCount) {
+  int _prepareForDraw(RenderTexture texture, BlendMode blendMode, int vertexCount, int indexCount) {
     if (vertexCount > 0xFFFF) {
       throw StateError('WebGPU draw exceeds 16-bit index capacity.');
     }
@@ -95,20 +106,25 @@ class WebGpuBatchSystem {
     _ensureCpuVertexCapacity(_vertexPosition + vertexCount * _floatsPerVertex);
     _ensureCpuIndexCapacity(_indexPosition + indexCount + 1);
 
-    final run = _runs.isEmpty ? null : _runs.last;
-    if (run == null || !identical(run.texture, texture) || !identical(run.blendMode, blendMode)) {
-      _runs.add(_WebGpuRun(texture, blendMode)
-        ..firstIndex = _indexPosition);
+    var run = _runs.isEmpty ? null : _runs.last;
+    var textureIndex = run == null || !identical(run.blendMode, blendMode) ? null : run.textureIndex(texture);
+    if (textureIndex == null) {
+      run = _WebGpuRun(texture, blendMode)
+        ..firstIndex = _indexPosition;
+      _runs.add(run);
+      textureIndex = 0;
     }
-    _runs.last.vertexCount += vertexCount;
+    run!.vertexCount += vertexCount;
     _vertexCount += vertexCount;
+    return textureIndex;
   }
 
   void _bakeVertices(
     RenderState renderState,
     RenderTexture renderTexture,
     Float32List vxList,
-    int vertexCount, [
+    int vertexCount,
+    int textureIndex, [
     num r = 1,
     num g = 1,
     num b = 1,
@@ -123,6 +139,7 @@ class WebGpuBatchSystem {
     final textureSystem = renderContext.textureSystem;
     final textureScaleX = textureSystem._textureCoordinateScaleX(renderTexture);
     final textureScaleY = textureSystem._textureCoordinateScaleY(renderTexture);
+    final textureIndexValue = textureIndex.toDouble();
 
     var writeIndex = _vertexPosition;
     for (var i = 0, sourceIndex = 0; i < vertexCount; i++, sourceIndex += 4) {
@@ -143,6 +160,7 @@ class WebGpuBatchSystem {
       _vertices[writeIndex++] = alpha;
       _vertices[writeIndex++] = vxList[sourceIndex + 2] * textureScaleX;
       _vertices[writeIndex++] = vxList[sourceIndex + 3] * textureScaleY;
+      _vertices[writeIndex++] = textureIndexValue;
     }
     _vertexPosition = writeIndex;
   }
@@ -182,7 +200,7 @@ class WebGpuBatchSystem {
         activePipeline = pipeline;
       }
       pass
-        ..setBindGroup(0, renderContext.textureSystem.getBindGroup(run.texture))
+        ..setBindGroup(0, renderContext.textureSystem.getBatchBindGroup(run.textures))
         ..drawIndexed(run.indexCount, 1, run.firstIndex, 0, 0);
       final statistics = renderContext.renderStatistics;
       statistics.drawCount++;

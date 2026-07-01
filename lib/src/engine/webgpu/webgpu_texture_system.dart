@@ -3,7 +3,6 @@ part of '../../engine.dart';
 class _WebGpuTextureEntry {
   GPUTexture texture;
   GPUTextureView? view;
-  GPUBindGroup? bindGroup;
   int width;
   int height;
   int version;
@@ -14,6 +13,26 @@ class _WebGpuTextureEntry {
     required this.height,
     required this.version,
   });
+}
+
+class _WebGpuBatchBindGroupKey {
+  final List<RenderTexture> textures;
+  late final int _hashCode = Object.hashAll(textures.map(identityHashCode));
+
+  _WebGpuBatchBindGroupKey(List<RenderTexture> textures)
+      : textures = List<RenderTexture>.unmodifiable(textures);
+
+  @override
+  int get hashCode => _hashCode;
+
+  @override
+  bool operator ==(Object other) {
+    if (other is! _WebGpuBatchBindGroupKey || other.textures.length != textures.length) return false;
+    for (var i = 0; i < textures.length; i++) {
+      if (!identical(textures[i], other.textures[i])) return false;
+    }
+    return true;
+  }
 }
 
 class _WebGpuSamplerKey {
@@ -41,25 +60,38 @@ class WebGpuTextureSystem {
   final RenderContextWebGPU renderContext;
   final _textures = <RenderTexture, _WebGpuTextureEntry>{};
   final _samplers = <_WebGpuSamplerKey, GPUSampler>{};
+  final _batchBindGroups = <_WebGpuBatchBindGroupKey, GPUBindGroup>{};
 
   WebGpuTextureSystem(this.renderContext);
 
-  GPUBindGroup getBindGroup(RenderTexture renderTexture) {
-    final entry = _getEntry(renderTexture);
-    final bindGroup = entry.bindGroup;
+  GPUBindGroup getBindGroup(RenderTexture renderTexture) => getBatchBindGroup([renderTexture]);
+
+  GPUBindGroup getBatchBindGroup(List<RenderTexture> textures) {
+    if (textures.isEmpty) {
+      throw StateError('WebGPU batch bind group requires at least one texture.');
+    }
+
+    final key = _WebGpuBatchBindGroupKey(textures);
+    final bindGroup = _batchBindGroups[key];
     if (bindGroup != null) return bindGroup;
 
-    final view = getTextureView(renderTexture);
-    final sampler = getSampler(renderTexture);
+    final entries = <GPUBindGroupEntry>[];
+    for (var i = 0; i < WebGpuPipelineSystem.maxBatchTextures; i++) {
+      final renderTexture = i < textures.length ? textures[i] : textures[0];
+      final view = getTextureView(renderTexture);
+      final sampler = getSampler(renderTexture);
+      entries
+        ..add(GPUBindGroupEntry(binding: i * 2, resource: sampler))
+        ..add(GPUBindGroupEntry(binding: i * 2 + 1, resource: view));
+    }
+
     final created = renderContext.device.createBindGroup(GPUBindGroupDescriptor(
       layout: renderContext.pipelineSystem.textureBindGroupLayout,
-      entries: [
-        GPUBindGroupEntry(binding: 0, resource: sampler),
-        GPUBindGroupEntry(binding: 1, resource: view),
-      ].toJS,
+      entries: entries.toJS,
     ));
     renderContext.renderStatistics.webgpuBindGroupCreateCount++;
-    return entry.bindGroup = created;
+    _batchBindGroups[key] = created;
+    return created;
   }
 
   GPUSampler getSampler(RenderTexture renderTexture) {
@@ -142,8 +174,8 @@ class WebGpuTextureSystem {
     if (entry.version != version || needsTexture) {
       if (compressedTexture == null && renderTexture.source == null && renderTexture.imageBitmap == null) {
         entry.version = version;
-        entry.bindGroup = null;
         entry.view = null;
+        _batchBindGroups.clear();
         return entry;
       }
 
@@ -153,8 +185,8 @@ class WebGpuTextureSystem {
         _upload(renderTexture, entry.texture);
       }
       entry.version = version;
-      entry.bindGroup = null;
       entry.view = null;
+      _batchBindGroups.clear();
     }
 
     return entry;
@@ -169,6 +201,7 @@ class WebGpuTextureSystem {
     }
 
     _textures.remove(renderTexture)?.texture.destroy();
+    _batchBindGroups.clear();
 
     final texture = renderContext.device.createTexture(GPUTextureDescriptor(
       size: GPUExtent3DDict(width: 1, height: 1, depthOrArrayLayers: 1),
@@ -257,5 +290,6 @@ class WebGpuTextureSystem {
   void disposeTexture(RenderTexture renderTexture) {
     final entry = _textures.remove(renderTexture);
     entry?.texture.destroy();
+    _batchBindGroups.clear();
   }
 }

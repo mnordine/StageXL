@@ -1,7 +1,9 @@
 part of '../../engine.dart';
 
 class WebGpuPipelineSystem {
-  static const _vertexStride = 40;
+  static const maxBatchTextures = 8;
+  static const _batchVertexStride = 44;
+  static const _stencilVertexStride = 40;
 
   final RenderContextWebGPU renderContext;
   late final GPUBindGroupLayout textureBindGroupLayout;
@@ -15,16 +17,18 @@ class WebGpuPipelineSystem {
   WebGpuPipelineSystem(this.renderContext) {
     final device = renderContext.device;
     textureBindGroupLayout = device.createBindGroupLayout(GPUBindGroupLayoutDescriptor(entries: [
-      GPUBindGroupLayoutEntry(
-        binding: 0,
-        visibility: $GPUShaderStage.FRAGMENT,
-        sampler: GPUSamplerBindingLayout(type: 'filtering'),
-      ),
-      GPUBindGroupLayoutEntry(
-        binding: 1,
-        visibility: $GPUShaderStage.FRAGMENT,
-        texture: GPUTextureBindingLayout(sampleType: 'float'),
-      ),
+      for (var i = 0; i < maxBatchTextures; i++) ...[
+        GPUBindGroupLayoutEntry(
+          binding: i * 2,
+          visibility: $GPUShaderStage.FRAGMENT,
+          sampler: GPUSamplerBindingLayout(type: 'filtering'),
+        ),
+        GPUBindGroupLayoutEntry(
+          binding: i * 2 + 1,
+          visibility: $GPUShaderStage.FRAGMENT,
+          texture: GPUTextureBindingLayout(sampleType: 'float'),
+        ),
+      ],
     ].toJS));
     pipelineLayout =
         device.createPipelineLayout(GPUPipelineLayoutDescriptor(bindGroupLayouts: [textureBindGroupLayout].toJS));
@@ -56,11 +60,12 @@ class WebGpuPipelineSystem {
         entryPoint: 'vs_main',
         buffers: [
           GPUVertexBufferLayout(
-            arrayStride: _vertexStride,
+            arrayStride: _batchVertexStride,
             attributes: [
               GPUVertexAttribute(format: 'float32x4', offset: 0, shaderLocation: 0),
               GPUVertexAttribute(format: 'float32x4', offset: 16, shaderLocation: 1),
               GPUVertexAttribute(format: 'float32x2', offset: 32, shaderLocation: 2),
+              GPUVertexAttribute(format: 'float32', offset: 40, shaderLocation: 3),
             ].toJS,
           ),
         ].toJS,
@@ -109,7 +114,7 @@ class WebGpuPipelineSystem {
         entryPoint: 'vs_main',
         buffers: [
           GPUVertexBufferLayout(
-            arrayStride: _vertexStride,
+            arrayStride: _stencilVertexStride,
             attributes: [
               GPUVertexAttribute(format: 'float32x4', offset: 0, shaderLocation: 0),
             ].toJS,
@@ -157,20 +162,39 @@ class WebGpuPipelineSystem {
     );
   }
 
-  static const _shaderSource = '''
-    @group(0) @binding(0) var stageSampler: sampler;
-    @group(0) @binding(1) var stageTexture: texture_2d<f32>;
+  static final _shaderSource = _batchShaderSource(maxBatchTextures);
+
+  static String _batchShaderSource(int textureCount) {
+    final bindings = StringBuffer();
+    final samplers = StringBuffer();
+
+    for (var i = 0; i < textureCount; i++) {
+      bindings.writeln('''
+    @group(0) @binding(${i * 2}) var stageSampler$i: sampler;
+    @group(0) @binding(${i * 2 + 1}) var stageTexture$i: texture_2d<f32>;
+''');
+      samplers.write('''
+      if (textureIndex == ${i}u) {
+        return textureSampleLevel(stageTexture$i, stageSampler$i, uv, 0.0);
+      }
+''');
+    }
+
+    return '''
+    $bindings
 
     struct VertexInput {
       @location(0) clip: vec4<f32>,
       @location(1) color: vec4<f32>,
       @location(2) uv: vec2<f32>,
+      @location(3) textureIndex: f32,
     };
 
     struct VertexOutput {
       @builtin(position) position: vec4<f32>,
       @location(0) color: vec4<f32>,
       @location(1) uv: vec2<f32>,
+      @location(2) textureIndex: f32,
     };
 
     @vertex
@@ -179,14 +203,22 @@ class WebGpuPipelineSystem {
       output.position = input.clip;
       output.color = input.color;
       output.uv = input.uv;
+      output.textureIndex = input.textureIndex;
       return output;
+    }
+
+    fn sampleStageTexture(textureIndex: u32, uv: vec2<f32>) -> vec4<f32> {
+      $samplers
+      return vec4<f32>(1.0, 0.0, 1.0, 1.0);
     }
 
     @fragment
     fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
-      return textureSample(stageTexture, stageSampler, input.uv) * input.color;
+      let textureIndex = u32(input.textureIndex + 0.5);
+      return sampleStageTexture(textureIndex, input.uv) * input.color;
     }
   ''';
+  }
 
   static const _stencilShaderSource = '''
     struct VertexInput {
