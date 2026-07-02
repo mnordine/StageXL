@@ -65,6 +65,8 @@ Future<void> main() async {
   var indexTotal = 0;
   var bindGroupCreates = 0;
   var pipelineCreates = 0;
+  var renderBundleBuilds = 0;
+  var renderBundleHits = 0;
   var renderPasses = 0;
   var textureUploads = 0;
 
@@ -97,6 +99,8 @@ Future<void> main() async {
     indexTotal += stats.indexCount;
     bindGroupCreates += stats.webgpuBindGroupCreateCount;
     pipelineCreates += stats.webgpuPipelineCreateCount;
+    renderBundleBuilds += stats.webgpuRenderBundleBuildCount;
+    renderBundleHits += stats.webgpuRenderBundleCacheHitCount;
     renderPasses += stats.webgpuRenderPassCount;
     textureUploads += stats.webgpuTextureUploadCount;
 
@@ -131,6 +135,8 @@ Future<void> main() async {
       'avg webgpu submit: ${avgWebGpuSubmitMs.toStringAsFixed(2)} ms',
       'webgpu bind-group creates/sample: $bindGroupCreates',
       'webgpu pipeline creates/sample: $pipelineCreates',
+      'webgpu render-bundle builds/sample: $renderBundleBuilds',
+      'webgpu render-bundle hits/sample: $renderBundleHits',
       'webgpu texture uploads/sample: $textureUploads',
     ].join('\n');
 
@@ -147,6 +153,8 @@ Future<void> main() async {
     indexTotal = 0;
     bindGroupCreates = 0;
     pipelineCreates = 0;
+    renderBundleBuilds = 0;
+    renderBundleHits = 0;
     renderPasses = 0;
     textureUploads = 0;
   });
