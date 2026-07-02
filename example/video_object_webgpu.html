@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>StageXL WebGPU VideoObject Example</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+    <meta property="og:image" content="http://www.stagexl.org/samples/common/img/stagexl064.png">
+    <meta property="og:title" content="StageXL WebGPU VideoObject Example">
+    <meta property="og:type" content="website">
+    <meta property="og:description" content="StageXL WebGPU VideoObject example using stars.mp4.">
+
+    <link rel="stylesheet" href="index.css">
+    <script defer src="video_object_webgpu.dart.js"></script>
+</head>
+
+<body class="stage-full-window">
+    <canvas id="stage" class="stage-full-window"></canvas>
+    <button id="playPause" class="video-control" type="button">Pause</button>
+
+    <style>
+        .video-control {
+            position: fixed;
+            right: 16px;
+            top: 16px;
+            z-index: 10;
+            min-width: 92px;
+            padding: 10px 14px;
+            border-radius: 6px;
+            border: 1px solid #4f668c;
+            background: rgba(24, 33, 49, 0.9);
+            color: #eef4ff;
+            font: 14px/1.2 Arial, sans-serif;
+            cursor: pointer;
+        }
+
+        .video-control:hover,
+        .video-control:focus {
+            border-color: #7ea5df;
+            background: rgba(35, 49, 73, 0.94);
+        }
+    </style>
+</body>
+</html>
