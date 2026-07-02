@@ -38,14 +38,14 @@ class WebGpuFilterSystem {
   late GPUBuffer _normalMapUniformBuffer;
   late GPUBuffer _displacementMapUniformBuffer;
   late GPUBuffer _alphaMaskUniformBuffer;
-  final _colorMatrixPipelines = <BlendMode, Map<bool, GPURenderPipeline>>{};
-  final _blurPipelines = <BlendMode, Map<bool, GPURenderPipeline>>{};
-  final _dropShadowPipelines = <BlendMode, Map<bool, GPURenderPipeline>>{};
-  final _glowPipelines = <BlendMode, Map<bool, GPURenderPipeline>>{};
-  final _chromaKeyPipelines = <BlendMode, Map<bool, GPURenderPipeline>>{};
-  final _normalMapPipelines = <BlendMode, Map<bool, GPURenderPipeline>>{};
-  final _displacementMapPipelines = <BlendMode, Map<bool, GPURenderPipeline>>{};
-  final _alphaMaskPipelines = <BlendMode, Map<bool, GPURenderPipeline>>{};
+  final _colorMatrixPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
+  final _blurPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
+  final _dropShadowPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
+  final _glowPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
+  final _chromaKeyPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
+  final _normalMapPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
+  final _displacementMapPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
+  final _alphaMaskPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
   var _vertexCapacity = 0;
   var _indexCapacity = 0;
   var _normalMapVertexCapacity = 0;
@@ -1027,44 +1027,64 @@ class WebGpuFilterSystem {
   }
 
   GPURenderPipeline _getColorMatrixPipeline(BlendMode blendMode, bool stencilTest) {
-    final blendPipelines = _colorMatrixPipelines.putIfAbsent(blendMode, () => <bool, GPURenderPipeline>{});
-    return blendPipelines.putIfAbsent(stencilTest, () => _createColorMatrixPipeline(blendMode, stencilTest));
+    final blendPipelines = _colorMatrixPipelines.putIfAbsent(blendMode, () => <int, GPURenderPipeline>{});
+    return blendPipelines.putIfAbsent(
+      _pipelineKey(stencilTest),
+      () => _createColorMatrixPipeline(blendMode, stencilTest),
+    );
   }
 
   GPURenderPipeline _getBlurPipeline(BlendMode blendMode, bool stencilTest) {
-    final blendPipelines = _blurPipelines.putIfAbsent(blendMode, () => <bool, GPURenderPipeline>{});
-    return blendPipelines.putIfAbsent(stencilTest, () => _createBlurPipeline(blendMode, stencilTest));
+    final blendPipelines = _blurPipelines.putIfAbsent(blendMode, () => <int, GPURenderPipeline>{});
+    return blendPipelines.putIfAbsent(_pipelineKey(stencilTest), () => _createBlurPipeline(blendMode, stencilTest));
   }
 
   GPURenderPipeline _getGlowPipeline(BlendMode blendMode, bool stencilTest) {
-    final blendPipelines = _glowPipelines.putIfAbsent(blendMode, () => <bool, GPURenderPipeline>{});
-    return blendPipelines.putIfAbsent(stencilTest, () => _createGlowPipeline(blendMode, stencilTest));
+    final blendPipelines = _glowPipelines.putIfAbsent(blendMode, () => <int, GPURenderPipeline>{});
+    return blendPipelines.putIfAbsent(_pipelineKey(stencilTest), () => _createGlowPipeline(blendMode, stencilTest));
   }
 
   GPURenderPipeline _getDropShadowPipeline(BlendMode blendMode, bool stencilTest) {
-    final blendPipelines = _dropShadowPipelines.putIfAbsent(blendMode, () => <bool, GPURenderPipeline>{});
-    return blendPipelines.putIfAbsent(stencilTest, () => _createDropShadowPipeline(blendMode, stencilTest));
+    final blendPipelines = _dropShadowPipelines.putIfAbsent(blendMode, () => <int, GPURenderPipeline>{});
+    return blendPipelines.putIfAbsent(
+      _pipelineKey(stencilTest),
+      () => _createDropShadowPipeline(blendMode, stencilTest),
+    );
   }
 
   GPURenderPipeline _getChromaKeyPipeline(BlendMode blendMode, bool stencilTest) {
-    final blendPipelines = _chromaKeyPipelines.putIfAbsent(blendMode, () => <bool, GPURenderPipeline>{});
-    return blendPipelines.putIfAbsent(stencilTest, () => _createChromaKeyPipeline(blendMode, stencilTest));
+    final blendPipelines = _chromaKeyPipelines.putIfAbsent(blendMode, () => <int, GPURenderPipeline>{});
+    return blendPipelines.putIfAbsent(
+      _pipelineKey(stencilTest),
+      () => _createChromaKeyPipeline(blendMode, stencilTest),
+    );
   }
 
   GPURenderPipeline _getNormalMapPipeline(BlendMode blendMode, bool stencilTest) {
-    final blendPipelines = _normalMapPipelines.putIfAbsent(blendMode, () => <bool, GPURenderPipeline>{});
-    return blendPipelines.putIfAbsent(stencilTest, () => _createNormalMapPipeline(blendMode, stencilTest));
+    final blendPipelines = _normalMapPipelines.putIfAbsent(blendMode, () => <int, GPURenderPipeline>{});
+    return blendPipelines.putIfAbsent(
+      _pipelineKey(stencilTest),
+      () => _createNormalMapPipeline(blendMode, stencilTest),
+    );
   }
 
   GPURenderPipeline _getDisplacementMapPipeline(BlendMode blendMode, bool stencilTest) {
-    final blendPipelines = _displacementMapPipelines.putIfAbsent(blendMode, () => <bool, GPURenderPipeline>{});
-    return blendPipelines.putIfAbsent(stencilTest, () => _createDisplacementMapPipeline(blendMode, stencilTest));
+    final blendPipelines = _displacementMapPipelines.putIfAbsent(blendMode, () => <int, GPURenderPipeline>{});
+    return blendPipelines.putIfAbsent(
+      _pipelineKey(stencilTest),
+      () => _createDisplacementMapPipeline(blendMode, stencilTest),
+    );
   }
 
   GPURenderPipeline _getAlphaMaskPipeline(BlendMode blendMode, bool stencilTest) {
-    final blendPipelines = _alphaMaskPipelines.putIfAbsent(blendMode, () => <bool, GPURenderPipeline>{});
-    return blendPipelines.putIfAbsent(stencilTest, () => _createAlphaMaskPipeline(blendMode, stencilTest));
+    final blendPipelines = _alphaMaskPipelines.putIfAbsent(blendMode, () => <int, GPURenderPipeline>{});
+    return blendPipelines.putIfAbsent(
+      _pipelineKey(stencilTest),
+      () => _createAlphaMaskPipeline(blendMode, stencilTest),
+    );
   }
+
+  int _pipelineKey(bool stencilTest) => (renderContext.sampleCount << 1) | (stencilTest ? 1 : 0);
 
   GPURenderPipeline _createColorMatrixPipeline(BlendMode blendMode, bool stencilTest) => _createFilterPipeline(
         'StageXL color matrix filter pipeline',
@@ -1132,7 +1152,7 @@ class WebGpuFilterSystem {
       ),
       primitive: GPUPrimitiveState(topology: 'triangle-list'),
       depthStencil: _depthStencilState(stencilTest),
-      multisample: GPUMultisampleState(count: 1),
+      multisample: GPUMultisampleState(count: renderContext.sampleCount),
     ));
   }
 
@@ -1166,7 +1186,7 @@ class WebGpuFilterSystem {
       ),
       primitive: GPUPrimitiveState(topology: 'triangle-list'),
       depthStencil: _depthStencilState(stencilTest),
-      multisample: GPUMultisampleState(count: 1),
+      multisample: GPUMultisampleState(count: renderContext.sampleCount),
     ));
   }
 
@@ -1201,7 +1221,7 @@ class WebGpuFilterSystem {
       ),
       primitive: GPUPrimitiveState(topology: 'triangle-list'),
       depthStencil: _depthStencilState(stencilTest),
-      multisample: GPUMultisampleState(count: 1),
+      multisample: GPUMultisampleState(count: renderContext.sampleCount),
     ));
   }
 
@@ -1240,7 +1260,7 @@ class WebGpuFilterSystem {
       ),
       primitive: GPUPrimitiveState(topology: 'triangle-list'),
       depthStencil: _depthStencilState(stencilTest),
-      multisample: GPUMultisampleState(count: 1),
+      multisample: GPUMultisampleState(count: renderContext.sampleCount),
     ));
   }
 

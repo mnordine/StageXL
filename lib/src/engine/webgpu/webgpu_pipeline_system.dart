@@ -15,7 +15,7 @@ class WebGpuPipelineSystem {
   late final GPUBuffer projectionBuffer;
   late final GPUBindGroup projectionBindGroup;
   final _pipelineCache = <BlendMode, Map<int, GPURenderPipeline>>{};
-  GPURenderPipeline? _stencilWritePipeline;
+  final _stencilWritePipelines = <int, GPURenderPipeline>{};
 
   WebGpuPipelineSystem(this.renderContext) {
     final device = renderContext.device;
@@ -67,16 +67,21 @@ class WebGpuPipelineSystem {
 
   GPURenderPipeline getPipeline(BlendMode blendMode, {required bool stencilTest}) {
     final stencilMode = stencilTest ? 1 : 0;
+    final sampleCount = renderContext.sampleCount;
+    final pipelineKey = stencilMode | (sampleCount << 2);
     final blendPipelines = _pipelineCache.putIfAbsent(blendMode, () => <int, GPURenderPipeline>{});
-    return blendPipelines.putIfAbsent(stencilMode, () => _createPipeline(blendMode, stencilMode: stencilMode));
+    return blendPipelines.putIfAbsent(
+      pipelineKey,
+      () => _createPipeline(blendMode, stencilMode: stencilMode, sampleCount: sampleCount),
+    );
   }
 
   GPURenderPipeline getStencilWritePipeline() =>
-      _stencilWritePipeline ??= _createStencilWritePipeline();
+      _stencilWritePipelines.putIfAbsent(renderContext.sampleCount, _createStencilWritePipeline);
 
   GPUBlendState getBlendState(BlendMode blendMode) => _blendFor(blendMode);
 
-  GPURenderPipeline _createPipeline(BlendMode blendMode, {required int stencilMode}) {
+  GPURenderPipeline _createPipeline(BlendMode blendMode, {required int stencilMode, required int sampleCount}) {
     renderContext.renderStatistics.webgpuPipelineCreateCount++;
     final blend = _blendFor(blendMode);
     return renderContext.device.createRenderPipeline(GPURenderPipelineDescriptor(
@@ -110,7 +115,7 @@ class WebGpuPipelineSystem {
       ),
       primitive: GPUPrimitiveState(topology: 'triangle-list'),
       depthStencil: _depthStencilState(stencilMode),
-      multisample: GPUMultisampleState(count: 1),
+      multisample: GPUMultisampleState(count: sampleCount),
     ));
   }
 
@@ -160,7 +165,7 @@ class WebGpuPipelineSystem {
       ),
       primitive: GPUPrimitiveState(topology: 'triangle-list'),
       depthStencil: _depthStencilState(2),
-      multisample: GPUMultisampleState(count: 1),
+      multisample: GPUMultisampleState(count: renderContext.sampleCount),
     ));
   }
 

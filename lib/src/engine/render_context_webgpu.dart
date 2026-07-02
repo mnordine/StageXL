@@ -50,6 +50,7 @@ class RenderContextWebGPU extends RenderContext {
   int get viewportHeight => _activeRenderTexture?.height ?? _canvasElement.height;
   RenderTexture? get activeRenderTexture => _activeRenderTexture;
   Matrix3D get activeProjectionMatrix => _projectionMatrix;
+  int get sampleCount => _activeRenderTexture == null && deviceSystem.antialias ? 4 : 1;
 
   @override
   RenderEngine get renderEngine => .WebGPU;

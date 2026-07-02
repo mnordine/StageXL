@@ -5,8 +5,19 @@ class _WebGpuDepthStencilEntry {
   GPUTextureView view;
   int width;
   int height;
+  int sampleCount;
 
-  _WebGpuDepthStencilEntry(this.texture, this.view, this.width, this.height);
+  _WebGpuDepthStencilEntry(this.texture, this.view, this.width, this.height, this.sampleCount);
+}
+
+class _WebGpuColorEntry {
+  GPUTexture texture;
+  GPUTextureView view;
+  int width;
+  int height;
+  int sampleCount;
+
+  _WebGpuColorEntry(this.texture, this.view, this.width, this.height, this.sampleCount);
 }
 
 class WebGpuCommandSystem {
@@ -14,6 +25,7 @@ class WebGpuCommandSystem {
   GPUCommandEncoder? _encoder;
   GPUTexture? _swapTexture;
   GPUTextureView? _swapTextureView;
+  _WebGpuColorEntry? _canvasMultisampleColorEntry;
   _WebGpuDepthStencilEntry? _canvasDepthStencilEntry;
   final _renderTargetDepthStencilEntries = <RenderTexture, _WebGpuDepthStencilEntry>{};
 
@@ -30,20 +42,7 @@ class WebGpuCommandSystem {
   }
 
   GPURenderPassEncoder beginColorPass(List<num>? clearColor) {
-    final textureView = _getColorView();
-    final colorAttachment = clearColor == null
-        ? GPURenderPassColorAttachment(view: textureView, loadOp: 'load', storeOp: 'store')
-        : GPURenderPassColorAttachment(
-            view: textureView,
-            loadOp: 'clear',
-            clearValue: GPUColorDict(
-              r: clearColor[0],
-              g: clearColor[1],
-              b: clearColor[2],
-              a: clearColor[3],
-            ),
-            storeOp: 'store',
-          );
+    final colorAttachment = _getColorAttachment(clearColor);
     renderContext.renderStatistics.webgpuRenderPassCount++;
     final pass = encoder.beginRenderPass(GPURenderPassDescriptor(
       colorAttachments: [colorAttachment].toJS,
@@ -62,11 +61,10 @@ class WebGpuCommandSystem {
   }
 
   GPURenderPassEncoder beginStencilClearPass() {
-    final textureView = _getColorView();
     renderContext.renderStatistics.webgpuRenderPassCount++;
     return encoder.beginRenderPass(GPURenderPassDescriptor(
       colorAttachments: [
-        GPURenderPassColorAttachment(view: textureView, loadOp: 'load', storeOp: 'store'),
+        _getColorAttachment(null),
       ].toJS,
       depthStencilAttachment: GPURenderPassDepthStencilAttachment(
         view: _getDepthStencilView(),
@@ -79,21 +77,68 @@ class WebGpuCommandSystem {
     ));
   }
 
+  GPURenderPassColorAttachment _getColorAttachment(List<num>? clearColor) {
+    final textureView = _getColorView();
+    final attachment = clearColor == null
+        ? GPURenderPassColorAttachment(view: textureView, loadOp: 'load', storeOp: 'store')
+        : GPURenderPassColorAttachment(
+            view: textureView,
+            loadOp: 'clear',
+            clearValue: GPUColorDict(
+              r: clearColor[0],
+              g: clearColor[1],
+              b: clearColor[2],
+              a: clearColor[3],
+            ),
+            storeOp: 'store',
+          );
+
+    if (renderContext.sampleCount > 1 && renderContext.activeRenderTexture == null) {
+      attachment.resolveTarget = _swapTextureView ??= swapTexture.createView();
+    }
+    return attachment;
+  }
+
   GPUTextureView _getColorView() {
     final activeRenderTexture = renderContext.activeRenderTexture;
+    if (activeRenderTexture == null && renderContext.sampleCount > 1) {
+      return _getCanvasMultisampleColorView();
+    }
     return activeRenderTexture == null
         ? (_swapTextureView ??= swapTexture.createView())
         : renderContext.textureSystem.getTextureView(activeRenderTexture);
   }
 
+  GPUTextureView _getCanvasMultisampleColorView() {
+    final width = renderContext.viewportWidth;
+    final height = renderContext.viewportHeight;
+    final sampleCount = renderContext.sampleCount;
+    final entry = _canvasMultisampleColorEntry;
+    if (entry != null && width == entry.width && height == entry.height && sampleCount == entry.sampleCount) {
+      return entry.view;
+    }
+
+    entry?.texture.destroy();
+    final texture = renderContext.device.createTexture(GPUTextureDescriptor(
+      size: GPUExtent3DDict(width: width, height: height, depthOrArrayLayers: 1),
+      format: renderContext.preferredTextureFormat,
+      usage: $GPUTextureUsage.RENDER_ATTACHMENT,
+      sampleCount: sampleCount,
+    ));
+    final created = _WebGpuColorEntry(texture, texture.createView(), width, height, sampleCount);
+    _canvasMultisampleColorEntry = created;
+    return created.view;
+  }
+
   GPUTextureView _getDepthStencilView() {
     final width = renderContext.viewportWidth;
     final height = renderContext.viewportHeight;
+    final sampleCount = renderContext.sampleCount;
     final activeRenderTexture = renderContext.activeRenderTexture;
     final entry = activeRenderTexture == null
         ? _canvasDepthStencilEntry
         : _renderTargetDepthStencilEntries[activeRenderTexture];
-    if (entry != null && width == entry.width && height == entry.height) {
+    if (entry != null && width == entry.width && height == entry.height && sampleCount == entry.sampleCount) {
       return entry.view;
     }
 
@@ -102,8 +147,9 @@ class WebGpuCommandSystem {
       size: GPUExtent3DDict(width: width, height: height, depthOrArrayLayers: 1),
       format: 'depth24plus-stencil8',
       usage: $GPUTextureUsage.RENDER_ATTACHMENT,
+      sampleCount: sampleCount,
     ));
-    final created = _WebGpuDepthStencilEntry(texture, texture.createView(), width, height);
+    final created = _WebGpuDepthStencilEntry(texture, texture.createView(), width, height, sampleCount);
     if (activeRenderTexture == null) {
       _canvasDepthStencilEntry = created;
     } else {
