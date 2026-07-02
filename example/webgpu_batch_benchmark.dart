@@ -14,11 +14,13 @@ Future<void> main() async {
   final spriteCount = int.tryParse(query['sprites'] ?? '') ?? 2048;
   final moving = query['moving'] != 'false';
   final useBitmapContainer = query['container'] == 'bitmap';
+  final antialias = query['antialias'] == 'true';
 
   final options = StageOptions()
     ..stageAlign = .TOP_LEFT
     ..stageScaleMode = .NO_SCALE
     ..backgroundColor = 0xFF111720
+    ..antialias = antialias
     ..renderEngine = engine;
 
   final canvas = document.querySelector('#stage') as HTMLCanvasElement;
@@ -42,7 +44,7 @@ Future<void> main() async {
   _addLabel(stage, 'StageXL Batch Benchmark', 20, 20, 24, 0xFFFFFFFF);
   _addLabel(
     stage,
-    'Use ?engine=webgpu or ?engine=webgl2, ?sprites=2048, ?moving=false, ?container=bitmap',
+    'Use ?engine=webgpu or ?engine=webgl2, ?sprites=2048, ?moving=false, ?container=bitmap, ?antialias=true',
     20,
     50,
     13,
@@ -115,6 +117,7 @@ Future<void> main() async {
       'sprites: $spriteCount',
       'textures: $_textureCount',
       'container: ${useBitmapContainer ? 'bitmap' : 'stage'}',
+      'antialias: $antialias',
       'moving: $moving',
       'avg stage materialize: ${avgFrameMs.toStringAsFixed(2)} ms',
       'avg render object: ${avgRenderObjectMs.toStringAsFixed(2)} ms',
