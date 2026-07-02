@@ -463,14 +463,19 @@ class Stage extends DisplayObjectContainer {
       _renderState.reset(_stageTransformation);
       _renderState.currentTime = currentTime;
       _renderState.deltaTime = deltaTime;
+      final renderObjectStart = stopwatch.elapsedMicroseconds;
       _renderState.renderObject(this);
+      final renderObjectEnd = stopwatch.elapsedMicroseconds;
       _renderState.flush();
+      final flushEnd = stopwatch.elapsedMicroseconds;
       _renderAfterContextRestore = false;
       _invalid = false;
 
       final stats = _renderContext.renderStatistics;
       final frameTime = stopwatch.elapsedMilliseconds;
       stats.frameTimeMicroseconds = stopwatch.elapsedMicroseconds;
+      stats.renderObjectMicroseconds = renderObjectEnd - renderObjectStart;
+      stats.renderFlushMicroseconds = flushEnd - renderObjectEnd;
       _avgDrawCalls = _avgDrawCalls * 0.75 + stats.drawCount * 0.25;
       _avgVertexCount = _avgVertexCount * 0.75 + stats.vertexCount * 0.25;
       _avgIdexCount = _avgIdexCount * 0.75 + stats.indexCount * 0.25;

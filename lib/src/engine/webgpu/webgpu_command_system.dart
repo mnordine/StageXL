@@ -115,7 +115,9 @@ class WebGpuCommandSystem {
   void submit() {
     final commandEncoder = _encoder;
     if (commandEncoder == null) return;
+    final stopwatch = Stopwatch()..start();
     renderContext.device.queue.submit([commandEncoder.finish()].toJS);
+    renderContext.renderStatistics.webgpuSubmitMicroseconds += stopwatch.elapsedMicroseconds;
     _encoder = null;
   }
 
