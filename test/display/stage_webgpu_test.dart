@@ -213,4 +213,31 @@ void main() {
     expect(() => stage.materialize(0, 16), returnsNormally);
     expect(stage.renderContext.renderStatistics.webgpuRenderPassCount, greaterThanOrEqualTo(4));
   });
+
+  test('WebGPU reuses stable batch render bundles when available', () async {
+    final options = StageOptions()
+      ..renderEngine = .WebGPU
+      ..backgroundColor = Color.Transparent
+      ..stageRenderMode = .ONCE;
+    final canvas = HTMLCanvasElement()
+      ..width = 64
+      ..height = 64;
+    final stage = await Stage.create(canvas, width: 64, height: 64, options: options);
+
+    if (stage.renderEngine != RenderEngine.WebGPU) return;
+
+    final texture = BitmapData(24, 24, Color.Red);
+    stage
+      ..addChild(Bitmap(texture)
+        ..x = 4
+        ..y = 4)
+      ..addChild(Bitmap(texture)
+        ..x = 32
+        ..y = 32);
+
+    expect(() => stage.materialize(0, 16), returnsNormally);
+    expect(() => stage.materialize(16, 16), returnsNormally);
+    expect(() => stage.materialize(32, 16), returnsNormally);
+    expect(stage.renderContext.renderStatistics.webgpuRenderBundleCacheHitCount, greaterThanOrEqualTo(1));
+  });
 }

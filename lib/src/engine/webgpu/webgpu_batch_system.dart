@@ -21,12 +21,102 @@ class _WebGpuRun {
   }
 }
 
+class _WebGpuBundleRunKey {
+  final GPURenderPipeline pipeline;
+  final GPUBindGroup textureBindGroup;
+  final int firstIndex;
+  final int indexCount;
+
+  _WebGpuBundleRunKey({
+    required this.pipeline,
+    required this.textureBindGroup,
+    required this.firstIndex,
+    required this.indexCount,
+  });
+
+  @override
+  int get hashCode => Object.hash(
+        identityHashCode(pipeline),
+        identityHashCode(textureBindGroup),
+        firstIndex,
+        indexCount,
+      );
+
+  @override
+  bool operator ==(Object other) =>
+      other is _WebGpuBundleRunKey &&
+      identical(other.pipeline, pipeline) &&
+      identical(other.textureBindGroup, textureBindGroup) &&
+      other.firstIndex == firstIndex &&
+      other.indexCount == indexCount;
+}
+
+class _WebGpuBundleKey {
+  final GPUBuffer vertexBuffer;
+  final GPUBuffer indexBuffer;
+  final GPUBindGroup projectionBindGroup;
+  final int vertexBytes;
+  final int indexBytes;
+  final int sampleCount;
+  final bool stencilTest;
+  final List<_WebGpuBundleRunKey> runs;
+  late final int _hashCode = Object.hash(
+    identityHashCode(vertexBuffer),
+    identityHashCode(indexBuffer),
+    identityHashCode(projectionBindGroup),
+    vertexBytes,
+    indexBytes,
+    sampleCount,
+    stencilTest,
+    Object.hashAll(runs),
+  );
+
+  _WebGpuBundleKey({
+    required this.vertexBuffer,
+    required this.indexBuffer,
+    required this.projectionBindGroup,
+    required this.vertexBytes,
+    required this.indexBytes,
+    required this.sampleCount,
+    required this.stencilTest,
+    required List<_WebGpuBundleRunKey> runs,
+  }) : runs = List<_WebGpuBundleRunKey>.unmodifiable(runs);
+
+  @override
+  int get hashCode => _hashCode;
+
+  @override
+  bool operator ==(Object other) {
+    if (other is! _WebGpuBundleKey ||
+        !identical(other.vertexBuffer, vertexBuffer) ||
+        !identical(other.indexBuffer, indexBuffer) ||
+        !identical(other.projectionBindGroup, projectionBindGroup) ||
+        other.vertexBytes != vertexBytes ||
+        other.indexBytes != indexBytes ||
+        other.sampleCount != sampleCount ||
+        other.stencilTest != stencilTest ||
+        other.runs.length != runs.length) {
+      return false;
+    }
+
+    for (var i = 0; i < runs.length; i++) {
+      if (other.runs[i] != runs[i]) return false;
+    }
+    return true;
+  }
+}
+
 class WebGpuBatchSystem {
   static const _floatsPerVertex = 9;
   static const _bytesPerVertex = _floatsPerVertex * 4;
+  static const _renderBundleMinRuns = 1;
+  static const _renderBundleStableFrameThreshold = 2;
+  static const _renderBundleCacheLimit = 64;
 
   final RenderContextWebGPU renderContext;
   final _runs = <_WebGpuRun>[];
+  final _renderBundles = <_WebGpuBundleKey, GPURenderBundle>{};
+  final _renderBundleObservations = <_WebGpuBundleKey, int>{};
   late Float32List _vertices;
   late Uint16List _indices;
   late GPUBuffer _vertexBuffer;
@@ -184,26 +274,36 @@ class WebGpuBatchSystem {
 
     final encodeStopwatch = Stopwatch()..start();
     final pass = renderContext.commandSystem.beginColorPass(clearColor);
-    pass
-      ..setVertexBuffer(0, _vertexBuffer, 0, vertexBytes)
-      ..setIndexBuffer(_indexBuffer, 'uint16', 0, indexBytes)
-      ..setBindGroup(1, renderContext.pipelineSystem.projectionBindGroup);
-
-    GPURenderPipeline? activePipeline;
     final stencilValue = renderContext.maskSystem.activeStencilValue;
     if (stencilValue > 0) {
       pass.setStencilReference(stencilValue);
     }
-    for (final run in _runs) {
-      final pipeline = renderContext.pipelineSystem.getPipeline(run.blendMode, stencilTest: stencilValue > 0);
-      if (!identical(pipeline, activePipeline)) {
-        pass.setPipeline(pipeline);
-        activePipeline = pipeline;
-      }
+
+    final bundleKey = _tryCreateBundleKey(vertexBytes, indexBytes, stencilValue > 0);
+    final bundle = bundleKey == null ? null : _getRenderBundle(bundleKey);
+    if (bundle != null) {
+      pass.executeBundles([bundle].toJS);
+    } else {
       pass
-        ..setBindGroup(0, renderContext.textureSystem.getBatchBindGroup(run.textures))
-        ..drawIndexed(run.indexCount, 1, run.firstIndex, 0, 0);
-      final statistics = renderContext.renderStatistics;
+        ..setVertexBuffer(0, _vertexBuffer, 0, vertexBytes)
+        ..setIndexBuffer(_indexBuffer, 'uint16', 0, indexBytes)
+        ..setBindGroup(1, renderContext.pipelineSystem.projectionBindGroup);
+
+      GPURenderPipeline? activePipeline;
+      for (final run in _runs) {
+        final pipeline = renderContext.pipelineSystem.getPipeline(run.blendMode, stencilTest: stencilValue > 0);
+        if (!identical(pipeline, activePipeline)) {
+          pass.setPipeline(pipeline);
+          activePipeline = pipeline;
+        }
+        pass
+          ..setBindGroup(0, renderContext.textureSystem.getBatchBindGroup(run.textures))
+          ..drawIndexed(run.indexCount, 1, run.firstIndex, 0, 0);
+      }
+    }
+
+    final statistics = renderContext.renderStatistics;
+    for (final run in _runs) {
       statistics.drawCount++;
       statistics.vertexCount += run.vertexCount;
       statistics.indexCount += run.indexCount;
@@ -289,6 +389,7 @@ class WebGpuBatchSystem {
 
   GPUBuffer _createVertexBuffer(int size) {
     _vertexCapacity = size;
+    _clearRenderBundleCache();
     return renderContext.device.createBuffer(GPUBufferDescriptor(
       size: size,
       usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.VERTEX,
@@ -297,6 +398,7 @@ class WebGpuBatchSystem {
 
   GPUBuffer _createIndexBuffer(int size) {
     _indexCapacity = size;
+    _clearRenderBundleCache();
     return renderContext.device.createBuffer(GPUBufferDescriptor(
       size: size,
       usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.INDEX,
@@ -331,5 +433,81 @@ class WebGpuBatchSystem {
       capacity *= 2;
     }
     _indices = Uint16List(capacity);
+  }
+
+  _WebGpuBundleKey? _tryCreateBundleKey(int vertexBytes, int indexBytes, bool stencilTest) {
+    if (_runs.length < _renderBundleMinRuns) return null;
+    if (_runs.any((run) => run.textures.any(_isDynamicTexture))) return null;
+
+    return _WebGpuBundleKey(
+      vertexBuffer: _vertexBuffer,
+      indexBuffer: _indexBuffer,
+      projectionBindGroup: renderContext.pipelineSystem.projectionBindGroup,
+      vertexBytes: vertexBytes,
+      indexBytes: indexBytes,
+      sampleCount: renderContext.sampleCount,
+      stencilTest: stencilTest,
+      runs: [
+        for (final run in _runs)
+          _WebGpuBundleRunKey(
+            pipeline: renderContext.pipelineSystem.getPipeline(run.blendMode, stencilTest: stencilTest),
+            textureBindGroup: renderContext.textureSystem.getBatchBindGroup(run.textures),
+            firstIndex: run.firstIndex,
+            indexCount: run.indexCount,
+          ),
+      ],
+    );
+  }
+
+  GPURenderBundle? _getRenderBundle(_WebGpuBundleKey key) {
+    final bundle = _renderBundles[key];
+    if (bundle != null) {
+      renderContext.renderStatistics.webgpuRenderBundleCacheHitCount++;
+      return bundle;
+    }
+
+    if (_renderBundleObservations.length >= _renderBundleCacheLimit && !_renderBundleObservations.containsKey(key)) {
+      _clearRenderBundleCache();
+    }
+
+    final observations = (_renderBundleObservations[key] ?? 0) + 1;
+    _renderBundleObservations[key] = observations;
+    if (observations < _renderBundleStableFrameThreshold) return null;
+
+    final encoder = renderContext.device.createRenderBundleEncoder(GPURenderBundleEncoderDescriptor(
+      colorFormats: [renderContext.preferredTextureFormat.toJS].toJS,
+      depthStencilFormat: 'depth24plus-stencil8',
+      sampleCount: renderContext.sampleCount,
+    ));
+    encoder
+      ..setVertexBuffer(0, key.vertexBuffer, 0, key.vertexBytes)
+      ..setIndexBuffer(key.indexBuffer, 'uint16', 0, key.indexBytes)
+      ..setBindGroup(1, key.projectionBindGroup);
+
+    GPURenderPipeline? activePipeline;
+    for (final run in key.runs) {
+      if (!identical(run.pipeline, activePipeline)) {
+        encoder.setPipeline(run.pipeline);
+        activePipeline = run.pipeline;
+      }
+      encoder
+        ..setBindGroup(0, run.textureBindGroup)
+        ..drawIndexed(run.indexCount, 1, run.firstIndex, 0, 0);
+    }
+
+    final created = encoder.finish(GPURenderBundleDescriptor(label: 'StageXL batch render bundle'));
+    if (_renderBundles.length >= _renderBundleCacheLimit) {
+      _clearRenderBundleCache();
+    }
+    _renderBundles[key] = created;
+    renderContext.renderStatistics.webgpuRenderBundleBuildCount++;
+    return created;
+  }
+
+  bool _isDynamicTexture(RenderTexture renderTexture) => renderTexture.source.isA<HTMLVideoElement>();
+
+  void _clearRenderBundleCache() {
+    _renderBundles.clear();
+    _renderBundleObservations.clear();
   }
 }
