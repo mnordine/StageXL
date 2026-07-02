@@ -13,6 +13,7 @@ Future<void> main() async {
   final engine = _engine(query['engine']);
   final spriteCount = int.tryParse(query['sprites'] ?? '') ?? 2048;
   final moving = query['moving'] != 'false';
+  final useBitmapContainer = query['container'] == 'bitmap';
 
   final options = StageOptions()
     ..stageAlign = .TOP_LEFT
@@ -29,14 +30,34 @@ Future<void> main() async {
   renderLoop.addStage(stage);
 
   final textures = _createTextures();
-  final sprites = _createSprites(stage, textures, spriteCount);
+  final void Function(Bitmap sprite) addSprite;
+  if (useBitmapContainer) {
+    final spriteParent = BitmapContainer();
+    stage.addChild(spriteParent);
+    addSprite = spriteParent.addChild;
+  } else {
+    addSprite = stage.addChild;
+  }
+  final sprites = _createSprites(addSprite, textures, spriteCount);
   _addLabel(stage, 'StageXL Batch Benchmark', 20, 20, 24, 0xFFFFFFFF);
-  _addLabel(stage, 'Use ?engine=webgpu or ?engine=webgl2, ?sprites=2048, ?moving=false', 20, 50, 13, 0xFFC8D3E5);
+  _addLabel(
+    stage,
+    'Use ?engine=webgpu or ?engine=webgl2, ?sprites=2048, ?moving=false, ?container=bitmap',
+    20,
+    50,
+    13,
+    0xFFC8D3E5,
+  );
 
   var elapsed = 0.0;
   var sampleTime = 0.0;
   var sampleCount = 0;
   var frameTimeTotal = 0.0;
+  var renderObjectTotal = 0.0;
+  var renderFlushTotal = 0.0;
+  var webgpuBufferUploadTotal = 0.0;
+  var webgpuPassEncodeTotal = 0.0;
+  var webgpuSubmitTotal = 0.0;
   var drawTotal = 0;
   var vertexTotal = 0;
   var indexTotal = 0;
@@ -64,6 +85,11 @@ Future<void> main() async {
     sampleTime += frameTime / 1000.0;
     sampleCount++;
     frameTimeTotal += frameTime;
+    renderObjectTotal += stats.renderObjectMicroseconds / 1000.0;
+    renderFlushTotal += stats.renderFlushMicroseconds / 1000.0;
+    webgpuBufferUploadTotal += stats.webgpuBufferUploadMicroseconds / 1000.0;
+    webgpuPassEncodeTotal += stats.webgpuPassEncodeMicroseconds / 1000.0;
+    webgpuSubmitTotal += stats.webgpuSubmitMicroseconds / 1000.0;
     drawTotal += stats.drawCount;
     vertexTotal += stats.vertexCount;
     indexTotal += stats.indexCount;
@@ -75,6 +101,11 @@ Future<void> main() async {
     if (sampleTime < 0.5) return;
 
     final avgFrameMs = frameTimeTotal / sampleCount;
+    final avgRenderObjectMs = renderObjectTotal / sampleCount;
+    final avgRenderFlushMs = renderFlushTotal / sampleCount;
+    final avgWebGpuBufferUploadMs = webgpuBufferUploadTotal / sampleCount;
+    final avgWebGpuPassEncodeMs = webgpuPassEncodeTotal / sampleCount;
+    final avgWebGpuSubmitMs = webgpuSubmitTotal / sampleCount;
     final avgDraws = drawTotal / sampleCount;
     final avgVertices = vertexTotal / sampleCount;
     final avgIndices = indexTotal / sampleCount;
@@ -83,12 +114,18 @@ Future<void> main() async {
       'renderer: ${stage.renderEngine.name}',
       'sprites: $spriteCount',
       'textures: $_textureCount',
+      'container: ${useBitmapContainer ? 'bitmap' : 'stage'}',
       'moving: $moving',
       'avg stage materialize: ${avgFrameMs.toStringAsFixed(2)} ms',
+      'avg render object: ${avgRenderObjectMs.toStringAsFixed(2)} ms',
+      'avg render flush: ${avgRenderFlushMs.toStringAsFixed(2)} ms',
       'avg draws/frame: ${avgDraws.toStringAsFixed(1)}',
       'avg vertices/frame: ${avgVertices.toStringAsFixed(0)}',
       'avg indices/frame: ${avgIndices.toStringAsFixed(0)}',
       'avg webgpu passes/frame: ${avgPasses.toStringAsFixed(1)}',
+      'avg webgpu buffer upload: ${avgWebGpuBufferUploadMs.toStringAsFixed(2)} ms',
+      'avg webgpu pass encode: ${avgWebGpuPassEncodeMs.toStringAsFixed(2)} ms',
+      'avg webgpu submit: ${avgWebGpuSubmitMs.toStringAsFixed(2)} ms',
       'webgpu bind-group creates/sample: $bindGroupCreates',
       'webgpu pipeline creates/sample: $pipelineCreates',
       'webgpu texture uploads/sample: $textureUploads',
@@ -97,6 +134,11 @@ Future<void> main() async {
     sampleTime = 0;
     sampleCount = 0;
     frameTimeTotal = 0;
+    renderObjectTotal = 0;
+    renderFlushTotal = 0;
+    webgpuBufferUploadTotal = 0;
+    webgpuPassEncodeTotal = 0;
+    webgpuSubmitTotal = 0;
     drawTotal = 0;
     vertexTotal = 0;
     indexTotal = 0;
@@ -134,7 +176,7 @@ List<BitmapData> _createTextures() {
   ];
 }
 
-List<Bitmap> _createSprites(Stage stage, List<BitmapData> textures, int count) {
+List<Bitmap> _createSprites(void Function(Bitmap sprite) addSprite, List<BitmapData> textures, int count) {
   final sprites = <Bitmap>[];
   const columns = 64;
   const xSpacing = 19;
@@ -148,7 +190,7 @@ List<Bitmap> _createSprites(Stage stage, List<BitmapData> textures, int count) {
       ..scaleX = 0.38
       ..scaleY = 0.38;
     sprites.add(sprite);
-    stage.addChild(sprite);
+    addSprite(sprite);
   }
 
   return sprites;
