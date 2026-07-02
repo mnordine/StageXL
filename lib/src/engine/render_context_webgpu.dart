@@ -100,7 +100,7 @@ class RenderContextWebGPU extends RenderContext {
   }
 
   void activateProjectionMatrix(Matrix3D matrix) {
-    flush();
+    if (!batchSystem.isEmpty) flush();
     _projectionMatrix.copyFrom(matrix);
   }
 
