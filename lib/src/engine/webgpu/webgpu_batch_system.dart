@@ -58,9 +58,8 @@ class WebGpuBatchSystem {
     }
 
     final renderTexture = renderTextureQuad.renderTexture;
-    final vxList = renderTextureQuad.vxList;
     final textureIndex = _prepareForDraw(renderTexture, renderState.globalBlendMode, 4, 6);
-    _bakeVertices(renderState, renderTexture, vxList, 4, textureIndex);
+    _bakeQuadVertices(renderState, renderTexture, renderTextureQuad.vxListQuad, textureIndex);
     final baseVertex = _vertexCount - 4;
     _indices[_indexPosition++] = baseVertex + 0;
     _indices[_indexPosition++] = baseVertex + 1;
@@ -176,11 +175,14 @@ class WebGpuBatchSystem {
     final indexBytes = (_indexPosition.isOdd ? _indexPosition + 1 : _indexPosition) * 2;
     _ensureVertexCapacity(vertexBytes);
     _ensureIndexCapacity(indexBytes);
+    final uploadStopwatch = Stopwatch()..start();
     renderContext.pipelineSystem.uploadProjectionMatrix(renderContext.activeProjectionMatrix);
     renderContext.device.queue
       ..writeBuffer(_vertexBuffer, 0, _vertices.buffer.toJS, 0, vertexBytes)
       ..writeBuffer(_indexBuffer, 0, _indices.buffer.toJS, 0, indexBytes);
+    renderContext.renderStatistics.webgpuBufferUploadMicroseconds += uploadStopwatch.elapsedMicroseconds;
 
+    final encodeStopwatch = Stopwatch()..start();
     final pass = renderContext.commandSystem.beginColorPass(clearColor);
     pass
       ..setVertexBuffer(0, _vertexBuffer, 0, vertexBytes)
@@ -208,11 +210,81 @@ class WebGpuBatchSystem {
     }
 
     pass.end();
+    renderContext.renderStatistics.webgpuPassEncodeMicroseconds += encodeStopwatch.elapsedMicroseconds;
     renderContext.commandSystem.submit();
     _runs.clear();
     _vertexPosition = 0;
     _indexPosition = 0;
     _vertexCount = 0;
+  }
+
+  void _bakeQuadVertices(
+    RenderState renderState,
+    RenderTexture renderTexture,
+    Float32List vxList,
+    int textureIndex,
+  ) {
+    final matrix = renderState.globalMatrix;
+    final x1 = vxList[0];
+    final y1 = vxList[1];
+    final x2 = vxList[8];
+    final y2 = vxList[9];
+    final ma1 = x1 * matrix.a + matrix.tx;
+    final ma2 = x2 * matrix.a + matrix.tx;
+    final mb1 = x1 * matrix.b + matrix.ty;
+    final mb2 = x2 * matrix.b + matrix.ty;
+    final mc1 = y1 * matrix.c;
+    final mc2 = y2 * matrix.c;
+    final md1 = y1 * matrix.d;
+    final md2 = y2 * matrix.d;
+    final alpha = renderState.globalAlpha;
+    final textureSystem = renderContext.textureSystem;
+    final textureScaleX = textureSystem._textureCoordinateScaleX(renderTexture);
+    final textureScaleY = textureSystem._textureCoordinateScaleY(renderTexture);
+    final textureIndexValue = textureIndex.toDouble();
+    final vertices = _vertices;
+
+    var writeIndex = _vertexPosition;
+    vertices[writeIndex++] = ma1 + mc1;
+    vertices[writeIndex++] = mb1 + md1;
+    vertices[writeIndex++] = alpha;
+    vertices[writeIndex++] = alpha;
+    vertices[writeIndex++] = alpha;
+    vertices[writeIndex++] = alpha;
+    vertices[writeIndex++] = vxList[2] * textureScaleX;
+    vertices[writeIndex++] = vxList[3] * textureScaleY;
+    vertices[writeIndex++] = textureIndexValue;
+
+    vertices[writeIndex++] = ma2 + mc1;
+    vertices[writeIndex++] = mb2 + md1;
+    vertices[writeIndex++] = alpha;
+    vertices[writeIndex++] = alpha;
+    vertices[writeIndex++] = alpha;
+    vertices[writeIndex++] = alpha;
+    vertices[writeIndex++] = vxList[6] * textureScaleX;
+    vertices[writeIndex++] = vxList[7] * textureScaleY;
+    vertices[writeIndex++] = textureIndexValue;
+
+    vertices[writeIndex++] = ma2 + mc2;
+    vertices[writeIndex++] = mb2 + md2;
+    vertices[writeIndex++] = alpha;
+    vertices[writeIndex++] = alpha;
+    vertices[writeIndex++] = alpha;
+    vertices[writeIndex++] = alpha;
+    vertices[writeIndex++] = vxList[10] * textureScaleX;
+    vertices[writeIndex++] = vxList[11] * textureScaleY;
+    vertices[writeIndex++] = textureIndexValue;
+
+    vertices[writeIndex++] = ma1 + mc2;
+    vertices[writeIndex++] = mb1 + md2;
+    vertices[writeIndex++] = alpha;
+    vertices[writeIndex++] = alpha;
+    vertices[writeIndex++] = alpha;
+    vertices[writeIndex++] = alpha;
+    vertices[writeIndex++] = vxList[14] * textureScaleX;
+    vertices[writeIndex++] = vxList[15] * textureScaleY;
+    vertices[writeIndex++] = textureIndexValue;
+    _vertexPosition = writeIndex;
   }
 
   GPUBuffer _createVertexBuffer(int size) {

@@ -3,7 +3,7 @@ part of '../../engine.dart';
 class WebGpuPipelineSystem {
   static const maxBatchTextures = 8;
   static const _batchVertexStride = 36;
-  static const _stencilVertexStride = 40;
+  static const _stencilVertexStride = 16;
 
   final RenderContextWebGPU renderContext;
   late final GPUBindGroupLayout textureBindGroupLayout;

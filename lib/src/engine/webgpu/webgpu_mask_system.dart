@@ -1,6 +1,9 @@
 part of '../../engine.dart';
 
 class WebGpuMaskSystem {
+  static const _floatsPerStencilVertex = 4;
+  static const _bytesPerStencilVertex = _floatsPerStencilVertex * 4;
+
   final RenderContextWebGPU renderContext;
   final _scissorStack = <Rectangle<num>>[];
   final _maskStates = <_WebGpuMaskState>[];
@@ -13,7 +16,7 @@ class WebGpuMaskSystem {
   var _renderingStencilMask = false;
 
   WebGpuMaskSystem(this.renderContext) {
-    _vertexBuffer = _createVertexBuffer(40 * 4);
+    _vertexBuffer = _createVertexBuffer(_bytesPerStencilVertex * 4);
     _indexBuffer = _createIndexBuffer(12);
   }
 
@@ -132,7 +135,7 @@ class WebGpuMaskSystem {
 
   Float32List _bakeStencilVertices(List<double> maskVertices) {
     final vertexCount = maskVertices.length ~/ 2;
-    final vertices = Float32List(vertexCount * WebGpuBatchSystem._floatsPerVertex);
+    final vertices = Float32List(vertexCount * _floatsPerStencilVertex);
     final projectionMatrix = renderContext.activeProjectionMatrix;
 
     var writeIndex = 0;
@@ -147,19 +150,13 @@ class WebGpuMaskSystem {
       vertices[writeIndex++] = clipY;
       vertices[writeIndex++] = clipZ * 0.5 + clipW * 0.5;
       vertices[writeIndex++] = clipW;
-      vertices[writeIndex++] = 1;
-      vertices[writeIndex++] = 1;
-      vertices[writeIndex++] = 1;
-      vertices[writeIndex++] = 1;
-      vertices[writeIndex++] = 0;
-      vertices[writeIndex++] = 0;
     }
 
     return vertices;
   }
 
   void _renderStencilMask(int stencilValue, Float32List vertices) {
-    final vertexCount = vertices.length ~/ WebGpuBatchSystem._floatsPerVertex;
+    final vertexCount = vertices.length ~/ _floatsPerStencilVertex;
     if (vertexCount > 0xFFFF) {
       throw StateError('WebGPU stencil mask exceeds 16-bit index capacity.');
     }
