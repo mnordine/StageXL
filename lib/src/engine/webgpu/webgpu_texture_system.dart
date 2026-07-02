@@ -71,6 +71,10 @@ class WebGpuTextureSystem {
       throw StateError('WebGPU batch bind group requires at least one texture.');
     }
 
+    for (final renderTexture in textures) {
+      _getEntry(renderTexture);
+    }
+
     final key = _WebGpuBatchBindGroupKey(textures);
     final bindGroup = _batchBindGroups[key];
     if (bindGroup != null) return bindGroup;
@@ -248,7 +252,12 @@ class WebGpuTextureSystem {
       mipLevelCount: compressedTexture?.mipLevelCount ?? 1,
       usage: usage,
     ));
-    final entry = _WebGpuTextureEntry(texture: texture, width: width, height: height, version: version - 1);
+    final entry = _WebGpuTextureEntry(
+      texture: texture,
+      width: width,
+      height: height,
+      version: version - 1,
+    );
     _textures[renderTexture] = entry;
     return entry;
   }
