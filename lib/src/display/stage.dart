@@ -485,14 +485,7 @@ class Stage extends DisplayObjectContainer {
         final console = _console!;
 
         if (console.visible && console.off == false) {
-          console.clear();
-          console
-              .print('FRAMETIME${_avgFrameTime.round().toString().padLeft(6)}');
-          console
-              .print('DRAWCALLS${_avgDrawCalls.round().toString().padLeft(6)}');
-          console
-              .print('VERTICES${_avgVertexCount.round().toString().padLeft(7)}');
-          console.print('INDICES${_avgIdexCount.round().toString().padLeft(8)}');
+          console.updateRenderStatistics(stats);
           _renderState.reset(_consoleTransformation);
           _renderState.renderObject(console);
           _renderState.flush();

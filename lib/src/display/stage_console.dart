@@ -32,6 +32,34 @@ class StageConsole extends DisplayObject {
 
   //----------------------------------------------------------------------------
 
+  void updateRenderStatistics(RenderStatistics stats) {
+    clear();
+    print('FRAME MS${_formatMicroseconds(stats.frameTimeMicroseconds).padLeft(9)}');
+    print('OBJECT MS${_formatMicroseconds(stats.renderObjectMicroseconds).padLeft(8)}');
+    print('FLUSH MS${_formatMicroseconds(stats.renderFlushMicroseconds).padLeft(9)}');
+    print('DRAWCALLS${stats.drawCount.toString().padLeft(6)}');
+    print('VERTICES${stats.vertexCount.toString().padLeft(7)}');
+    print('INDICES${stats.indexCount.toString().padLeft(8)}');
+    print('BATCH FLUSH${stats.webgpuBatchFlushCount.toString().padLeft(5)}');
+    print('BATCH RUNS${stats.webgpuBatchRunCount.toString().padLeft(6)}');
+    print('BLEND BREAK${stats.webgpuBatchBlendBreakCount.toString().padLeft(5)}');
+    print('TEX BREAK${stats.webgpuBatchTextureBreakCount.toString().padLeft(7)}');
+    print('BINDGROUPS${stats.webgpuBindGroupCreateCount.toString().padLeft(6)}');
+    print('PIPELINES${stats.webgpuPipelineCreateCount.toString().padLeft(7)}');
+    print('TEX UPLOAD${stats.webgpuTextureUploadCount.toString().padLeft(6)}');
+    print('PASSES${stats.webgpuRenderPassCount.toString().padLeft(10)}');
+    print('BUNDLE BUILD${stats.webgpuRenderBundleBuildCount.toString().padLeft(4)}');
+    print('BUNDLE HIT${stats.webgpuRenderBundleCacheHitCount.toString().padLeft(6)}');
+    print('BUFFER MS${_formatMicroseconds(stats.webgpuBufferUploadMicroseconds).padLeft(6)}');
+    print('ENCODE MS${_formatMicroseconds(stats.webgpuPassEncodeMicroseconds).padLeft(6)}');
+    print('SUBMIT MS${_formatMicroseconds(stats.webgpuSubmitMicroseconds).padLeft(6)}');
+    print('FALLBACKS${stats.webgpuFallbackCount.toString().padLeft(7)}');
+
+    for (final cause in stats.webgpuFallbackCauses) {
+      print('WGPU ${cause.toUpperCase()}');
+    }
+  }
+
   void clear() {
     _lines.clear();
     _consoleWidth = 0;
@@ -70,4 +98,6 @@ class StageConsole extends DisplayObject {
       _glyphs.add(fontBitmapData.renderTextureQuad.cut(rectangle));
     }
   }
+
+  String _formatMicroseconds(int microseconds) => (microseconds / 1000).toStringAsFixed(2);
 }
