@@ -109,6 +109,7 @@ class _WebGpuBundleKey {
 class WebGpuBatchSystem {
   static const _floatsPerVertex = 9;
   static const _bytesPerVertex = _floatsPerVertex * 4;
+  static const _bytesPerIndex = 4;
   static const _renderBundleMinRuns = 1;
   static const _renderBundleStableFrameThreshold = 2;
   static const _renderBundleCacheLimit = 64;
@@ -118,7 +119,7 @@ class WebGpuBatchSystem {
   final _renderBundles = <_WebGpuBundleKey, GPURenderBundle>{};
   final _renderBundleObservations = <_WebGpuBundleKey, int>{};
   late Float32List _vertices;
-  late Uint16List _indices;
+  late Uint32List _indices;
   late GPUBuffer _vertexBuffer;
   late GPUBuffer _indexBuffer;
   var _vertexCapacity = 0;
@@ -129,9 +130,9 @@ class WebGpuBatchSystem {
 
   WebGpuBatchSystem(this.renderContext) {
     _vertices = Float32List(_floatsPerVertex * 4);
-    _indices = Uint16List(12);
+    _indices = Uint32List(12);
     _vertexBuffer = _createVertexBuffer(_bytesPerVertex * 4);
-    _indexBuffer = _createIndexBuffer(12);
+    _indexBuffer = _createIndexBuffer(12 * _bytesPerIndex);
   }
 
   bool get isEmpty => _vertexCount == 0;
@@ -183,14 +184,6 @@ class WebGpuBatchSystem {
   }
 
   int _prepareForDraw(RenderTexture texture, BlendMode blendMode, int vertexCount, int indexCount) {
-    if (vertexCount > 0xFFFF) {
-      throw StateError('WebGPU draw exceeds 16-bit index capacity.');
-    }
-
-    if (_vertexCount > 0 && _vertexCount + vertexCount > 0xFFFF) {
-      flush(renderContext.consumeClearColor());
-    }
-
     _ensureCpuVertexCapacity(_vertexPosition + vertexCount * _floatsPerVertex);
     _ensureCpuIndexCapacity(_indexPosition + indexCount + 1);
 
@@ -262,7 +255,7 @@ class WebGpuBatchSystem {
     }
 
     final vertexBytes = _vertexPosition * 4;
-    final indexBytes = (_indexPosition.isOdd ? _indexPosition + 1 : _indexPosition) * 2;
+    final indexBytes = _indexPosition * _bytesPerIndex;
     _ensureVertexCapacity(vertexBytes);
     _ensureIndexCapacity(indexBytes);
     final uploadStopwatch = Stopwatch()..start();
@@ -286,7 +279,7 @@ class WebGpuBatchSystem {
     } else {
       pass
         ..setVertexBuffer(0, _vertexBuffer, 0, vertexBytes)
-        ..setIndexBuffer(_indexBuffer, 'uint16', 0, indexBytes)
+        ..setIndexBuffer(_indexBuffer, 'uint32', 0, indexBytes)
         ..setBindGroup(1, renderContext.pipelineSystem.projectionBindGroup);
 
       GPURenderPipeline? activePipeline;
@@ -432,7 +425,7 @@ class WebGpuBatchSystem {
     while (capacity < size) {
       capacity *= 2;
     }
-    _indices = Uint16List(capacity);
+    _indices = Uint32List(capacity);
   }
 
   _WebGpuBundleKey? _tryCreateBundleKey(int vertexBytes, int indexBytes, bool stencilTest) {
@@ -482,7 +475,7 @@ class WebGpuBatchSystem {
     ));
     encoder
       ..setVertexBuffer(0, key.vertexBuffer, 0, key.vertexBytes)
-      ..setIndexBuffer(key.indexBuffer, 'uint16', 0, key.indexBytes)
+      ..setIndexBuffer(key.indexBuffer, 'uint32', 0, key.indexBytes)
       ..setBindGroup(1, key.projectionBindGroup);
 
     GPURenderPipeline? activePipeline;
