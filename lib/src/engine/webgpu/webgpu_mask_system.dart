@@ -3,6 +3,7 @@ part of '../../engine.dart';
 class WebGpuMaskSystem {
   static const _floatsPerStencilVertex = 4;
   static const _bytesPerStencilVertex = _floatsPerStencilVertex * 4;
+  static const _bytesPerStencilIndex = 4;
 
   final RenderContextWebGPU renderContext;
   final _scissorStack = <Rectangle<num>>[];
@@ -17,7 +18,7 @@ class WebGpuMaskSystem {
 
   WebGpuMaskSystem(this.renderContext) {
     _vertexBuffer = _createVertexBuffer(_bytesPerStencilVertex * 4);
-    _indexBuffer = _createIndexBuffer(12);
+    _indexBuffer = _createIndexBuffer(12 * _bytesPerStencilIndex);
   }
 
   bool get isRenderingStencilMask => _renderingStencilMask;
@@ -157,11 +158,7 @@ class WebGpuMaskSystem {
 
   void _renderStencilMask(int stencilValue, Float32List vertices) {
     final vertexCount = vertices.length ~/ _floatsPerStencilVertex;
-    if (vertexCount > 0xFFFF) {
-      throw StateError('WebGPU stencil mask exceeds 16-bit index capacity.');
-    }
-
-    final indices = Uint16List(vertexCount.isOdd ? vertexCount + 1 : vertexCount);
+    final indices = Uint32List(vertexCount);
     for (var i = 0; i < vertexCount; i++) {
       indices[i] = i;
     }
@@ -179,7 +176,7 @@ class WebGpuMaskSystem {
       ..setStencilReference(stencilValue)
       ..setPipeline(renderContext.pipelineSystem.getStencilWritePipeline())
       ..setVertexBuffer(0, _vertexBuffer, 0, vertexBytes)
-      ..setIndexBuffer(_indexBuffer, 'uint16', 0, indexBytes)
+      ..setIndexBuffer(_indexBuffer, 'uint32', 0, indexBytes)
       ..drawIndexed(vertexCount, 1, 0, 0, 0);
     pass.end();
     renderContext.commandSystem.submit();
