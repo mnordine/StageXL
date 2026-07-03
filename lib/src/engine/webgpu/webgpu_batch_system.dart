@@ -1,27 +1,9 @@
 part of '../../engine.dart';
 
-class _WebGpuDraw {
-  final int firstIndex;
-  final int indexCount;
-  final int baseVertex;
-
-  _WebGpuDraw(this.firstIndex, this.indexCount, this.baseVertex);
-
-  @override
-  int get hashCode => Object.hash(firstIndex, indexCount, baseVertex);
-
-  @override
-  bool operator ==(Object other) =>
-      other is _WebGpuDraw &&
-      other.firstIndex == firstIndex &&
-      other.indexCount == indexCount &&
-      other.baseVertex == baseVertex;
-}
-
 class _WebGpuRun {
   final BlendMode blendMode;
   final textures = <RenderTexture>[];
-  final draws = <_WebGpuDraw>[];
+  var firstIndex = 0;
   var indexCount = 0;
   var vertexCount = 0;
 
@@ -37,54 +19,36 @@ class _WebGpuRun {
     textures.add(texture);
     return textures.length - 1;
   }
-
-  void addDraw(int firstIndex, int indexCount, int baseVertex) {
-    final lastDraw = draws.isEmpty ? null : draws.last;
-    if (lastDraw != null &&
-        lastDraw.baseVertex == 0 &&
-        baseVertex == 0 &&
-        lastDraw.firstIndex + lastDraw.indexCount == firstIndex) {
-      draws[draws.length - 1] = _WebGpuDraw(lastDraw.firstIndex, lastDraw.indexCount + indexCount, 0);
-    } else {
-      draws.add(_WebGpuDraw(firstIndex, indexCount, baseVertex));
-    }
-    this.indexCount += indexCount;
-  }
 }
 
 class _WebGpuBundleRunKey {
   final GPURenderPipeline pipeline;
   final GPUBindGroup textureBindGroup;
-  final List<_WebGpuDraw> draws;
-  late final int _hashCode = Object.hash(
-    identityHashCode(pipeline),
-    identityHashCode(textureBindGroup),
-    Object.hashAll(draws),
-  );
+  final int firstIndex;
+  final int indexCount;
 
   _WebGpuBundleRunKey({
     required this.pipeline,
     required this.textureBindGroup,
-    required List<_WebGpuDraw> draws,
-  }) : draws = List<_WebGpuDraw>.unmodifiable(draws);
+    required this.firstIndex,
+    required this.indexCount,
+  });
 
   @override
-  int get hashCode => _hashCode;
+  int get hashCode => Object.hash(
+        identityHashCode(pipeline),
+        identityHashCode(textureBindGroup),
+        firstIndex,
+        indexCount,
+      );
 
   @override
-  bool operator ==(Object other) {
-    if (other is! _WebGpuBundleRunKey ||
-        !identical(other.pipeline, pipeline) ||
-        !identical(other.textureBindGroup, textureBindGroup) ||
-        other.draws.length != draws.length) {
-      return false;
-    }
-
-    for (var i = 0; i < draws.length; i++) {
-      if (other.draws[i] != draws[i]) return false;
-    }
-    return true;
-  }
+  bool operator ==(Object other) =>
+      other is _WebGpuBundleRunKey &&
+      identical(other.pipeline, pipeline) &&
+      identical(other.textureBindGroup, textureBindGroup) &&
+      other.firstIndex == firstIndex &&
+      other.indexCount == indexCount;
 }
 
 class _WebGpuBundleKey {
@@ -188,14 +152,13 @@ class WebGpuBatchSystem {
     final textureIndex = _prepareForDraw(renderTexture, renderState.globalBlendMode, 4, 6);
     _bakeQuadVertices(renderState, renderTexture, renderTextureQuad.vxListQuad, textureIndex);
     final baseVertex = _vertexCount - 4;
-    final firstIndex = _indexPosition;
     _indices[_indexPosition++] = baseVertex + 0;
     _indices[_indexPosition++] = baseVertex + 1;
     _indices[_indexPosition++] = baseVertex + 2;
     _indices[_indexPosition++] = baseVertex + 0;
     _indices[_indexPosition++] = baseVertex + 2;
     _indices[_indexPosition++] = baseVertex + 3;
-    _runs.last.addDraw(firstIndex, 6, 0);
+    _runs.last.indexCount += 6;
   }
 
   void renderTextureMesh(
@@ -214,10 +177,10 @@ class WebGpuBatchSystem {
     final textureIndex = _prepareForDraw(renderTexture, renderState.globalBlendMode, vertexCount, ixList.length);
     _bakeVertices(renderState, renderTexture, vxList, vertexCount, textureIndex, r, g, b, a);
     final baseVertex = _vertexCount - vertexCount;
-    final firstIndex = _indexPosition;
-    _indices.setAll(_indexPosition, ixList);
-    _indexPosition += ixList.length;
-    _runs.last.addDraw(firstIndex, ixList.length, baseVertex);
+    for (var i = 0; i < ixList.length; i++) {
+      _indices[_indexPosition++] = baseVertex + ixList[i];
+    }
+    _runs.last.indexCount += ixList.length;
   }
 
   int _prepareForDraw(RenderTexture texture, BlendMode blendMode, int vertexCount, int indexCount) {
@@ -227,7 +190,8 @@ class WebGpuBatchSystem {
     var run = _runs.isEmpty ? null : _runs.last;
     var textureIndex = run == null || !identical(run.blendMode, blendMode) ? null : run.textureIndex(texture);
     if (textureIndex == null) {
-      run = _WebGpuRun(texture, blendMode);
+      run = _WebGpuRun(texture, blendMode)
+        ..firstIndex = _indexPosition;
       _runs.add(run);
       textureIndex = 0;
     }
@@ -262,48 +226,20 @@ class WebGpuBatchSystem {
     final textureScaleX = textureSystem._textureCoordinateScaleX(renderTexture);
     final textureScaleY = textureSystem._textureCoordinateScaleY(renderTexture);
     final textureIndexValue = textureIndex.toDouble();
-    final vertices = _vertices;
-    final source = vxList;
-    final unscaledUv = textureScaleX == 1.0 && textureScaleY == 1.0;
 
     var writeIndex = _vertexPosition;
-    final sourceEnd = vertexCount * 4;
-    if (mb == 0.0 && mc == 0.0) {
-      for (var sourceIndex = 0; sourceIndex < sourceEnd; sourceIndex += 4) {
-        vertices[writeIndex++] = mx + ma * source[sourceIndex + 0];
-        vertices[writeIndex++] = my + md * source[sourceIndex + 1];
-        vertices[writeIndex++] = red;
-        vertices[writeIndex++] = green;
-        vertices[writeIndex++] = blue;
-        vertices[writeIndex++] = alpha;
-        if (unscaledUv) {
-          vertices[writeIndex++] = source[sourceIndex + 2];
-          vertices[writeIndex++] = source[sourceIndex + 3];
-        } else {
-          vertices[writeIndex++] = source[sourceIndex + 2] * textureScaleX;
-          vertices[writeIndex++] = source[sourceIndex + 3] * textureScaleY;
-        }
-        vertices[writeIndex++] = textureIndexValue;
-      }
-    } else {
-      for (var sourceIndex = 0; sourceIndex < sourceEnd; sourceIndex += 4) {
-        final x = source[sourceIndex + 0];
-        final y = source[sourceIndex + 1];
-        vertices[writeIndex++] = mx + ma * x + mc * y;
-        vertices[writeIndex++] = my + mb * x + md * y;
-        vertices[writeIndex++] = red;
-        vertices[writeIndex++] = green;
-        vertices[writeIndex++] = blue;
-        vertices[writeIndex++] = alpha;
-        if (unscaledUv) {
-          vertices[writeIndex++] = source[sourceIndex + 2];
-          vertices[writeIndex++] = source[sourceIndex + 3];
-        } else {
-          vertices[writeIndex++] = source[sourceIndex + 2] * textureScaleX;
-          vertices[writeIndex++] = source[sourceIndex + 3] * textureScaleY;
-        }
-        vertices[writeIndex++] = textureIndexValue;
-      }
+    for (var i = 0, sourceIndex = 0; i < vertexCount; i++, sourceIndex += 4) {
+      final x = vxList[sourceIndex + 0];
+      final y = vxList[sourceIndex + 1];
+      _vertices[writeIndex++] = mx + ma * x + mc * y;
+      _vertices[writeIndex++] = my + mb * x + md * y;
+      _vertices[writeIndex++] = red;
+      _vertices[writeIndex++] = green;
+      _vertices[writeIndex++] = blue;
+      _vertices[writeIndex++] = alpha;
+      _vertices[writeIndex++] = vxList[sourceIndex + 2] * textureScaleX;
+      _vertices[writeIndex++] = vxList[sourceIndex + 3] * textureScaleY;
+      _vertices[writeIndex++] = textureIndexValue;
     }
     _vertexPosition = writeIndex;
   }
@@ -353,16 +289,15 @@ class WebGpuBatchSystem {
           pass.setPipeline(pipeline);
           activePipeline = pipeline;
         }
-        pass.setBindGroup(0, renderContext.textureSystem.getBatchBindGroup(run.textures));
-        for (final draw in run.draws) {
-          pass.drawIndexed(draw.indexCount, 1, draw.firstIndex, draw.baseVertex, 0);
-        }
+        pass
+          ..setBindGroup(0, renderContext.textureSystem.getBatchBindGroup(run.textures))
+          ..drawIndexed(run.indexCount, 1, run.firstIndex, 0, 0);
       }
     }
 
     final statistics = renderContext.renderStatistics;
     for (final run in _runs) {
-      statistics.drawCount += run.draws.length;
+      statistics.drawCount++;
       statistics.vertexCount += run.vertexCount;
       statistics.indexCount += run.indexCount;
     }
@@ -511,7 +446,8 @@ class WebGpuBatchSystem {
           _WebGpuBundleRunKey(
             pipeline: renderContext.pipelineSystem.getPipeline(run.blendMode, stencilTest: stencilTest),
             textureBindGroup: renderContext.textureSystem.getBatchBindGroup(run.textures),
-            draws: run.draws,
+            firstIndex: run.firstIndex,
+            indexCount: run.indexCount,
           ),
       ],
     );
@@ -548,10 +484,9 @@ class WebGpuBatchSystem {
         encoder.setPipeline(run.pipeline);
         activePipeline = run.pipeline;
       }
-      encoder.setBindGroup(0, run.textureBindGroup);
-      for (final draw in run.draws) {
-        encoder.drawIndexed(draw.indexCount, 1, draw.firstIndex, draw.baseVertex, 0);
-      }
+      encoder
+        ..setBindGroup(0, run.textureBindGroup)
+        ..drawIndexed(run.indexCount, 1, run.firstIndex, 0, 0);
     }
 
     final created = encoder.finish(GPURenderBundleDescriptor(label: 'StageXL batch render bundle'));
