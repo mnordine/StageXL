@@ -436,6 +436,7 @@ class WebGpuBatchSystem {
   }
 
   _WebGpuBundleKey? _tryCreateBundleKey(int vertexBytes, int indexBytes, bool stencilTest) {
+    if (!renderContext.renderBundles) return null;
     if (_runs.length < _renderBundleMinRuns) return null;
     if (_runs.any((run) => run.textures.any(_isDynamicTexture))) return null;
 

@@ -3,6 +3,7 @@ part of '../engine.dart';
 class RenderContextWebGPU extends RenderContext {
   final HTMLCanvasElement _canvasElement;
   final WebGpuDeviceSystem deviceSystem;
+  final bool renderBundles;
   late final WebGpuCommandSystem commandSystem;
   late final WebGpuTextureSystem textureSystem;
   late final WebGpuPipelineSystem pipelineSystem;
@@ -16,7 +17,7 @@ class RenderContextWebGPU extends RenderContext {
   RenderTexture? _activeRenderTexture;
   List<num>? _clearColor;
 
-  RenderContextWebGPU._(this._canvasElement, this.deviceSystem) {
+  RenderContextWebGPU._(this._canvasElement, this.deviceSystem, {required this.renderBundles}) {
     commandSystem = WebGpuCommandSystem(this);
     textureSystem = WebGpuTextureSystem(this);
     pipelineSystem = WebGpuPipelineSystem(this);
@@ -32,6 +33,7 @@ class RenderContextWebGPU extends RenderContext {
     required PowerPreference powerPreference,
     bool alpha = false,
     bool antialias = false,
+    bool renderBundles = false,
   }) async {
     final deviceSystem = await WebGpuDeviceSystem.create(
       canvas,
@@ -40,7 +42,7 @@ class RenderContextWebGPU extends RenderContext {
       powerPreference: powerPreference,
     );
     if (deviceSystem == null) return null;
-    return RenderContextWebGPU._(canvas, deviceSystem);
+    return RenderContextWebGPU._(canvas, deviceSystem, renderBundles: renderBundles);
   }
 
   GPUDevice get device => deviceSystem.device;

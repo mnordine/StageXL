@@ -516,6 +516,7 @@ class Stage extends DisplayObjectContainer {
         alpha: options.transparent,
         antialias: options.antialias,
         powerPreference: options.powerPreference,
+        renderBundles: options.renderBundles,
       );
       if (webgpuContext != null) return webgpuContext;
     }

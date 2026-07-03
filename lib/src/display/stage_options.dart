@@ -119,6 +119,9 @@ class StageOptions {
   /// The power preference for the WebGL render engine.
   PowerPreference powerPreference = .normal;
 
+  /// Enable WebGPU render bundle caching for stable batches.
+  var renderBundles = false;
+
   var _shaderPrecision = 'mediump';
 
   ShaderPrecision get shaderPrecision => switch (_shaderPrecision) {
@@ -161,6 +164,7 @@ class StageOptions {
     options.preventDefaultOnKeyboard = preventDefaultOnKeyboard;
     options.shaderPrecision = shaderPrecision;
     options.powerPreference = powerPreference;
+    options.renderBundles = renderBundles;
     options.resetColorOnRenderStart = resetColorOnRenderStart;
     options.resetStencilTestOnRenderStart = resetStencilTestOnRenderStart;
     options.resetScissorTestOnRenderStart = resetScissorTestOnRenderStart;
