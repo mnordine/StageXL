@@ -11,6 +11,7 @@ class WebGpuDeviceSystem {
   final GPUTextureFormat preferredTextureFormat;
   final Set<String> enabledFeatures;
   final bool antialias;
+  final int maxBatchTextures;
 
   WebGpuDeviceSystem._({
     required this.canvas,
@@ -19,6 +20,7 @@ class WebGpuDeviceSystem {
     required this.preferredTextureFormat,
     required this.enabledFeatures,
     required this.antialias,
+    required this.maxBatchTextures,
   });
 
   static Future<WebGpuDeviceSystem?> create(
@@ -38,6 +40,7 @@ class WebGpuDeviceSystem {
     );
     final adapter = await gpu.requestAdapter(adapterOptions).toDart;
     if (adapter == null) return null;
+    final maxBatchTextures = _resolveMaxBatchTextures(adapter);
 
     final requestedFeatures = <String>[];
     final enabledFeatures = <String>{};
@@ -79,8 +82,21 @@ class WebGpuDeviceSystem {
       preferredTextureFormat: preferredTextureFormat,
       enabledFeatures: enabledFeatures,
       antialias: antialias,
+      maxBatchTextures: maxBatchTextures,
     );
   }
 
   int? get maxTextureSize => device.limits.maxTextureDimension2D;
+
+  static int _resolveMaxBatchTextures(GPUAdapter adapter) {
+    try {
+      final limits = adapter.limits;
+      if (limits.maxSampledTexturesPerShaderStage >= 16 && limits.maxSamplersPerShaderStage >= 16) {
+        return 16;
+      }
+    } catch (_) {
+      // Limit probing is best-effort. The 8-texture batch shader is the conservative baseline.
+    }
+    return 8;
+  }
 }

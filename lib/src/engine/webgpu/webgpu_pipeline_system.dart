@@ -1,11 +1,11 @@
 part of '../../engine.dart';
 
 class WebGpuPipelineSystem {
-  static const maxBatchTextures = 8;
   static const _batchVertexStride = 36;
   static const _stencilVertexStride = 16;
 
   final RenderContextWebGPU renderContext;
+  late final int maxBatchTextures = renderContext.deviceSystem.maxBatchTextures;
   late final GPUBindGroupLayout textureBindGroupLayout;
   late final GPUBindGroupLayout projectionBindGroupLayout;
   late final GPUPipelineLayout pipelineLayout;
@@ -47,7 +47,7 @@ class WebGpuPipelineSystem {
     ].toJS));
     stencilPipelineLayout =
         device.createPipelineLayout(GPUPipelineLayoutDescriptor(bindGroupLayouts: <GPUBindGroupLayout>[].toJS));
-    shaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _shaderSource));
+    shaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _batchShaderSource(maxBatchTextures)));
     stencilShaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _stencilShaderSource));
     projectionBuffer = device.createBuffer(GPUBufferDescriptor(
       size: 64,
@@ -193,8 +193,6 @@ class WebGpuPipelineSystem {
       alpha: GPUBlendComponent(operation: 'add', srcFactor: alphaSrc, dstFactor: alphaDst),
     );
   }
-
-  static final _shaderSource = _batchShaderSource(maxBatchTextures);
 
   static String _batchShaderSource(int textureCount) {
     final bindings = StringBuffer();

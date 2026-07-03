@@ -80,7 +80,7 @@ class WebGpuTextureSystem {
     if (bindGroup != null) return bindGroup;
 
     final entries = <GPUBindGroupEntry>[];
-    for (var i = 0; i < WebGpuPipelineSystem.maxBatchTextures; i++) {
+    for (var i = 0; i < renderContext.pipelineSystem.maxBatchTextures; i++) {
       final renderTexture = i < textures.length ? textures[i] : textures[0];
       final view = getTextureView(renderTexture);
       final sampler = getSampler(renderTexture);

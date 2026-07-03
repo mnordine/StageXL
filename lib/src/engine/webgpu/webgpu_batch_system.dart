@@ -2,12 +2,13 @@ part of '../../engine.dart';
 
 class _WebGpuRun {
   final BlendMode blendMode;
+  final int maxTextures;
   final textures = <RenderTexture>[];
   var firstIndex = 0;
   var indexCount = 0;
   var vertexCount = 0;
 
-  _WebGpuRun(RenderTexture texture, this.blendMode) {
+  _WebGpuRun(RenderTexture texture, this.blendMode, this.maxTextures) {
     textures.add(texture);
   }
 
@@ -15,7 +16,7 @@ class _WebGpuRun {
     for (var i = 0; i < textures.length; i++) {
       if (identical(textures[i], texture)) return i;
     }
-    if (textures.length >= WebGpuPipelineSystem.maxBatchTextures) return null;
+    if (textures.length >= maxTextures) return null;
     textures.add(texture);
     return textures.length - 1;
   }
@@ -190,7 +191,7 @@ class WebGpuBatchSystem {
     var run = _runs.isEmpty ? null : _runs.last;
     var textureIndex = run == null || !identical(run.blendMode, blendMode) ? null : run.textureIndex(texture);
     if (textureIndex == null) {
-      run = _WebGpuRun(texture, blendMode)
+      run = _WebGpuRun(texture, blendMode, renderContext.pipelineSystem.maxBatchTextures)
         ..firstIndex = _indexPosition;
       _runs.add(run);
       textureIndex = 0;
