@@ -416,7 +416,7 @@ class WebGpuBatchSystem {
     while (capacity < size) {
       capacity *= 2;
     }
-    _vertices = Float32List(capacity);
+    _vertices = Float32List(capacity)..setRange(0, _vertexPosition, _vertices);
   }
 
   void _ensureCpuIndexCapacity(int size) {
@@ -425,7 +425,7 @@ class WebGpuBatchSystem {
     while (capacity < size) {
       capacity *= 2;
     }
-    _indices = Uint32List(capacity);
+    _indices = Uint32List(capacity)..setRange(0, _indexPosition, _indices);
   }
 
   _WebGpuBundleKey? _tryCreateBundleKey(int vertexBytes, int indexBytes, bool stencilTest) {
