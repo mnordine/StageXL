@@ -23,6 +23,9 @@ class FxaaFilter extends BitmapFilter {
   @override
   BitmapFilter clone() => FxaaFilter();
 
+  @override
+  bool get supportsWebGPU => true;
+
   //----------------------------------------------------------------------------
 
   @override
@@ -35,7 +38,13 @@ class FxaaFilter extends BitmapFilter {
   @override
   void renderFilter(
       RenderState renderState, RenderTextureQuad renderTextureQuad, int pass) {
-    final renderContext = renderState.renderContext as RenderContextWebGL;
+    final renderContext = renderState.renderContext;
+    if (renderContext is RenderContextWebGPU) {
+      renderContext.filterSystem.renderFxaaFilterQuad(renderState, renderTextureQuad);
+      return;
+    }
+
+    renderContext as RenderContextWebGL;
     final renderTexture = renderTextureQuad.renderTexture;
 
     final renderProgram = renderContext.getRenderProgram(
