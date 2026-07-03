@@ -8,6 +8,10 @@ class RenderStatistics {
   var vertexCount = 0;
   var indexCount = 0;
   var webgpuBindGroupCreateCount = 0;
+  var webgpuBatchBlendBreakCount = 0;
+  var webgpuBatchFlushCount = 0;
+  var webgpuBatchRunCount = 0;
+  var webgpuBatchTextureBreakCount = 0;
   var webgpuBufferUploadMicroseconds = 0;
   var webgpuPassEncodeMicroseconds = 0;
   var webgpuFallbackCount = 0;
@@ -32,6 +36,10 @@ class RenderStatistics {
     vertexCount = 0;
     indexCount = 0;
     webgpuBindGroupCreateCount = 0;
+    webgpuBatchBlendBreakCount = 0;
+    webgpuBatchFlushCount = 0;
+    webgpuBatchRunCount = 0;
+    webgpuBatchTextureBreakCount = 0;
     webgpuBufferUploadMicroseconds = 0;
     webgpuPassEncodeMicroseconds = 0;
     webgpuFallbackCount = 0;

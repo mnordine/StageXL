@@ -189,8 +189,23 @@ class WebGpuBatchSystem {
     _ensureCpuIndexCapacity(_indexPosition + indexCount + 1);
 
     var run = _runs.isEmpty ? null : _runs.last;
-    var textureIndex = run == null || !identical(run.blendMode, blendMode) ? null : run.textureIndex(texture);
+    int? textureIndex;
+    var blendBreak = false;
+    var textureBreak = false;
+    if (run == null) {
+      textureIndex = null;
+    } else if (!identical(run.blendMode, blendMode)) {
+      blendBreak = true;
+      textureIndex = null;
+    } else {
+      textureIndex = run.textureIndex(texture);
+      textureBreak = textureIndex == null;
+    }
+
     if (textureIndex == null) {
+      final statistics = renderContext.renderStatistics;
+      if (blendBreak) statistics.webgpuBatchBlendBreakCount++;
+      if (textureBreak) statistics.webgpuBatchTextureBreakCount++;
       run = _WebGpuRun(texture, blendMode, renderContext.pipelineSystem.maxBatchTextures)
         ..firstIndex = _indexPosition;
       _runs.add(run);
@@ -297,6 +312,8 @@ class WebGpuBatchSystem {
     }
 
     final statistics = renderContext.renderStatistics;
+    statistics.webgpuBatchFlushCount++;
+    statistics.webgpuBatchRunCount += _runs.length;
     for (final run in _runs) {
       statistics.drawCount++;
       statistics.vertexCount += run.vertexCount;
