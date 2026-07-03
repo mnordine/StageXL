@@ -5,13 +5,14 @@ import 'package:web/web.dart';
 
 const _stageWidth = 1280;
 const _stageHeight = 720;
-const _textureCount = 8;
+const _defaultTextureCount = 8;
 const _spriteSize = 48;
 
 Future<void> main() async {
   final query = Uri.base.queryParameters;
   final engine = _engine(query['engine']);
   final spriteCount = int.tryParse(query['sprites'] ?? '') ?? 2048;
+  final textureCount = int.tryParse(query['textures'] ?? '') ?? _defaultTextureCount;
   final moving = query['moving'] != 'false';
   final useBitmapContainer = query['container'] == 'bitmap';
   final antialias = query['antialias'] == 'true';
@@ -31,7 +32,7 @@ Future<void> main() async {
   final renderLoop = RenderLoop();
   renderLoop.addStage(stage);
 
-  final textures = _createTextures();
+  final textures = _createTextures(textureCount);
   final void Function(Bitmap sprite) addSprite;
   if (useBitmapContainer) {
     final spriteParent = BitmapContainer();
@@ -44,7 +45,7 @@ Future<void> main() async {
   _addLabel(stage, 'StageXL Batch Benchmark', 20, 20, 24, 0xFFFFFFFF);
   _addLabel(
     stage,
-    'Use ?engine=webgpu or ?engine=webgl2, ?sprites=2048, ?moving=false, ?container=bitmap, ?antialias=true',
+    'Use ?engine=webgpu or ?engine=webgl2, ?sprites=2048, ?textures=16, ?moving=false, ?container=bitmap',
     20,
     50,
     13,
@@ -60,6 +61,10 @@ Future<void> main() async {
   var webgpuBufferUploadTotal = 0.0;
   var webgpuPassEncodeTotal = 0.0;
   var webgpuSubmitTotal = 0.0;
+  var batchFlushes = 0;
+  var batchRuns = 0;
+  var batchBlendBreaks = 0;
+  var batchTextureBreaks = 0;
   var drawTotal = 0;
   var vertexTotal = 0;
   var indexTotal = 0;
@@ -94,6 +99,10 @@ Future<void> main() async {
     webgpuBufferUploadTotal += stats.webgpuBufferUploadMicroseconds / 1000.0;
     webgpuPassEncodeTotal += stats.webgpuPassEncodeMicroseconds / 1000.0;
     webgpuSubmitTotal += stats.webgpuSubmitMicroseconds / 1000.0;
+    batchFlushes += stats.webgpuBatchFlushCount;
+    batchRuns += stats.webgpuBatchRunCount;
+    batchBlendBreaks += stats.webgpuBatchBlendBreakCount;
+    batchTextureBreaks += stats.webgpuBatchTextureBreakCount;
     drawTotal += stats.drawCount;
     vertexTotal += stats.vertexCount;
     indexTotal += stats.indexCount;
@@ -112,6 +121,8 @@ Future<void> main() async {
     final avgWebGpuBufferUploadMs = webgpuBufferUploadTotal / sampleCount;
     final avgWebGpuPassEncodeMs = webgpuPassEncodeTotal / sampleCount;
     final avgWebGpuSubmitMs = webgpuSubmitTotal / sampleCount;
+    final avgBatchFlushes = batchFlushes / sampleCount;
+    final avgBatchRuns = batchRuns / sampleCount;
     final avgDraws = drawTotal / sampleCount;
     final avgVertices = vertexTotal / sampleCount;
     final avgIndices = indexTotal / sampleCount;
@@ -119,7 +130,7 @@ Future<void> main() async {
     statsElement.textContent = [
       'renderer: ${stage.renderEngine.name}',
       'sprites: $spriteCount',
-      'textures: $_textureCount',
+      'textures: $textureCount',
       'container: ${useBitmapContainer ? 'bitmap' : 'stage'}',
       'antialias: $antialias',
       'moving: $moving',
@@ -133,6 +144,10 @@ Future<void> main() async {
       'avg webgpu buffer upload: ${avgWebGpuBufferUploadMs.toStringAsFixed(2)} ms',
       'avg webgpu pass encode: ${avgWebGpuPassEncodeMs.toStringAsFixed(2)} ms',
       'avg webgpu submit: ${avgWebGpuSubmitMs.toStringAsFixed(2)} ms',
+      'avg webgpu batch flushes/frame: ${avgBatchFlushes.toStringAsFixed(1)}',
+      'avg webgpu batch runs/frame: ${avgBatchRuns.toStringAsFixed(1)}',
+      'webgpu blend breaks/sample: $batchBlendBreaks',
+      'webgpu texture breaks/sample: $batchTextureBreaks',
       'webgpu bind-group creates/sample: $bindGroupCreates',
       'webgpu pipeline creates/sample: $pipelineCreates',
       'webgpu render-bundle builds/sample: $renderBundleBuilds',
@@ -148,6 +163,10 @@ Future<void> main() async {
     webgpuBufferUploadTotal = 0;
     webgpuPassEncodeTotal = 0;
     webgpuSubmitTotal = 0;
+    batchFlushes = 0;
+    batchRuns = 0;
+    batchBlendBreaks = 0;
+    batchTextureBreaks = 0;
     drawTotal = 0;
     vertexTotal = 0;
     indexTotal = 0;
@@ -166,7 +185,7 @@ RenderEngine _engine(String? value) => switch (value?.toLowerCase()) {
       _ => RenderEngine.WebGL2,
     };
 
-List<BitmapData> _createTextures() {
+List<BitmapData> _createTextures(int textureCount) {
   const colors = [
     0xFFFFC857,
     0xFF7B61FF,
@@ -179,9 +198,9 @@ List<BitmapData> _createTextures() {
   ];
 
   return [
-    for (var i = 0; i < _textureCount; i++)
+    for (var i = 0; i < textureCount; i++)
       BitmapData(_spriteSize, _spriteSize, 0xFF1B2635)
-        ..fillRect(Rectangle<num>(4, 4, 40, 40), colors[i])
+        ..fillRect(Rectangle<num>(4, 4, 40, 40), colors[i % colors.length])
         ..fillRect(Rectangle<num>(10, 10, 28, 10), 0x55FFFFFF)
         ..fillRect(Rectangle<num>(14, 29, 20, 8), 0x66000000),
   ];
