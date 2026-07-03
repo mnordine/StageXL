@@ -7,6 +7,7 @@ class WebGpuFilterSystem {
   static const _normalMapBytesPerVertex = _normalMapFloatsPerVertex * 4;
   static const _alphaMaskFloatsPerVertex = 8;
   static const _alphaMaskBytesPerVertex = _alphaMaskFloatsPerVertex * 4;
+  static const _bytesPerIndex = 4;
   static const _displacementMapUniformBytes = 80;
 
   final RenderContextWebGPU renderContext;
@@ -169,7 +170,7 @@ class WebGpuFilterSystem {
       device.createShaderModule(GPUShaderModuleDescriptor(code: _displacementMapShaderSource));
     _alphaMaskShaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _alphaMaskShaderSource));
     _vertexBuffer = _createVertexBuffer(_bytesPerVertex * 4);
-    _indexBuffer = _createIndexBuffer(12);
+    _indexBuffer = _createIndexBuffer(12 * _bytesPerIndex);
     _normalMapVertexBuffer = _createNormalMapVertexBuffer(_normalMapBytesPerVertex * 4);
     _alphaMaskVertexBuffer = _createAlphaMaskVertexBuffer(_alphaMaskBytesPerVertex * 4);
     _uniformBuffer = device.createBuffer(GPUBufferDescriptor(
@@ -586,7 +587,7 @@ class WebGpuFilterSystem {
       ..setRange(16, 20, [0, 0, 0, 0]);
 
     final vertices = Float32List(vertexCount * _normalMapFloatsPerVertex);
-    final indices = Uint16List(ixList.length.isOdd ? ixList.length + 1 : ixList.length);
+    final indices = Uint32List(ixList.length);
 
     var vertexIndex = 0;
     for (var i = 0, sourceIndex = 0; i < vertexCount; i++, sourceIndex += 4) {
@@ -640,7 +641,7 @@ class WebGpuFilterSystem {
       ..setPipeline(_getNormalMapPipeline(renderState.globalBlendMode, stencilValue > 0))
       ..setBindGroup(0, bindGroup)
       ..setVertexBuffer(0, _normalMapVertexBuffer, 0, vertexBytes)
-      ..setIndexBuffer(_indexBuffer, 'uint16', 0, indexBytes);
+      ..setIndexBuffer(_indexBuffer, 'uint32', 0, indexBytes);
     if (stencilValue > 0) {
       pass.setStencilReference(stencilValue);
     }
@@ -682,7 +683,7 @@ class WebGpuFilterSystem {
       ..setRange(16, 20, [renderState.globalAlpha, 0, 0, 0]);
 
     final vertices = Float32List(vertexCount * _floatsPerVertex);
-    final indices = Uint16List(ixList.length.isOdd ? ixList.length + 1 : ixList.length);
+    final indices = Uint32List(ixList.length);
 
     var vertexIndex = 0;
     for (var i = 0, sourceIndex = 0; i < vertexCount; i++, sourceIndex += 4) {
@@ -743,7 +744,7 @@ class WebGpuFilterSystem {
       ..setPipeline(_getDisplacementMapPipeline(renderState.globalBlendMode, stencilValue > 0))
       ..setBindGroup(0, bindGroup)
       ..setVertexBuffer(0, _vertexBuffer, 0, vertexBytes)
-      ..setIndexBuffer(_indexBuffer, 'uint16', 0, indexBytes);
+      ..setIndexBuffer(_indexBuffer, 'uint32', 0, indexBytes);
     if (stencilValue > 0) {
       pass.setStencilReference(stencilValue);
     }
@@ -792,7 +793,7 @@ class WebGpuFilterSystem {
     ]);
 
     final vertices = Float32List(vertexCount * _alphaMaskFloatsPerVertex);
-    final indices = Uint16List(ixList.length.isOdd ? ixList.length + 1 : ixList.length);
+    final indices = Uint32List(ixList.length);
 
     var vertexIndex = 0;
     for (var i = 0, sourceIndex = 0; i < vertexCount; i++, sourceIndex += 4) {
@@ -851,7 +852,7 @@ class WebGpuFilterSystem {
       ..setPipeline(_getAlphaMaskPipeline(renderState.globalBlendMode, stencilValue > 0))
       ..setBindGroup(0, bindGroup)
       ..setVertexBuffer(0, _alphaMaskVertexBuffer, 0, vertexBytes)
-      ..setIndexBuffer(_indexBuffer, 'uint16', 0, indexBytes);
+      ..setIndexBuffer(_indexBuffer, 'uint32', 0, indexBytes);
     if (stencilValue > 0) {
       pass.setStencilReference(stencilValue);
     }
@@ -954,7 +955,7 @@ class WebGpuFilterSystem {
     if (vertexCount == 0 || ixList.isEmpty) return;
 
     final vertices = Float32List(vertexCount * _floatsPerVertex);
-    final indices = Uint16List(ixList.length.isOdd ? ixList.length + 1 : ixList.length);
+    final indices = Uint32List(ixList.length);
     final texture = renderTextureQuad.renderTexture;
     final combined = Matrix3D.fromIdentity()
       ..copyFrom2DAndConcat(renderState.globalMatrix, renderContext.activeProjectionMatrix);
@@ -1012,7 +1013,7 @@ class WebGpuFilterSystem {
       ..setPipeline(getPipeline(renderState.globalBlendMode, stencilValue > 0))
       ..setBindGroup(0, bindGroup)
       ..setVertexBuffer(0, _vertexBuffer, 0, vertexBytes)
-      ..setIndexBuffer(_indexBuffer, 'uint16', 0, indexBytes);
+      ..setIndexBuffer(_indexBuffer, 'uint32', 0, indexBytes);
     if (stencilValue > 0) {
       pass.setStencilReference(stencilValue);
     }
