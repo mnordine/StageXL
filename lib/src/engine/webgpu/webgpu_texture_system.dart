@@ -17,10 +17,17 @@ class _WebGpuTextureEntry {
 
 class _WebGpuBatchBindGroupKey {
   final List<RenderTexture> textures;
-  late final int _hashCode = Object.hashAll(textures.map(identityHashCode));
+  final List<_WebGpuSamplerKey> samplerKeys;
+  late final int _hashCode = Object.hashAll([
+    for (var i = 0; i < textures.length; i++) ...[
+      identityHashCode(textures[i]),
+      samplerKeys[i],
+    ],
+  ]);
 
   _WebGpuBatchBindGroupKey(List<RenderTexture> textures)
-      : textures = List<RenderTexture>.unmodifiable(textures);
+      : textures = List<RenderTexture>.unmodifiable(textures),
+        samplerKeys = List<_WebGpuSamplerKey>.unmodifiable(textures.map(_WebGpuSamplerKey.new));
 
   @override
   int get hashCode => _hashCode;
@@ -30,6 +37,7 @@ class _WebGpuBatchBindGroupKey {
     if (other is! _WebGpuBatchBindGroupKey || other.textures.length != textures.length) return false;
     for (var i = 0; i < textures.length; i++) {
       if (!identical(textures[i], other.textures[i])) return false;
+      if (samplerKeys[i] != other.samplerKeys[i]) return false;
     }
     return true;
   }
