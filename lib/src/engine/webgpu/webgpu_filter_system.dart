@@ -7,40 +7,158 @@ class WebGpuFilterSystem {
   static const _normalMapBytesPerVertex = _normalMapFloatsPerVertex * 4;
   static const _alphaMaskFloatsPerVertex = 8;
   static const _alphaMaskBytesPerVertex = _alphaMaskFloatsPerVertex * 4;
-  static const _bytesPerIndex = 4;
   static const _displacementMapUniformBytes = 80;
 
   final RenderContextWebGPU renderContext;
-  late final GPUBindGroupLayout _colorMatrixBindGroupLayout;
-  late final GPUPipelineLayout _colorMatrixPipelineLayout;
-  late final GPUBindGroupLayout _normalMapBindGroupLayout;
-  late final GPUPipelineLayout _normalMapPipelineLayout;
-  late final GPUBindGroupLayout _displacementMapBindGroupLayout;
-  late final GPUPipelineLayout _displacementMapPipelineLayout;
-  late final GPUBindGroupLayout _alphaMaskBindGroupLayout;
-  late final GPUPipelineLayout _alphaMaskPipelineLayout;
-  late final GPUShaderModule _colorMatrixShaderModule;
-  late final GPUShaderModule _blurShaderModule;
-  late final GPUShaderModule _dropShadowShaderModule;
-  late final GPUShaderModule _glowShaderModule;
-  late final GPUShaderModule _chromaKeyShaderModule;
-  late final GPUShaderModule _fxaaShaderModule;
-  late final GPUShaderModule _normalMapShaderModule;
-  late final GPUShaderModule _displacementMapShaderModule;
-  late final GPUShaderModule _alphaMaskShaderModule;
-  late GPUBuffer _vertexBuffer;
-  late GPUBuffer _indexBuffer;
-  late GPUBuffer _normalMapVertexBuffer;
-  late GPUBuffer _alphaMaskVertexBuffer;
-  late GPUBuffer _uniformBuffer;
-  late GPUBuffer _blurUniformBuffer;
-  late GPUBuffer _dropShadowUniformBuffer;
-  late GPUBuffer _glowUniformBuffer;
-  late GPUBuffer _chromaKeyUniformBuffer;
-  late GPUBuffer _fxaaUniformBuffer;
-  late GPUBuffer _normalMapUniformBuffer;
-  late GPUBuffer _displacementMapUniformBuffer;
-  late GPUBuffer _alphaMaskUniformBuffer;
+  late final GPUBindGroupLayout _colorMatrixBindGroupLayout =
+      renderContext.device.createBindGroupLayout(GPUBindGroupLayoutDescriptor(entries: [
+    GPUBindGroupLayoutEntry(
+      binding: 0,
+      visibility: $GPUShaderStage.FRAGMENT,
+      sampler: GPUSamplerBindingLayout(type: 'filtering'),
+    ),
+    GPUBindGroupLayoutEntry(
+      binding: 1,
+      visibility: $GPUShaderStage.FRAGMENT,
+      texture: GPUTextureBindingLayout(sampleType: 'float'),
+    ),
+    GPUBindGroupLayoutEntry(
+      binding: 2,
+      visibility: $GPUShaderStage.FRAGMENT,
+      buffer: GPUBufferBindingLayout(type: 'uniform'),
+    ),
+  ].toJS));
+  late final GPUPipelineLayout _colorMatrixPipelineLayout =
+      renderContext.device.createPipelineLayout(GPUPipelineLayoutDescriptor(
+    bindGroupLayouts: [_colorMatrixBindGroupLayout].toJS,
+  ));
+  late final GPUBindGroupLayout _normalMapBindGroupLayout =
+      renderContext.device.createBindGroupLayout(GPUBindGroupLayoutDescriptor(entries: [
+    GPUBindGroupLayoutEntry(
+      binding: 0,
+      visibility: $GPUShaderStage.FRAGMENT,
+      sampler: GPUSamplerBindingLayout(type: 'filtering'),
+    ),
+    GPUBindGroupLayoutEntry(
+      binding: 1,
+      visibility: $GPUShaderStage.FRAGMENT,
+      texture: GPUTextureBindingLayout(sampleType: 'float'),
+    ),
+    GPUBindGroupLayoutEntry(
+      binding: 2,
+      visibility: $GPUShaderStage.FRAGMENT,
+      sampler: GPUSamplerBindingLayout(type: 'filtering'),
+    ),
+    GPUBindGroupLayoutEntry(
+      binding: 3,
+      visibility: $GPUShaderStage.FRAGMENT,
+      texture: GPUTextureBindingLayout(sampleType: 'float'),
+    ),
+    GPUBindGroupLayoutEntry(
+      binding: 4,
+      visibility: $GPUShaderStage.FRAGMENT,
+      buffer: GPUBufferBindingLayout(type: 'uniform'),
+    ),
+  ].toJS));
+  late final GPUPipelineLayout _normalMapPipelineLayout =
+      renderContext.device.createPipelineLayout(GPUPipelineLayoutDescriptor(
+    bindGroupLayouts: [_normalMapBindGroupLayout].toJS,
+  ));
+  late final GPUBindGroupLayout _displacementMapBindGroupLayout =
+      renderContext.device.createBindGroupLayout(GPUBindGroupLayoutDescriptor(entries: [
+    GPUBindGroupLayoutEntry(
+      binding: 0,
+      visibility: $GPUShaderStage.FRAGMENT,
+      sampler: GPUSamplerBindingLayout(type: 'filtering'),
+    ),
+    GPUBindGroupLayoutEntry(
+      binding: 1,
+      visibility: $GPUShaderStage.FRAGMENT,
+      texture: GPUTextureBindingLayout(sampleType: 'float'),
+    ),
+    GPUBindGroupLayoutEntry(
+      binding: 2,
+      visibility: $GPUShaderStage.FRAGMENT,
+      sampler: GPUSamplerBindingLayout(type: 'filtering'),
+    ),
+    GPUBindGroupLayoutEntry(
+      binding: 3,
+      visibility: $GPUShaderStage.FRAGMENT,
+      texture: GPUTextureBindingLayout(sampleType: 'float'),
+    ),
+    GPUBindGroupLayoutEntry(
+      binding: 4,
+      visibility: $GPUShaderStage.FRAGMENT,
+      buffer: GPUBufferBindingLayout(type: 'uniform'),
+    ),
+  ].toJS));
+  late final GPUPipelineLayout _displacementMapPipelineLayout =
+      renderContext.device.createPipelineLayout(GPUPipelineLayoutDescriptor(
+    bindGroupLayouts: [_displacementMapBindGroupLayout].toJS,
+  ));
+  late final GPUBindGroupLayout _alphaMaskBindGroupLayout =
+      renderContext.device.createBindGroupLayout(GPUBindGroupLayoutDescriptor(entries: [
+    GPUBindGroupLayoutEntry(
+      binding: 0,
+      visibility: $GPUShaderStage.FRAGMENT,
+      sampler: GPUSamplerBindingLayout(type: 'filtering'),
+    ),
+    GPUBindGroupLayoutEntry(
+      binding: 1,
+      visibility: $GPUShaderStage.FRAGMENT,
+      texture: GPUTextureBindingLayout(sampleType: 'float'),
+    ),
+    GPUBindGroupLayoutEntry(
+      binding: 2,
+      visibility: $GPUShaderStage.FRAGMENT,
+      sampler: GPUSamplerBindingLayout(type: 'filtering'),
+    ),
+    GPUBindGroupLayoutEntry(
+      binding: 3,
+      visibility: $GPUShaderStage.FRAGMENT,
+      texture: GPUTextureBindingLayout(sampleType: 'float'),
+    ),
+    GPUBindGroupLayoutEntry(
+      binding: 4,
+      visibility: $GPUShaderStage.FRAGMENT,
+      buffer: GPUBufferBindingLayout(type: 'uniform'),
+    ),
+  ].toJS));
+  late final GPUPipelineLayout _alphaMaskPipelineLayout =
+      renderContext.device.createPipelineLayout(GPUPipelineLayoutDescriptor(
+    bindGroupLayouts: [_alphaMaskBindGroupLayout].toJS,
+  ));
+  late final GPUShaderModule _colorMatrixShaderModule =
+      renderContext.device.createShaderModule(GPUShaderModuleDescriptor(code: _colorMatrixShaderSource));
+  late final GPUShaderModule _blurShaderModule =
+      renderContext.device.createShaderModule(GPUShaderModuleDescriptor(code: _blurShaderSource));
+  late final GPUShaderModule _dropShadowShaderModule =
+      renderContext.device.createShaderModule(GPUShaderModuleDescriptor(code: _dropShadowShaderSource));
+  late final GPUShaderModule _glowShaderModule =
+      renderContext.device.createShaderModule(GPUShaderModuleDescriptor(code: _glowShaderSource));
+  late final GPUShaderModule _chromaKeyShaderModule =
+      renderContext.device.createShaderModule(GPUShaderModuleDescriptor(code: _chromaKeyShaderSource));
+  late final GPUShaderModule _fxaaShaderModule =
+      renderContext.device.createShaderModule(GPUShaderModuleDescriptor(code: _fxaaShaderSource));
+  late final GPUShaderModule _normalMapShaderModule =
+      renderContext.device.createShaderModule(GPUShaderModuleDescriptor(code: _normalMapShaderSource));
+  late final GPUShaderModule _displacementMapShaderModule =
+      renderContext.device.createShaderModule(GPUShaderModuleDescriptor(code: _displacementMapShaderSource));
+  late final GPUShaderModule _alphaMaskShaderModule =
+      renderContext.device.createShaderModule(GPUShaderModuleDescriptor(code: _alphaMaskShaderSource));
+  GPUBuffer? _vertexBuffer;
+  GPUBuffer? _indexBuffer;
+  GPUBuffer? _normalMapVertexBuffer;
+  GPUBuffer? _alphaMaskVertexBuffer;
+  late final GPUBuffer _uniformBuffer = _createUniformBuffer(80);
+  late final GPUBuffer _blurUniformBuffer = _createUniformBuffer(16);
+  late final GPUBuffer _dropShadowUniformBuffer = _createUniformBuffer(32);
+  late final GPUBuffer _glowUniformBuffer = _createUniformBuffer(32);
+  late final GPUBuffer _chromaKeyUniformBuffer = _createUniformBuffer(32);
+  late final GPUBuffer _fxaaUniformBuffer = _createUniformBuffer(16);
+  late final GPUBuffer _normalMapUniformBuffer = _createUniformBuffer(80);
+  late final GPUBuffer _displacementMapUniformBuffer = _createUniformBuffer(_displacementMapUniformBytes);
+  late final GPUBuffer _alphaMaskUniformBuffer = _createUniformBuffer(32);
   final _colorMatrixPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
   final _blurPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
   final _dropShadowPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
@@ -55,165 +173,7 @@ class WebGpuFilterSystem {
   var _normalMapVertexCapacity = 0;
   var _alphaMaskVertexCapacity = 0;
 
-  WebGpuFilterSystem(this.renderContext) {
-    final device = renderContext.device;
-    _colorMatrixBindGroupLayout = device.createBindGroupLayout(GPUBindGroupLayoutDescriptor(entries: [
-      GPUBindGroupLayoutEntry(
-        binding: 0,
-        visibility: $GPUShaderStage.FRAGMENT,
-        sampler: GPUSamplerBindingLayout(type: 'filtering'),
-      ),
-      GPUBindGroupLayoutEntry(
-        binding: 1,
-        visibility: $GPUShaderStage.FRAGMENT,
-        texture: GPUTextureBindingLayout(sampleType: 'float'),
-      ),
-      GPUBindGroupLayoutEntry(
-        binding: 2,
-        visibility: $GPUShaderStage.FRAGMENT,
-        buffer: GPUBufferBindingLayout(type: 'uniform'),
-      ),
-    ].toJS));
-    _colorMatrixPipelineLayout =
-        device.createPipelineLayout(GPUPipelineLayoutDescriptor(bindGroupLayouts: [_colorMatrixBindGroupLayout].toJS));
-    _normalMapBindGroupLayout = device.createBindGroupLayout(GPUBindGroupLayoutDescriptor(entries: [
-      GPUBindGroupLayoutEntry(
-        binding: 0,
-        visibility: $GPUShaderStage.FRAGMENT,
-        sampler: GPUSamplerBindingLayout(type: 'filtering'),
-      ),
-      GPUBindGroupLayoutEntry(
-        binding: 1,
-        visibility: $GPUShaderStage.FRAGMENT,
-        texture: GPUTextureBindingLayout(sampleType: 'float'),
-      ),
-      GPUBindGroupLayoutEntry(
-        binding: 2,
-        visibility: $GPUShaderStage.FRAGMENT,
-        sampler: GPUSamplerBindingLayout(type: 'filtering'),
-      ),
-      GPUBindGroupLayoutEntry(
-        binding: 3,
-        visibility: $GPUShaderStage.FRAGMENT,
-        texture: GPUTextureBindingLayout(sampleType: 'float'),
-      ),
-      GPUBindGroupLayoutEntry(
-        binding: 4,
-        visibility: $GPUShaderStage.FRAGMENT,
-        buffer: GPUBufferBindingLayout(type: 'uniform'),
-      ),
-    ].toJS));
-    _normalMapPipelineLayout =
-        device.createPipelineLayout(GPUPipelineLayoutDescriptor(bindGroupLayouts: [_normalMapBindGroupLayout].toJS));
-    _displacementMapBindGroupLayout = device.createBindGroupLayout(GPUBindGroupLayoutDescriptor(entries: [
-      GPUBindGroupLayoutEntry(
-        binding: 0,
-        visibility: $GPUShaderStage.FRAGMENT,
-        sampler: GPUSamplerBindingLayout(type: 'filtering'),
-      ),
-      GPUBindGroupLayoutEntry(
-        binding: 1,
-        visibility: $GPUShaderStage.FRAGMENT,
-        texture: GPUTextureBindingLayout(sampleType: 'float'),
-      ),
-      GPUBindGroupLayoutEntry(
-        binding: 2,
-        visibility: $GPUShaderStage.FRAGMENT,
-        sampler: GPUSamplerBindingLayout(type: 'filtering'),
-      ),
-      GPUBindGroupLayoutEntry(
-        binding: 3,
-        visibility: $GPUShaderStage.FRAGMENT,
-        texture: GPUTextureBindingLayout(sampleType: 'float'),
-      ),
-      GPUBindGroupLayoutEntry(
-        binding: 4,
-        visibility: $GPUShaderStage.FRAGMENT,
-        buffer: GPUBufferBindingLayout(type: 'uniform'),
-      ),
-    ].toJS));
-    _displacementMapPipelineLayout = device
-        .createPipelineLayout(GPUPipelineLayoutDescriptor(bindGroupLayouts: [_displacementMapBindGroupLayout].toJS));
-    _alphaMaskBindGroupLayout = device.createBindGroupLayout(GPUBindGroupLayoutDescriptor(entries: [
-      GPUBindGroupLayoutEntry(
-        binding: 0,
-        visibility: $GPUShaderStage.FRAGMENT,
-        sampler: GPUSamplerBindingLayout(type: 'filtering'),
-      ),
-      GPUBindGroupLayoutEntry(
-        binding: 1,
-        visibility: $GPUShaderStage.FRAGMENT,
-        texture: GPUTextureBindingLayout(sampleType: 'float'),
-      ),
-      GPUBindGroupLayoutEntry(
-        binding: 2,
-        visibility: $GPUShaderStage.FRAGMENT,
-        sampler: GPUSamplerBindingLayout(type: 'filtering'),
-      ),
-      GPUBindGroupLayoutEntry(
-        binding: 3,
-        visibility: $GPUShaderStage.FRAGMENT,
-        texture: GPUTextureBindingLayout(sampleType: 'float'),
-      ),
-      GPUBindGroupLayoutEntry(
-        binding: 4,
-        visibility: $GPUShaderStage.FRAGMENT,
-        buffer: GPUBufferBindingLayout(type: 'uniform'),
-      ),
-    ].toJS));
-    _alphaMaskPipelineLayout =
-        device.createPipelineLayout(GPUPipelineLayoutDescriptor(bindGroupLayouts: [_alphaMaskBindGroupLayout].toJS));
-    _colorMatrixShaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _colorMatrixShaderSource));
-    _blurShaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _blurShaderSource));
-    _dropShadowShaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _dropShadowShaderSource));
-    _glowShaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _glowShaderSource));
-    _chromaKeyShaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _chromaKeyShaderSource));
-    _fxaaShaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _fxaaShaderSource));
-    _normalMapShaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _normalMapShaderSource));
-    _displacementMapShaderModule =
-      device.createShaderModule(GPUShaderModuleDescriptor(code: _displacementMapShaderSource));
-    _alphaMaskShaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _alphaMaskShaderSource));
-    _vertexBuffer = _createVertexBuffer(_bytesPerVertex * 4);
-    _indexBuffer = _createIndexBuffer(12 * _bytesPerIndex);
-    _normalMapVertexBuffer = _createNormalMapVertexBuffer(_normalMapBytesPerVertex * 4);
-    _alphaMaskVertexBuffer = _createAlphaMaskVertexBuffer(_alphaMaskBytesPerVertex * 4);
-    _uniformBuffer = device.createBuffer(GPUBufferDescriptor(
-      size: 80,
-      usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.UNIFORM,
-    ));
-    _blurUniformBuffer = device.createBuffer(GPUBufferDescriptor(
-      size: 16,
-      usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.UNIFORM,
-    ));
-    _dropShadowUniformBuffer = device.createBuffer(GPUBufferDescriptor(
-      size: 32,
-      usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.UNIFORM,
-    ));
-    _glowUniformBuffer = device.createBuffer(GPUBufferDescriptor(
-      size: 32,
-      usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.UNIFORM,
-    ));
-    _chromaKeyUniformBuffer = device.createBuffer(GPUBufferDescriptor(
-      size: 32,
-      usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.UNIFORM,
-    ));
-    _fxaaUniformBuffer = device.createBuffer(GPUBufferDescriptor(
-      size: 16,
-      usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.UNIFORM,
-    ));
-    _normalMapUniformBuffer = device.createBuffer(GPUBufferDescriptor(
-      size: 80,
-      usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.UNIFORM,
-    ));
-    _displacementMapUniformBuffer = device.createBuffer(GPUBufferDescriptor(
-      size: _displacementMapUniformBytes,
-      usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.UNIFORM,
-    ));
-    _alphaMaskUniformBuffer = device.createBuffer(GPUBufferDescriptor(
-      size: 32,
-      usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.UNIFORM,
-    ));
-  }
+  WebGpuFilterSystem(this.renderContext);
 
   void renderTextureQuadFiltered(
       RenderState renderState, RenderTextureQuad renderTextureQuad, List<RenderFilter> renderFilters) {
@@ -637,10 +597,13 @@ class WebGpuFilterSystem {
     final indexBytes = indices.lengthInBytes;
     _ensureNormalMapVertexCapacity(vertexBytes);
     _ensureIndexCapacity(indexBytes);
+    final normalMapVertexBuffer = _normalMapVertexBuffer!;
+    final indexBuffer = _indexBuffer!;
+    final normalMapUniformBuffer = _normalMapUniformBuffer;
     renderContext.device.queue
-      ..writeBuffer(_normalMapVertexBuffer, 0, vertices.buffer.toJS)
-      ..writeBuffer(_indexBuffer, 0, indices.buffer.toJS)
-      ..writeBuffer(_normalMapUniformBuffer, 0, uniformData.buffer.toJS);
+      ..writeBuffer(normalMapVertexBuffer, 0, vertices.buffer.toJS)
+      ..writeBuffer(indexBuffer, 0, indices.buffer.toJS)
+      ..writeBuffer(normalMapUniformBuffer, 0, uniformData.buffer.toJS);
 
     final bindGroup = renderContext.device.createBindGroup(GPUBindGroupDescriptor(
       layout: _normalMapBindGroupLayout,
@@ -651,7 +614,7 @@ class WebGpuFilterSystem {
         GPUBindGroupEntry(binding: 3, resource: renderContext.textureSystem.getTextureView(mapTexture)),
         GPUBindGroupEntry(
           binding: 4,
-          resource: GPUBufferBinding(buffer: _normalMapUniformBuffer, offset: 0, size: 80),
+          resource: GPUBufferBinding(buffer: normalMapUniformBuffer, offset: 0, size: 80),
         ),
       ].toJS,
     ));
@@ -662,8 +625,8 @@ class WebGpuFilterSystem {
     pass
       ..setPipeline(_getNormalMapPipeline(renderState.globalBlendMode, stencilValue > 0))
       ..setBindGroup(0, bindGroup)
-      ..setVertexBuffer(0, _normalMapVertexBuffer, 0, vertexBytes)
-      ..setIndexBuffer(_indexBuffer, 'uint32', 0, indexBytes);
+      ..setVertexBuffer(0, normalMapVertexBuffer, 0, vertexBytes)
+      ..setIndexBuffer(indexBuffer, 'uint32', 0, indexBytes);
     if (stencilValue > 0) {
       pass.setStencilReference(stencilValue);
     }
@@ -736,10 +699,13 @@ class WebGpuFilterSystem {
     final indexBytes = indices.lengthInBytes;
     _ensureVertexCapacity(vertexBytes);
     _ensureIndexCapacity(indexBytes);
+    final vertexBuffer = _vertexBuffer!;
+    final indexBuffer = _indexBuffer!;
+    final displacementMapUniformBuffer = _displacementMapUniformBuffer;
     renderContext.device.queue
-      ..writeBuffer(_vertexBuffer, 0, vertices.buffer.toJS)
-      ..writeBuffer(_indexBuffer, 0, indices.buffer.toJS)
-      ..writeBuffer(_displacementMapUniformBuffer, 0, uniformData.buffer.toJS);
+      ..writeBuffer(vertexBuffer, 0, vertices.buffer.toJS)
+      ..writeBuffer(indexBuffer, 0, indices.buffer.toJS)
+      ..writeBuffer(displacementMapUniformBuffer, 0, uniformData.buffer.toJS);
 
     final bindGroup = renderContext.device.createBindGroup(GPUBindGroupDescriptor(
       layout: _displacementMapBindGroupLayout,
@@ -751,7 +717,7 @@ class WebGpuFilterSystem {
         GPUBindGroupEntry(
           binding: 4,
           resource: GPUBufferBinding(
-            buffer: _displacementMapUniformBuffer,
+            buffer: displacementMapUniformBuffer,
             offset: 0,
             size: _displacementMapUniformBytes,
           ),
@@ -765,8 +731,8 @@ class WebGpuFilterSystem {
     pass
       ..setPipeline(_getDisplacementMapPipeline(renderState.globalBlendMode, stencilValue > 0))
       ..setBindGroup(0, bindGroup)
-      ..setVertexBuffer(0, _vertexBuffer, 0, vertexBytes)
-      ..setIndexBuffer(_indexBuffer, 'uint32', 0, indexBytes);
+      ..setVertexBuffer(0, vertexBuffer, 0, vertexBytes)
+      ..setIndexBuffer(indexBuffer, 'uint32', 0, indexBytes);
     if (stencilValue > 0) {
       pass.setStencilReference(stencilValue);
     }
@@ -848,10 +814,13 @@ class WebGpuFilterSystem {
     final indexBytes = indices.lengthInBytes;
     _ensureAlphaMaskVertexCapacity(vertexBytes);
     _ensureIndexCapacity(indexBytes);
+    final alphaMaskVertexBuffer = _alphaMaskVertexBuffer!;
+    final indexBuffer = _indexBuffer!;
+    final alphaMaskUniformBuffer = _alphaMaskUniformBuffer;
     renderContext.device.queue
-      ..writeBuffer(_alphaMaskVertexBuffer, 0, vertices.buffer.toJS)
-      ..writeBuffer(_indexBuffer, 0, indices.buffer.toJS)
-      ..writeBuffer(_alphaMaskUniformBuffer, 0, uniformData.buffer.toJS);
+      ..writeBuffer(alphaMaskVertexBuffer, 0, vertices.buffer.toJS)
+      ..writeBuffer(indexBuffer, 0, indices.buffer.toJS)
+      ..writeBuffer(alphaMaskUniformBuffer, 0, uniformData.buffer.toJS);
 
     final bindGroup = renderContext.device.createBindGroup(GPUBindGroupDescriptor(
       layout: _alphaMaskBindGroupLayout,
@@ -862,7 +831,7 @@ class WebGpuFilterSystem {
         GPUBindGroupEntry(binding: 3, resource: renderContext.textureSystem.getTextureView(maskTexture)),
         GPUBindGroupEntry(
           binding: 4,
-          resource: GPUBufferBinding(buffer: _alphaMaskUniformBuffer, offset: 0, size: 32),
+          resource: GPUBufferBinding(buffer: alphaMaskUniformBuffer, offset: 0, size: 32),
         ),
       ].toJS,
     ));
@@ -873,8 +842,8 @@ class WebGpuFilterSystem {
     pass
       ..setPipeline(_getAlphaMaskPipeline(renderState.globalBlendMode, stencilValue > 0))
       ..setBindGroup(0, bindGroup)
-      ..setVertexBuffer(0, _alphaMaskVertexBuffer, 0, vertexBytes)
-      ..setIndexBuffer(_indexBuffer, 'uint32', 0, indexBytes);
+      ..setVertexBuffer(0, alphaMaskVertexBuffer, 0, vertexBytes)
+      ..setIndexBuffer(indexBuffer, 'uint32', 0, indexBytes);
     if (stencilValue > 0) {
       pass.setStencilReference(stencilValue);
     }
@@ -1026,9 +995,11 @@ class WebGpuFilterSystem {
     final indexBytes = indices.lengthInBytes;
     _ensureVertexCapacity(vertexBytes);
     _ensureIndexCapacity(indexBytes);
+    final vertexBuffer = _vertexBuffer!;
+    final indexBuffer = _indexBuffer!;
     renderContext.device.queue
-      ..writeBuffer(_vertexBuffer, 0, vertices.buffer.toJS)
-      ..writeBuffer(_indexBuffer, 0, indices.buffer.toJS)
+      ..writeBuffer(vertexBuffer, 0, vertices.buffer.toJS)
+      ..writeBuffer(indexBuffer, 0, indices.buffer.toJS)
       ..writeBuffer(uniformBuffer, 0, uniformData.buffer.toJS);
 
     final bindGroup = renderContext.device.createBindGroup(GPUBindGroupDescriptor(
@@ -1049,8 +1020,8 @@ class WebGpuFilterSystem {
     pass
       ..setPipeline(getPipeline(renderState.globalBlendMode, stencilValue > 0))
       ..setBindGroup(0, bindGroup)
-      ..setVertexBuffer(0, _vertexBuffer, 0, vertexBytes)
-      ..setIndexBuffer(_indexBuffer, 'uint32', 0, indexBytes);
+      ..setVertexBuffer(0, vertexBuffer, 0, vertexBytes)
+      ..setIndexBuffer(indexBuffer, 'uint32', 0, indexBytes);
     if (stencilValue > 0) {
       pass.setStencilReference(stencilValue);
     }
@@ -1361,27 +1332,36 @@ class WebGpuFilterSystem {
     ));
   }
 
+  GPUBuffer _createUniformBuffer(int size) => renderContext.device.createBuffer(GPUBufferDescriptor(
+        size: size,
+        usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.UNIFORM,
+      ));
+
   void _ensureVertexCapacity(int size) {
-    if (size <= _vertexCapacity) return;
-    _vertexBuffer.destroy();
+    final buffer = _vertexBuffer;
+    if (buffer != null && size <= _vertexCapacity) return;
+    buffer?.destroy();
     _vertexBuffer = _createVertexBuffer(size * 2);
   }
 
   void _ensureIndexCapacity(int size) {
-    if (size <= _indexCapacity) return;
-    _indexBuffer.destroy();
+    final buffer = _indexBuffer;
+    if (buffer != null && size <= _indexCapacity) return;
+    buffer?.destroy();
     _indexBuffer = _createIndexBuffer(size * 2);
   }
 
   void _ensureNormalMapVertexCapacity(int size) {
-    if (size <= _normalMapVertexCapacity) return;
-    _normalMapVertexBuffer.destroy();
+    final buffer = _normalMapVertexBuffer;
+    if (buffer != null && size <= _normalMapVertexCapacity) return;
+    buffer?.destroy();
     _normalMapVertexBuffer = _createNormalMapVertexBuffer(size * 2);
   }
 
   void _ensureAlphaMaskVertexCapacity(int size) {
-    if (size <= _alphaMaskVertexCapacity) return;
-    _alphaMaskVertexBuffer.destroy();
+    final buffer = _alphaMaskVertexBuffer;
+    if (buffer != null && size <= _alphaMaskVertexCapacity) return;
+    buffer?.destroy();
     _alphaMaskVertexBuffer = _createAlphaMaskVertexBuffer(size * 2);
   }
 

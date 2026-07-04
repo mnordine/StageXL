@@ -6,60 +6,56 @@ class WebGpuPipelineSystem {
 
   final RenderContextWebGPU renderContext;
   late final int maxBatchTextures = renderContext.deviceSystem.maxBatchTextures;
-  late final GPUBindGroupLayout textureBindGroupLayout;
-  late final GPUBindGroupLayout projectionBindGroupLayout;
-  late final GPUPipelineLayout pipelineLayout;
-  late final GPUPipelineLayout stencilPipelineLayout;
-  late final GPUShaderModule shaderModule;
-  late final GPUShaderModule stencilShaderModule;
-  late final GPUBuffer projectionBuffer;
-  late final GPUBindGroup projectionBindGroup;
+  late final GPUBindGroupLayout textureBindGroupLayout =
+      renderContext.device.createBindGroupLayout(GPUBindGroupLayoutDescriptor(entries: [
+    for (var i = 0; i < maxBatchTextures; i++) ...[
+      GPUBindGroupLayoutEntry(
+        binding: i * 2,
+        visibility: $GPUShaderStage.FRAGMENT,
+        sampler: GPUSamplerBindingLayout(type: 'filtering'),
+      ),
+      GPUBindGroupLayoutEntry(
+        binding: i * 2 + 1,
+        visibility: $GPUShaderStage.FRAGMENT,
+        texture: GPUTextureBindingLayout(sampleType: 'float'),
+      ),
+    ],
+  ].toJS));
+  late final GPUBindGroupLayout projectionBindGroupLayout =
+      renderContext.device.createBindGroupLayout(GPUBindGroupLayoutDescriptor(entries: [
+    GPUBindGroupLayoutEntry(
+      binding: 0,
+      visibility: $GPUShaderStage.VERTEX,
+      buffer: GPUBufferBindingLayout(type: 'uniform'),
+    ),
+  ].toJS));
+  late final GPUPipelineLayout pipelineLayout =
+      renderContext.device.createPipelineLayout(GPUPipelineLayoutDescriptor(bindGroupLayouts: [
+    textureBindGroupLayout,
+    projectionBindGroupLayout,
+  ].toJS));
+  late final GPUPipelineLayout stencilPipelineLayout =
+      renderContext.device.createPipelineLayout(GPUPipelineLayoutDescriptor(
+    bindGroupLayouts: <GPUBindGroupLayout>[].toJS,
+  ));
+  late final GPUShaderModule shaderModule =
+      renderContext.device.createShaderModule(GPUShaderModuleDescriptor(code: _batchShaderSource(maxBatchTextures)));
+  late final GPUShaderModule stencilShaderModule =
+      renderContext.device.createShaderModule(GPUShaderModuleDescriptor(code: _stencilShaderSource));
+  late final GPUBuffer projectionBuffer = renderContext.device.createBuffer(GPUBufferDescriptor(
+    size: 64,
+    usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.UNIFORM,
+  ));
+  late final GPUBindGroup projectionBindGroup = renderContext.device.createBindGroup(GPUBindGroupDescriptor(
+    layout: projectionBindGroupLayout,
+    entries: [
+      GPUBindGroupEntry(binding: 0, resource: GPUBufferBinding(buffer: projectionBuffer)),
+    ].toJS,
+  ));
   final _pipelineCache = <BlendMode, Map<int, GPURenderPipeline>>{};
   final _stencilWritePipelines = <int, GPURenderPipeline>{};
 
-  WebGpuPipelineSystem(this.renderContext) {
-    final device = renderContext.device;
-    textureBindGroupLayout = device.createBindGroupLayout(GPUBindGroupLayoutDescriptor(entries: [
-      for (var i = 0; i < maxBatchTextures; i++) ...[
-        GPUBindGroupLayoutEntry(
-          binding: i * 2,
-          visibility: $GPUShaderStage.FRAGMENT,
-          sampler: GPUSamplerBindingLayout(type: 'filtering'),
-        ),
-        GPUBindGroupLayoutEntry(
-          binding: i * 2 + 1,
-          visibility: $GPUShaderStage.FRAGMENT,
-          texture: GPUTextureBindingLayout(sampleType: 'float'),
-        ),
-      ],
-    ].toJS));
-    projectionBindGroupLayout = device.createBindGroupLayout(GPUBindGroupLayoutDescriptor(entries: [
-      GPUBindGroupLayoutEntry(
-        binding: 0,
-        visibility: $GPUShaderStage.VERTEX,
-        buffer: GPUBufferBindingLayout(type: 'uniform'),
-      ),
-    ].toJS));
-    pipelineLayout =
-        device.createPipelineLayout(GPUPipelineLayoutDescriptor(bindGroupLayouts: [
-      textureBindGroupLayout,
-      projectionBindGroupLayout,
-    ].toJS));
-    stencilPipelineLayout =
-        device.createPipelineLayout(GPUPipelineLayoutDescriptor(bindGroupLayouts: <GPUBindGroupLayout>[].toJS));
-    shaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _batchShaderSource(maxBatchTextures)));
-    stencilShaderModule = device.createShaderModule(GPUShaderModuleDescriptor(code: _stencilShaderSource));
-    projectionBuffer = device.createBuffer(GPUBufferDescriptor(
-      size: 64,
-      usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.UNIFORM,
-    ));
-    projectionBindGroup = device.createBindGroup(GPUBindGroupDescriptor(
-      layout: projectionBindGroupLayout,
-      entries: [
-        GPUBindGroupEntry(binding: 0, resource: GPUBufferBinding(buffer: projectionBuffer)),
-      ].toJS,
-    ));
-  }
+  WebGpuPipelineSystem(this.renderContext);
 
   void uploadProjectionMatrix(Matrix3D matrix) {
     renderContext.device.queue.writeBuffer(projectionBuffer, 0, matrix.data.buffer.toJS, 0, 64);
