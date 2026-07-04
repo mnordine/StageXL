@@ -149,6 +149,44 @@ void main() {
     expect(stage.renderContext.renderStatistics.webgpuBatchRunCount, 1);
   });
 
+  test('WebGPU batches color-scale ColorMatrixFilter bitmap quads when available', () async {
+    final options = StageOptions()
+      ..renderEngine = .WebGPU
+      ..backgroundColor = Color.Transparent
+      ..stageRenderMode = .ONCE;
+    final canvas = HTMLCanvasElement()
+      ..width = 128
+      ..height = 128;
+    final stage = await Stage.create(canvas, width: 128, height: 128, options: options);
+
+    if (stage.renderEngine != RenderEngine.WebGPU) return;
+
+    final bitmapData = BitmapData(8, 8);
+    final amberFilter = ColorMatrixFilter(
+      [1, 0, 0, 0, 0, 0.75, 0, 0, 0, 0, 0.25, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0],
+    );
+    final blueFilter = ColorMatrixFilter(
+      [0.4, 0, 0, 0, 0, 0.8, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0],
+    );
+    for (var i = 0; i < 24; i++) {
+      final bitmap = Bitmap(bitmapData)
+        ..x = (i % 6) * 16
+        ..y = (i ~/ 6) * 16
+        ..blendMode = BlendMode.ADD
+        ..filters = [
+          if (i.isEven) amberFilter else blueFilter,
+        ];
+      stage.addChild(bitmap);
+    }
+
+    expect(() => stage.materialize(0, 16), returnsNormally);
+    expect(stage.renderContext.renderStatistics.drawCount, 1);
+    expect(stage.renderContext.renderStatistics.webgpuBatchFlushCount, 1);
+    expect(stage.renderContext.renderStatistics.webgpuBatchRunCount, 1);
+  });
+
   test('WebGPU renders ChromaKeyFilter bitmap quads when available', () async {
     final options = StageOptions()
       ..renderEngine = .WebGPU

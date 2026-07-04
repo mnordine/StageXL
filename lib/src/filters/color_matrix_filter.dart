@@ -82,6 +82,30 @@ class ColorMatrixFilter extends BitmapFilter {
   @override
   bool get supportsWebGPU => true;
 
+  @override
+  bool get rendersInWebGpuBatch => _isWebGpuBatchColorScale;
+
+  bool get _isWebGpuBatchColorScale {
+    final matrix = _colorMatrixList;
+    final offset = _colorOffsetList;
+    return offset[0] == 0 &&
+        offset[1] == 0 &&
+        offset[2] == 0 &&
+        offset[3] == 0 &&
+        matrix[1] == 0 &&
+        matrix[2] == 0 &&
+        matrix[3] == 0 &&
+        matrix[4] == 0 &&
+        matrix[6] == 0 &&
+        matrix[7] == 0 &&
+        matrix[8] == 0 &&
+        matrix[9] == 0 &&
+        matrix[11] == 0 &&
+        matrix[12] == 0 &&
+        matrix[13] == 0 &&
+        matrix[14] == 0;
+  }
+
   //-----------------------------------------------------------------------------------------------
 
   void adjustInversion(num value) {
@@ -262,6 +286,18 @@ class ColorMatrixFilter extends BitmapFilter {
       RenderState renderState, RenderTextureQuad renderTextureQuad, int pass) {
     final renderContext = renderState.renderContext;
     if (renderContext is RenderContextWebGPU) {
+      if (_isWebGpuBatchColorScale) {
+        renderContext.batchSystem.renderTextureQuad(
+          renderState,
+          renderTextureQuad,
+          _colorMatrixList[0],
+          _colorMatrixList[5],
+          _colorMatrixList[10],
+          _colorMatrixList[15],
+        );
+        return;
+      }
+
       renderContext.filterSystem.renderColorMatrixFilterQuad(
         renderState,
         renderTextureQuad,
