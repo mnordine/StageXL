@@ -1,5 +1,47 @@
 part of '../../engine.dart';
 
+class _BindGroupKey {
+  final int layout;
+  final int textureGeneration;
+  final RenderTexture texture;
+  final RenderTexture? secondTexture;
+  final GPUBuffer uniformBuffer;
+  final _WebGpuSamplerKey samplerKey;
+  final _WebGpuSamplerKey? secondSamplerKey;
+  late final _hashCode = Object.hash(
+    layout,
+    textureGeneration,
+    identityHashCode(texture),
+    identityHashCode(secondTexture),
+    identityHashCode(uniformBuffer),
+    samplerKey,
+    secondSamplerKey,
+  );
+
+  _BindGroupKey({
+    required this.layout,
+    required this.textureGeneration,
+    required this.texture,
+    required this.secondTexture,
+    required this.uniformBuffer,
+  })  : samplerKey = _WebGpuSamplerKey(texture),
+        secondSamplerKey = secondTexture == null ? null : _WebGpuSamplerKey(secondTexture);
+
+  @override
+  int get hashCode => _hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _BindGroupKey &&
+      other.layout == layout &&
+      other.textureGeneration == textureGeneration &&
+      identical(other.texture, texture) &&
+      identical(other.secondTexture, secondTexture) &&
+      identical(other.uniformBuffer, uniformBuffer) &&
+      other.samplerKey == samplerKey &&
+      other.secondSamplerKey == secondSamplerKey;
+}
+
 class WebGpuFilterSystem {
   static const _floatsPerVertex = 6;
   static const _bytesPerVertex = _floatsPerVertex * 4;
@@ -8,6 +50,10 @@ class WebGpuFilterSystem {
   static const _alphaMaskFloatsPerVertex = 8;
   static const _alphaMaskBytesPerVertex = _alphaMaskFloatsPerVertex * 4;
   static const _displacementMapUniformBytes = 80;
+  static const _singleTextureBindGroupLayout = 1;
+  static const _normalMapBindGroupLayoutKey = 2;
+  static const _displacementMapBindGroupLayoutKey = 3;
+  static const _alphaMaskBindGroupLayoutKey = 4;
 
   final RenderContextWebGPU renderContext;
   late final GPUBindGroupLayout _colorMatrixBindGroupLayout =
@@ -168,12 +214,96 @@ class WebGpuFilterSystem {
   final _normalMapPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
   final _displacementMapPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
   final _alphaMaskPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
+  final _filterBindGroups = <_BindGroupKey, GPUBindGroup>{};
+  var _filterBindGroupGeneration = -1;
   var _vertexCapacity = 0;
   var _indexCapacity = 0;
   var _normalMapVertexCapacity = 0;
   var _alphaMaskVertexCapacity = 0;
 
   WebGpuFilterSystem(this.renderContext);
+
+  void _syncFilterBindGroupGeneration() {
+    final generation = renderContext.textureSystem.bindGroupGeneration;
+    if (_filterBindGroupGeneration == generation) return;
+    _filterBindGroupGeneration = generation;
+    _filterBindGroups.clear();
+  }
+
+  GPUBindGroup _getSingleTextureBindGroup(RenderTexture texture, GPUBuffer uniformBuffer, int uniformByteSize) {
+    final textureSystem = renderContext.textureSystem;
+    final sampler = textureSystem.getSampler(texture);
+    final view = textureSystem.getTextureView(texture);
+    _syncFilterBindGroupGeneration();
+
+    final key = _BindGroupKey(
+      layout: _singleTextureBindGroupLayout,
+      textureGeneration: _filterBindGroupGeneration,
+      texture: texture,
+      secondTexture: null,
+      uniformBuffer: uniformBuffer,
+    );
+    final cached = _filterBindGroups[key];
+    if (cached != null) return cached;
+
+    final created = renderContext.device.createBindGroup(GPUBindGroupDescriptor(
+      layout: _colorMatrixBindGroupLayout,
+      entries: [
+        GPUBindGroupEntry(binding: 0, resource: sampler),
+        GPUBindGroupEntry(binding: 1, resource: view),
+        GPUBindGroupEntry(
+          binding: 2,
+          resource: GPUBufferBinding(buffer: uniformBuffer, offset: 0, size: uniformByteSize),
+        ),
+      ].toJS,
+    ));
+    renderContext.renderStatistics.webgpuBindGroupCreateCount++;
+    _filterBindGroups[key] = created;
+    return created;
+  }
+
+  GPUBindGroup _getTwoTextureBindGroup({
+    required int layoutKey,
+    required GPUBindGroupLayout layout,
+    required RenderTexture texture,
+    required RenderTexture secondTexture,
+    required GPUBuffer uniformBuffer,
+    required int uniformByteSize,
+  }) {
+    final textureSystem = renderContext.textureSystem;
+    final sampler = textureSystem.getSampler(texture);
+    final view = textureSystem.getTextureView(texture);
+    final secondSampler = textureSystem.getSampler(secondTexture);
+    final secondView = textureSystem.getTextureView(secondTexture);
+    _syncFilterBindGroupGeneration();
+
+    final key = _BindGroupKey(
+      layout: layoutKey,
+      textureGeneration: _filterBindGroupGeneration,
+      texture: texture,
+      secondTexture: secondTexture,
+      uniformBuffer: uniformBuffer,
+    );
+    final cached = _filterBindGroups[key];
+    if (cached != null) return cached;
+
+    final created = renderContext.device.createBindGroup(GPUBindGroupDescriptor(
+      layout: layout,
+      entries: [
+        GPUBindGroupEntry(binding: 0, resource: sampler),
+        GPUBindGroupEntry(binding: 1, resource: view),
+        GPUBindGroupEntry(binding: 2, resource: secondSampler),
+        GPUBindGroupEntry(binding: 3, resource: secondView),
+        GPUBindGroupEntry(
+          binding: 4,
+          resource: GPUBufferBinding(buffer: uniformBuffer, offset: 0, size: uniformByteSize),
+        ),
+      ].toJS,
+    ));
+    renderContext.renderStatistics.webgpuBindGroupCreateCount++;
+    _filterBindGroups[key] = created;
+    return created;
+  }
 
   void renderTextureQuadFiltered(
       RenderState renderState, RenderTextureQuad renderTextureQuad, List<RenderFilter> renderFilters) {
@@ -605,20 +735,14 @@ class WebGpuFilterSystem {
       ..writeBuffer(indexBuffer, 0, indices.buffer.toJS)
       ..writeBuffer(normalMapUniformBuffer, 0, uniformData.buffer.toJS);
 
-    final bindGroup = renderContext.device.createBindGroup(GPUBindGroupDescriptor(
+    final bindGroup = _getTwoTextureBindGroup(
+      layoutKey: _normalMapBindGroupLayoutKey,
       layout: _normalMapBindGroupLayout,
-      entries: [
-        GPUBindGroupEntry(binding: 0, resource: renderContext.textureSystem.getSampler(texture)),
-        GPUBindGroupEntry(binding: 1, resource: renderContext.textureSystem.getTextureView(texture)),
-        GPUBindGroupEntry(binding: 2, resource: renderContext.textureSystem.getSampler(mapTexture)),
-        GPUBindGroupEntry(binding: 3, resource: renderContext.textureSystem.getTextureView(mapTexture)),
-        GPUBindGroupEntry(
-          binding: 4,
-          resource: GPUBufferBinding(buffer: normalMapUniformBuffer, offset: 0, size: 80),
-        ),
-      ].toJS,
-    ));
-    renderContext.renderStatistics.webgpuBindGroupCreateCount++;
+      texture: texture,
+      secondTexture: mapTexture,
+      uniformBuffer: normalMapUniformBuffer,
+      uniformByteSize: 80,
+    );
 
     final stencilValue = renderContext.maskSystem.activeStencilValue;
     final pass = renderContext.commandSystem.beginColorPass(renderContext.consumeClearColor());
@@ -707,24 +831,14 @@ class WebGpuFilterSystem {
       ..writeBuffer(indexBuffer, 0, indices.buffer.toJS)
       ..writeBuffer(displacementMapUniformBuffer, 0, uniformData.buffer.toJS);
 
-    final bindGroup = renderContext.device.createBindGroup(GPUBindGroupDescriptor(
+    final bindGroup = _getTwoTextureBindGroup(
+      layoutKey: _displacementMapBindGroupLayoutKey,
       layout: _displacementMapBindGroupLayout,
-      entries: [
-        GPUBindGroupEntry(binding: 0, resource: renderContext.textureSystem.getSampler(texture)),
-        GPUBindGroupEntry(binding: 1, resource: renderContext.textureSystem.getTextureView(texture)),
-        GPUBindGroupEntry(binding: 2, resource: renderContext.textureSystem.getSampler(mapTexture)),
-        GPUBindGroupEntry(binding: 3, resource: renderContext.textureSystem.getTextureView(mapTexture)),
-        GPUBindGroupEntry(
-          binding: 4,
-          resource: GPUBufferBinding(
-            buffer: displacementMapUniformBuffer,
-            offset: 0,
-            size: _displacementMapUniformBytes,
-          ),
-        ),
-      ].toJS,
-    ));
-    renderContext.renderStatistics.webgpuBindGroupCreateCount++;
+      texture: texture,
+      secondTexture: mapTexture,
+      uniformBuffer: displacementMapUniformBuffer,
+      uniformByteSize: _displacementMapUniformBytes,
+    );
 
     final stencilValue = renderContext.maskSystem.activeStencilValue;
     final pass = renderContext.commandSystem.beginColorPass(renderContext.consumeClearColor());
@@ -822,20 +936,14 @@ class WebGpuFilterSystem {
       ..writeBuffer(indexBuffer, 0, indices.buffer.toJS)
       ..writeBuffer(alphaMaskUniformBuffer, 0, uniformData.buffer.toJS);
 
-    final bindGroup = renderContext.device.createBindGroup(GPUBindGroupDescriptor(
+    final bindGroup = _getTwoTextureBindGroup(
+      layoutKey: _alphaMaskBindGroupLayoutKey,
       layout: _alphaMaskBindGroupLayout,
-      entries: [
-        GPUBindGroupEntry(binding: 0, resource: renderContext.textureSystem.getSampler(texture)),
-        GPUBindGroupEntry(binding: 1, resource: renderContext.textureSystem.getTextureView(texture)),
-        GPUBindGroupEntry(binding: 2, resource: renderContext.textureSystem.getSampler(maskTexture)),
-        GPUBindGroupEntry(binding: 3, resource: renderContext.textureSystem.getTextureView(maskTexture)),
-        GPUBindGroupEntry(
-          binding: 4,
-          resource: GPUBufferBinding(buffer: alphaMaskUniformBuffer, offset: 0, size: 32),
-        ),
-      ].toJS,
-    ));
-    renderContext.renderStatistics.webgpuBindGroupCreateCount++;
+      texture: texture,
+      secondTexture: maskTexture,
+      uniformBuffer: alphaMaskUniformBuffer,
+      uniformByteSize: 32,
+    );
 
     final stencilValue = renderContext.maskSystem.activeStencilValue;
     final pass = renderContext.commandSystem.beginColorPass(renderContext.consumeClearColor());
@@ -1002,18 +1110,7 @@ class WebGpuFilterSystem {
       ..writeBuffer(indexBuffer, 0, indices.buffer.toJS)
       ..writeBuffer(uniformBuffer, 0, uniformData.buffer.toJS);
 
-    final bindGroup = renderContext.device.createBindGroup(GPUBindGroupDescriptor(
-      layout: _colorMatrixBindGroupLayout,
-      entries: [
-        GPUBindGroupEntry(binding: 0, resource: renderContext.textureSystem.getSampler(texture)),
-        GPUBindGroupEntry(binding: 1, resource: renderContext.textureSystem.getTextureView(texture)),
-        GPUBindGroupEntry(
-          binding: 2,
-          resource: GPUBufferBinding(buffer: uniformBuffer, offset: 0, size: uniformByteSize),
-        ),
-      ].toJS,
-    ));
-    renderContext.renderStatistics.webgpuBindGroupCreateCount++;
+    final bindGroup = _getSingleTextureBindGroup(texture, uniformBuffer, uniformByteSize);
 
     final stencilValue = renderContext.maskSystem.activeStencilValue;
     final pass = renderContext.commandSystem.beginColorPass(renderContext.consumeClearColor());

@@ -61,8 +61,11 @@ class WebGpuTextureSystem {
   final _textures = <RenderTexture, _WebGpuTextureEntry>{};
   final _samplers = <_WebGpuSamplerKey, GPUSampler>{};
   final _batchBindGroups = <_WebGpuBatchBindGroupKey, GPUBindGroup>{};
+  var _bindGroupGeneration = 0;
 
   WebGpuTextureSystem(this.renderContext);
+
+  int get bindGroupGeneration => _bindGroupGeneration;
 
   GPUBindGroup getBindGroup(RenderTexture renderTexture) => getBatchBindGroup([renderTexture]);
 
@@ -114,6 +117,11 @@ class WebGpuTextureSystem {
 
   String _addressMode(RenderTextureWrapping wrapping) =>
       wrapping.value == RenderTextureWrapping.REPEAT.value ? 'repeat' : 'clamp-to-edge';
+
+  void _clearBindGroups() {
+    _batchBindGroups.clear();
+    _bindGroupGeneration++;
+  }
 
   GPUTextureView getTextureView(RenderTexture renderTexture) {
     final entry = _getEntry(renderTexture);
@@ -179,7 +187,7 @@ class WebGpuTextureSystem {
       if (compressedTexture == null && renderTexture.source == null && renderTexture.imageBitmap == null) {
         entry.version = version;
         entry.view = null;
-        _batchBindGroups.clear();
+        _clearBindGroups();
         return entry;
       }
 
@@ -190,7 +198,7 @@ class WebGpuTextureSystem {
       }
       entry.version = version;
       entry.view = null;
-      _batchBindGroups.clear();
+      _clearBindGroups();
     }
 
     return entry;
@@ -205,7 +213,7 @@ class WebGpuTextureSystem {
     }
 
     _textures.remove(renderTexture)?.texture.destroy();
-    _batchBindGroups.clear();
+    _clearBindGroups();
 
     final texture = renderContext.device.createTexture(GPUTextureDescriptor(
       size: GPUExtent3DDict(width: 1, height: 1, depthOrArrayLayers: 1),
@@ -299,6 +307,6 @@ class WebGpuTextureSystem {
   void disposeTexture(RenderTexture renderTexture) {
     final entry = _textures.remove(renderTexture);
     entry?.texture.destroy();
-    _batchBindGroups.clear();
+    _clearBindGroups();
   }
 }
