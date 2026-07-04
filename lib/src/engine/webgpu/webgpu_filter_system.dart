@@ -311,7 +311,7 @@ class WebGpuFilterSystem {
 
     if (renderFilters.isEmpty) return;
     if (firstFilter != null && firstFilter.isSimple && firstFilter.supportsWebGPU) {
-      renderContext.flush();
+      if (!firstFilter.rendersInWebGpuBatch) renderContext.flush();
       firstFilter.renderFilter(renderState, renderTextureQuad, 0);
       return;
     }

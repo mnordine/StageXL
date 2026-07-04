@@ -28,6 +28,9 @@ class TintFilter extends BitmapFilter {
   @override
   bool get supportsWebGPU => true;
 
+  @override
+  bool get rendersInWebGpuBatch => true;
+
   //---------------------------------------------------------------------------
 
   @override
@@ -68,7 +71,7 @@ class TintFilter extends BitmapFilter {
     final renderContext = renderState.renderContext;
 
     if (renderContext is RenderContextWebGPU) {
-      renderContext.filterSystem.renderTintFilterQuad(
+      renderContext.batchSystem.renderTextureQuad(
         renderState,
         renderTextureQuad,
         factorR,

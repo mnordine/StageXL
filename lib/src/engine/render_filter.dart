@@ -16,6 +16,8 @@ abstract class RenderFilter {
 
   bool get supportsWebGPU => false;
 
+  bool get rendersInWebGpuBatch => false;
+
   void renderFilter(
       RenderState renderState, RenderTextureQuad renderTextureQuad, int pass);
 }

@@ -138,20 +138,31 @@ class WebGpuBatchSystem {
 
   bool get isEmpty => _vertexCount == 0;
 
-  void renderTextureQuad(RenderState renderState, RenderTextureQuad renderTextureQuad) {
+  void renderTextureQuad(
+    RenderState renderState,
+    RenderTextureQuad renderTextureQuad, [
+    num r = 1,
+    num g = 1,
+    num b = 1,
+    num a = 1,
+  ]) {
     if (renderTextureQuad.hasCustomVertices) {
       renderTextureMesh(
         renderState,
         renderTextureQuad.renderTexture,
         renderTextureQuad.ixList,
         renderTextureQuad.vxList,
+        r,
+        g,
+        b,
+        a,
       );
       return;
     }
 
     final renderTexture = renderTextureQuad.renderTexture;
     final textureIndex = _prepareForDraw(renderTexture, renderState.globalBlendMode, 4, 6);
-    _bakeQuadVertices(renderState, renderTexture, renderTextureQuad.vxListQuad, textureIndex);
+    _bakeQuadVertices(renderState, renderTexture, renderTextureQuad.vxListQuad, textureIndex, r, g, b, a);
     final baseVertex = _vertexCount - 4;
     _indices[_indexPosition++] = baseVertex + 0;
     _indices[_indexPosition++] = baseVertex + 1;
@@ -333,8 +344,12 @@ class WebGpuBatchSystem {
     RenderState renderState,
     RenderTexture renderTexture,
     Float32List vxList,
-    int textureIndex,
-  ) {
+    int textureIndex, [
+    num r = 1,
+    num g = 1,
+    num b = 1,
+    num a = 1,
+  ]) {
     final matrix = renderState.globalMatrix;
     final x1 = vxList[0];
     final y1 = vxList[1];
@@ -348,7 +363,10 @@ class WebGpuBatchSystem {
     final mc2 = y2 * matrix.c;
     final md1 = y1 * matrix.d;
     final md2 = y2 * matrix.d;
-    final alpha = renderState.globalAlpha;
+    final alpha = renderState.globalAlpha * a;
+    final red = r * alpha;
+    final green = g * alpha;
+    final blue = b * alpha;
     final textureSystem = renderContext.textureSystem;
     final textureScaleX = textureSystem._textureCoordinateScaleX(renderTexture);
     final textureScaleY = textureSystem._textureCoordinateScaleY(renderTexture);
@@ -358,9 +376,9 @@ class WebGpuBatchSystem {
     var writeIndex = _vertexPosition;
     vertices[writeIndex++] = ma1 + mc1;
     vertices[writeIndex++] = mb1 + md1;
-    vertices[writeIndex++] = alpha;
-    vertices[writeIndex++] = alpha;
-    vertices[writeIndex++] = alpha;
+    vertices[writeIndex++] = red;
+    vertices[writeIndex++] = green;
+    vertices[writeIndex++] = blue;
     vertices[writeIndex++] = alpha;
     vertices[writeIndex++] = vxList[2] * textureScaleX;
     vertices[writeIndex++] = vxList[3] * textureScaleY;
@@ -368,9 +386,9 @@ class WebGpuBatchSystem {
 
     vertices[writeIndex++] = ma2 + mc1;
     vertices[writeIndex++] = mb2 + md1;
-    vertices[writeIndex++] = alpha;
-    vertices[writeIndex++] = alpha;
-    vertices[writeIndex++] = alpha;
+    vertices[writeIndex++] = red;
+    vertices[writeIndex++] = green;
+    vertices[writeIndex++] = blue;
     vertices[writeIndex++] = alpha;
     vertices[writeIndex++] = vxList[6] * textureScaleX;
     vertices[writeIndex++] = vxList[7] * textureScaleY;
@@ -378,9 +396,9 @@ class WebGpuBatchSystem {
 
     vertices[writeIndex++] = ma2 + mc2;
     vertices[writeIndex++] = mb2 + md2;
-    vertices[writeIndex++] = alpha;
-    vertices[writeIndex++] = alpha;
-    vertices[writeIndex++] = alpha;
+    vertices[writeIndex++] = red;
+    vertices[writeIndex++] = green;
+    vertices[writeIndex++] = blue;
     vertices[writeIndex++] = alpha;
     vertices[writeIndex++] = vxList[10] * textureScaleX;
     vertices[writeIndex++] = vxList[11] * textureScaleY;
@@ -388,9 +406,9 @@ class WebGpuBatchSystem {
 
     vertices[writeIndex++] = ma1 + mc2;
     vertices[writeIndex++] = mb1 + md2;
-    vertices[writeIndex++] = alpha;
-    vertices[writeIndex++] = alpha;
-    vertices[writeIndex++] = alpha;
+    vertices[writeIndex++] = red;
+    vertices[writeIndex++] = green;
+    vertices[writeIndex++] = blue;
     vertices[writeIndex++] = alpha;
     vertices[writeIndex++] = vxList[14] * textureScaleX;
     vertices[writeIndex++] = vxList[15] * textureScaleY;
