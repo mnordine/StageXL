@@ -18,6 +18,8 @@ abstract class RenderFilter {
 
   bool get rendersInWebGpuBatch => false;
 
+  void applyWebGpuBatchColorScale(Float32List colorScale) {}
+
   void renderFilter(
       RenderState renderState, RenderTextureQuad renderTextureQuad, int pass);
 }

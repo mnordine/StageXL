@@ -106,6 +106,14 @@ class ColorMatrixFilter extends BitmapFilter {
         matrix[14] == 0;
   }
 
+  @override
+  void applyWebGpuBatchColorScale(Float32List colorScale) {
+    colorScale[0] *= _colorMatrixList[0];
+    colorScale[1] *= _colorMatrixList[5];
+    colorScale[2] *= _colorMatrixList[10];
+    colorScale[3] *= _colorMatrixList[15];
+  }
+
   //-----------------------------------------------------------------------------------------------
 
   void adjustInversion(num value) {

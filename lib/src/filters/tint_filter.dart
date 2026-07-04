@@ -1,6 +1,7 @@
 library;
 
 import 'dart:js_interop';
+import 'dart:typed_data';
 
 import '../display.dart';
 import '../engine.dart';
@@ -30,6 +31,14 @@ class TintFilter extends BitmapFilter {
 
   @override
   bool get rendersInWebGpuBatch => true;
+
+  @override
+  void applyWebGpuBatchColorScale(Float32List colorScale) {
+    colorScale[0] *= factorR.toDouble();
+    colorScale[1] *= factorG.toDouble();
+    colorScale[2] *= factorB.toDouble();
+    colorScale[3] *= factorA.toDouble();
+  }
 
   //---------------------------------------------------------------------------
 

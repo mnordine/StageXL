@@ -310,6 +310,22 @@ class WebGpuFilterSystem {
     final firstFilter = renderFilters.length == 1 ? renderFilters[0] : null;
 
     if (renderFilters.isEmpty) return;
+    if (renderFilters.every((filter) => filter.isSimple && filter.supportsWebGPU && filter.rendersInWebGpuBatch)) {
+      final colorScale = Float32List.fromList([1.0, 1.0, 1.0, 1.0]);
+      for (final filter in renderFilters) {
+        filter.applyWebGpuBatchColorScale(colorScale);
+      }
+      renderContext.batchSystem.renderTextureQuad(
+        renderState,
+        renderTextureQuad,
+        colorScale[0],
+        colorScale[1],
+        colorScale[2],
+        colorScale[3],
+      );
+      return;
+    }
+
     if (firstFilter != null && firstFilter.isSimple && firstFilter.supportsWebGPU) {
       if (!firstFilter.rendersInWebGpuBatch) renderContext.flush();
       firstFilter.renderFilter(renderState, renderTextureQuad, 0);
