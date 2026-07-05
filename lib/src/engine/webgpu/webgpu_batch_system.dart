@@ -131,8 +131,8 @@ class WebGpuBatchSystem {
   var _vertexCount = 0;
 
   WebGpuBatchSystem(this.renderContext) {
-    _vertices = Float32List(_floatsPerVertex * 4);
-    _indices = Uint32List(12);
+    _vertices = _createCpuVertexData(_floatsPerVertex * 4);
+    _indices = _createCpuIndexData(12);
     _vertexBuffer = _createVertexBuffer(_bytesPerVertex * 4);
     _indexBuffer = _createIndexBuffer(12 * _bytesPerIndex);
   }
@@ -289,8 +289,8 @@ class WebGpuBatchSystem {
     final uploadStopwatch = Stopwatch()..start();
     renderContext.pipelineSystem.uploadProjectionMatrix(renderContext.activeProjectionMatrix);
     renderContext.device.queue
-      ..writeBuffer(_vertexBuffer, 0, _vertices.buffer.toJS, 0, vertexBytes)
-      ..writeBuffer(_indexBuffer, 0, _indices.buffer.toJS, 0, indexBytes);
+      ..writeBuffer(_vertexBuffer, 0, _vertices.toJS, 0, _vertexPosition)
+      ..writeBuffer(_indexBuffer, 0, _indices.toJS, 0, _indexPosition);
     renderContext.renderStatistics.webgpuBufferUploadMicroseconds += uploadStopwatch.elapsedMicroseconds;
 
     final encodeStopwatch = Stopwatch()..start();
@@ -453,7 +453,7 @@ class WebGpuBatchSystem {
     while (capacity < size) {
       capacity *= 2;
     }
-    _vertices = Float32List(capacity)..setRange(0, _vertexPosition, _vertices);
+    _vertices = _createCpuVertexData(capacity)..setRange(0, _vertexPosition, _vertices);
   }
 
   void _ensureCpuIndexCapacity(int size) {
@@ -462,8 +462,12 @@ class WebGpuBatchSystem {
     while (capacity < size) {
       capacity *= 2;
     }
-    _indices = Uint32List(capacity)..setRange(0, _indexPosition, _indices);
+    _indices = _createCpuIndexData(capacity)..setRange(0, _indexPosition, _indices);
   }
+
+  Float32List _createCpuVertexData(int length) => JSFloat32Array.withLength(length).toDart;
+
+  Uint32List _createCpuIndexData(int length) => JSUint32Array.withLength(length).toDart;
 
   _WebGpuBundleKey? _tryCreateBundleKey(int vertexBytes, int indexBytes, bool stencilTest) {
     if (!renderContext.renderBundles) return null;

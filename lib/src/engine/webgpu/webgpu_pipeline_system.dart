@@ -52,13 +52,15 @@ class WebGpuPipelineSystem {
       GPUBindGroupEntry(binding: 0, resource: GPUBufferBinding(buffer: projectionBuffer)),
     ].toJS,
   ));
+  final _projectionData = JSFloat32Array.withLength(16).toDart;
   final _pipelineCache = <BlendMode, Map<int, GPURenderPipeline>>{};
   final _stencilWritePipelines = <int, GPURenderPipeline>{};
 
   WebGpuPipelineSystem(this.renderContext);
 
   void uploadProjectionMatrix(Matrix3D matrix) {
-    renderContext.device.queue.writeBuffer(projectionBuffer, 0, matrix.data.buffer.toJS, 0, 64);
+    _projectionData.setRange(0, 16, matrix.data);
+    renderContext.device.queue.writeBuffer(projectionBuffer, 0, _projectionData.toJS, 0, 16);
   }
 
   GPURenderPipeline getPipeline(BlendMode blendMode, {required bool stencilTest}) {
