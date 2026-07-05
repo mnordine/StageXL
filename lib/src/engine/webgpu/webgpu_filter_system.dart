@@ -174,36 +174,6 @@ class WebGpuFilterSystem {
       renderContext.device.createPipelineLayout(GPUPipelineLayoutDescriptor(
     bindGroupLayouts: [_alphaMaskBindGroupLayout].toJS,
   ));
-  late final _colorMatrixProgram = WebGpuFilterProgram(
-    label: 'StageXL color matrix filter pipeline',
-    shaderSource: _colorMatrixShaderSource,
-    uniformByteSize: 80,
-  );
-  late final _blurProgram = WebGpuFilterProgram(
-    label: 'StageXL blur filter pipeline',
-    shaderSource: _blurShaderSource,
-    uniformByteSize: 16,
-  );
-  late final _dropShadowProgram = WebGpuFilterProgram(
-    label: 'StageXL drop shadow filter pipeline',
-    shaderSource: _dropShadowShaderSource,
-    uniformByteSize: 32,
-  );
-  late final _glowProgram = WebGpuFilterProgram(
-    label: 'StageXL glow filter pipeline',
-    shaderSource: _glowShaderSource,
-    uniformByteSize: 32,
-  );
-  late final _chromaKeyProgram = WebGpuFilterProgram(
-    label: 'StageXL chroma key filter pipeline',
-    shaderSource: _chromaKeyShaderSource,
-    uniformByteSize: 32,
-  );
-  late final _fxaaProgram = WebGpuFilterProgram(
-    label: 'StageXL fxaa filter pipeline',
-    shaderSource: _fxaaShaderSource,
-    uniformByteSize: 16,
-  );
   late final GPUShaderModule _normalMapShaderModule =
       renderContext.device.createShaderModule(GPUShaderModuleDescriptor(code: _normalMapShaderSource));
   late final GPUShaderModule _displacementMapShaderModule =
@@ -1030,42 +1000,52 @@ class WebGpuFilterSystem {
     RenderTextureQuad renderTextureQuad,
     Float32List uniformData,
   ) =>
-      renderTextureQuadWithProgram(renderState, renderTextureQuad, _colorMatrixProgram, uniformData);
+      renderTextureQuadWithProgram(
+        renderState,
+        renderTextureQuad,
+        _WebGpuColorMatrixFilterProgram.program,
+        uniformData,
+      );
 
   void _renderTextureQuadWithBlurUniform(
     RenderState renderState,
     RenderTextureQuad renderTextureQuad,
     Float32List uniformData,
   ) =>
-      renderTextureQuadWithProgram(renderState, renderTextureQuad, _blurProgram, uniformData);
+      renderTextureQuadWithProgram(renderState, renderTextureQuad, _WebGpuBlurFilterProgram.program, uniformData);
 
   void _renderTextureQuadWithGlowUniform(
     RenderState renderState,
     RenderTextureQuad renderTextureQuad,
     Float32List uniformData,
   ) =>
-      renderTextureQuadWithProgram(renderState, renderTextureQuad, _glowProgram, uniformData);
+      renderTextureQuadWithProgram(renderState, renderTextureQuad, _WebGpuGlowFilterProgram.program, uniformData);
 
   void _renderTextureQuadWithDropShadowUniform(
     RenderState renderState,
     RenderTextureQuad renderTextureQuad,
     Float32List uniformData,
   ) =>
-      renderTextureQuadWithProgram(renderState, renderTextureQuad, _dropShadowProgram, uniformData);
+      renderTextureQuadWithProgram(
+        renderState,
+        renderTextureQuad,
+        _WebGpuDropShadowFilterProgram.program,
+        uniformData,
+      );
 
   void _renderTextureQuadWithChromaKeyUniform(
     RenderState renderState,
     RenderTextureQuad renderTextureQuad,
     Float32List uniformData,
   ) =>
-      renderTextureQuadWithProgram(renderState, renderTextureQuad, _chromaKeyProgram, uniformData);
+      renderTextureQuadWithProgram(renderState, renderTextureQuad, _WebGpuChromaKeyFilterProgram.program, uniformData);
 
   void _renderTextureQuadWithFxaaUniform(
     RenderState renderState,
     RenderTextureQuad renderTextureQuad,
     Float32List uniformData,
   ) =>
-      renderTextureQuadWithProgram(renderState, renderTextureQuad, _fxaaProgram, uniformData);
+      renderTextureQuadWithProgram(renderState, renderTextureQuad, _WebGpuFxaaFilterProgram.program, uniformData);
 
   void renderTextureQuadWithProgram(
     RenderState renderState,
@@ -1417,324 +1397,6 @@ class WebGpuFilterSystem {
     renderContext.renderStatistics.addWebGpuFallbackCause('unsupported filter');
     throw UnsupportedError('WebGPU filter parity requires the WGSL multi-pass filter implementation.');
   }
-
-  static const _colorMatrixShaderSource = '''
-    @group(0) @binding(0) var stageSampler: sampler;
-    @group(0) @binding(1) var stageTexture: texture_2d<f32>;
-
-    struct ColorMatrixUniforms {
-      matrixR: vec4<f32>,
-      matrixG: vec4<f32>,
-      matrixB: vec4<f32>,
-      matrixA: vec4<f32>,
-      offset: vec4<f32>,
-    };
-
-    @group(0) @binding(2) var<uniform> colorMatrix: ColorMatrixUniforms;
-
-    struct VertexInput {
-      @location(0) clip: vec4<f32>,
-      @location(1) uv: vec2<f32>,
-    };
-
-    struct VertexOutput {
-      @builtin(position) position: vec4<f32>,
-      @location(0) uv: vec2<f32>,
-    };
-
-    @vertex
-    fn vs_main(input: VertexInput) -> VertexOutput {
-      var output: VertexOutput;
-      output.position = input.clip;
-      output.uv = input.uv;
-      return output;
-    }
-
-    @fragment
-    fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
-      let sampleColor = textureSample(stageTexture, stageSampler, input.uv);
-      let safeAlpha = max(sampleColor.a, 0.000001);
-      let color = vec4<f32>(sampleColor.rgb / safeAlpha, sampleColor.a);
-      let transformed = colorMatrix.offset + vec4<f32>(
-        dot(color, colorMatrix.matrixR),
-        dot(color, colorMatrix.matrixG),
-        dot(color, colorMatrix.matrixB),
-        dot(color, colorMatrix.matrixA)
-      );
-      return vec4<f32>(transformed.rgb * transformed.a, transformed.a);
-    }
-  ''';
-
-  static const _blurShaderSource = '''
-    @group(0) @binding(0) var stageSampler: sampler;
-    @group(0) @binding(1) var stageTexture: texture_2d<f32>;
-
-    struct BlurUniforms {
-      radius: vec2<f32>,
-      alpha: f32,
-      padding: f32,
-    };
-
-    @group(0) @binding(2) var<uniform> blur: BlurUniforms;
-
-    struct VertexInput {
-      @location(0) clip: vec4<f32>,
-      @location(1) uv: vec2<f32>,
-    };
-
-    struct VertexOutput {
-      @builtin(position) position: vec4<f32>,
-      @location(0) uv: vec2<f32>,
-    };
-
-    @vertex
-    fn vs_main(input: VertexInput) -> VertexOutput {
-      var output: VertexOutput;
-      output.position = input.clip;
-      output.uv = input.uv;
-      return output;
-    }
-
-    @fragment
-    fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
-      let radius = blur.radius;
-      var sum = vec4<f32>(0.0);
-      sum += textureSample(stageTexture, stageSampler, input.uv - radius * 1.2) * 0.00443;
-      sum += textureSample(stageTexture, stageSampler, input.uv - radius * 0.8) * 0.05399;
-      sum += textureSample(stageTexture, stageSampler, input.uv - radius * 0.4) * 0.24197;
-      sum += textureSample(stageTexture, stageSampler, input.uv) * 0.39894;
-      sum += textureSample(stageTexture, stageSampler, input.uv + radius * 0.4) * 0.24197;
-      sum += textureSample(stageTexture, stageSampler, input.uv + radius * 0.8) * 0.05399;
-      sum += textureSample(stageTexture, stageSampler, input.uv + radius * 1.2) * 0.00443;
-      return sum * blur.alpha;
-    }
-  ''';
-
-  static const _chromaKeyShaderSource = '''
-    @group(0) @binding(0) var stageSampler: sampler;
-    @group(0) @binding(1) var stageTexture: texture_2d<f32>;
-
-    struct ChromaKeyUniforms {
-      backgroundColor: vec4<f32>,
-      thresholds: vec4<f32>,
-    };
-
-    @group(0) @binding(2) var<uniform> chromaKey: ChromaKeyUniforms;
-
-    struct VertexInput {
-      @location(0) clip: vec4<f32>,
-      @location(1) uv: vec2<f32>,
-    };
-
-    struct VertexOutput {
-      @builtin(position) position: vec4<f32>,
-      @location(0) uv: vec2<f32>,
-    };
-
-    @vertex
-    fn vs_main(input: VertexInput) -> VertexOutput {
-      var output: VertexOutput;
-      output.position = input.clip;
-      output.uv = input.uv;
-      return output;
-    }
-
-    @fragment
-    fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
-      let pixelColor = textureSample(stageTexture, stageSampler, input.uv);
-      let colorDiff = abs(pixelColor.rgb - chromaKey.backgroundColor.rgb);
-      let invisibleThreshold = chromaKey.thresholds.y;
-      let solidThreshold = chromaKey.thresholds.x;
-
-      if (any(colorDiff > vec3<f32>(solidThreshold))) {
-        return pixelColor;
-      }
-
-      if (all(colorDiff < vec3<f32>(invisibleThreshold))) {
-        return pixelColor * 0.0;
-      }
-
-      let thresholdRange = solidThreshold - invisibleThreshold;
-      let channelAlpha = clamp(
-        (colorDiff - vec3<f32>(invisibleThreshold)) / thresholdRange,
-        vec3<f32>(0),
-        vec3<f32>(1)
-      );
-      let alpha = min(channelAlpha.b, min(channelAlpha.r, channelAlpha.g));
-      let weight = chromaKey.thresholds.z;
-      let correctedColor = pixelColor.rgb - (vec3<f32>(1) - colorDiff) * (1.0 - alpha) *
-        chromaKey.backgroundColor.rgb * weight;
-
-      return vec4<f32>(correctedColor, alpha);
-    }
-  ''';
-
-  static const _fxaaShaderSource = '''
-    @group(0) @binding(0) var stageSampler: sampler;
-    @group(0) @binding(1) var stageTexture: texture_2d<f32>;
-
-    struct FxaaUniforms {
-      texel: vec2<f32>,
-      alpha: f32,
-      padding: f32,
-    };
-
-    @group(0) @binding(2) var<uniform> fxaa: FxaaUniforms;
-
-    struct VertexInput {
-      @location(0) clip: vec4<f32>,
-      @location(1) uv: vec2<f32>,
-    };
-
-    struct VertexOutput {
-      @builtin(position) position: vec4<f32>,
-      @location(0) uv: vec2<f32>,
-    };
-
-    @vertex
-    fn vs_main(input: VertexInput) -> VertexOutput {
-      var output: VertexOutput;
-      output.position = input.clip;
-      output.uv = input.uv;
-      return output;
-    }
-
-    @fragment
-    fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
-      let texel = fxaa.texel;
-      let color = textureSample(stageTexture, stageSampler, input.uv);
-      let rgbTL = textureSample(stageTexture, stageSampler, input.uv + vec2<f32>(-1.0, -1.0) * texel).rgb;
-      let rgbTR = textureSample(stageTexture, stageSampler, input.uv + vec2<f32>(1.0, -1.0) * texel).rgb;
-      let rgbBL = textureSample(stageTexture, stageSampler, input.uv + vec2<f32>(-1.0, 1.0) * texel).rgb;
-      let rgbBR = textureSample(stageTexture, stageSampler, input.uv + vec2<f32>(1.0, 1.0) * texel).rgb;
-      let rgbXY = color.rgb;
-      let luma = vec3<f32>(0.299, 0.587, 0.114);
-
-      let lumaTL = dot(rgbTL, luma);
-      let lumaTR = dot(rgbTR, luma);
-      let lumaBL = dot(rgbBL, luma);
-      let lumaBR = dot(rgbBR, luma);
-      let lumaXY = dot(rgbXY, luma);
-      let lumaMin = min(lumaXY, min(min(lumaTL, lumaTR), min(lumaBL, lumaBR)));
-      let lumaMax = max(lumaXY, max(max(lumaTL, lumaTR), max(lumaBL, lumaBR)));
-
-      var dir = vec2<f32>(
-        lumaBL + lumaBR - lumaTL - lumaTR,
-        lumaTL + lumaBL - lumaTR - lumaBR,
-      );
-      let dirReduce = max((lumaTL + lumaTR + lumaBL + lumaBR) * (0.25 * (1.0 / 8.0)), 1.0 / 128.0);
-      let dirMin = min(abs(dir.x), abs(dir.y)) + dirReduce;
-      dir = clamp(dir / dirMin, vec2<f32>(-8.0, -8.0), vec2<f32>(8.0, 8.0)) * texel;
-
-      let rgbA = 0.5 * (
-        textureSample(stageTexture, stageSampler, input.uv - dir * 0.16666).rgb +
-        textureSample(stageTexture, stageSampler, input.uv + dir * 0.16666).rgb
-      );
-      let rgbB = 0.25 * (
-        textureSample(stageTexture, stageSampler, input.uv - dir * 0.5).rgb +
-        textureSample(stageTexture, stageSampler, input.uv + dir * 0.5).rgb
-      ) + rgbA * 0.5;
-
-      let lumaB = dot(rgbB, luma);
-      let conditionLT = max(sign(lumaMin - lumaB), 0.0);
-      let conditionGT = max(sign(lumaB - lumaMax), 0.0);
-      let conditionOR = min(conditionLT + conditionGT, 1.0);
-      return vec4<f32>((rgbA - rgbB) * conditionOR + rgbB, color.a) * fxaa.alpha;
-    }
-  ''';
-
-  static const _glowShaderSource = '''
-    @group(0) @binding(0) var stageSampler: sampler;
-    @group(0) @binding(1) var stageTexture: texture_2d<f32>;
-
-    struct GlowUniforms {
-      radius: vec2<f32>,
-      padding0: vec2<f32>,
-      color: vec4<f32>,
-    };
-
-    @group(0) @binding(2) var<uniform> glow: GlowUniforms;
-
-    struct VertexInput {
-      @location(0) clip: vec4<f32>,
-      @location(1) uv: vec2<f32>,
-    };
-
-    struct VertexOutput {
-      @builtin(position) position: vec4<f32>,
-      @location(0) uv: vec2<f32>,
-    };
-
-    @vertex
-    fn vs_main(input: VertexInput) -> VertexOutput {
-      var output: VertexOutput;
-      output.position = input.clip;
-      output.uv = input.uv;
-      return output;
-    }
-
-    @fragment
-    fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
-      let radius = glow.radius;
-      var alpha = 0.0;
-      alpha += textureSample(stageTexture, stageSampler, input.uv - radius * 1.2).a * 0.00443;
-      alpha += textureSample(stageTexture, stageSampler, input.uv - radius * 0.8).a * 0.05399;
-      alpha += textureSample(stageTexture, stageSampler, input.uv - radius * 0.4).a * 0.24197;
-      alpha += textureSample(stageTexture, stageSampler, input.uv).a * 0.39894;
-      alpha += textureSample(stageTexture, stageSampler, input.uv + radius * 0.4).a * 0.24197;
-      alpha += textureSample(stageTexture, stageSampler, input.uv + radius * 0.8).a * 0.05399;
-      alpha += textureSample(stageTexture, stageSampler, input.uv + radius * 1.2).a * 0.00443;
-      alpha *= glow.color.a;
-      return vec4<f32>(glow.color.rgb * alpha, alpha);
-    }
-  ''';
-
-  static const _dropShadowShaderSource = '''
-    @group(0) @binding(0) var stageSampler: sampler;
-    @group(0) @binding(1) var stageTexture: texture_2d<f32>;
-
-    struct DropShadowUniforms {
-      shift: vec2<f32>,
-      radius: vec2<f32>,
-      color: vec4<f32>,
-    };
-
-    @group(0) @binding(2) var<uniform> dropShadow: DropShadowUniforms;
-
-    struct VertexInput {
-      @location(0) clip: vec4<f32>,
-      @location(1) uv: vec2<f32>,
-    };
-
-    struct VertexOutput {
-      @builtin(position) position: vec4<f32>,
-      @location(0) uv: vec2<f32>,
-    };
-
-    @vertex
-    fn vs_main(input: VertexInput) -> VertexOutput {
-      var output: VertexOutput;
-      output.position = input.clip;
-      output.uv = input.uv;
-      return output;
-    }
-
-    @fragment
-    fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
-      let texCoord = input.uv - dropShadow.shift;
-      let radius = dropShadow.radius;
-      var alpha = 0.0;
-      alpha += textureSample(stageTexture, stageSampler, texCoord - radius * 1.2).a * 0.00443;
-      alpha += textureSample(stageTexture, stageSampler, texCoord - radius * 0.8).a * 0.05399;
-      alpha += textureSample(stageTexture, stageSampler, texCoord - radius * 0.4).a * 0.24197;
-      alpha += textureSample(stageTexture, stageSampler, texCoord).a * 0.39894;
-      alpha += textureSample(stageTexture, stageSampler, texCoord + radius * 0.4).a * 0.24197;
-      alpha += textureSample(stageTexture, stageSampler, texCoord + radius * 0.8).a * 0.05399;
-      alpha += textureSample(stageTexture, stageSampler, texCoord + radius * 1.2).a * 0.00443;
-      alpha *= dropShadow.color.a;
-      return vec4<f32>(dropShadow.color.rgb * alpha, alpha);
-    }
-  ''';
 
   static const _normalMapShaderSource = '''
     @group(0) @binding(0) var texSampler: sampler;
