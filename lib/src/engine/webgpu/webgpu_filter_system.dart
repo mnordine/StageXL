@@ -174,18 +174,36 @@ class WebGpuFilterSystem {
       renderContext.device.createPipelineLayout(GPUPipelineLayoutDescriptor(
     bindGroupLayouts: [_alphaMaskBindGroupLayout].toJS,
   ));
-  late final GPUShaderModule _colorMatrixShaderModule =
-      renderContext.device.createShaderModule(GPUShaderModuleDescriptor(code: _colorMatrixShaderSource));
-  late final GPUShaderModule _blurShaderModule =
-      renderContext.device.createShaderModule(GPUShaderModuleDescriptor(code: _blurShaderSource));
-  late final GPUShaderModule _dropShadowShaderModule =
-      renderContext.device.createShaderModule(GPUShaderModuleDescriptor(code: _dropShadowShaderSource));
-  late final GPUShaderModule _glowShaderModule =
-      renderContext.device.createShaderModule(GPUShaderModuleDescriptor(code: _glowShaderSource));
-  late final GPUShaderModule _chromaKeyShaderModule =
-      renderContext.device.createShaderModule(GPUShaderModuleDescriptor(code: _chromaKeyShaderSource));
-  late final GPUShaderModule _fxaaShaderModule =
-      renderContext.device.createShaderModule(GPUShaderModuleDescriptor(code: _fxaaShaderSource));
+  late final _colorMatrixProgram = WebGpuFilterProgram(
+    label: 'StageXL color matrix filter pipeline',
+    shaderSource: _colorMatrixShaderSource,
+    uniformByteSize: 80,
+  );
+  late final _blurProgram = WebGpuFilterProgram(
+    label: 'StageXL blur filter pipeline',
+    shaderSource: _blurShaderSource,
+    uniformByteSize: 16,
+  );
+  late final _dropShadowProgram = WebGpuFilterProgram(
+    label: 'StageXL drop shadow filter pipeline',
+    shaderSource: _dropShadowShaderSource,
+    uniformByteSize: 32,
+  );
+  late final _glowProgram = WebGpuFilterProgram(
+    label: 'StageXL glow filter pipeline',
+    shaderSource: _glowShaderSource,
+    uniformByteSize: 32,
+  );
+  late final _chromaKeyProgram = WebGpuFilterProgram(
+    label: 'StageXL chroma key filter pipeline',
+    shaderSource: _chromaKeyShaderSource,
+    uniformByteSize: 32,
+  );
+  late final _fxaaProgram = WebGpuFilterProgram(
+    label: 'StageXL fxaa filter pipeline',
+    shaderSource: _fxaaShaderSource,
+    uniformByteSize: 16,
+  );
   late final GPUShaderModule _normalMapShaderModule =
       renderContext.device.createShaderModule(GPUShaderModuleDescriptor(code: _normalMapShaderSource));
   late final GPUShaderModule _displacementMapShaderModule =
@@ -196,25 +214,14 @@ class WebGpuFilterSystem {
   GPUBuffer? _indexBuffer;
   GPUBuffer? _normalMapVertexBuffer;
   GPUBuffer? _alphaMaskVertexBuffer;
-  late final GPUBuffer _uniformBuffer = _createUniformBuffer(80);
-  late final GPUBuffer _blurUniformBuffer = _createUniformBuffer(16);
-  late final GPUBuffer _dropShadowUniformBuffer = _createUniformBuffer(32);
-  late final GPUBuffer _glowUniformBuffer = _createUniformBuffer(32);
-  late final GPUBuffer _chromaKeyUniformBuffer = _createUniformBuffer(32);
-  late final GPUBuffer _fxaaUniformBuffer = _createUniformBuffer(16);
   late final GPUBuffer _normalMapUniformBuffer = _createUniformBuffer(80);
   late final GPUBuffer _displacementMapUniformBuffer = _createUniformBuffer(_displacementMapUniformBytes);
   late final GPUBuffer _alphaMaskUniformBuffer = _createUniformBuffer(32);
-  final _colorMatrixPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
-  final _blurPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
-  final _dropShadowPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
-  final _glowPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
-  final _chromaKeyPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
-  final _fxaaPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
   final _normalMapPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
   final _displacementMapPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
   final _alphaMaskPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
   final _filterBindGroups = <_BindGroupKey, GPUBindGroup>{};
+  final _programResources = <WebGpuFilterProgram, _WebGpuFilterProgramResources>{};
   final _batchColorScale = Float32List(4);
   var _filterBindGroupGeneration = -1;
   var _vertexCapacity = 0;
@@ -522,7 +529,12 @@ class WebGpuFilterSystem {
         boundsHeight,
         pixelRatio,
       );
-      filter.renderFilter(passRenderState, sourceRenderTextureQuad, pass);
+      filter.renderWebGpuFilter(WebGpuFilterContext(
+        filterSystem: this,
+        renderState: passRenderState,
+        renderTextureQuad: sourceRenderTextureQuad,
+        pass: pass,
+      ));
     }
 
     if (!renderToFinalTarget) {
@@ -1017,91 +1029,63 @@ class WebGpuFilterSystem {
     RenderState renderState,
     RenderTextureQuad renderTextureQuad,
     Float32List uniformData,
-  ) {
-    _renderTextureQuadWithUniform(
-      renderState,
-      renderTextureQuad,
-      uniformData,
-      _uniformBuffer,
-      _getColorMatrixPipeline,
-      80,
-    );
-  }
+  ) =>
+      renderTextureQuadWithProgram(renderState, renderTextureQuad, _colorMatrixProgram, uniformData);
 
   void _renderTextureQuadWithBlurUniform(
     RenderState renderState,
     RenderTextureQuad renderTextureQuad,
     Float32List uniformData,
-  ) {
-    _renderTextureQuadWithUniform(
-      renderState,
-      renderTextureQuad,
-      uniformData,
-      _blurUniformBuffer,
-      _getBlurPipeline,
-      16,
-    );
-  }
+  ) =>
+      renderTextureQuadWithProgram(renderState, renderTextureQuad, _blurProgram, uniformData);
 
   void _renderTextureQuadWithGlowUniform(
     RenderState renderState,
     RenderTextureQuad renderTextureQuad,
     Float32List uniformData,
-  ) {
-    _renderTextureQuadWithUniform(
-      renderState,
-      renderTextureQuad,
-      uniformData,
-      _glowUniformBuffer,
-      _getGlowPipeline,
-      32,
-    );
-  }
+  ) =>
+      renderTextureQuadWithProgram(renderState, renderTextureQuad, _glowProgram, uniformData);
 
   void _renderTextureQuadWithDropShadowUniform(
     RenderState renderState,
     RenderTextureQuad renderTextureQuad,
     Float32List uniformData,
-  ) {
-    _renderTextureQuadWithUniform(
-      renderState,
-      renderTextureQuad,
-      uniformData,
-      _dropShadowUniformBuffer,
-      _getDropShadowPipeline,
-      32,
-    );
-  }
+  ) =>
+      renderTextureQuadWithProgram(renderState, renderTextureQuad, _dropShadowProgram, uniformData);
 
   void _renderTextureQuadWithChromaKeyUniform(
     RenderState renderState,
     RenderTextureQuad renderTextureQuad,
     Float32List uniformData,
-  ) {
-    _renderTextureQuadWithUniform(
-      renderState,
-      renderTextureQuad,
-      uniformData,
-      _chromaKeyUniformBuffer,
-      _getChromaKeyPipeline,
-      32,
-    );
-  }
+  ) =>
+      renderTextureQuadWithProgram(renderState, renderTextureQuad, _chromaKeyProgram, uniformData);
 
   void _renderTextureQuadWithFxaaUniform(
     RenderState renderState,
     RenderTextureQuad renderTextureQuad,
     Float32List uniformData,
+  ) =>
+      renderTextureQuadWithProgram(renderState, renderTextureQuad, _fxaaProgram, uniformData);
+
+  void renderTextureQuadWithProgram(
+    RenderState renderState,
+    RenderTextureQuad renderTextureQuad,
+    WebGpuFilterProgram program,
+    Float32List uniformData,
   ) {
+    final resources = _resourcesForProgram(program);
     _renderTextureQuadWithUniform(
       renderState,
       renderTextureQuad,
       uniformData,
-      _fxaaUniformBuffer,
-      _getFxaaPipeline,
-      16,
+      resources.uniformBuffer,
+      resources.getPipeline,
+      program.uniformByteSize,
     );
   }
+
+  _WebGpuFilterProgramResources _resourcesForProgram(WebGpuFilterProgram program) =>
+      _programResources.putIfAbsent(program, () => _WebGpuFilterProgramResources(this, program));
 
   void _renderTextureQuadWithUniform(
     RenderState renderState,
@@ -1180,45 +1164,6 @@ class WebGpuFilterSystem {
     statistics.indexCount += ixList.length;
   }
 
-  GPURenderPipeline _getColorMatrixPipeline(BlendMode blendMode, bool stencilTest) {
-    final blendPipelines = _colorMatrixPipelines.putIfAbsent(blendMode, () => <int, GPURenderPipeline>{});
-    return blendPipelines.putIfAbsent(
-      _pipelineKey(stencilTest),
-      () => _createColorMatrixPipeline(blendMode, stencilTest),
-    );
-  }
-
-  GPURenderPipeline _getBlurPipeline(BlendMode blendMode, bool stencilTest) {
-    final blendPipelines = _blurPipelines.putIfAbsent(blendMode, () => <int, GPURenderPipeline>{});
-    return blendPipelines.putIfAbsent(_pipelineKey(stencilTest), () => _createBlurPipeline(blendMode, stencilTest));
-  }
-
-  GPURenderPipeline _getGlowPipeline(BlendMode blendMode, bool stencilTest) {
-    final blendPipelines = _glowPipelines.putIfAbsent(blendMode, () => <int, GPURenderPipeline>{});
-    return blendPipelines.putIfAbsent(_pipelineKey(stencilTest), () => _createGlowPipeline(blendMode, stencilTest));
-  }
-
-  GPURenderPipeline _getDropShadowPipeline(BlendMode blendMode, bool stencilTest) {
-    final blendPipelines = _dropShadowPipelines.putIfAbsent(blendMode, () => <int, GPURenderPipeline>{});
-    return blendPipelines.putIfAbsent(
-      _pipelineKey(stencilTest),
-      () => _createDropShadowPipeline(blendMode, stencilTest),
-    );
-  }
-
-  GPURenderPipeline _getChromaKeyPipeline(BlendMode blendMode, bool stencilTest) {
-    final blendPipelines = _chromaKeyPipelines.putIfAbsent(blendMode, () => <int, GPURenderPipeline>{});
-    return blendPipelines.putIfAbsent(
-      _pipelineKey(stencilTest),
-      () => _createChromaKeyPipeline(blendMode, stencilTest),
-    );
-  }
-
-  GPURenderPipeline _getFxaaPipeline(BlendMode blendMode, bool stencilTest) {
-    final blendPipelines = _fxaaPipelines.putIfAbsent(blendMode, () => <int, GPURenderPipeline>{});
-    return blendPipelines.putIfAbsent(_pipelineKey(stencilTest), () => _createFxaaPipeline(blendMode, stencilTest));
-  }
-
   GPURenderPipeline _getNormalMapPipeline(BlendMode blendMode, bool stencilTest) {
     final blendPipelines = _normalMapPipelines.putIfAbsent(blendMode, () => <int, GPURenderPipeline>{});
     return blendPipelines.putIfAbsent(
@@ -1244,48 +1189,6 @@ class WebGpuFilterSystem {
   }
 
   int _pipelineKey(bool stencilTest) => (renderContext.sampleCount << 1) | (stencilTest ? 1 : 0);
-
-  GPURenderPipeline _createColorMatrixPipeline(BlendMode blendMode, bool stencilTest) => _createFilterPipeline(
-        'StageXL color matrix filter pipeline',
-        _colorMatrixShaderModule,
-        blendMode,
-        stencilTest,
-      );
-
-  GPURenderPipeline _createBlurPipeline(BlendMode blendMode, bool stencilTest) => _createFilterPipeline(
-        'StageXL blur filter pipeline',
-        _blurShaderModule,
-        blendMode,
-        stencilTest,
-      );
-
-  GPURenderPipeline _createGlowPipeline(BlendMode blendMode, bool stencilTest) => _createFilterPipeline(
-        'StageXL glow filter pipeline',
-        _glowShaderModule,
-        blendMode,
-        stencilTest,
-      );
-
-  GPURenderPipeline _createDropShadowPipeline(BlendMode blendMode, bool stencilTest) => _createFilterPipeline(
-        'StageXL drop shadow filter pipeline',
-        _dropShadowShaderModule,
-        blendMode,
-        stencilTest,
-      );
-
-  GPURenderPipeline _createChromaKeyPipeline(BlendMode blendMode, bool stencilTest) => _createFilterPipeline(
-        'StageXL chroma key filter pipeline',
-        _chromaKeyShaderModule,
-        blendMode,
-        stencilTest,
-      );
-
-  GPURenderPipeline _createFxaaPipeline(BlendMode blendMode, bool stencilTest) => _createFilterPipeline(
-        'StageXL fxaa filter pipeline',
-        _fxaaShaderModule,
-        blendMode,
-        stencilTest,
-      );
 
   GPURenderPipeline _createNormalMapPipeline(BlendMode blendMode, bool stencilTest) {
     renderContext.renderStatistics.webgpuPipelineCreateCount++;

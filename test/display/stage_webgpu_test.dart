@@ -3,7 +3,7 @@ library;
 
 import 'package:stagexl/stagexl.dart';
 import 'package:test/test.dart';
-import 'package:web/web.dart';
+import 'package:web/web.dart' hide Float32List;
 
 void main() {
   test('sync Stage constructor rejects WebGPU because device creation is async', () {
@@ -38,7 +38,7 @@ void main() {
       ..height = 64;
     final stage = await Stage.create(canvas, width: 64, height: 64, options: options);
 
-    if (stage.renderEngine != RenderEngine.WebGPU) return;
+    if (stage.renderEngine != .WebGPU) return;
 
     final bitmap = Bitmap(BitmapData(48, 48, Color.Red))
       ..x = 8
@@ -60,16 +60,17 @@ void main() {
       ..height = 64;
     final stage = await Stage.create(canvas, width: 64, height: 64, options: options);
 
-    if (stage.renderEngine != RenderEngine.WebGPU) return;
+    if (stage.renderEngine != .WebGPU) return;
 
     final container = Sprite()
       ..x = 4
       ..y = 4
-      ..mask = Mask.circle(28, 28, 26);
+      ..mask = .circle(28, 28, 26);
+
     final bitmap = Bitmap(BitmapData(48, 48, Color.Red))
       ..x = 4
       ..y = 4
-      ..mask = Mask.circle(24, 24, 18);
+      ..mask = .circle(24, 24, 18);
 
     container.addChild(bitmap);
     stage.addChild(container);
@@ -87,7 +88,7 @@ void main() {
       ..height = 64;
     final stage = await Stage.create(canvas, width: 64, height: 64, options: options);
 
-    if (stage.renderEngine != RenderEngine.WebGPU) return;
+    if (stage.renderEngine != .WebGPU) return;
 
     final bitmap = Bitmap(BitmapData(48, 48, Color.Red))
       ..x = 8
@@ -109,7 +110,7 @@ void main() {
       ..height = 64;
     final stage = await Stage.create(canvas, width: 64, height: 64, options: options);
 
-    if (stage.renderEngine != RenderEngine.WebGPU) return;
+    if (stage.renderEngine != .WebGPU) return;
 
     final bitmap = Bitmap(BitmapData(48, 48, Color.Red))
       ..x = 8
@@ -131,7 +132,7 @@ void main() {
       ..height = 128;
     final stage = await Stage.create(canvas, width: 128, height: 128, options: options);
 
-    if (stage.renderEngine != RenderEngine.WebGPU) return;
+    if (stage.renderEngine != .WebGPU) return;
 
     final bitmapData = BitmapData(8, 8);
     for (var i = 0; i < 24; i++) {
@@ -159,7 +160,7 @@ void main() {
       ..height = 128;
     final stage = await Stage.create(canvas, width: 128, height: 128, options: options);
 
-    if (stage.renderEngine != RenderEngine.WebGPU) return;
+    if (stage.renderEngine != .WebGPU) return;
 
     final bitmapData = BitmapData(8, 8);
     final amberFilter = ColorMatrixFilter(
@@ -174,7 +175,7 @@ void main() {
       final bitmap = Bitmap(bitmapData)
         ..x = (i % 6) * 16
         ..y = (i ~/ 6) * 16
-        ..blendMode = BlendMode.ADD
+        ..blendMode = .ADD
         ..filters = [
           if (i.isEven) amberFilter else blueFilter,
         ];
@@ -197,7 +198,7 @@ void main() {
       ..height = 128;
     final stage = await Stage.create(canvas, width: 128, height: 128, options: options);
 
-    if (stage.renderEngine != RenderEngine.WebGPU) return;
+    if (stage.renderEngine != .WebGPU) return;
 
     final bitmapData = BitmapData(8, 8);
     final colorScaleFilter = ColorMatrixFilter(
@@ -232,13 +233,35 @@ void main() {
       ..height = 64;
     final stage = await Stage.create(canvas, width: 64, height: 64, options: options);
 
-    if (stage.renderEngine != RenderEngine.WebGPU) return;
+    if (stage.renderEngine != .WebGPU) return;
 
     final bitmapData = BitmapData(48, 48, 0xFF00FF00)..fillRect(Rectangle<num>(12, 12, 24, 24), Color.Red);
     final bitmap = Bitmap(bitmapData)
       ..x = 8
       ..y = 8
       ..filters = [ChromaKeyFilter()];
+    stage.addChild(bitmap);
+
+    expect(() => stage.materialize(0, 16), returnsNormally);
+    expect(stage.renderContext.renderStatistics.webgpuRenderPassCount, greaterThanOrEqualTo(1));
+  });
+
+  test('WebGPU renders custom one-texture filter programs when available', () async {
+    final options = StageOptions()
+      ..renderEngine = .WebGPU
+      ..backgroundColor = Color.Transparent
+      ..stageRenderMode = .ONCE;
+    final canvas = HTMLCanvasElement()
+      ..width = 64
+      ..height = 64;
+    final stage = await Stage.create(canvas, width: 64, height: 64, options: options);
+
+    if (stage.renderEngine != .WebGPU) return;
+
+    final bitmap = Bitmap(BitmapData(48, 48, Color.Red))
+      ..x = 8
+      ..y = 8
+      ..filters = [_CustomTintFilter(0.25, 0.5, 1, 1)];
     stage.addChild(bitmap);
 
     expect(() => stage.materialize(0, 16), returnsNormally);
@@ -255,11 +278,11 @@ void main() {
       ..height = 128;
     final stage = await Stage.create(canvas, width: 128, height: 128, options: options);
 
-    if (stage.renderEngine != RenderEngine.WebGPU) return;
+    if (stage.renderEngine != .WebGPU) return;
 
     final bitmapData = BitmapData(8, 8);
     final sprite = Sprite()
-      ..blendMode = BlendMode.ADD
+      ..blendMode = .ADD
       ..filters = [TintFilter.fromColor(0xFF66CCFF)];
     for (var i = 0; i < 24; i++) {
       sprite.addChild(Bitmap(bitmapData)
@@ -306,7 +329,7 @@ void main() {
       ..height = 64;
     final stage = await Stage.create(canvas, width: 64, height: 64, options: options);
 
-    if (stage.renderEngine != RenderEngine.WebGPU) return;
+    if (stage.renderEngine != .WebGPU) return;
 
     final bitmap = Bitmap(BitmapData(32, 32, Color.Red))
       ..x = 16
@@ -347,4 +370,70 @@ void main() {
     expect(() => stage.materialize(32, 16), returnsNormally);
     expect(stage.renderContext.renderStatistics.webgpuRenderBundleCacheHitCount, greaterThanOrEqualTo(1));
   });
+}
+
+class _CustomTintFilter extends BitmapFilter {
+  static final _program = WebGpuFilterProgram(
+    label: 'StageXL custom test tint filter pipeline',
+    uniformByteSize: 16,
+    shaderSource: '''
+      @group(0) @binding(0) var stageSampler: sampler;
+      @group(0) @binding(1) var stageTexture: texture_2d<f32>;
+
+      struct TintUniforms {
+        colorScale: vec4<f32>,
+      };
+
+      @group(0) @binding(2) var<uniform> tint: TintUniforms;
+
+      struct VertexInput {
+        @location(0) clip: vec4<f32>,
+        @location(1) uv: vec2<f32>,
+      };
+
+      struct VertexOutput {
+        @builtin(position) position: vec4<f32>,
+        @location(0) uv: vec2<f32>,
+      };
+
+      @vertex
+      fn vs_main(input: VertexInput) -> VertexOutput {
+        var output: VertexOutput;
+        output.position = input.clip;
+        output.uv = input.uv;
+        return output;
+      }
+
+      @fragment
+      fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
+        return textureSample(stageTexture, stageSampler, input.uv) * tint.colorScale;
+      }
+    ''',
+  );
+
+  final double factorR;
+  final double factorG;
+  final double factorB;
+  final double factorA;
+
+  _CustomTintFilter(this.factorR, this.factorG, this.factorB, this.factorA);
+
+  @override
+  bool get supportsWebGPU => true;
+
+  @override
+  BitmapFilter clone() => _CustomTintFilter(factorR, factorG, factorB, factorA);
+
+  @override
+  void renderWebGpuFilter(WebGpuFilterContext context) {
+    context.renderSingleTextureProgram(
+      _program,
+      .fromList([
+        factorR,
+        factorG,
+        factorB,
+        factorA * context.renderState.globalAlpha,
+      ]),
+    );
+  }
 }

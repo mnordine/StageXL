@@ -20,6 +20,10 @@ abstract class RenderFilter {
 
   void applyWebGpuBatchColorScale(Float32List colorScale) {}
 
+  void renderWebGpuFilter(WebGpuFilterContext context) {
+    renderFilter(context.renderState, context.renderTextureQuad, context.pass);
+  }
+
   void renderFilter(
       RenderState renderState, RenderTextureQuad renderTextureQuad, int pass);
 }

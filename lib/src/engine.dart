@@ -63,6 +63,7 @@ part 'engine/compressed_texture_formats/ktx_texture.dart';
 part 'engine/webgpu/webgpu_batch_system.dart';
 part 'engine/webgpu/webgpu_command_system.dart';
 part 'engine/webgpu/webgpu_device_system.dart';
+part 'engine/webgpu/webgpu_filter_program.dart';
 part 'engine/webgpu/webgpu_filter_system.dart';
 part 'engine/webgpu/webgpu_mask_system.dart';
 part 'engine/webgpu/webgpu_pipeline_system.dart';
