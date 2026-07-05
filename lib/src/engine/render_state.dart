@@ -2,6 +2,10 @@ part of '../engine.dart';
 
 class _ContextState {
   double alpha = 1;
+  double colorScaleR = 1;
+  double colorScaleG = 1;
+  double colorScaleB = 1;
+  double colorScaleA = 1;
   BlendMode blendMode = .NORMAL;
 
   final matrix = Matrix.fromIdentity();
@@ -54,6 +58,10 @@ class RenderState {
 
   Matrix get globalMatrix => _currentContextState!.matrix;
   double get globalAlpha => _currentContextState!.alpha;
+  double get globalColorScaleR => _currentContextState!.colorScaleR;
+  double get globalColorScaleG => _currentContextState!.colorScaleG;
+  double get globalColorScaleB => _currentContextState!.colorScaleB;
+  double get globalColorScaleA => _currentContextState!.colorScaleA;
   BlendMode get globalBlendMode => _currentContextState!.blendMode;
 
   //---------------------------------------------------------------------------
@@ -62,6 +70,10 @@ class RenderState {
     final currentContextState = _currentContextState = _firstContextState;
     currentContextState.matrix.identity();
     currentContextState.alpha = 1.0;
+    currentContextState.colorScaleR = 1.0;
+    currentContextState.colorScaleG = 1.0;
+    currentContextState.colorScaleB = 1.0;
+    currentContextState.colorScaleA = 1.0;
     currentContextState.blendMode = .NORMAL;
 
     if (matrix is Matrix) _firstContextState.matrix.copyFrom(matrix);
@@ -73,6 +85,10 @@ class RenderState {
     final currentContextState = _currentContextState = _firstContextState;
     currentContextState.matrix.copyFrom(renderState.globalMatrix);
     currentContextState.alpha = renderState.globalAlpha;
+    currentContextState.colorScaleR = renderState.globalColorScaleR;
+    currentContextState.colorScaleG = renderState.globalColorScaleG;
+    currentContextState.colorScaleB = renderState.globalColorScaleB;
+    currentContextState.colorScaleA = renderState.globalColorScaleA;
     currentContextState.blendMode = renderState.globalBlendMode;
   }
 
@@ -138,6 +154,10 @@ class RenderState {
     cs2.matrix.copyFromAndConcat(matrix, cs1.matrix);
     cs2.blendMode = (blendMode is BlendMode) ? blendMode : cs1.blendMode;
     cs2.alpha = alpha * cs1.alpha;
+    cs2.colorScaleR = cs1.colorScaleR;
+    cs2.colorScaleG = cs1.colorScaleG;
+    cs2.colorScaleB = cs1.colorScaleB;
+    cs2.colorScaleA = cs1.colorScaleA;
 
     if (renderObject is RenderObject3D && renderContext is RenderContextWebGL) {
       final renderObject3D = renderObject;
@@ -196,6 +216,24 @@ class RenderState {
     cs2.matrix.copyFromAndConcat(matrix, cs1.matrix);
     cs2.blendMode = blendMode ?? cs1.blendMode;
     cs2.alpha = alpha * cs1.alpha;
+    cs2.colorScaleR = cs1.colorScaleR;
+    cs2.colorScaleG = cs1.colorScaleG;
+    cs2.colorScaleB = cs1.colorScaleB;
+    cs2.colorScaleA = cs1.colorScaleA;
+    _currentContextState = cs2;
+  }
+
+  void pushColorScale(Float32List colorScale) {
+    final cs1 = _currentContextState!;
+    final cs2 = _currentContextState!.nextContextState;
+    cs2.matrix.copyFrom(cs1.matrix);
+    cs2.matrix3D.copyFrom(cs1.matrix3D);
+    cs2.blendMode = cs1.blendMode;
+    cs2.alpha = cs1.alpha;
+    cs2.colorScaleR = cs1.colorScaleR * colorScale[0];
+    cs2.colorScaleG = cs1.colorScaleG * colorScale[1];
+    cs2.colorScaleB = cs1.colorScaleB * colorScale[2];
+    cs2.colorScaleA = cs1.colorScaleA * colorScale[3];
     _currentContextState = cs2;
   }
 

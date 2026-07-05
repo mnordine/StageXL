@@ -245,27 +245,33 @@ void main() {
     expect(stage.renderContext.renderStatistics.webgpuRenderPassCount, greaterThanOrEqualTo(1));
   });
 
-  test('WebGPU renders simple filtered display objects when available', () async {
+  test('WebGPU batches batch-preserving filtered display objects when available', () async {
     final options = StageOptions()
       ..renderEngine = .WebGPU
       ..backgroundColor = Color.Transparent
       ..stageRenderMode = .ONCE;
     final canvas = HTMLCanvasElement()
-      ..width = 64
-      ..height = 64;
-    final stage = await Stage.create(canvas, width: 64, height: 64, options: options);
+      ..width = 128
+      ..height = 128;
+    final stage = await Stage.create(canvas, width: 128, height: 128, options: options);
 
     if (stage.renderEngine != RenderEngine.WebGPU) return;
 
+    final bitmapData = BitmapData(8, 8);
     final sprite = Sprite()
-      ..x = 8
-      ..y = 8
+      ..blendMode = BlendMode.ADD
       ..filters = [TintFilter.fromColor(0xFF66CCFF)];
-    sprite.addChild(Bitmap(BitmapData(48, 48, Color.Red)));
+    for (var i = 0; i < 24; i++) {
+      sprite.addChild(Bitmap(bitmapData)
+        ..x = (i % 6) * 16
+        ..y = (i ~/ 6) * 16);
+    }
     stage.addChild(sprite);
 
     expect(() => stage.materialize(0, 16), returnsNormally);
-    expect(stage.renderContext.renderStatistics.webgpuRenderPassCount, greaterThanOrEqualTo(2));
+    expect(stage.renderContext.renderStatistics.drawCount, 1);
+    expect(stage.renderContext.renderStatistics.webgpuBatchFlushCount, 1);
+    expect(stage.renderContext.renderStatistics.webgpuBatchRunCount, 1);
   });
 
   test('WebGPU renders BlurFilter bitmap quads when available', () async {

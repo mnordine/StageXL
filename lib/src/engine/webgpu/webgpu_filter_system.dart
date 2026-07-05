@@ -310,11 +310,8 @@ class WebGpuFilterSystem {
     final firstFilter = renderFilters.length == 1 ? renderFilters[0] : null;
 
     if (renderFilters.isEmpty) return;
-    if (renderFilters.every((filter) => filter.isSimple && filter.supportsWebGPU && filter.rendersInWebGpuBatch)) {
-      final colorScale = Float32List.fromList([1.0, 1.0, 1.0, 1.0]);
-      for (final filter in renderFilters) {
-        filter.applyWebGpuBatchColorScale(colorScale);
-      }
+    if (_canRenderInWebGpuBatch(renderFilters)) {
+      final colorScale = _webGpuBatchColorScale(renderFilters);
       renderContext.batchSystem.renderTextureQuad(
         renderState,
         renderTextureQuad,
@@ -345,6 +342,13 @@ class WebGpuFilterSystem {
     if (filters.isEmpty) return;
     if (!filters.every((filter) => filter.supportsWebGPU)) {
       _throwUnsupported();
+    }
+
+    if (_canRenderInWebGpuBatch(filters)) {
+      renderState.pushColorScale(_webGpuBatchColorScale(filters));
+      renderObject.render(renderState);
+      renderState.pop();
+      return;
     }
 
     final bounds = renderObject.bounds;
@@ -432,6 +436,17 @@ class WebGpuFilterSystem {
       renderContext.textureSystem.disposeTexture(renderTexture);
       renderTexture.dispose();
     }));
+  }
+
+  bool _canRenderInWebGpuBatch(List<RenderFilter> filters) =>
+      filters.every((filter) => filter.isSimple && filter.supportsWebGPU && filter.rendersInWebGpuBatch);
+
+  Float32List _webGpuBatchColorScale(List<RenderFilter> filters) {
+    final colorScale = Float32List.fromList([1.0, 1.0, 1.0, 1.0]);
+    for (final filter in filters) {
+      filter.applyWebGpuBatchColorScale(colorScale);
+    }
+    return colorScale;
   }
 
   void _renderFilterPasses(
