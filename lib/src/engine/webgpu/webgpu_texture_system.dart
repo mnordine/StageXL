@@ -69,6 +69,7 @@ class WebGpuTextureSystem {
   final _textures = <RenderTexture, _WebGpuTextureEntry>{};
   final _samplers = <_WebGpuSamplerKey, GPUSampler>{};
   final _batchBindGroups = <_WebGpuBatchBindGroupKey, GPUBindGroup>{};
+  final _transparentPixel = JSUint8Array.withLength(4).toDart;
   var _bindGroupGeneration = 0;
 
   WebGpuTextureSystem(this.renderContext);
@@ -231,7 +232,7 @@ class WebGpuTextureSystem {
 
     renderContext.device.queue.writeTexture(
       GPUImageCopyTexture(texture: texture),
-      Uint8List.fromList(const [0, 0, 0, 0]).toJS,
+      _transparentPixel.toJS,
       GPUImageDataLayout(offset: 0, bytesPerRow: 4, rowsPerImage: 1),
       GPUExtent3DDict(width: 1, height: 1, depthOrArrayLayers: 1),
     );

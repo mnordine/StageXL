@@ -136,7 +136,7 @@ class WebGpuMaskSystem {
 
   Float32List _bakeStencilVertices(List<double> maskVertices) {
     final vertexCount = maskVertices.length ~/ 2;
-    final vertices = Float32List(vertexCount * _floatsPerStencilVertex);
+    final vertices = _createFloat32Data(vertexCount * _floatsPerStencilVertex);
     final projectionMatrix = renderContext.activeProjectionMatrix;
 
     var writeIndex = 0;
@@ -158,7 +158,7 @@ class WebGpuMaskSystem {
 
   void _renderStencilMask(int stencilValue, Float32List vertices) {
     final vertexCount = vertices.length ~/ _floatsPerStencilVertex;
-    final indices = Uint32List(vertexCount);
+    final indices = _createUint32Data(vertexCount);
     for (var i = 0; i < vertexCount; i++) {
       indices[i] = i;
     }
@@ -168,8 +168,8 @@ class WebGpuMaskSystem {
     _ensureVertexCapacity(vertexBytes);
     _ensureIndexCapacity(indexBytes);
     renderContext.device.queue
-      ..writeBuffer(_vertexBuffer, 0, vertices.buffer.toJS)
-      ..writeBuffer(_indexBuffer, 0, indices.buffer.toJS);
+      ..writeBuffer(_vertexBuffer, 0, vertices.toJS, 0, vertices.length)
+      ..writeBuffer(_indexBuffer, 0, indices.toJS, 0, indices.length);
 
     final pass = renderContext.commandSystem.beginColorPass(null);
     pass
@@ -211,6 +211,10 @@ class WebGpuMaskSystem {
       usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.INDEX,
     ));
   }
+
+  Float32List _createFloat32Data(int length) => JSFloat32Array.withLength(length).toDart;
+
+  Uint32List _createUint32Data(int length) => JSUint32Array.withLength(length).toDart;
 
   void _ensureVertexCapacity(int size) {
     if (size <= _vertexCapacity) return;

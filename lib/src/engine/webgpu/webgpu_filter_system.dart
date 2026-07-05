@@ -449,7 +449,7 @@ class WebGpuFilterSystem {
     Float32List colorMatrixList,
     Float32List colorOffsetList,
   ) {
-    final uniformData = Float32List(20);
+    final uniformData = _createFloat32Data(20);
     final alpha = renderState.globalAlpha;
     uniformData
       ..setRange(0, 12, colorMatrixList, 0)
@@ -478,7 +478,7 @@ class WebGpuFilterSystem {
     num factorA,
   ) {
     final alpha = renderState.globalAlpha;
-    final uniformData = Float32List(20);
+    final uniformData = _createFloat32Data(20);
     uniformData[0] = factorR.toDouble();
     uniformData[5] = factorG.toDouble();
     uniformData[10] = factorB.toDouble();
@@ -493,7 +493,7 @@ class WebGpuFilterSystem {
     int solidThreshold,
     int invisibleThreshold,
   ) {
-    final uniformData = Float32List.fromList([
+    final uniformData = _createFloat32DataFromList([
       colorGetR(backgroundColor) / 255.0,
       colorGetG(backgroundColor) / 255.0,
       colorGetB(backgroundColor) / 255.0,
@@ -513,7 +513,7 @@ class WebGpuFilterSystem {
     num radiusX,
     num radiusY,
   ) {
-    final uniformData = Float32List.fromList([
+    final uniformData = _createFloat32DataFromList([
       radiusX.toDouble(),
       radiusY.toDouble(),
       alpha.toDouble(),
@@ -527,7 +527,7 @@ class WebGpuFilterSystem {
     RenderTextureQuad renderTextureQuad,
   ) {
     final texture = renderTextureQuad.renderTexture;
-    final uniformData = Float32List.fromList([
+    final uniformData = _createFloat32DataFromList([
       1.0 / texture.width,
       1.0 / texture.height,
       renderState.globalAlpha,
@@ -544,7 +544,7 @@ class WebGpuFilterSystem {
     num radiusX,
     num radiusY,
   ) {
-    final uniformData = Float32List.fromList([
+    final uniformData = _createFloat32DataFromList([
       radiusX.toDouble(),
       radiusY.toDouble(),
       0,
@@ -567,7 +567,7 @@ class WebGpuFilterSystem {
     num radiusX,
     num radiusY,
   ) {
-    final uniformData = Float32List.fromList([
+    final uniformData = _createFloat32DataFromList([
       shiftX.toDouble(),
       shiftY.toDouble(),
       radiusX.toDouble(),
@@ -612,7 +612,7 @@ class WebGpuFilterSystem {
     final lightSamplerZ = lightScale * lightZ;
     final lightSamplerRadius = lightScale * lightRadius;
 
-    final uniformData = Float32List(20)
+    final uniformData = _createFloat32Data(20)
       ..setRange(0, 4, [
         colorGetA(ambientColor) / 255.0,
         colorGetR(ambientColor) / 255.0,
@@ -639,8 +639,8 @@ class WebGpuFilterSystem {
       ])
       ..setRange(16, 20, [0, 0, 0, 0]);
 
-    final vertices = Float32List(vertexCount * _WebGpuNormalMapFilterProgram.floatsPerVertex);
-    final indices = Uint32List(ixList.length);
+    final vertices = _createFloat32Data(vertexCount * _WebGpuNormalMapFilterProgram.floatsPerVertex);
+    final indices = _createUint32Data(ixList.length);
 
     var vertexIndex = 0;
     for (var i = 0, sourceIndex = 0; i < vertexCount; i++, sourceIndex += 4) {
@@ -672,9 +672,9 @@ class WebGpuFilterSystem {
     final indexBuffer = _indexBuffer!;
     final normalMapUniformBuffer = _normalMapUniformBuffer;
     renderContext.device.queue
-      ..writeBuffer(normalMapVertexBuffer, 0, vertices.buffer.toJS)
-      ..writeBuffer(indexBuffer, 0, indices.buffer.toJS)
-      ..writeBuffer(normalMapUniformBuffer, 0, uniformData.buffer.toJS);
+      ..writeBuffer(normalMapVertexBuffer, 0, vertices.toJS, 0, vertices.length)
+      ..writeBuffer(indexBuffer, 0, indices.toJS, 0, indices.length)
+      ..writeBuffer(normalMapUniformBuffer, 0, uniformData.toJS, 0, uniformData.length);
 
     final bindGroup = _getTwoTextureBindGroup(
       layoutKey: _WebGpuNormalMapFilterProgram.layoutKey,
@@ -725,15 +725,15 @@ class WebGpuFilterSystem {
         renderContext.textureSystem.scaledSamplerMatrix(mapTexture, mapMatrix, inputTexture: texture);
     final scaledDisMatrix = renderContext.textureSystem.scaledSamplerMatrix(texture, disMatrix);
 
-    final uniformData = Float32List(20)
+    final uniformData = _createFloat32Data(20)
       ..setRange(0, 4, [scaledMapMatrix.a, scaledMapMatrix.c, scaledMapMatrix.tx, 0])
       ..setRange(4, 8, [scaledMapMatrix.b, scaledMapMatrix.d, scaledMapMatrix.ty, 0])
       ..setRange(8, 12, [scaledDisMatrix.a, scaledDisMatrix.c, 0, 0])
       ..setRange(12, 16, [scaledDisMatrix.b, scaledDisMatrix.d, 0, 0])
       ..setRange(16, 20, [renderState.globalAlpha, 0, 0, 0]);
 
-    final vertices = Float32List(vertexCount * _floatsPerVertex);
-    final indices = Uint32List(ixList.length);
+    final vertices = _createFloat32Data(vertexCount * _floatsPerVertex);
+    final indices = _createUint32Data(ixList.length);
 
     var vertexIndex = 0;
     for (var i = 0, sourceIndex = 0; i < vertexCount; i++, sourceIndex += 4) {
@@ -768,9 +768,9 @@ class WebGpuFilterSystem {
     final indexBuffer = _indexBuffer!;
     final displacementMapUniformBuffer = _displacementMapUniformBuffer;
     renderContext.device.queue
-      ..writeBuffer(vertexBuffer, 0, vertices.buffer.toJS)
-      ..writeBuffer(indexBuffer, 0, indices.buffer.toJS)
-      ..writeBuffer(displacementMapUniformBuffer, 0, uniformData.buffer.toJS);
+      ..writeBuffer(vertexBuffer, 0, vertices.toJS, 0, vertices.length)
+      ..writeBuffer(indexBuffer, 0, indices.toJS, 0, indices.length)
+      ..writeBuffer(displacementMapUniformBuffer, 0, uniformData.toJS, 0, uniformData.length);
 
     final bindGroup = _getTwoTextureBindGroup(
       layoutKey: _WebGpuDisplacementMapFilterProgram.layoutKey,
@@ -824,7 +824,7 @@ class WebGpuFilterSystem {
     final maskTexture = maskRenderTextureQuad.renderTexture;
     final scaledMaskMatrix = renderContext.textureSystem.scaledSamplerMatrix(maskTexture, maskMatrix);
 
-    final uniformData = Float32List.fromList([
+    final uniformData = _createFloat32DataFromList([
       mskBoundsX1,
       mskBoundsY1,
       mskBoundsX2,
@@ -835,8 +835,8 @@ class WebGpuFilterSystem {
       0,
     ]);
 
-    final vertices = Float32List(vertexCount * _WebGpuAlphaMaskFilterProgram.floatsPerVertex);
-    final indices = Uint32List(ixList.length);
+    final vertices = _createFloat32Data(vertexCount * _WebGpuAlphaMaskFilterProgram.floatsPerVertex);
+    final indices = _createUint32Data(ixList.length);
 
     var vertexIndex = 0;
     for (var i = 0, sourceIndex = 0; i < vertexCount; i++, sourceIndex += 4) {
@@ -873,9 +873,9 @@ class WebGpuFilterSystem {
     final indexBuffer = _indexBuffer!;
     final alphaMaskUniformBuffer = _alphaMaskUniformBuffer;
     renderContext.device.queue
-      ..writeBuffer(alphaMaskVertexBuffer, 0, vertices.buffer.toJS)
-      ..writeBuffer(indexBuffer, 0, indices.buffer.toJS)
-      ..writeBuffer(alphaMaskUniformBuffer, 0, uniformData.buffer.toJS);
+      ..writeBuffer(alphaMaskVertexBuffer, 0, vertices.toJS, 0, vertices.length)
+      ..writeBuffer(indexBuffer, 0, indices.toJS, 0, indices.length)
+      ..writeBuffer(alphaMaskUniformBuffer, 0, uniformData.toJS, 0, uniformData.length);
 
     final bindGroup = _getTwoTextureBindGroup(
       layoutKey: _WebGpuAlphaMaskFilterProgram.layoutKey,
@@ -991,8 +991,8 @@ class WebGpuFilterSystem {
     final vertexCount = vxList.length >> 2;
     if (vertexCount == 0 || ixList.isEmpty) return;
 
-    final vertices = Float32List(vertexCount * _floatsPerVertex);
-    final indices = Uint32List(ixList.length);
+    final vertices = _createFloat32Data(vertexCount * _floatsPerVertex);
+    final indices = _createUint32Data(ixList.length);
     final texture = renderTextureQuad.renderTexture;
     final combined = Matrix3D.fromIdentity()
       ..copyFrom2DAndConcat(renderState.globalMatrix, renderContext.activeProjectionMatrix);
@@ -1029,9 +1029,9 @@ class WebGpuFilterSystem {
     final vertexBuffer = _vertexBuffer!;
     final indexBuffer = _indexBuffer!;
     renderContext.device.queue
-      ..writeBuffer(vertexBuffer, 0, vertices.buffer.toJS)
-      ..writeBuffer(indexBuffer, 0, indices.buffer.toJS)
-      ..writeBuffer(uniformBuffer, 0, uniformData.buffer.toJS);
+      ..writeBuffer(vertexBuffer, 0, vertices.toJS, 0, vertices.length)
+      ..writeBuffer(indexBuffer, 0, indices.toJS, 0, indices.length)
+      ..writeBuffer(uniformBuffer, 0, uniformData.toJS, 0, uniformData.length);
 
     final bindGroup = _getSingleTextureBindGroup(texture, uniformBuffer, uniformByteSize);
 
@@ -1204,6 +1204,18 @@ class WebGpuFilterSystem {
         size: size,
         usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.UNIFORM,
       ));
+
+  Float32List _createFloat32Data(int length) => JSFloat32Array.withLength(length).toDart;
+
+  Float32List _createFloat32DataFromList(List<num> values) {
+    final data = _createFloat32Data(values.length);
+    for (var i = 0; i < values.length; i++) {
+      data[i] = values[i].toDouble();
+    }
+    return data;
+  }
+
+  Uint32List _createUint32Data(int length) => JSUint32Array.withLength(length).toDart;
 
   void _ensureVertexCapacity(int size) {
     final buffer = _vertexBuffer;
