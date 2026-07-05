@@ -119,6 +119,7 @@ class WebGpuBatchSystem {
   final _runs = <_WebGpuRun>[];
   final _renderBundles = <_WebGpuBundleKey, GPURenderBundle>{};
   final _renderBundleObservations = <_WebGpuBundleKey, int>{};
+  _WebGpuBundleKey? _lastRenderBundleKey;
   late Float32List _vertices;
   late Uint32List _indices;
   late GPUBuffer _vertexBuffer;
@@ -467,9 +468,12 @@ class WebGpuBatchSystem {
   _WebGpuBundleKey? _tryCreateBundleKey(int vertexBytes, int indexBytes, bool stencilTest) {
     if (!renderContext.renderBundles) return null;
     if (_runs.length < _renderBundleMinRuns) return null;
-    if (_runs.any((run) => run.textures.any(_isDynamicTexture))) return null;
+    if (_hasDynamicTexture()) return null;
 
-    return _WebGpuBundleKey(
+    final lastKey = _lastRenderBundleKey;
+    if (lastKey != null && _matchesBundleKey(lastKey, vertexBytes, indexBytes, stencilTest)) return lastKey;
+
+    final key = _WebGpuBundleKey(
       vertexBuffer: _vertexBuffer,
       indexBuffer: _indexBuffer,
       projectionBindGroup: renderContext.pipelineSystem.projectionBindGroup,
@@ -485,8 +489,48 @@ class WebGpuBatchSystem {
             firstIndex: run.firstIndex,
             indexCount: run.indexCount,
           ),
-      ],
+        ],
     );
+    _lastRenderBundleKey = key;
+    return key;
+  }
+
+  bool _hasDynamicTexture() {
+    for (var r = 0; r < _runs.length; r++) {
+      final textures = _runs[r].textures;
+      for (var t = 0; t < textures.length; t++) {
+        if (_isDynamicTexture(textures[t])) return true;
+      }
+    }
+    return false;
+  }
+
+  bool _matchesBundleKey(_WebGpuBundleKey key, int vertexBytes, int indexBytes, bool stencilTest) {
+    if (!identical(key.vertexBuffer, _vertexBuffer) ||
+        !identical(key.indexBuffer, _indexBuffer) ||
+        !identical(key.projectionBindGroup, renderContext.pipelineSystem.projectionBindGroup) ||
+        key.vertexBytes != vertexBytes ||
+        key.indexBytes != indexBytes ||
+        key.sampleCount != renderContext.sampleCount ||
+        key.stencilTest != stencilTest ||
+        key.runs.length != _runs.length) {
+      return false;
+    }
+
+    for (var i = 0; i < _runs.length; i++) {
+      final run = _runs[i];
+      final keyRun = key.runs[i];
+      final pipeline = renderContext.pipelineSystem.getPipeline(run.blendMode, stencilTest: stencilTest);
+      final textureBindGroup = renderContext.textureSystem.getBatchBindGroup(run.textures);
+      if (!identical(keyRun.pipeline, pipeline) ||
+          !identical(keyRun.textureBindGroup, textureBindGroup) ||
+          keyRun.firstIndex != run.firstIndex ||
+          keyRun.indexCount != run.indexCount) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   GPURenderBundle? _getRenderBundle(_WebGpuBundleKey key) {
@@ -539,5 +583,6 @@ class WebGpuBatchSystem {
   void _clearRenderBundleCache() {
     _renderBundles.clear();
     _renderBundleObservations.clear();
+    _lastRenderBundleKey = null;
   }
 }

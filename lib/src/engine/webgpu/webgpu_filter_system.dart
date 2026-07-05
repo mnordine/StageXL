@@ -215,6 +215,7 @@ class WebGpuFilterSystem {
   final _displacementMapPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
   final _alphaMaskPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
   final _filterBindGroups = <_BindGroupKey, GPUBindGroup>{};
+  final _batchColorScale = Float32List(4);
   var _filterBindGroupGeneration = -1;
   var _vertexCapacity = 0;
   var _indexCapacity = 0;
@@ -329,7 +330,7 @@ class WebGpuFilterSystem {
       return;
     }
 
-    if (renderFilters.every((filter) => filter.supportsWebGPU)) {
+    if (_supportsWebGpu(renderFilters)) {
       renderObjectFiltered(renderState, _RenderTextureQuadObject(renderTextureQuad, renderFilters));
       return;
     }
@@ -340,7 +341,7 @@ class WebGpuFilterSystem {
   void renderObjectFiltered(RenderState renderState, RenderObject renderObject) {
     final filters = renderObject.filters;
     if (filters.isEmpty) return;
-    if (!filters.every((filter) => filter.supportsWebGPU)) {
+    if (!_supportsWebGpu(filters)) {
       _throwUnsupported();
     }
 
@@ -438,11 +439,27 @@ class WebGpuFilterSystem {
     }));
   }
 
-  bool _canRenderInWebGpuBatch(List<RenderFilter> filters) =>
-      filters.every((filter) => filter.isSimple && filter.supportsWebGPU && filter.rendersInWebGpuBatch);
+  bool _supportsWebGpu(List<RenderFilter> filters) {
+    for (var i = 0; i < filters.length; i++) {
+      if (!filters[i].supportsWebGPU) return false;
+    }
+    return true;
+  }
+
+  bool _canRenderInWebGpuBatch(List<RenderFilter> filters) {
+    for (var i = 0; i < filters.length; i++) {
+      final filter = filters[i];
+      if (!filter.isSimple || !filter.supportsWebGPU || !filter.rendersInWebGpuBatch) return false;
+    }
+    return true;
+  }
 
   Float32List _webGpuBatchColorScale(List<RenderFilter> filters) {
-    final colorScale = Float32List.fromList([1.0, 1.0, 1.0, 1.0]);
+    final colorScale = _batchColorScale;
+    colorScale[0] = 1.0;
+    colorScale[1] = 1.0;
+    colorScale[2] = 1.0;
+    colorScale[3] = 1.0;
     for (final filter in filters) {
       filter.applyWebGpuBatchColorScale(colorScale);
     }
