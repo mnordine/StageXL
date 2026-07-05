@@ -45,15 +45,7 @@ class _BindGroupKey {
 class WebGpuFilterSystem {
   static const _floatsPerVertex = 6;
   static const _bytesPerVertex = _floatsPerVertex * 4;
-  static const _normalMapFloatsPerVertex = 8;
-  static const _normalMapBytesPerVertex = _normalMapFloatsPerVertex * 4;
-  static const _alphaMaskFloatsPerVertex = 8;
-  static const _alphaMaskBytesPerVertex = _alphaMaskFloatsPerVertex * 4;
-  static const _displacementMapUniformBytes = 80;
   static const _singleTextureBindGroupLayout = 1;
-  static const _normalMapBindGroupLayoutKey = 2;
-  static const _displacementMapBindGroupLayoutKey = 3;
-  static const _alphaMaskBindGroupLayoutKey = 4;
 
   final RenderContextWebGPU renderContext;
   late final GPUBindGroupLayout _colorMatrixBindGroupLayout =
@@ -79,114 +71,33 @@ class WebGpuFilterSystem {
     bindGroupLayouts: [_colorMatrixBindGroupLayout].toJS,
   ));
   late final GPUBindGroupLayout _normalMapBindGroupLayout =
-      renderContext.device.createBindGroupLayout(GPUBindGroupLayoutDescriptor(entries: [
-    GPUBindGroupLayoutEntry(
-      binding: 0,
-      visibility: $GPUShaderStage.FRAGMENT,
-      sampler: GPUSamplerBindingLayout(type: 'filtering'),
-    ),
-    GPUBindGroupLayoutEntry(
-      binding: 1,
-      visibility: $GPUShaderStage.FRAGMENT,
-      texture: GPUTextureBindingLayout(sampleType: 'float'),
-    ),
-    GPUBindGroupLayoutEntry(
-      binding: 2,
-      visibility: $GPUShaderStage.FRAGMENT,
-      sampler: GPUSamplerBindingLayout(type: 'filtering'),
-    ),
-    GPUBindGroupLayoutEntry(
-      binding: 3,
-      visibility: $GPUShaderStage.FRAGMENT,
-      texture: GPUTextureBindingLayout(sampleType: 'float'),
-    ),
-    GPUBindGroupLayoutEntry(
-      binding: 4,
-      visibility: $GPUShaderStage.FRAGMENT,
-      buffer: GPUBufferBindingLayout(type: 'uniform'),
-    ),
-  ].toJS));
+      _WebGpuNormalMapFilterProgram.createBindGroupLayout(renderContext.device);
   late final GPUPipelineLayout _normalMapPipelineLayout =
-      renderContext.device.createPipelineLayout(GPUPipelineLayoutDescriptor(
-    bindGroupLayouts: [_normalMapBindGroupLayout].toJS,
-  ));
+      _WebGpuNormalMapFilterProgram.createPipelineLayout(renderContext.device, _normalMapBindGroupLayout);
   late final GPUBindGroupLayout _displacementMapBindGroupLayout =
-      renderContext.device.createBindGroupLayout(GPUBindGroupLayoutDescriptor(entries: [
-    GPUBindGroupLayoutEntry(
-      binding: 0,
-      visibility: $GPUShaderStage.FRAGMENT,
-      sampler: GPUSamplerBindingLayout(type: 'filtering'),
-    ),
-    GPUBindGroupLayoutEntry(
-      binding: 1,
-      visibility: $GPUShaderStage.FRAGMENT,
-      texture: GPUTextureBindingLayout(sampleType: 'float'),
-    ),
-    GPUBindGroupLayoutEntry(
-      binding: 2,
-      visibility: $GPUShaderStage.FRAGMENT,
-      sampler: GPUSamplerBindingLayout(type: 'filtering'),
-    ),
-    GPUBindGroupLayoutEntry(
-      binding: 3,
-      visibility: $GPUShaderStage.FRAGMENT,
-      texture: GPUTextureBindingLayout(sampleType: 'float'),
-    ),
-    GPUBindGroupLayoutEntry(
-      binding: 4,
-      visibility: $GPUShaderStage.FRAGMENT,
-      buffer: GPUBufferBindingLayout(type: 'uniform'),
-    ),
-  ].toJS));
+      _WebGpuDisplacementMapFilterProgram.createBindGroupLayout(renderContext.device);
   late final GPUPipelineLayout _displacementMapPipelineLayout =
-      renderContext.device.createPipelineLayout(GPUPipelineLayoutDescriptor(
-    bindGroupLayouts: [_displacementMapBindGroupLayout].toJS,
-  ));
+      _WebGpuDisplacementMapFilterProgram.createPipelineLayout(renderContext.device, _displacementMapBindGroupLayout);
   late final GPUBindGroupLayout _alphaMaskBindGroupLayout =
-      renderContext.device.createBindGroupLayout(GPUBindGroupLayoutDescriptor(entries: [
-    GPUBindGroupLayoutEntry(
-      binding: 0,
-      visibility: $GPUShaderStage.FRAGMENT,
-      sampler: GPUSamplerBindingLayout(type: 'filtering'),
-    ),
-    GPUBindGroupLayoutEntry(
-      binding: 1,
-      visibility: $GPUShaderStage.FRAGMENT,
-      texture: GPUTextureBindingLayout(sampleType: 'float'),
-    ),
-    GPUBindGroupLayoutEntry(
-      binding: 2,
-      visibility: $GPUShaderStage.FRAGMENT,
-      sampler: GPUSamplerBindingLayout(type: 'filtering'),
-    ),
-    GPUBindGroupLayoutEntry(
-      binding: 3,
-      visibility: $GPUShaderStage.FRAGMENT,
-      texture: GPUTextureBindingLayout(sampleType: 'float'),
-    ),
-    GPUBindGroupLayoutEntry(
-      binding: 4,
-      visibility: $GPUShaderStage.FRAGMENT,
-      buffer: GPUBufferBindingLayout(type: 'uniform'),
-    ),
-  ].toJS));
+      _WebGpuAlphaMaskFilterProgram.createBindGroupLayout(renderContext.device);
   late final GPUPipelineLayout _alphaMaskPipelineLayout =
-      renderContext.device.createPipelineLayout(GPUPipelineLayoutDescriptor(
-    bindGroupLayouts: [_alphaMaskBindGroupLayout].toJS,
-  ));
+      _WebGpuAlphaMaskFilterProgram.createPipelineLayout(renderContext.device, _alphaMaskBindGroupLayout);
   late final GPUShaderModule _normalMapShaderModule =
-      renderContext.device.createShaderModule(GPUShaderModuleDescriptor(code: _normalMapShaderSource));
+      _WebGpuNormalMapFilterProgram.createShaderModule(renderContext.device);
   late final GPUShaderModule _displacementMapShaderModule =
-      renderContext.device.createShaderModule(GPUShaderModuleDescriptor(code: _displacementMapShaderSource));
+      _WebGpuDisplacementMapFilterProgram.createShaderModule(renderContext.device);
   late final GPUShaderModule _alphaMaskShaderModule =
-      renderContext.device.createShaderModule(GPUShaderModuleDescriptor(code: _alphaMaskShaderSource));
+      _WebGpuAlphaMaskFilterProgram.createShaderModule(renderContext.device);
   GPUBuffer? _vertexBuffer;
   GPUBuffer? _indexBuffer;
   GPUBuffer? _normalMapVertexBuffer;
   GPUBuffer? _alphaMaskVertexBuffer;
-  late final GPUBuffer _normalMapUniformBuffer = _createUniformBuffer(80);
-  late final GPUBuffer _displacementMapUniformBuffer = _createUniformBuffer(_displacementMapUniformBytes);
-  late final GPUBuffer _alphaMaskUniformBuffer = _createUniformBuffer(32);
+  late final GPUBuffer _normalMapUniformBuffer =
+      _createUniformBuffer(_WebGpuNormalMapFilterProgram.uniformByteSize);
+  late final GPUBuffer _displacementMapUniformBuffer =
+      _createUniformBuffer(_WebGpuDisplacementMapFilterProgram.uniformByteSize);
+  late final GPUBuffer _alphaMaskUniformBuffer =
+      _createUniformBuffer(_WebGpuAlphaMaskFilterProgram.uniformByteSize);
   final _normalMapPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
   final _displacementMapPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
   final _alphaMaskPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
@@ -728,7 +639,7 @@ class WebGpuFilterSystem {
       ])
       ..setRange(16, 20, [0, 0, 0, 0]);
 
-    final vertices = Float32List(vertexCount * _normalMapFloatsPerVertex);
+    final vertices = Float32List(vertexCount * _WebGpuNormalMapFilterProgram.floatsPerVertex);
     final indices = Uint32List(ixList.length);
 
     var vertexIndex = 0;
@@ -766,7 +677,7 @@ class WebGpuFilterSystem {
       ..writeBuffer(normalMapUniformBuffer, 0, uniformData.buffer.toJS);
 
     final bindGroup = _getTwoTextureBindGroup(
-      layoutKey: _normalMapBindGroupLayoutKey,
+      layoutKey: _WebGpuNormalMapFilterProgram.layoutKey,
       layout: _normalMapBindGroupLayout,
       texture: texture,
       secondTexture: mapTexture,
@@ -862,12 +773,12 @@ class WebGpuFilterSystem {
       ..writeBuffer(displacementMapUniformBuffer, 0, uniformData.buffer.toJS);
 
     final bindGroup = _getTwoTextureBindGroup(
-      layoutKey: _displacementMapBindGroupLayoutKey,
+      layoutKey: _WebGpuDisplacementMapFilterProgram.layoutKey,
       layout: _displacementMapBindGroupLayout,
       texture: texture,
       secondTexture: mapTexture,
       uniformBuffer: displacementMapUniformBuffer,
-      uniformByteSize: _displacementMapUniformBytes,
+      uniformByteSize: _WebGpuDisplacementMapFilterProgram.uniformByteSize,
     );
 
     final stencilValue = renderContext.maskSystem.activeStencilValue;
@@ -924,7 +835,7 @@ class WebGpuFilterSystem {
       0,
     ]);
 
-    final vertices = Float32List(vertexCount * _alphaMaskFloatsPerVertex);
+    final vertices = Float32List(vertexCount * _WebGpuAlphaMaskFilterProgram.floatsPerVertex);
     final indices = Uint32List(ixList.length);
 
     var vertexIndex = 0;
@@ -967,7 +878,7 @@ class WebGpuFilterSystem {
       ..writeBuffer(alphaMaskUniformBuffer, 0, uniformData.buffer.toJS);
 
     final bindGroup = _getTwoTextureBindGroup(
-      layoutKey: _alphaMaskBindGroupLayoutKey,
+      layoutKey: _WebGpuAlphaMaskFilterProgram.layoutKey,
       layout: _alphaMaskBindGroupLayout,
       texture: texture,
       secondTexture: maskTexture,
@@ -1172,106 +1083,35 @@ class WebGpuFilterSystem {
 
   GPURenderPipeline _createNormalMapPipeline(BlendMode blendMode, bool stencilTest) {
     renderContext.renderStatistics.webgpuPipelineCreateCount++;
-    return renderContext.device.createRenderPipeline(GPURenderPipelineDescriptor(
-      label: 'StageXL normal map filter pipeline',
-      layout: _normalMapPipelineLayout,
-      vertex: GPUVertexState(
-        module: _normalMapShaderModule,
-        entryPoint: 'vs_main',
-        buffers: [
-          GPUVertexBufferLayout(
-            arrayStride: _normalMapBytesPerVertex,
-            attributes: [
-              GPUVertexAttribute(format: 'float32x4', offset: 0, shaderLocation: 0),
-              GPUVertexAttribute(format: 'float32x2', offset: 16, shaderLocation: 1),
-              GPUVertexAttribute(format: 'float32x2', offset: 24, shaderLocation: 2),
-            ].toJS,
-          ),
-        ].toJS,
-      ),
-      fragment: GPUFragmentState(
-        module: _normalMapShaderModule,
-        entryPoint: 'fs_main',
-        targets: [
-          GPUColorTargetState(
-            format: renderContext.preferredTextureFormat,
-            blend: renderContext.pipelineSystem.getBlendState(blendMode),
-          ),
-        ].toJS,
-      ),
-      primitive: GPUPrimitiveState(topology: 'triangle-list'),
-      depthStencil: _depthStencilState(stencilTest),
-      multisample: GPUMultisampleState(count: renderContext.sampleCount),
-    ));
+    return _WebGpuNormalMapFilterProgram.createPipeline(
+      renderContext: renderContext,
+      pipelineLayout: _normalMapPipelineLayout,
+      shaderModule: _normalMapShaderModule,
+      blendMode: blendMode,
+      depthStencilState: _depthStencilState(stencilTest),
+    );
   }
 
   GPURenderPipeline _createDisplacementMapPipeline(BlendMode blendMode, bool stencilTest) {
     renderContext.renderStatistics.webgpuPipelineCreateCount++;
-    return renderContext.device.createRenderPipeline(GPURenderPipelineDescriptor(
-      label: 'StageXL displacement map filter pipeline',
-      layout: _displacementMapPipelineLayout,
-      vertex: GPUVertexState(
-        module: _displacementMapShaderModule,
-        entryPoint: 'vs_main',
-        buffers: [
-          GPUVertexBufferLayout(
-            arrayStride: _bytesPerVertex,
-            attributes: [
-              GPUVertexAttribute(format: 'float32x4', offset: 0, shaderLocation: 0),
-              GPUVertexAttribute(format: 'float32x2', offset: 16, shaderLocation: 1),
-            ].toJS,
-          ),
-        ].toJS,
-      ),
-      fragment: GPUFragmentState(
-        module: _displacementMapShaderModule,
-        entryPoint: 'fs_main',
-        targets: [
-          GPUColorTargetState(
-            format: renderContext.preferredTextureFormat,
-            blend: renderContext.pipelineSystem.getBlendState(blendMode),
-          ),
-        ].toJS,
-      ),
-      primitive: GPUPrimitiveState(topology: 'triangle-list'),
-      depthStencil: _depthStencilState(stencilTest),
-      multisample: GPUMultisampleState(count: renderContext.sampleCount),
-    ));
+    return _WebGpuDisplacementMapFilterProgram.createPipeline(
+      renderContext: renderContext,
+      pipelineLayout: _displacementMapPipelineLayout,
+      shaderModule: _displacementMapShaderModule,
+      blendMode: blendMode,
+      depthStencilState: _depthStencilState(stencilTest),
+    );
   }
 
   GPURenderPipeline _createAlphaMaskPipeline(BlendMode blendMode, bool stencilTest) {
     renderContext.renderStatistics.webgpuPipelineCreateCount++;
-    return renderContext.device.createRenderPipeline(GPURenderPipelineDescriptor(
-      label: 'StageXL alpha mask filter pipeline',
-      layout: _alphaMaskPipelineLayout,
-      vertex: GPUVertexState(
-        module: _alphaMaskShaderModule,
-        entryPoint: 'vs_main',
-        buffers: [
-          GPUVertexBufferLayout(
-            arrayStride: _alphaMaskBytesPerVertex,
-            attributes: [
-              GPUVertexAttribute(format: 'float32x4', offset: 0, shaderLocation: 0),
-              GPUVertexAttribute(format: 'float32x2', offset: 16, shaderLocation: 1),
-              GPUVertexAttribute(format: 'float32x2', offset: 24, shaderLocation: 2),
-            ].toJS,
-          ),
-        ].toJS,
-      ),
-      fragment: GPUFragmentState(
-        module: _alphaMaskShaderModule,
-        entryPoint: 'fs_main',
-        targets: [
-          GPUColorTargetState(
-            format: renderContext.preferredTextureFormat,
-            blend: renderContext.pipelineSystem.getBlendState(blendMode),
-          ),
-        ].toJS,
-      ),
-      primitive: GPUPrimitiveState(topology: 'triangle-list'),
-      depthStencil: _depthStencilState(stencilTest),
-      multisample: GPUMultisampleState(count: renderContext.sampleCount),
-    ));
+    return _WebGpuAlphaMaskFilterProgram.createPipeline(
+      renderContext: renderContext,
+      pipelineLayout: _alphaMaskPipelineLayout,
+      shaderModule: _alphaMaskShaderModule,
+      blendMode: blendMode,
+      depthStencilState: _depthStencilState(stencilTest),
+    );
   }
 
   GPURenderPipeline _createFilterPipeline(
@@ -1397,160 +1237,4 @@ class WebGpuFilterSystem {
     renderContext.renderStatistics.addWebGpuFallbackCause('unsupported filter');
     throw UnsupportedError('WebGPU filter parity requires the WGSL multi-pass filter implementation.');
   }
-
-  static const _normalMapShaderSource = '''
-    @group(0) @binding(0) var texSampler: sampler;
-    @group(0) @binding(1) var texTexture: texture_2d<f32>;
-    @group(0) @binding(2) var mapSampler: sampler;
-    @group(0) @binding(3) var mapTexture: texture_2d<f32>;
-
-    struct NormalMapUniforms {
-      ambientColor: vec4<f32>,
-      lightColor: vec4<f32>,
-      lightCoord: vec4<f32>,
-      alpha: f32,
-      padding0: vec3<f32>,
-    };
-
-    @group(0) @binding(4) var<uniform> normalMap: NormalMapUniforms;
-
-    struct VertexInput {
-      @location(0) clip: vec4<f32>,
-      @location(1) texCoord: vec2<f32>,
-      @location(2) mapCoord: vec2<f32>,
-    };
-
-    struct VertexOutput {
-      @builtin(position) position: vec4<f32>,
-      @location(0) texCoord: vec2<f32>,
-      @location(1) mapCoord: vec2<f32>,
-    };
-
-    @vertex
-    fn vs_main(input: VertexInput) -> VertexOutput {
-      var output: VertexOutput;
-      output.position = input.clip;
-      output.texCoord = input.texCoord;
-      output.mapCoord = input.mapCoord;
-      return output;
-    }
-
-    @fragment
-    fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
-      let texColor = textureSample(texTexture, texSampler, input.texCoord);
-      let mapColor = textureSample(mapTexture, mapSampler, input.mapCoord);
-      let mapVector = vec3<f32>(mapColor.r, 1.0 - mapColor.g, mapColor.b);
-      let mapNormal = normalize(mapVector * 2.0 - 1.0);
-
-      let lightDelta = vec3<f32>(normalMap.lightCoord.xy - input.texCoord.xy, normalMap.lightCoord.z);
-      let lightNormal = normalize(lightDelta);
-
-      let diffuse = max(dot(mapNormal, lightNormal), 0.0);
-      let diffuseColor = normalMap.lightColor.rgb * normalMap.lightColor.a * diffuse;
-      let ambientColor = normalMap.ambientColor.rgb * normalMap.ambientColor.a;
-
-      let distance = length(lightDelta.xy);
-      let radius = normalMap.lightCoord.w;
-      let temp = clamp(1.0 - (distance * distance) / (radius * radius), 0.0, 1.0);
-      let attenuation = temp * temp;
-
-      let color = texColor.rgb * (ambientColor + diffuseColor * attenuation);
-      return vec4<f32>(color.rgb, texColor.a) * normalMap.alpha;
-    }
-  ''';
-
-  static const _displacementMapShaderSource = '''
-    @group(0) @binding(0) var texSampler: sampler;
-    @group(0) @binding(1) var texTexture: texture_2d<f32>;
-    @group(0) @binding(2) var mapSampler: sampler;
-    @group(0) @binding(3) var mapTexture: texture_2d<f32>;
-
-    struct DisplacementUniforms {
-      map0: vec4<f32>,
-      map1: vec4<f32>,
-      dis0: vec4<f32>,
-      dis1: vec4<f32>,
-      alpha: vec4<f32>,
-    };
-
-    @group(0) @binding(4) var<uniform> displacement: DisplacementUniforms;
-
-    struct VertexInput {
-      @location(0) clip: vec4<f32>,
-      @location(1) texCoord: vec2<f32>,
-    };
-
-    struct VertexOutput {
-      @builtin(position) position: vec4<f32>,
-      @location(0) texCoord: vec2<f32>,
-    };
-
-    @vertex
-    fn vs_main(input: VertexInput) -> VertexOutput {
-      var output: VertexOutput;
-      output.position = input.clip;
-      output.texCoord = input.texCoord;
-      return output;
-    }
-
-    @fragment
-    fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
-      let mapCoord = vec2<f32>(
-        input.texCoord.x * displacement.map0.x + input.texCoord.y * displacement.map0.y + displacement.map0.z,
-        input.texCoord.x * displacement.map1.x + input.texCoord.y * displacement.map1.y + displacement.map1.z
-      );
-      let mapColor = textureSample(mapTexture, mapSampler, mapCoord);
-      let mapDelta = mapColor.rg - vec2<f32>(0.5, 0.5);
-      let dis = vec2<f32>(
-        mapDelta.x * displacement.dis0.x + mapDelta.y * displacement.dis0.y,
-        mapDelta.x * displacement.dis1.x + mapDelta.y * displacement.dis1.y
-      );
-      return textureSample(texTexture, texSampler, input.texCoord + dis) * displacement.alpha.x;
-    }
-  ''';
-
-  static const _alphaMaskShaderSource = '''
-    @group(0) @binding(0) var texSampler: sampler;
-    @group(0) @binding(1) var texTexture: texture_2d<f32>;
-    @group(0) @binding(2) var mskSampler: sampler;
-    @group(0) @binding(3) var mskTexture: texture_2d<f32>;
-
-    struct AlphaMaskUniforms {
-      mskLimit: vec4<f32>,
-      alpha: vec4<f32>,
-    };
-
-    @group(0) @binding(4) var<uniform> alphaMask: AlphaMaskUniforms;
-
-    struct VertexInput {
-      @location(0) clip: vec4<f32>,
-      @location(1) texCoord: vec2<f32>,
-      @location(2) mskCoord: vec2<f32>,
-    };
-
-    struct VertexOutput {
-      @builtin(position) position: vec4<f32>,
-      @location(0) texCoord: vec2<f32>,
-      @location(1) mskCoord: vec2<f32>,
-    };
-
-    @vertex
-    fn vs_main(input: VertexInput) -> VertexOutput {
-      var output: VertexOutput;
-      output.position = input.clip;
-      output.texCoord = input.texCoord;
-      output.mskCoord = input.mskCoord;
-      return output;
-    }
-
-    @fragment
-    fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
-      let texColor = textureSample(texTexture, texSampler, input.texCoord);
-      let mskColor = textureSample(mskTexture, mskSampler, input.mskCoord);
-      let s1 = step(alphaMask.mskLimit.xy, input.mskCoord.xy);
-      let s2 = step(input.mskCoord.xy, alphaMask.mskLimit.zw);
-      let sAlpha = s1.x * s1.y * s2.x * s2.y;
-      return texColor * (mskColor.a * alphaMask.alpha.x * sAlpha);
-    }
-  ''';
 }
