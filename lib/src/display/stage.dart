@@ -51,48 +51,48 @@ enum StageAlign {
 ///     var stage = Stage(canvas, width: 800, height: 600);
 
 class Stage extends DisplayObjectContainer {
-  static StageOptions defaultOptions = StageOptions();
+  static var defaultOptions = StageOptions();
 
   late HTMLCanvasElement _canvas;
   late final RenderContext _renderContext;
   RenderLoop? _renderLoop;
   StageConsole? _console;
 
-  int _sourceWidth = 0;
-  int _sourceHeight = 0;
-  int _stageWidth = 0;
-  int _stageHeight = 0;
+  var _sourceWidth = 0;
+  var _sourceHeight = 0;
+  var _stageWidth = 0;
+  var _stageHeight = 0;
   num _pixelRatio = 1.0;
-  bool _invalid = false;
+  var _invalid = false;
 
   double _avgFrameTime = 0;
   double _avgDrawCalls = 0;
   double _avgVertexCount = 0;
   double _avgIdexCount = 0;
 
-  final Rectangle<num> _contentRectangle = Rectangle<num>(0.0, 0.0, 0.0, 0.0);
-  final Matrix _clientTransformation = Matrix.fromIdentity();
-  final Matrix _stageTransformation = Matrix.fromIdentity();
-  final Matrix _consoleTransformation = Matrix.fromIdentity();
-  final RenderEvent _renderEvent = RenderEvent();
+  final _contentRectangle = Rectangle<num>(0.0, 0.0, 0.0, 0.0);
+  final _clientTransformation = Matrix.fromIdentity();
+  final _stageTransformation = Matrix.fromIdentity();
+  final _consoleTransformation = Matrix.fromIdentity();
+  final _renderEvent = RenderEvent();
 
   late RenderState _renderState;
-  InputEventMode _inputEventMode = InputEventMode.MouseOnly;
-  bool _renderContextLost = false;
-  bool _renderAfterContextRestore = false;
+  InputEventMode _inputEventMode = .MouseOnly;
+  var _renderContextLost = false;
+  var _renderAfterContextRestore = false;
 
   /// Gets and sets the render mode of this Stage. You can choose between
   /// three different modes defined in [StageRenderMode].
-  StageRenderMode renderMode = StageRenderMode.AUTO;
+  StageRenderMode renderMode = .AUTO;
 
-  StageScaleMode _stageScaleMode = StageScaleMode.SHOW_ALL;
-  StageAlign _stageAlign = StageAlign.NONE;
+  StageScaleMode _stageScaleMode = .SHOW_ALL;
+  StageAlign _stageAlign = .NONE;
 
   String _mouseCursor = MouseCursor.DEFAULT;
-  Point<num> _mousePosition = Point<num>(0.0, 0.0);
+  var _mousePosition = Point<num>(0.0, 0.0);
   InteractiveObject? _mouseTarget;
 
-  final List<_Drag> _drags = <_Drag>[];
+  final _drags = <_Drag>[];
   final Map<int, _TouchPoint> _touchPoints = {};
   final List<_MouseButton> _mouseButtons = _MouseButton.createDefaults();
 
@@ -102,7 +102,7 @@ class Stage extends DisplayObjectContainer {
   /// [RenderLoop] where this Stage is added to. If this Stage is not added
   /// to a RenderLoop, the [Juggler] will not advance in time.
 
-  final Juggler juggler = Juggler();
+  final juggler = Juggler();
 
   /// The interactive object with keyboard focus or null if focus is not set.
 
@@ -114,27 +114,25 @@ class Stage extends DisplayObjectContainer {
 
   /// Prevents the browser's default behavior for touch events.
 
-  bool preventDefaultOnTouch = true;
+  var preventDefaultOnTouch = true;
 
   /// Prevents the browser's default behavior for mouse events.
 
-  bool preventDefaultOnMouse = true;
+  var preventDefaultOnMouse = true;
 
   /// Prevents the browser's default behavior for wheel events.
 
-  bool preventDefaultOnWheel = false;
+  var preventDefaultOnWheel = false;
 
   /// Prevents the browser's default behavior for keyboard events.
 
-  bool preventDefaultOnKeyboard = false;
+  var preventDefaultOnKeyboard = false;
 
   //----------------------------------------------------------------------------
 
-  static const EventStreamProvider<Event> resizeEvent =
-    EventStreamProvider<Event>(Event.RESIZE);
+  static const resizeEvent = EventStreamProvider<Event>(Event.RESIZE);
 
-  static const EventStreamProvider<Event> mouseLeaveEvent =
-    EventStreamProvider<Event>(Event.MOUSE_LEAVE);
+  static const mouseLeaveEvent = EventStreamProvider<Event>(Event.MOUSE_LEAVE);
 
   EventStream<Event> get onResize => Stage.resizeEvent.forTarget(this);
 
@@ -188,8 +186,7 @@ class Stage extends DisplayObjectContainer {
     canvas.onKeyUp.listen(_onKeyEvent);
     canvas.onKeyPress.listen(_onKeyEvent);
 
-    final listenToMouseEvents = _inputEventMode == InputEventMode.MouseOnly ||
-        _inputEventMode == InputEventMode.MouseAndTouch;
+    final listenToMouseEvents = _inputEventMode == .MouseOnly || _inputEventMode == .MouseAndTouch;
 
     if (listenToMouseEvents) {
       canvas.onMouseDown.listen(_onMouseEvent);
@@ -200,8 +197,7 @@ class Stage extends DisplayObjectContainer {
       canvas.onMouseWheel.listen(_onMouseWheelEvent);
     }
 
-    final listenToTouchEvents = _inputEventMode == InputEventMode.TouchOnly ||
-        _inputEventMode == InputEventMode.MouseAndTouch;
+    final listenToTouchEvents = _inputEventMode == .TouchOnly || _inputEventMode == .MouseAndTouch;
 
     if (listenToTouchEvents && env.isTouchEventSupported) {
       canvas.onTouchStart.listen(_onTouchEvent);
@@ -411,15 +407,15 @@ class Stage extends DisplayObjectContainer {
 
   void materialize(num currentTime, num deltaTime) {
     if (_renderContextLost) return;
-    if (renderMode == StageRenderMode.STOP) {
+    if (renderMode == .STOP) {
       _renderAfterContextRestore = false;
       return;
     }
 
     final shouldRender = _renderAfterContextRestore ||
-        renderMode == StageRenderMode.AUTO ||
-        renderMode == StageRenderMode.AUTO_INVALID && _invalid ||
-        renderMode == StageRenderMode.ONCE;
+        renderMode == .AUTO ||
+        renderMode == .AUTO_INVALID && _invalid ||
+        renderMode == .ONCE;
 
     if (shouldRender) {
       final stopwatch = Stopwatch()..start();
@@ -463,8 +459,8 @@ class Stage extends DisplayObjectContainer {
       }
     }
 
-    if (renderMode == StageRenderMode.ONCE) {
-      renderMode = StageRenderMode.STOP;
+    if (renderMode == .ONCE) {
+      renderMode = .STOP;
     }
   }
 
@@ -474,7 +470,7 @@ class Stage extends DisplayObjectContainer {
   RenderContext _createRenderContext(
       HTMLCanvasElement canvas, StageOptions options) {
     switch (options.renderEngine) {
-      case RenderEngine.WebGL || RenderEngine.WebGL2:
+      case .WebGL || .WebGL2:
         final RenderContextWebGL context;
 
         try {
@@ -482,7 +478,7 @@ class Stage extends DisplayObjectContainer {
             canvas,
             alpha: options.transparent, 
             antialias: options.antialias, 
-            forceWebGL1: options.renderEngine == RenderEngine.WebGL,
+            forceWebGL1: options.renderEngine == .WebGL,
             powerPreference: options.powerPreference,
             resetScissorTest: options.resetScissorTestOnRenderStart,
             resetStencilTest: options.resetScissorTestOnRenderStart,
@@ -497,19 +493,19 @@ class Stage extends DisplayObjectContainer {
         }
 
         // Override to medium precision if high is not supported
-        if (options.shaderPrecision == ShaderPrecision.high) {
+        if (options.shaderPrecision == .high) {
           try {
             final gl = context.rawContext;
             final high = gl.getShaderPrecisionFormat(WebGL.FRAGMENT_SHADER, WebGL.HIGH_FLOAT);
-            if (high!.precision <= 0) options.shaderPrecision = ShaderPrecision.medium;
+            if (high!.precision <= 0) options.shaderPrecision = .medium;
           } catch (e) {
-            options.shaderPrecision = ShaderPrecision.medium;
+            options.shaderPrecision = .medium;
           }
         }
 
         return context;
 
-      case RenderEngine.Canvas2D:
+      case .Canvas2D:
         return RenderContextCanvas(canvas);
     }
   }
@@ -556,55 +552,45 @@ class Stage extends DisplayObjectContainer {
     final ratioHeight = clientHeight / sourceHeight;
 
     switch (_stageScaleMode) {
-      case StageScaleMode.EXACT_FIT:
+      case .EXACT_FIT:
         scaleX = ratioWidth;
         scaleY = ratioHeight;
-        break;
-      case StageScaleMode.NO_BORDER:
+      case .NO_BORDER:
         scaleX = scaleY = (ratioWidth > ratioHeight) ? ratioWidth : ratioHeight;
-        break;
-      case StageScaleMode.NO_SCALE:
+      case .NO_SCALE:
         scaleX = scaleY = 1.0;
-        break;
-      case StageScaleMode.SHOW_ALL:
+      case .SHOW_ALL:
         scaleX = scaleY = (ratioWidth < ratioHeight) ? ratioWidth : ratioHeight;
-        break;
     }
 
     switch (_stageAlign) {
-      case StageAlign.LEFT:
-      case StageAlign.BOTTOM_LEFT:
-      case StageAlign.TOP_LEFT:
+      case .LEFT:
+      case .BOTTOM_LEFT:
+      case .TOP_LEFT:
         pivotX = 0.0;
-        break;
-      case StageAlign.TOP:
-      case StageAlign.NONE:
-      case StageAlign.BOTTOM:
+      case .TOP:
+      case .NONE:
+      case .BOTTOM:
         pivotX = (clientWidth - sourceWidth * scaleX) / 2;
-        break;
-      case StageAlign.TOP_RIGHT:
-      case StageAlign.RIGHT:
-      case StageAlign.BOTTOM_RIGHT:
+      case .TOP_RIGHT:
+      case .RIGHT:
+      case .BOTTOM_RIGHT:
         pivotX = clientWidth - sourceWidth * scaleX;
-        break;
     }
 
     switch (_stageAlign) {
-      case StageAlign.TOP_LEFT:
-      case StageAlign.TOP:
-      case StageAlign.TOP_RIGHT:
+      case .TOP_LEFT:
+      case .TOP:
+      case .TOP_RIGHT:
         pivotY = 0.0;
-        break;
-      case StageAlign.LEFT:
-      case StageAlign.NONE:
-      case StageAlign.RIGHT:
+      case .LEFT:
+      case .NONE:
+      case .RIGHT:
         pivotY = (clientHeight - sourceHeight * scaleY) / 2;
-        break;
-      case StageAlign.BOTTOM_LEFT:
-      case StageAlign.BOTTOM:
-      case StageAlign.BOTTOM_RIGHT:
+      case .BOTTOM_LEFT:
+      case .BOTTOM:
+      case .BOTTOM_RIGHT:
         pivotY = clientHeight - sourceHeight * scaleY;
-        break;
     }
 
     //----------------------------
@@ -1142,19 +1128,19 @@ class Stage extends DisplayObjectContainer {
         keyboardEventType = KeyboardEvent.KEY_DOWN;
       }
       if (event.location == html.KeyLocation.LEFT) {
-        keyLocation = KeyLocation.LEFT;
+        keyLocation = .LEFT;
       }
       if (event.location == html.KeyLocation.RIGHT) {
-        keyLocation = KeyLocation.RIGHT;
+        keyLocation = .RIGHT;
       }
       if (event.location == html.KeyLocation.NUMPAD) {
-        keyLocation = KeyLocation.NUM_PAD;
+        keyLocation = .NUM_PAD;
       }
       if (event.location == html.KeyLocation.JOYSTICK) {
-        keyLocation = KeyLocation.D_PAD;
+        keyLocation = .D_PAD;
       }
       if (event.location == html.KeyLocation.MOBILE) {
-        keyLocation = KeyLocation.D_PAD;
+        keyLocation = .D_PAD;
       }
 
       final keyboardEvent = KeyboardEvent(

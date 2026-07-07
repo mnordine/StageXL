@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'environment.dart' as env;
 import 'tools.dart';
 
-Int32List _buffer = Int32List(1024);
+var _buffer = Int32List(1024);
 
 //-----------------------------------------------------------------------------------------------
 

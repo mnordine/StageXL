@@ -4,10 +4,10 @@ class RenderBufferVertex {
   final Float32List data;
   final int usage;
 
-  int position = 0; // position in data list
-  int count = 0; // count of vertices
+  var position = 0; // position in data list
+  var count = 0; // count of vertices
 
-  int _contextIdentifier = -1;
+  var _contextIdentifier = -1;
   WebGLBuffer? _buffer;
   WebGL? _renderingContext;
   late RenderStatistics _renderStatistics;

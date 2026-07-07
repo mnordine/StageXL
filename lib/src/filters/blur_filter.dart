@@ -13,8 +13,8 @@ class BlurFilter extends BitmapFilter {
   late int _blurY;
   late int _quality;
 
-  final List<int> _renderPassSources = <int>[];
-  final List<int> _renderPassTargets = <int>[];
+  final _renderPassSources = <int>[];
+  final _renderPassTargets = <int>[];
 
   //---------------------------------------------------------------------------
   // Credits to Alois Zingl, Vienna, Austria.

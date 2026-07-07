@@ -1,6 +1,6 @@
 part of '../text.dart';
 
-final Map<String, _FontStyleMetrics> _fontStyleMetrics =
+final _fontStyleMetrics =
     <String, _FontStyleMetrics>{};
 
 _FontStyleMetrics _getFontStyleMetrics(TextFormat textFormat) {
@@ -12,9 +12,9 @@ _FontStyleMetrics _getFontStyleMetrics(TextFormat textFormat) {
 //-------------------------------------------------------------------------------------------------
 
 class _FontStyleMetrics {
-  int ascent = 0;
-  int descent = 0;
-  int height = 0;
+  var ascent = 0;
+  var descent = 0;
+  var height = 0;
 
   _FontStyleMetrics(TextFormat textFormat) {
     final fontStyle = textFormat._cssFontStyle;

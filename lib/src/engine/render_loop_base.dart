@@ -2,7 +2,7 @@ part of '../engine.dart';
 
 final _globalFrameListeners = <void Function(double)>[];
 num _globalFrameTime = double.maxFinite;
-int _globalFrameCallbackId = -1;
+var _globalFrameCallbackId = -1;
 
 void _globalFrameCallback(double frameTime) {
     final currentFrameTime = frameTime / 1000.0;
@@ -11,7 +11,7 @@ void _globalFrameCallback(double frameTime) {
     _globalFrameCallbackId = -1;
     _globalFrameRequest();
 
-    for (var f in _globalFrameListeners.toList()) {
+    for (final f in _globalFrameListeners.toList()) {
       f(deltaTime);
     }
 }
@@ -26,7 +26,7 @@ void _globalFrameRequest() {
 //-----------------------------------------------------------------------------
 
 abstract class RenderLoopBase {
-  bool _running = false;
+  var _running = false;
 
   void advanceTime(num deltaTime);
 

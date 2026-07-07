@@ -43,7 +43,7 @@ void main() {
   ];
 
   test('.distance', () {
-    for (var r in distanceTestTable) {
+    for (final r in distanceTestTable) {
       final p1 = Point(r[0], r[1]);
       final p2 = Point(r[2], r[3]);
 
@@ -52,7 +52,7 @@ void main() {
   });
 
   test('#distanceTo', () {
-    for (var r in distanceTestTable) {
+    for (final r in distanceTestTable) {
       final p1 = Point(r[0], r[1]);
       final p2 = Point(r[2], r[3]);
 

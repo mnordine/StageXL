@@ -11,7 +11,7 @@ class AlphaMaskFilter extends BitmapFilter {
   final Matrix matrix;
 
   AlphaMaskFilter(this.bitmapData, [Matrix? matrix])
-      : matrix = matrix ?? Matrix.fromIdentity();
+      : matrix = matrix ?? .fromIdentity();
 
   @override
   BitmapFilter clone() => AlphaMaskFilter(bitmapData, matrix.clone());

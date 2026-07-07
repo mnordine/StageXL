@@ -3,38 +3,38 @@
 part of '../text.dart';
 
 class TextField extends InteractiveObject {
-  String _text = '';
+  var _text = '';
   late TextFormat _defaultTextFormat;
 
   String _autoSize = TextFieldAutoSize.NONE;
   String _type = TextFieldType.DYNAMIC;
 
-  int _caretIndex = 0;
-  int _caretLine = 0;
+  var _caretIndex = 0;
+  var _caretLine = 0;
   num _caretTime = 0.0;
   num _caretX = 0.0;
   num _caretY = 0.0;
   num _caretWidth = 0.0;
   num _caretHeight = 0.0;
 
-  bool _wordWrap = false;
-  bool _multiline = false;
-  bool _displayAsPassword = false;
-  bool _background = false;
-  bool _border = false;
-  String _passwordChar = '•';
+  var _wordWrap = false;
+  var _multiline = false;
+  var _displayAsPassword = false;
+  var _background = false;
+  var _border = false;
+  var _passwordChar = '•';
   int _backgroundColor = Color.White;
   int _borderColor = Color.Black;
-  int maxChars = 0;
+  var maxChars = 0;
   num _width = 100;
   num _height = 100;
 
   num _textWidth = 0.0;
   num _textHeight = 0.0;
-  final List<TextLineMetrics> _textLineMetrics = <TextLineMetrics>[];
+  final _textLineMetrics = <TextLineMetrics>[];
 
-  int _refreshPending = 3; // bit 0: textLineMetrics, bit 1: cache
-  bool _cacheAsBitmap = true;
+  var _refreshPending = 3; // bit 0: textLineMetrics, bit 1: cache
+  var _cacheAsBitmap = true;
 
   RenderTexture? _renderTexture;
   RenderTextureQuad? _renderTextureQuad;
@@ -325,7 +325,7 @@ class TextField extends InteractiveObject {
 
       if (_wordWrap == false) {
         paragraph = _passwordEncoder(paragraph);
-        _textLineMetrics.add(TextLineMetrics._internal(paragraph, startIndex));
+        _textLineMetrics.add(._internal(paragraph, startIndex));
         startIndex += paragraph.length + 1;
       } else {
         checkLine = null;
@@ -344,13 +344,13 @@ class TextField extends InteractiveObject {
           if (lineIndent + lineWidth >= availableWidth) {
             if (validLine == null) {
               _textLineMetrics
-                  .add(TextLineMetrics._internal(checkLine, startIndex));
+                  .add(._internal(checkLine, startIndex));
               startIndex += checkLine.length + 1;
               checkLine = null;
               lineIndent = 0;
             } else {
               _textLineMetrics
-                  .add(TextLineMetrics._internal(validLine, startIndex));
+                  .add(._internal(validLine, startIndex));
               startIndex += validLine.length + 1;
               checkLine = _passwordEncoder(word);
               lineIndent = 0;
@@ -360,7 +360,7 @@ class TextField extends InteractiveObject {
 
         if (checkLine != null) {
           _textLineMetrics
-              .add(TextLineMetrics._internal(checkLine, startIndex));
+              .add(._internal(checkLine, startIndex));
           startIndex += checkLine.length + 1;
         }
       }
@@ -412,17 +412,14 @@ class TextField extends InteractiveObject {
         case TextFieldAutoSize.LEFT:
           _width = autoWidth;
           _height = autoHeight;
-          break;
         case TextFieldAutoSize.RIGHT:
           super.x -= autoWidth - _width;
           _width = autoWidth;
           _height = autoHeight;
-          break;
         case TextFieldAutoSize.CENTER:
           super.x -= (autoWidth - _width) / 2;
           _width = autoWidth;
           _height = autoHeight;
-          break;
       }
     }
 
@@ -435,10 +432,8 @@ class TextField extends InteractiveObject {
     switch (textFormatVerticalAlign) {
       case TextFormatVerticalAlign.CENTER:
         heightOffset = (_height - _textHeight) / 2;
-        break;
       case TextFormatVerticalAlign.BOTTOM:
         heightOffset = _height - _textHeight - textFormatStrokeWidth;
-        break;
     }
 
     //-----------------------------------
@@ -451,11 +446,9 @@ class TextField extends InteractiveObject {
         case TextFormatAlign.CENTER:
         case TextFormatAlign.JUSTIFY:
           textLineMetrics._x += (availableWidth - textLineMetrics.width) / 2;
-          break;
         case TextFormatAlign.RIGHT:
         case TextFormatAlign.END:
           textLineMetrics._x += availableWidth - textLineMetrics.width;
-          break;
         default:
           textLineMetrics._x += textFormatStrokeWidth;
       }
@@ -630,15 +623,13 @@ class TextField extends InteractiveObject {
     CanvasGradient canvasGradient;
 
     switch (gradient.type) {
-      case GraphicsGradientType.Linear:
+      case .Linear:
         canvasGradient = context.createLinearGradient(sx, sy, ex, ey);
-        break;
-      case GraphicsGradientType.Radial:
+      case .Radial:
         canvasGradient = context.createRadialGradient(sx, sy, sr, ex, ey, er);
-        break;
     }
 
-    for (var colorStop in gradient.colorStops) {
+    for (final colorStop in gradient.colorStops) {
       final offset = colorStop.offset;
       final color = color2rgba(colorStop.color);
       canvasGradient.addColorStop(offset, color);
@@ -669,26 +660,22 @@ class TextField extends InteractiveObject {
                 text.substring(0, caretIndex - 1) + text.substring(caretIndex);
             caretIndexNew = caretIndex - 1;
           }
-          break;
 
         case html.KeyCode.END:
           keyboardEvent.preventDefault();
           final tlm = textLineMetrics[caretLine];
           caretIndexNew = tlm._textIndex + tlm._text.length;
-          break;
 
         case html.KeyCode.HOME:
           keyboardEvent.preventDefault();
           final tlm = textLineMetrics[caretLine];
           caretIndexNew = tlm._textIndex;
-          break;
 
         case html.KeyCode.LEFT:
           keyboardEvent.preventDefault();
           if (caretIndex > 0) {
             caretIndexNew = caretIndex - 1;
           }
-          break;
 
         case html.KeyCode.UP:
           keyboardEvent.preventDefault();
@@ -701,14 +688,12 @@ class TextField extends InteractiveObject {
           } else {
             caretIndexNew = 0;
           }
-          break;
 
         case html.KeyCode.RIGHT:
           keyboardEvent.preventDefault();
           if (caretIndex < textLength) {
             caretIndexNew = caretIndex + 1;
           }
-          break;
 
         case html.KeyCode.DOWN:
           keyboardEvent.preventDefault();
@@ -721,7 +706,6 @@ class TextField extends InteractiveObject {
           } else {
             caretIndexNew = textLength;
           }
-          break;
 
         case html.KeyCode.DELETE:
           keyboardEvent.preventDefault();
@@ -730,7 +714,6 @@ class TextField extends InteractiveObject {
                 text.substring(0, caretIndex) + text.substring(caretIndex + 1);
             caretIndexNew = caretIndex;
           }
-          break;
       }
 
       if (caretIndexNew != -1) {

@@ -16,14 +16,10 @@ part of '../display_ex.dart';
 ///
 
 class VideoObject extends InteractiveObject {
-  static const EventStreamProvider<Event> endedEvent =
-      EventStreamProvider<Event>('videoEnded');
-  static const EventStreamProvider<Event> pauseEvent =
-      EventStreamProvider<Event>('videoPause');
-  static const EventStreamProvider<Event> errorEvent =
-      EventStreamProvider<Event>('videoError');
-  static const EventStreamProvider<Event> playEvent =
-      EventStreamProvider<Event>('videoPlay');
+  static const endedEvent = EventStreamProvider<Event>('videoEnded');
+  static const pauseEvent = EventStreamProvider<Event>('videoPause');
+  static const errorEvent = EventStreamProvider<Event>('videoError');
+  static const playEvent = EventStreamProvider<Event>('videoPlay');
 
   EventStream<Event> get onEnded => VideoObject.endedEvent.forTarget(this);
   EventStream<Event> get onPause => VideoObject.pauseEvent.forTarget(this);

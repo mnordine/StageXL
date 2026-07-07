@@ -25,7 +25,7 @@ abstract class ResourceRegistry<T> {
 
 class BitmapDataResourceRegistry extends ResourceRegistry<BitmapData> {
   @override
-  final String kind = 'BitmapData';
+  final kind = 'BitmapData';
 
   BitmapDataResourceRegistry(super.resources);
 
@@ -49,14 +49,14 @@ class BitmapDataResourceRegistry extends ResourceRegistry<BitmapData> {
 
 class TextureAtlasResourceRegistry extends ResourceRegistry<TextureAtlas> {
   @override
-  final String kind = 'TextureAtlas';
+  final kind = 'TextureAtlas';
 
   final _loaders = <String, _TextureAtlasLoaderFile>{};
 
   TextureAtlasResourceRegistry(super.resources);
 
   void add(String name, String url, [TextureAtlasFormat? textureAtlasFormat, BitmapDataLoadOptions? options]) {
-    textureAtlasFormat ??= TextureAtlasFormat.jsonArray;
+    textureAtlasFormat ??= .jsonArray;
 
     final tuple = TextureAtlas.load(url, textureAtlasFormat, options, resources.manifest);
     resources.addResource(kind, name, url, tuple.atlasFuture);
@@ -76,7 +76,7 @@ class TextureAtlasResourceRegistry extends ResourceRegistry<TextureAtlas> {
     }
 
     if (textureAtlas is TextureAtlas && dispose) {
-      for (var textureAtlasFrame in textureAtlas.frames.values) {
+      for (final textureAtlasFrame in textureAtlas.frames.values) {
         textureAtlasFrame.bitmapData.renderTexture.dispose();
       }
     }
@@ -87,7 +87,7 @@ class TextureAtlasResourceRegistry extends ResourceRegistry<TextureAtlas> {
 
 class VideoResourceRegistry extends ResourceRegistry<Video> {
   @override
-  final String kind = 'Video';
+  final kind = 'Video';
 
   VideoResourceRegistry(super.resources);
 
@@ -99,7 +99,7 @@ class VideoResourceRegistry extends ResourceRegistry<Video> {
 
 class SoundResourceRegistry extends ResourceRegistry<Sound> {
   @override
-  final String kind = 'Sound';
+  final kind = 'Sound';
 
   // Key is name
   final _soundDatas = <String, _SoundData>{};
@@ -128,7 +128,7 @@ class SoundResourceRegistry extends ResourceRegistry<Sound> {
 
     // TODO: Just Web Audio API for now, add support for Audio Element (IE 11)
     final data = _soundDatas[name]!;
-    if (data.engine == SoundEngine.WebAudioApi) {
+    if (data.engine == .WebAudioApi) {
       WebAudioApiSound.cancel(data.url);
     }
 
@@ -139,7 +139,7 @@ class SoundResourceRegistry extends ResourceRegistry<Sound> {
 
 class SoundSpriteResourceRegistry extends ResourceRegistry<SoundSprite> {
   @override
-  final String kind = 'SoundSprite';
+  final kind = 'SoundSprite';
 
   SoundSpriteResourceRegistry(super.resources);
 
@@ -151,7 +151,7 @@ class SoundSpriteResourceRegistry extends ResourceRegistry<SoundSprite> {
 
 class TextResourceRegistry extends ResourceRegistry<String> {
   @override
-  final String kind = 'Text';
+  final kind = 'Text';
 
   TextResourceRegistry(super.resources);
 
@@ -162,13 +162,13 @@ class TextResourceRegistry extends ResourceRegistry<String> {
 
 class TextFileResourceRegistry extends ResourceRegistry<String> {
   @override
-  final String kind = 'TextFile';
+  final kind = 'TextFile';
 
   TextFileResourceRegistry(super.resources);
 
   void add(String name, String url) {
     final mappedUrl = resources.manifest.mapUrl(url);
-    final loader = http.get(Uri.parse(mappedUrl)).then((text) => text.body, onError: (error) {
+    final loader = http.get(.parse(mappedUrl)).then((text) => text.body, onError: (error) {
       throw StateError('Failed to load text file.');
     });
     resources.addResource(kind, name, url, loader);
@@ -177,13 +177,13 @@ class TextFileResourceRegistry extends ResourceRegistry<String> {
 
 class AssetManifestResourceRegistry extends ResourceRegistry<AssetManifest> {
   @override
-  final String kind = 'AssetManifest';
+  final kind = 'AssetManifest';
 
   AssetManifestResourceRegistry(super.resources);
 
   void add(String name, String url, [String storagePrefix = '/']) {
     final mappedUrl = resources.manifest.mapUrl(url);
-    final loader = http.get(Uri.parse(mappedUrl)).then((resp) {
+    final loader = http.get(.parse(mappedUrl)).then((resp) {
       final parsed = json.decode(resp.body) as Map<String, dynamic>;
       return AssetManifest(parsed.cast<String, String>(), storagePrefix);
     }, onError: (error) {
@@ -196,7 +196,7 @@ class AssetManifestResourceRegistry extends ResourceRegistry<AssetManifest> {
 
 class CustomObjectResourceRegistry extends ResourceRegistry<dynamic> {
   @override
-  final String kind = 'CustomObject';
+  final kind = 'CustomObject';
 
   CustomObjectResourceRegistry(super.resources);
 

@@ -11,8 +11,8 @@ import '../internal/environment.dart' as env;
 import '../internal/tools.dart';
 
 class ColorMatrixFilter extends BitmapFilter {
-  Float32List _colorMatrixList = Float32List(16);
-  Float32List _colorOffsetList = Float32List(4);
+  var _colorMatrixList = Float32List(16);
+  var _colorOffsetList = Float32List(4);
 
   static const num _lumaR = 0.213;
   static const num _lumaG = 0.715;

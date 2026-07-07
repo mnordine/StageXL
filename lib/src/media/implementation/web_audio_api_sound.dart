@@ -15,7 +15,7 @@ class WebAudioApiSound extends Sound {
     final audioUrls = options.getOptimalAudioUrls(url, manifest);
     final aggregateError = AggregateError('Error loading sound.');
 
-    for (var audioUrl in audioUrls) {
+    for (final audioUrl in audioUrls) {
       try {
         final sound = await _tryAudioUrl(url, audioUrl);
         return sound;
@@ -35,7 +35,7 @@ class WebAudioApiSound extends Sound {
   static Future<Sound> _tryAudioUrl(String key, String audioUrl) {
     final completer = Completer<Sound>();
 
-    _loaders[key] = http.get(Uri.parse(audioUrl)).then((response) async {
+    _loaders[key] = http.get(.parse(audioUrl)).then((response) async {
       if (response.statusCode == 200) {
 
         if (!_loaders.containsKey(key)) {
@@ -95,7 +95,7 @@ class WebAudioApiSound extends Sound {
   //---------------------------------------------------------------------------
 
   @override
-  SoundEngine get engine => SoundEngine.WebAudioApi;
+  SoundEngine get engine => .WebAudioApi;
 
   @override
   num get length => _audioBuffer.duration;

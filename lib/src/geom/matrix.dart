@@ -9,7 +9,7 @@ import 'rectangle.dart';
 import 'vector.dart';
 
 class Matrix {
-  final Float32List _data = Float32List(6);
+  final _data = Float32List(6);
 
   Matrix(num a, num b, num c, num d, num tx, num ty) {
     _data[0] = a.toDouble();

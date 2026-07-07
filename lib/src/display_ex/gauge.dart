@@ -12,10 +12,10 @@ part of '../display_ex.dart';
 ///     resourceManager.onProgress.listen((progress) => gauge.ratio = progress);
 
 class Gauge extends DisplayObject {
-  static const String DIRECTION_UP = 'DIRECTION_UP';
-  static const String DIRECTION_RIGHT = 'DIRECTION_RIGHT';
-  static const String DIRECTION_DOWN = 'DIRECTION_DOWN';
-  static const String DIRECTION_LEFT = 'DIRECTION_LEFT';
+  static const DIRECTION_UP = 'DIRECTION_UP';
+  static const DIRECTION_RIGHT = 'DIRECTION_RIGHT';
+  static const DIRECTION_DOWN = 'DIRECTION_DOWN';
+  static const DIRECTION_LEFT = 'DIRECTION_LEFT';
 
   BitmapData bitmapData;
   String direction;

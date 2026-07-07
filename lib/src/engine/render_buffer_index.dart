@@ -4,10 +4,10 @@ class RenderBufferIndex {
   final Int16List data;
   final int usage;
 
-  int position = 0; // position in data list
-  int count = 0; // count of indices
+  var position = 0; // position in data list
+  var count = 0; // count of indices
 
-  int _contextIdentifier = -1;
+  var _contextIdentifier = -1;
   WebGLBuffer? _buffer;
   WebGL? _renderingContext;
   late RenderStatistics _renderStatistics;

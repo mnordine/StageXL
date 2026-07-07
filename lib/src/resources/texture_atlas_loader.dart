@@ -28,7 +28,7 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
   final AssetManifest _manifest;
 
   BaseImageLoader? _imageLoader;
-  bool _cancelled = false;
+  var _cancelled = false;
 
   static const compressedTextureFormats = {'.pvr', '.pvr.gz', '.ktx'};
 
@@ -42,7 +42,7 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
 
   @override
   Future<String> getSource() async {
-    final response = await http.get(Uri.parse(_manifest.mapUrl(_loadInfo.loaderUrl)));
+    final response = await http.get(.parse(_manifest.mapUrl(_loadInfo.loaderUrl)));
     return response.body;
   }
 
@@ -81,12 +81,12 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
       if (env.isImageBitmapSupported) {
         final loader = _imageLoader = ImageBitmapLoader(imageUrl);
         final imageLoader = await loader.done;
-        renderTexture = RenderTexture.fromImageBitmap(imageLoader);
+        renderTexture = .fromImageBitmap(imageLoader);
       } else {
         final corsEnabled = _loadOptions.corsEnabled;
         final imageLoader = _imageLoader = ImageLoader(imageUrl, corsEnabled);
         final imageElement = await imageLoader.done;
-        renderTexture = RenderTexture.fromImageElement(imageElement);
+        renderTexture = .fromImageElement(imageElement);
       }
     }
 
@@ -101,20 +101,13 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
       ext = filenameParts[filenameParts.length - 2];
     }
 
-    CompressedTextureFileTypes type;
+    final type = switch (ext) {
+      'pvr' => CompressedTextureFileTypes.pvr,
+      'ktx' => CompressedTextureFileTypes.ktx,
+      _ => throw LoadError('unknown extension $ext'),
+    };
 
-    switch (ext) {
-      case 'pvr':
-        type = CompressedTextureFileTypes.pvr;
-        break;
-      case 'ktx':
-        type = CompressedTextureFileTypes.ktx;
-        break;
-      default:
-        throw LoadError('unknown extension $ext');
-    }
-
-    return http.get(Uri.parse(filename))
+    return http.get(.parse(filename))
       .then((response) {
         if (_cancelled) {
           throw LoadError('compressed texture load cancelled');
@@ -130,23 +123,19 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
       });
   }
 
-  RenderTexture _decodeCompressedTexture(ByteBuffer buffer, CompressedTextureFileTypes type) {
-    switch (type) {
-      case CompressedTextureFileTypes.pvr:
-        return _decodePvr(buffer);
-      case CompressedTextureFileTypes.ktx:
-        return _decodeKtx(buffer);
-    }
-  }
+  RenderTexture _decodeCompressedTexture(ByteBuffer buffer, CompressedTextureFileTypes type) => switch (type) {
+    .pvr => _decodePvr(buffer),
+    .ktx => _decodeKtx(buffer),
+  };
 
   RenderTexture _decodePvr(ByteBuffer buffer) {
     final tex = PvrTexture(buffer);
-    return RenderTexture.fromCompressedTexture(tex);
+    return .fromCompressedTexture(tex);
   }
 
   RenderTexture _decodeKtx(ByteBuffer buffer) {
     final tex = KtxTexture(buffer);
-    return RenderTexture.fromCompressedTexture(tex);
+    return .fromCompressedTexture(tex);
   }
 
   bool _isCompressedTexture(String filename) => compressedTextureFormats.any((format) => filename.endsWith(format));

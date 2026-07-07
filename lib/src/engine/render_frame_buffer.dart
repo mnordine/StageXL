@@ -5,15 +5,15 @@ class RenderFrameBuffer {
   RenderStencilBuffer? _renderStencilBuffer;
   late RenderContextWebGL _renderContext;
 
-  int _contextIdentifier = -1;
+  var _contextIdentifier = -1;
   WebGLFramebuffer? _framebuffer;
   WebGL? _renderingContext;
 
-  final List<_MaskState> _maskStates = <_MaskState>[];
+  final _maskStates = <_MaskState>[];
 
   RenderFrameBuffer.rawWebGL(int width, int height) {
-    _renderTexture = RenderTexture.rawWebGL(width, height);
-    _renderStencilBuffer = RenderStencilBuffer.rawWebGL(width, height);
+    _renderTexture = .rawWebGL(width, height);
+    _renderStencilBuffer = .rawWebGL(width, height);
   }
 
   //---------------------------------------------------------------------------

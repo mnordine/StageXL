@@ -2,7 +2,7 @@ part of '../../drawing.dart';
 
 class _GraphicsPathSegment extends _GraphicsMeshSegment {
   bool? _clockwise;
-  bool closed = false;
+  var closed = false;
 
   _GraphicsPathSegment() : super(16, 32);
 

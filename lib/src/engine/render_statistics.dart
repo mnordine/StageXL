@@ -1,9 +1,9 @@
 part of '../engine.dart';
 
 class RenderStatistics {
-  int drawCount = 0;
-  int vertexCount = 0;
-  int indexCount = 0;
+  var drawCount = 0;
+  var vertexCount = 0;
+  var indexCount = 0;
 
   void reset() {
     drawCount = 0;

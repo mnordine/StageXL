@@ -1,17 +1,17 @@
 part of '../engine.dart';
 
 class RenderTexture {
-  int _width = 0;
-  int _height = 0;
+  var _width = 0;
+  var _height = 0;
 
   CanvasImageSource? _source;
   HTMLCanvasElement? _canvas;
-  RenderTextureFiltering _filtering = RenderTextureFiltering.LINEAR;
-  RenderTextureWrapping _wrappingX = RenderTextureWrapping.CLAMP;
-  RenderTextureWrapping _wrappingY = RenderTextureWrapping.CLAMP;
+  RenderTextureFiltering _filtering = .LINEAR;
+  RenderTextureWrapping _wrappingX = .CLAMP;
+  RenderTextureWrapping _wrappingY = .CLAMP;
   RenderContextWebGL? _renderContext;
 
-  int _contextIdentifier = -1;
+  var _contextIdentifier = -1;
 
   CompressedTexture? _compressedTexture;
   WebGL? _renderingContext;
@@ -85,7 +85,7 @@ class RenderTexture {
 
   ImageBitmap? get imageBitmap => _source.isA<ImageBitmap>() ? _source as ImageBitmap : null;
 
-  RenderTextureQuad get quad => RenderTextureQuad(
+  RenderTextureQuad get quad => .new(
       this,
       Rectangle<int>(0, 0, _width, _height),
       Rectangle<int>(0, 0, _width, _height),
@@ -105,21 +105,12 @@ class RenderTexture {
       return _canvas!;
     } else if (_source.isA<ImageBitmap>()) {
       final image = _source as ImageBitmap;
-      _source = _canvas = HTMLCanvasElement()
+      final canvas = _source = _canvas = HTMLCanvasElement()
         ..width = _width
         ..height = _height;
 
-      // Note: We need to use js_util.callMethod, because Dart SDK
-      // does not support ImageBitmap as a CanvasImageSource
-      _canvas!.context2D.drawImage(
-        image,
-        0,
-        0,
-        _width,
-        _height,
-      );
-
-      return _canvas!;
+      canvas.context2D.drawImage(image, 0, 0, _width, _height);
+      return canvas;
     } else {
       throw StateError('RenderTexture is read only.');
     }

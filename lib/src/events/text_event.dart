@@ -8,8 +8,8 @@ part of '../events.dart';
 /// * [TextEvent.LINK]
 /// * [TextEvent.TEXT_INPUT]
 class TextEvent extends Event {
-  static const String LINK = 'link';
-  static const String TEXT_INPUT = 'textInput';
+  static const LINK = 'link';
+  static const TEXT_INPUT = 'textInput';
 
   //---------------------------------------------------------------------------
 
@@ -23,7 +23,7 @@ class TextEvent extends Event {
 
   //---------------------------------------------------------------------------
 
-  bool _isDefaultPrevented = false;
+  var _isDefaultPrevented = false;
 
   void preventDefault() {
     _isDefaultPrevented = true;

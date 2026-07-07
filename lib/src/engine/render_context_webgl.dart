@@ -1,20 +1,20 @@
 part of '../engine.dart';
 
 class RenderContextWebGL extends RenderContext {
-  static int _globalContextIdentifier = 0;
+  static var _globalContextIdentifier = 0;
   final HTMLCanvasElement _canvasElement;
 
   late final WebGL _renderingContext;
-  final Matrix3D _projectionMatrix = Matrix3D.fromIdentity();
-  final List<_MaskState> _maskStates = <_MaskState>[];
+  final _projectionMatrix = Matrix3D.fromIdentity();
+  final _maskStates = <_MaskState>[];
 
   late RenderProgram _activeRenderProgram;
   RenderFrameBuffer? _activeRenderFrameBuffer;
   RenderStencilBuffer? _activeRenderStencilBuffer;
   BlendMode? _activeBlendMode;
 
-  bool _contextValid = true;
-  int _contextIdentifier = 0;
+  var _contextValid = true;
+  var _contextIdentifier = 0;
   late final bool _isWebGL2;
 
   bool get isWebGL2 => _isWebGL2;
@@ -38,16 +38,16 @@ class RenderContextWebGL extends RenderContext {
 
   //---------------------------------------------------------------------------
 
-  final RenderProgramTinted renderProgramTinted = RenderProgramTinted();
-  final RenderProgramTriangle renderProgramTriangle = RenderProgramTriangle();
-  final RenderProgramBatch renderProgramBatch = RenderProgramBatch();
+  final renderProgramTinted = RenderProgramTinted();
+  final renderProgramTriangle = RenderProgramTriangle();
+  final renderProgramBatch = RenderProgramBatch();
 
-  final RenderBufferIndex renderBufferIndex = RenderBufferIndex(16384 * 2);
-  final RenderBufferVertex renderBufferVertex = RenderBufferVertex(32768 * 2);
+  final renderBufferIndex = RenderBufferIndex(16384 * 2);
+  final renderBufferVertex = RenderBufferVertex(32768 * 2);
 
   late final List<RenderTexture?> _activeRenderTextures;
-  final List<RenderFrameBuffer> _renderFrameBufferPool = <RenderFrameBuffer>[];
-  final Map<String, RenderProgram> _renderPrograms = <String, RenderProgram>{};
+  final _renderFrameBufferPool = <RenderFrameBuffer>[];
+  final _renderPrograms = <String, RenderProgram>{};
 
   final bool _resetScissorTest;
   final bool _resetStencilTest;
@@ -56,18 +56,15 @@ class RenderContextWebGL extends RenderContext {
   //---------------------------------------------------------------------------
 
   RenderContextWebGL(
-    HTMLCanvasElement canvasElement, {
+    this._canvasElement, {
     required PowerPreference powerPreference,
     bool alpha = false,
     bool antialias = false,
     bool forceWebGL1 = false,
-    bool resetScissorTest = true,
-    bool resetStencilTest = true,
-    bool resetColor = true,
-  }) : _canvasElement = canvasElement,
-       _resetScissorTest = resetScissorTest,
-       _resetStencilTest = resetStencilTest,
-       _resetColor = resetColor {
+    this._resetScissorTest = true,
+    this._resetStencilTest = true,
+    this._resetColor = true,
+  }) {
     _canvasElement.onWebGlContextLost.listen(_onContextLost);
     _canvasElement.onWebGlContextRestored.listen(_onContextRestored);
 
@@ -98,7 +95,7 @@ class RenderContextWebGL extends RenderContext {
 
     // Initialize max textures for RenderProgramBatch
     final maxTextureUnits = RenderProgramBatch.initializeMaxTextures(_renderingContext, isWebGL2: _isWebGL2);
-    _activeRenderTextures = List.filled(maxTextureUnits, null);
+    _activeRenderTextures = .filled(maxTextureUnits, null);
 
     _contextValid = true;
     _contextIdentifier = ++_globalContextIdentifier;
@@ -348,7 +345,7 @@ class RenderContextWebGL extends RenderContext {
   GLContext get rawContext => _renderingContext;
 
   @override
-  RenderEngine get renderEngine => _isWebGL2 ? RenderEngine.WebGL2 : RenderEngine.WebGL;
+  RenderEngine get renderEngine => _isWebGL2 ? .WebGL2 : .WebGL;
 
   @override
   int? get maxTextureSize => (_renderingContext.getParameter(WebGL.MAX_TEXTURE_SIZE) as JSNumber?)?.toDartInt;
@@ -390,8 +387,8 @@ class RenderContextWebGL extends RenderContext {
       _activeRenderProgram.projectionMatrix = _projectionMatrix;
     }
 
-    if (_activeBlendMode != BlendMode.NORMAL) {
-      _activeBlendMode = BlendMode.NORMAL;
+    if (_activeBlendMode != .NORMAL) {
+      _activeBlendMode = .NORMAL;
       _renderingContext.blendFunc(WebGL.ONE, WebGL.ONE_MINUS_SRC_ALPHA);
     }
   }
@@ -564,7 +561,7 @@ class RenderContextWebGL extends RenderContext {
 
   void _renderFullScreenQuadFallback() {
     activateRenderProgram(renderProgramTriangle);
-    activateBlendMode(BlendMode.NONE);
+    activateBlendMode(.NONE);
 
     renderProgramTriangle.renderTriangleMesh(
       RenderState(this),
@@ -696,7 +693,7 @@ class RenderContextWebGL extends RenderContext {
 
     activateRenderFrameBuffer(filterRenderFrameBuffer);
     activateProjectionMatrix(filterProjectionMatrix);
-    activateBlendMode(BlendMode.NORMAL);
+    activateBlendMode(.NORMAL);
     clear(0);
 
     if (filters.isEmpty) {
@@ -756,13 +753,13 @@ class RenderContextWebGL extends RenderContext {
         } else if (renderFrameBufferMap.containsKey(renderPassTarget)) {
           filterRenderFrameBuffer = renderFrameBufferMap[renderPassTarget];
           activateRenderFrameBuffer(filterRenderFrameBuffer);
-          activateBlendMode(BlendMode.NORMAL);
+          activateBlendMode(.NORMAL);
         } else {
           filterRenderFrameBuffer =
               getRenderFrameBuffer(boundsWidth, boundsHeight);
           renderFrameBufferMap[renderPassTarget] = filterRenderFrameBuffer;
           activateRenderFrameBuffer(filterRenderFrameBuffer);
-          activateBlendMode(BlendMode.NORMAL);
+          activateBlendMode(.NORMAL);
           clear(0);
         }
 

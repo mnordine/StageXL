@@ -123,7 +123,7 @@ class EventDispatcher {
   /// Dispatches the [event] to all listening subscribers.
 
   void dispatchEvent(Event event) {
-    dispatchEventRaw(event, this, EventPhase.AT_TARGET);
+    dispatchEventRaw(event, this, .AT_TARGET);
   }
 
   //----------------------------------------------------------------------------

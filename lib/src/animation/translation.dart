@@ -40,9 +40,9 @@ class Translation implements Animatable {
   /// Specifies if the values should be rounded to an integer.
   ///
   /// Default is false.
-  bool roundToInt = false;
+  var roundToInt = false;
 
-  bool _started = false;
+  var _started = false;
 
   /// Creates a new [Translation].
   Translation(num startValue, num targetValue, num time,

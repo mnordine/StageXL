@@ -8,7 +8,7 @@ part of '../display_ex.dart';
 /// of the [transformationMatrix] on your own.
 
 class Warp extends DisplayObjectContainer {
-  Matrix matrix = Matrix.fromIdentity();
+  var matrix = Matrix.fromIdentity();
 
   @override
   Matrix get transformationMatrix => matrix;

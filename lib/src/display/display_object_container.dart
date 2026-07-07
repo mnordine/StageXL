@@ -12,7 +12,7 @@ part of '../display.dart';
 
 abstract class DisplayObjectContainer extends InteractiveObject
     implements DisplayObjectParent<DisplayObject> {
-  final List<DisplayObject> _children = <DisplayObject>[];
+  final _children = <DisplayObject>[];
 
   /// Determines whether or not the children of the object are mouse, or user
   /// input device, enabled.
@@ -33,18 +33,17 @@ abstract class DisplayObjectContainer extends InteractiveObject
   ///
   /// No event is dispatched by setting this property. You must use the on...()
   /// event methods to create interactive functionality.
-  bool mouseChildren = true;
+  var mouseChildren = true;
 
   /// Determines whether the children of this container are tab enabled.
   ///
   /// The default is true.
-  bool tabChildren = true;
+  var tabChildren = true;
 
   //----------------------------------------------------------------------------
 
   @override
-  DisplayObjectChildren<DisplayObject> get children =>
-      DisplayObjectChildren<DisplayObject>._(this, _children);
+  DisplayObjectChildren<DisplayObject> get children => ._(this, _children);
 
   /// The number of children of this container.
 
@@ -321,7 +320,7 @@ abstract class DisplayObjectContainer extends InteractiveObject
     final result = <DisplayObject>[];
     final temp = Point<num>(0.0, 0.0);
 
-    for (var child in _children) {
+    for (final child in _children) {
       child.parentToLocal(point, temp);
       if (child is DisplayObjectContainer) {
         result.addAll(child.getObjectsUnderPoint(temp));

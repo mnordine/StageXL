@@ -3,7 +3,7 @@ part of '../display_ex.dart';
 class ViewportContainer extends DisplayObjectContainer {
   Mask? _viewportMask;
   Rectangle<num>? _viewportRectangle;
-  final Matrix _viewportMatrix = Matrix.fromIdentity();
+  final _viewportMatrix = Matrix.fromIdentity();
 
   Rectangle<num>? get viewport => _viewportRectangle?.clone();
 

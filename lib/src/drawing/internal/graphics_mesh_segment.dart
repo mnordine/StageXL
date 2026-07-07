@@ -4,15 +4,15 @@ abstract class _GraphicsMeshSegment {
   Float32List _vertexBuffer;
   Int16List _indexBuffer;
 
-  int _vertexCount = 0;
-  int _indexCount = 0;
+  var _vertexCount = 0;
+  var _indexCount = 0;
 
   double _minX = 0.0 + double.maxFinite;
   double _minY = 0.0 + double.maxFinite;
   double _maxX = 0.0 - double.maxFinite;
   double _maxY = 0.0 - double.maxFinite;
 
-  final Matrix _tmpMatrix = Matrix.fromIdentity();
+  final _tmpMatrix = Matrix.fromIdentity();
 
   //---------------------------------------------------------------------------
 
@@ -119,19 +119,10 @@ abstract class _GraphicsMeshSegment {
     final renderContext = renderState.renderContext as RenderContextWebGL;
     final renderTexture = gradient.getRenderTexture();
 
-    _GraphicsGradientProgram renderProgram;
-
-    switch (gradient.type) {
-      case GraphicsGradientType.Linear:
-        renderProgram = renderContext.getRenderProgram(
-            r'$LinearGraphicsGradientProgram',
-            _LinearGraphicsGradientProgram.new);
-        break;
-      case GraphicsGradientType.Radial:
-        renderProgram = renderContext.getRenderProgram(
-            r'$RadialGraphicsGradientProgram',
-            _RadialGraphicsGradientProgram.new);
-    }
+    final renderProgram = switch (gradient.type) {
+      .Linear => renderContext.getRenderProgram(r'$LinearGraphicsGradientProgram', _LinearGraphicsGradientProgram.new),
+      .Radial => renderContext.getRenderProgram(r'$RadialGraphicsGradientProgram', _RadialGraphicsGradientProgram.new),
+    };
 
     if (renderProgram.activeGradient != gradient) {
       renderProgram.activeGradient = gradient;

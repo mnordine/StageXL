@@ -52,7 +52,7 @@ class AudioElementSound extends Sound {
   //---------------------------------------------------------------------------
 
   @override
-  SoundEngine get engine => SoundEngine.AudioElement;
+  SoundEngine get engine => .AudioElement;
 
   @override
   num get length => _audioElement.duration;
@@ -75,7 +75,7 @@ class AudioElementSound extends Sound {
 
   Future<HTMLAudioElement> _requestAudioElement(
       AudioElementSoundChannel soundChannel) async {
-    for (var audioElement in _soundChannels.keys) {
+    for (final audioElement in _soundChannels.keys) {
       if (_soundChannels[audioElement] == null) {
         _soundChannels[audioElement] = soundChannel;
         return audioElement;

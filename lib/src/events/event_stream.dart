@@ -13,7 +13,7 @@ class EventStream<T extends Event> extends Stream<T> {
   // This is safe and gives good performance in JavaScript.
 
   List<EventStreamSubscription<T>?> _subscriptions = [];
-  int _capturingSubscriptionCount = 0;
+  var _capturingSubscriptionCount = 0;
 
   EventStream._(this.target, this.eventType);
 
@@ -185,7 +185,7 @@ class EventStream<T extends Event> extends Stream<T> {
   void _dispatchEventInternal(
       T event, EventDispatcher target, EventPhase eventPhase) {
     final subscriptions = _subscriptions;
-    final isCapturing = eventPhase == EventPhase.CAPTURING_PHASE;
+    final isCapturing = eventPhase == .CAPTURING_PHASE;
 
     for (var i = 0; i < subscriptions.length; i++) {
       final subscription = subscriptions[i];

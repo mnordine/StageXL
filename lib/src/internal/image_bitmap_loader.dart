@@ -5,20 +5,20 @@ import 'dart:js_interop';
 import 'package:stagexl/stagexl.dart';
 import 'package:web/web.dart';
 
-import '../internal/image_loader.dart';
+import 'image_loader.dart';
 import 'package:http/http.dart' as http;
 
 class ImageBitmapLoader implements BaseImageLoader<ImageBitmap> {
   final String _url;
   final _completer = Completer<ImageBitmap>();
-  bool _cancelled = false;
+  var _cancelled = false;
 
   ImageBitmapLoader(this._url) {
     _load(_url);
   }
 
   void _load(String url) {
-    http.get(Uri.parse(url)).then((response) {
+    http.get(.parse(url)).then((response) {
       if (_cancelled) {
         _completer.completeError(LoadError('image bitmap load cancelled'));
         return;

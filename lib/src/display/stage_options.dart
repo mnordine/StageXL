@@ -13,7 +13,7 @@ class StageOptions {
   /// Setting the render engine to WebGL will automatically fallback
   /// to Canvas2D if WebGL is not supported.
 
-  RenderEngine renderEngine = RenderEngine.WebGL2;
+  RenderEngine renderEngine = .WebGL2;
 
   /// The [InputEventMode] used for input events on the [Stage].
   ///
@@ -22,11 +22,11 @@ class StageOptions {
   /// you won't get any input events if you choose `TouchOnly` when
   /// there is no touch screen available.
 
-  InputEventMode inputEventMode = InputEventMode.MouseOnly;
+  InputEventMode inputEventMode = .MouseOnly;
 
   /// The [StageRenderMode] used to render the [Stage].
 
-  StageRenderMode stageRenderMode = StageRenderMode.AUTO;
+  StageRenderMode stageRenderMode = .AUTO;
 
   /// The [StageScaleMode] used to render the [Stage].
   ///
@@ -35,7 +35,7 @@ class StageOptions {
   /// can change the behavior at runtime by changing the [Stage.scaleMode]
   /// property.
 
-  StageScaleMode stageScaleMode = StageScaleMode.SHOW_ALL;
+  StageScaleMode stageScaleMode = .SHOW_ALL;
 
   /// The [StageAlign] used to render the [Stage].
   ///
@@ -43,7 +43,7 @@ class StageOptions {
   /// is aligned on the canvas element. You can change the behavior at
   /// runtime by changing the [Stage.align] property.
 
-  StageAlign stageAlign = StageAlign.NONE;
+  StageAlign stageAlign = .NONE;
 
   /// The background color for the [Stage].
   ///
@@ -59,7 +59,7 @@ class StageOptions {
   /// The WebGL render engine supports transparency but there is performance
   /// penalty for setting this flag to 'true'.
 
-  bool transparent = false;
+  var transparent = false;
 
   /// Initialize the render engine to support anti-aliasing for the [Stage].
   ///
@@ -68,7 +68,7 @@ class StageOptions {
   /// The WebGL render engine supports anti-aliasing but there is performance
   /// penalty fo setting this flag to 'true'.
 
-  bool antialias = false;
+  var antialias = false;
 
   /// The maximum pixel ratio used to initialize the [Stage].
   ///
@@ -87,7 +87,7 @@ class StageOptions {
   /// browser will ignore the event. This does not affect the event
   /// propagation from the Stage to the display objects.
 
-  bool preventDefaultOnTouch = true;
+  var preventDefaultOnTouch = true;
 
   /// Prevents the browser's default behavior for mouse events.
   ///
@@ -96,7 +96,7 @@ class StageOptions {
   /// browser will ignore the event. This does not affect the event
   /// propagation from the Stage to the display objects.
 
-  bool preventDefaultOnMouse = true;
+  var preventDefaultOnMouse = true;
 
   /// Prevents the browser's default behavior for wheel events.
   ///
@@ -105,7 +105,7 @@ class StageOptions {
   /// browser will ignore the event. This does not affect the event
   /// propagation from the Stage to the display objects.
 
-  bool preventDefaultOnWheel = false;
+  var preventDefaultOnWheel = false;
 
   /// Prevents the browser's default behavior for keyboard events.
   ///
@@ -114,34 +114,31 @@ class StageOptions {
   /// browser will ignore the event. This does not affect the event
   /// propagation from the Stage to the display objects.
 
-  bool preventDefaultOnKeyboard = false;
+  var preventDefaultOnKeyboard = false;
 
   /// The power preference for the WebGL render engine.
-  PowerPreference powerPreference = PowerPreference.normal;
+  PowerPreference powerPreference = .normal;
 
-  String _shaderPrecision = 'mediump';
+  var _shaderPrecision = 'mediump';
 
-  ShaderPrecision get shaderPrecision {
-    switch (_shaderPrecision) {
-      case 'mediump': return ShaderPrecision.medium;
-      case 'highp': return ShaderPrecision.high;
-    }
-
-    throw ArgumentError('cannot get here');
-  }
+  ShaderPrecision get shaderPrecision => switch (_shaderPrecision) {
+    'mediump' => .medium,
+    'highp' => .high,
+    _ => throw ArgumentError('cannot get here'),
+  };
 
   set shaderPrecision(ShaderPrecision value) {
-    switch (value) {
-      case ShaderPrecision.medium: _shaderPrecision = 'mediump'; break;
-      case ShaderPrecision.high: _shaderPrecision = 'highp'; break;
-    }
+    _shaderPrecision = switch (value) {
+      .medium => 'mediump',
+      .high => 'highp',
+    };
 
     RenderProgram.fragmentPrecision = _shaderPrecision;
   }
 
-  bool resetScissorTestOnRenderStart = true;
-  bool resetStencilTestOnRenderStart = true;
-  bool resetColorOnRenderStart = true;
+  var resetScissorTestOnRenderStart = true;
+  var resetStencilTestOnRenderStart = true;
+  var resetColorOnRenderStart = true;
 
   //---------------------------------------------------------------------------
 

@@ -11,14 +11,12 @@ class GraphicsGradientColorStop {
 enum GraphicsGradientType { Linear, Radial }
 
 class GraphicsGradient {
-  static const int GRADIENT_TEXTURE_SIZE = 512;
+  static const GRADIENT_TEXTURE_SIZE = 512;
 
-  static final SharedCache<String, CanvasGradient> _canvasGradientCache =
-      SharedCache<String, CanvasGradient>();
+  static final _canvasGradientCache = SharedCache<String, CanvasGradient>();
 
-  static final SharedCache<String, RenderTexture> _gradientTextureCache =
-      SharedCache<String, RenderTexture>()
-        ..onObjectReleased.listen((e) => e.object.dispose());
+  static final _gradientTextureCache = SharedCache<String, RenderTexture>()
+      ..onObjectReleased.listen((e) => e.object.dispose());
 
   /// cached by the Canvas2D renderer
   CanvasGradient? _canvasGradient;
@@ -30,34 +28,19 @@ class GraphicsGradient {
 
   num _startX;
   num _startY;
-  num _startRadius;
   num _endX;
   num _endY;
-  num _endRadius;
+  num _startRadius = 0;
+  num _endRadius = 0;
 
-  final List<GraphicsGradientColorStop> _colorStops;
+  final _colorStops = <GraphicsGradientColorStop>[];
   GraphicsGradientType _type;
 
-  GraphicsGradient.linear(num startX, num startY, num endX, num endY)
-      : _startX = startX,
-        _startY = startY,
-        _startRadius = 0,
-        _endX = endX,
-        _endY = endY,
-        _endRadius = 0,
-        _colorStops = <GraphicsGradientColorStop>[],
-        _type = GraphicsGradientType.Linear;
+  GraphicsGradient.linear(this._startX, this._startY, this._endX, this._endY)
+      : _type = .Linear;
 
-  GraphicsGradient.radial(num startX, num startY, num startRadius, num endX,
-      num endY, num endRadius)
-      : _startX = startX,
-        _startY = startY,
-        _startRadius = startRadius,
-        _endX = endX,
-        _endY = endY,
-        _endRadius = endRadius,
-        _colorStops = <GraphicsGradientColorStop>[],
-        _type = GraphicsGradientType.Radial;
+  GraphicsGradient.radial(this._startX, this._startY, this._startRadius, this._endX, this._endY, this._endRadius)
+      : _type = .Radial;
 
   //---------------------------------------------------------------------------
 
@@ -148,7 +131,7 @@ class GraphicsGradient {
       _canvasGradient = _canvasGradientCache.getObject(_canvasCacheKey!);
     }
 
-    if (_canvasGradient == null && _type == GraphicsGradientType.Linear) {
+    if (_canvasGradient == null && _type == .Linear) {
       _canvasGradient =
           context.createLinearGradient(_startX, _startY, _endX, _endY);
       _colorStops.forEach((cs) =>
@@ -156,7 +139,7 @@ class GraphicsGradient {
       _canvasGradientCache.addObject(_canvasCacheKey!, _canvasGradient!);
     }
 
-    if (_canvasGradient == null && _type == GraphicsGradientType.Radial) {
+    if (_canvasGradient == null && _type == .Radial) {
       _canvasGradient = context.createRadialGradient(
           _startX, _startY, _startRadius, _endX, _endY, _endRadius);
       _colorStops.forEach((cs) =>
@@ -183,7 +166,7 @@ class GraphicsGradient {
           (cs) => canvasGradient.addColorStop(cs.offset, color2rgba(cs.color)));
       canvas.context2D.fillStyle = canvasGradient;
       canvas.context2D.fillRect(0, 0, 1, GRADIENT_TEXTURE_SIZE);
-      _gradientTexture = RenderTexture.fromCanvasElement(canvas);
+      _gradientTexture = .fromCanvasElement(canvas);
       _gradientTextureCache.addObject(_textureCacheKey!, _gradientTexture!);
     }
 
@@ -194,13 +177,13 @@ class GraphicsGradient {
     // TODO: Profile to see if using a StringBuffer is faster here.
     var key = '';
 
-    if (_type == GraphicsGradientType.Linear) {
+    if (_type == .Linear) {
       key += 'L';
       key += '_' + _startX.toStringAsFixed(3);
       key += '_' + _startY.toStringAsFixed(3);
       key += '_' + _endX.toStringAsFixed(3);
       key += '_' + _endY.toStringAsFixed(3);
-    } else if (_type == GraphicsGradientType.Radial) {
+    } else if (_type == .Radial) {
       key += 'R';
       key += '_' + _startX.toStringAsFixed(3);
       key += '_' + _startY.toStringAsFixed(3);
@@ -214,7 +197,7 @@ class GraphicsGradient {
 
     key += '_' + _colorStops.length.toString();
 
-    for (var colorStop in _colorStops) {
+    for (final colorStop in _colorStops) {
       key += '_' + colorStop.offset.toStringAsPrecision(3);
       key += '_' + colorStop.color.toRadixString(16);
     }
@@ -224,7 +207,7 @@ class GraphicsGradient {
 
   String _createTextureCacheKey() {
     var key = _colorStops.length.toString();
-    for (var colorStop in _colorStops) {
+    for (final colorStop in _colorStops) {
       key += '_' + colorStop.offset.toStringAsPrecision(3);
       key += '_' + colorStop.color.toRadixString(16);
     }

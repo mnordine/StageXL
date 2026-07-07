@@ -19,7 +19,7 @@ abstract class InteractiveObject extends DisplayObject {
   /// doubleClick events.
   ///
   /// No event is dispatched by setting this property.
-  bool doubleClickEnabled = false;
+  var doubleClickEnabled = false;
 
   /// Specifies whether this object receives mouse, or other user input,
   /// messages.
@@ -34,7 +34,7 @@ abstract class InteractiveObject extends DisplayObject {
   /// [DisplayObjectContainer.mouseChildren].
   ///
   /// No event is dispatched by setting this property.
-  bool mouseEnabled = true;
+  var mouseEnabled = true;
 
   /// Defines the mouse cursor that is displayed on this interactive object.
   String mouseCursor = MouseCursor.AUTO;
@@ -43,12 +43,12 @@ abstract class InteractiveObject extends DisplayObject {
   ///
   /// If this object is in the tab order, the value is true; otherwise, the
   /// value is false. By default, the value is true.
-  bool tabEnabled = true;
+  var tabEnabled = true;
 
   /// Specifies the tab ordering of objects.
   ///
   /// The [tabIndex] property is 0 by default.
-  int tabIndex = 0;
+  var tabIndex = 0;
 
   // simulate [useHandCursor] by changing the [mouseCursor] value.
 
@@ -60,40 +60,23 @@ abstract class InteractiveObject extends DisplayObject {
 
   // mouse events
 
-  static const EventStreamProvider<MouseEvent> mouseOutEvent =
-      EventStreamProvider<MouseEvent>(MouseEvent.MOUSE_OUT);
-  static const EventStreamProvider<MouseEvent> mouseOverEvent =
-      EventStreamProvider<MouseEvent>(MouseEvent.MOUSE_OVER);
-  static const EventStreamProvider<MouseEvent> mouseRollOutEvent =
-      EventStreamProvider<MouseEvent>(MouseEvent.ROLL_OUT);
-  static const EventStreamProvider<MouseEvent> mouseRollOverEvent =
-      EventStreamProvider<MouseEvent>(MouseEvent.ROLL_OVER);
-  static const EventStreamProvider<MouseEvent> mouseMoveEvent =
-      EventStreamProvider<MouseEvent>(MouseEvent.MOUSE_MOVE);
-  static const EventStreamProvider<MouseEvent> mouseDownEvent =
-      EventStreamProvider<MouseEvent>(MouseEvent.MOUSE_DOWN);
-  static const EventStreamProvider<MouseEvent> mouseUpEvent =
-      EventStreamProvider<MouseEvent>(MouseEvent.MOUSE_UP);
-  static const EventStreamProvider<MouseEvent> mouseClickEvent =
-      EventStreamProvider<MouseEvent>(MouseEvent.CLICK);
-  static const EventStreamProvider<MouseEvent> mouseDoubleClickEvent =
-      EventStreamProvider<MouseEvent>(MouseEvent.DOUBLE_CLICK);
-  static const EventStreamProvider<MouseEvent> mouseMiddleDownEvent =
-      EventStreamProvider<MouseEvent>(MouseEvent.MIDDLE_MOUSE_DOWN);
-  static const EventStreamProvider<MouseEvent> mouseMiddleUpEvent =
-      EventStreamProvider<MouseEvent>(MouseEvent.MIDDLE_MOUSE_UP);
-  static const EventStreamProvider<MouseEvent> mouseMiddleClickEvent =
-      EventStreamProvider<MouseEvent>(MouseEvent.MIDDLE_CLICK);
-  static const EventStreamProvider<MouseEvent> mouseRightDownEvent =
-      EventStreamProvider<MouseEvent>(MouseEvent.RIGHT_MOUSE_DOWN);
-  static const EventStreamProvider<MouseEvent> mouseRightUpEvent =
-      EventStreamProvider<MouseEvent>(MouseEvent.RIGHT_MOUSE_UP);
-  static const EventStreamProvider<MouseEvent> mouseRightClickEvent =
-      EventStreamProvider<MouseEvent>(MouseEvent.RIGHT_CLICK);
-  static const EventStreamProvider<MouseEvent> mouseWheelEvent =
-      EventStreamProvider<MouseEvent>(MouseEvent.MOUSE_WHEEL);
-  static const EventStreamProvider<MouseEvent> mouseContextMenu =
-      EventStreamProvider<MouseEvent>(MouseEvent.CONTEXT_MENU);
+  static const mouseOutEvent = EventStreamProvider<MouseEvent>(MouseEvent.MOUSE_OUT);
+  static const mouseOverEvent = EventStreamProvider<MouseEvent>(MouseEvent.MOUSE_OVER);
+  static const mouseRollOutEvent = EventStreamProvider<MouseEvent>(MouseEvent.ROLL_OUT);
+  static const mouseRollOverEvent = EventStreamProvider<MouseEvent>(MouseEvent.ROLL_OVER);
+  static const mouseMoveEvent = EventStreamProvider<MouseEvent>(MouseEvent.MOUSE_MOVE);
+  static const mouseDownEvent = EventStreamProvider<MouseEvent>(MouseEvent.MOUSE_DOWN);
+  static const mouseUpEvent = EventStreamProvider<MouseEvent>(MouseEvent.MOUSE_UP);
+  static const mouseClickEvent = EventStreamProvider<MouseEvent>(MouseEvent.CLICK);
+  static const mouseDoubleClickEvent = EventStreamProvider<MouseEvent>(MouseEvent.DOUBLE_CLICK);
+  static const mouseMiddleDownEvent = EventStreamProvider<MouseEvent>(MouseEvent.MIDDLE_MOUSE_DOWN);
+  static const mouseMiddleUpEvent = EventStreamProvider<MouseEvent>(MouseEvent.MIDDLE_MOUSE_UP);
+  static const mouseMiddleClickEvent = EventStreamProvider<MouseEvent>(MouseEvent.MIDDLE_CLICK);
+  static const mouseRightDownEvent = EventStreamProvider<MouseEvent>(MouseEvent.RIGHT_MOUSE_DOWN);
+  static const mouseRightUpEvent = EventStreamProvider<MouseEvent>(MouseEvent.RIGHT_MOUSE_UP);
+  static const mouseRightClickEvent = EventStreamProvider<MouseEvent>(MouseEvent.RIGHT_CLICK);
+  static const mouseWheelEvent = EventStreamProvider<MouseEvent>(MouseEvent.MOUSE_WHEEL);
+  static const mouseContextMenu = EventStreamProvider<MouseEvent>(MouseEvent.CONTEXT_MENU);
 
   /// Dispatched when the user moves a pointing device away from an
   /// InteractiveObject instance.
@@ -284,24 +267,15 @@ abstract class InteractiveObject extends DisplayObject {
 
   // touch events
 
-  static const EventStreamProvider<TouchEvent> touchOutEvent =
-      EventStreamProvider<TouchEvent>(TouchEvent.TOUCH_OUT);
-  static const EventStreamProvider<TouchEvent> touchOverEvent =
-      EventStreamProvider<TouchEvent>(TouchEvent.TOUCH_OVER);
-  static const EventStreamProvider<TouchEvent> touchMoveEvent =
-      EventStreamProvider<TouchEvent>(TouchEvent.TOUCH_MOVE);
-  static const EventStreamProvider<TouchEvent> touchBeginEvent =
-      EventStreamProvider<TouchEvent>(TouchEvent.TOUCH_BEGIN);
-  static const EventStreamProvider<TouchEvent> touchEndEvent =
-      EventStreamProvider<TouchEvent>(TouchEvent.TOUCH_END);
-  static const EventStreamProvider<TouchEvent> touchCancelEvent =
-      EventStreamProvider<TouchEvent>(TouchEvent.TOUCH_CANCEL);
-  static const EventStreamProvider<TouchEvent> touchRollOut =
-      EventStreamProvider<TouchEvent>(TouchEvent.TOUCH_ROLL_OUT);
-  static const EventStreamProvider<TouchEvent> touchRollOver =
-      EventStreamProvider<TouchEvent>(TouchEvent.TOUCH_ROLL_OVER);
-  static const EventStreamProvider<TouchEvent> touchTap =
-      EventStreamProvider<TouchEvent>(TouchEvent.TOUCH_TAP);
+  static const touchOutEvent = EventStreamProvider<TouchEvent>(TouchEvent.TOUCH_OUT);
+  static const touchOverEvent = EventStreamProvider<TouchEvent>(TouchEvent.TOUCH_OVER);
+  static const touchMoveEvent = EventStreamProvider<TouchEvent>(TouchEvent.TOUCH_MOVE);
+  static const touchBeginEvent = EventStreamProvider<TouchEvent>(TouchEvent.TOUCH_BEGIN);
+  static const touchEndEvent = EventStreamProvider<TouchEvent>(TouchEvent.TOUCH_END);
+  static const touchCancelEvent = EventStreamProvider<TouchEvent>(TouchEvent.TOUCH_CANCEL);
+  static const touchRollOut = EventStreamProvider<TouchEvent>(TouchEvent.TOUCH_ROLL_OUT);
+  static const touchRollOver = EventStreamProvider<TouchEvent>(TouchEvent.TOUCH_ROLL_OVER);
+  static const touchTap = EventStreamProvider<TouchEvent>(TouchEvent.TOUCH_TAP);
 
   /// Dispatched when the user moves the point of contact away from
   /// InteractiveObject instance on a touch-enabled device.
@@ -384,10 +358,8 @@ abstract class InteractiveObject extends DisplayObject {
 
   // keyboard events
 
-  static const EventStreamProvider<KeyboardEvent> keyUpEvent =
-      EventStreamProvider<KeyboardEvent>(KeyboardEvent.KEY_UP);
-  static const EventStreamProvider<KeyboardEvent> keyDownEvent =
-      EventStreamProvider<KeyboardEvent>(KeyboardEvent.KEY_DOWN);
+  static const keyUpEvent = EventStreamProvider<KeyboardEvent>(KeyboardEvent.KEY_UP);
+  static const keyDownEvent = EventStreamProvider<KeyboardEvent>(KeyboardEvent.KEY_DOWN);
 
   /// Dispatched when the user releases a key.
   ///
@@ -405,8 +377,7 @@ abstract class InteractiveObject extends DisplayObject {
 
   // text events
 
-  static const EventStreamProvider<TextEvent> textInputEvent =
-      EventStreamProvider<TextEvent>(TextEvent.TEXT_INPUT);
+  static const textInputEvent = EventStreamProvider<TextEvent>(TextEvent.TEXT_INPUT);
 
   /// Dispatched when a user enters one or more characters of text.
   EventStream<TextEvent> get onTextInput =>

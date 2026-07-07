@@ -40,10 +40,10 @@ class _RenderTextureQuadObject implements RenderObject {
   final List<RenderFilter> filters;
 
   @override
-  final Matrix transformationMatrix = Matrix.fromIdentity();
+  final transformationMatrix = Matrix.fromIdentity();
 
   @override
-  final BlendMode blendMode = BlendMode.NORMAL;
+  final BlendMode blendMode = .NORMAL;
 
   @override
   final RenderTextureQuad? cache;

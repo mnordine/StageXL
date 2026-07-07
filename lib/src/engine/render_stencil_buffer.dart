@@ -1,12 +1,12 @@
 part of '../engine.dart';
 
 class RenderStencilBuffer {
-  int _width = 0;
-  int _height = 0;
+  var _width = 0;
+  var _height = 0;
 
   RenderContextWebGL? _renderContext;
 
-  int _contextIdentifier = -1;
+  var _contextIdentifier = -1;
   WebGL? _renderingContext;
   WebGLRenderbuffer? _renderbuffer;
 

@@ -99,7 +99,7 @@ export 'src/ui.dart';
 class StageXL {
   /// The system environment in which the application is running.
 
-  static final Environment environment = Environment._internal();
+  static final environment = Environment._internal();
 
   /// The default [StageOptions] used by the [Stage] constructor.
   ///

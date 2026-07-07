@@ -7,8 +7,6 @@ class RenderTextureWrapping {
 
   RenderTextureWrapping(this.value);
 
-  static final RenderTextureWrapping REPEAT =
-      RenderTextureWrapping(WebGL.REPEAT);
-  static final RenderTextureWrapping CLAMP =
-      RenderTextureWrapping(WebGL.CLAMP_TO_EDGE);
+  static final REPEAT = RenderTextureWrapping(WebGL.REPEAT);
+  static final CLAMP = RenderTextureWrapping(WebGL.CLAMP_TO_EDGE);
 }

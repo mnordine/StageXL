@@ -1,10 +1,10 @@
 part of '../display.dart';
 
 class RenderLoop extends RenderLoopBase {
-  final Juggler _juggler = Juggler();
-  final List<Stage> _stages = <Stage>[];
-  final EnterFrameEvent _enterFrameEvent = EnterFrameEvent(0);
-  final ExitFrameEvent _exitFrameEvent = ExitFrameEvent();
+  final _juggler = Juggler();
+  final _stages = <Stage>[];
+  final _enterFrameEvent = EnterFrameEvent(0);
+  final _exitFrameEvent = ExitFrameEvent();
 
   num _currentTime = 0.0;
 

@@ -14,7 +14,7 @@ part of '../display.dart';
 class Shape extends DisplayObject {
   /// Specifies the graphics object belonging to this Shape object, where vector
   /// drawing commands can occur.
-  Graphics graphics = Graphics();
+  var graphics = Graphics();
 
   @override
   Rectangle<num> get bounds => graphics.bounds;

@@ -22,7 +22,7 @@ class RenderProgramBatch extends RenderProgram {
   // aVertexColor:      Float32(r), Float32(g), Float32(b), Float32(a)
   // aVertexTexIndex:   Float32(textureIndex)
 
-  static int _maxTextures = 8; // Default value, will be updated at runtime
+  static var _maxTextures = 8; // Default value, will be updated at runtime
   static JSUint32Array? _samplerIndices;
 
   static int initializeMaxTextures(WebGL renderingContext, {required bool isWebGL2}) {
@@ -34,17 +34,17 @@ class RenderProgramBatch extends RenderProgram {
 
     // Pre-calculate the sampler indices list for WebGL 2
     if (isWebGL2) {
-      _samplerIndices = Uint32List.fromList(List.generate(_maxTextures, (i) => i, growable: false)).toJS;
+      _samplerIndices = Uint32List.fromList(.generate(_maxTextures, (i) => i, growable: false)).toJS;
     }
 
     return _maxTextures;
   }
 
-  late final List<RenderTexture?> _textures = List.filled(_maxTextures, null);
+  late final List<RenderTexture?> _textures = .filled(_maxTextures, null);
   
   final _drawCommands = <_DrawCommand>[];
   RenderContextWebGL? _renderContextWebGL;
-  bool _executingBatch = false;
+  var _executingBatch = false;
 
   @override
   String get vertexShaderSource => isWebGL2 ? '''
@@ -233,7 +233,7 @@ class RenderProgramBatch extends RenderProgram {
     if (lastBlendMode.srcFactor != BlendMode.NORMAL.srcFactor ||
          lastBlendMode.dstFactor != BlendMode.NORMAL.dstFactor) {
       _renderingContext.blendFunc(BlendMode.NORMAL.srcFactor, BlendMode.NORMAL.dstFactor);
-      _lastBlendMode = BlendMode.NORMAL;
+      _lastBlendMode = .NORMAL;
     }
   }
 
@@ -259,7 +259,7 @@ class RenderProgramBatch extends RenderProgram {
       final groupBlend = first.blendMode;
 
       // --- Group consecutive commands ---
-      var groupOffset = first.indexOffset;
+      final groupOffset = first.indexOffset;
       var groupCount = first.indexCount;
       final uniqueTextures = {first.textureIndex: first.texture};
 

@@ -7,9 +7,9 @@ class AudioElementSoundChannel extends SoundChannel {
   StreamSubscription<num>? _volumeChangedSubscription;
   Timer? _completeTimer;
 
-  bool _stopped = false;
-  bool _paused = false;
-  bool _loop = false;
+  var _stopped = false;
+  var _paused = false;
+  var _loop = false;
   num _startTime = 0.0;
   num _duration = 0.0;
   num _position = 0.0;

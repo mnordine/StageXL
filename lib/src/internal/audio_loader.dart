@@ -7,16 +7,16 @@ import 'package:http/http.dart' as http;
 import '../errors.dart';
 
 class AudioLoader {
-  static final List<String> supportedTypes = _getSupportedTypes();
+  static final supportedTypes = _getSupportedTypes();
 
-  final HTMLAudioElement audio = HTMLAudioElement();
-  final AggregateError aggregateError = AggregateError('Error loading sound.');
-  final Completer<HTMLAudioElement> _completer = Completer<HTMLAudioElement>();
+  final audio = HTMLAudioElement();
+  final aggregateError = AggregateError('Error loading sound.');
+  final _completer = Completer<HTMLAudioElement>();
 
   late StreamSubscription<Event> _onCanPlaySubscription;
   late StreamSubscription<Event> _onErrorSubscription;
-  final List<String> _urls = <String>[];
-  bool _loadData = false;
+  final _urls = <String>[];
+  var _loadData = false;
 
   AudioLoader(List<String> urls, bool loadData, bool corsEnabled) {
     // we have to add the AudioElement to the document,
@@ -71,7 +71,7 @@ class AudioLoader {
   }
 
   void _loadAudioData(String url) {
-    http.get(Uri.parse(url)).then((request) {
+    http.get(.parse(url)).then((request) {
       final url = Uri.dataFromBytes(request.bodyBytes);
       _loadAudioSource(url.toString());
     }).catchError((Object error) {
@@ -90,28 +90,17 @@ class AudioLoader {
   //-------------------------------------------------------------------------------------------------
 
   static List<String> _getSupportedTypes() {
-    final supportedTypes = <String>[];
     final audio = HTMLAudioElement();
     final valid = ['maybe', 'probably'];
 
-    if (valid.contains(audio.canPlayType('audio/ogg; codecs=opus'))) {
-      supportedTypes.add('opus');
-    }
-    if (valid.contains(audio.canPlayType('audio/mpeg'))) {
-      supportedTypes.add('mp3');
-    }
-    if (valid.contains(audio.canPlayType('audio/mp4'))) {
-      supportedTypes.add('mp4');
-    }
-    if (valid.contains(audio.canPlayType('audio/ogg'))) {
-      supportedTypes.add('ogg');
-    }
-    if (valid.contains(audio.canPlayType('audio/ac3'))) {
-      supportedTypes.add('ac3');
-    }
-    if (valid.contains(audio.canPlayType('audio/wav'))) {
-      supportedTypes.add('wav');
-    }
+    final supportedTypes = [
+      if (valid.contains(audio.canPlayType('audio/ogg; codecs=opus'))) 'opus',
+      if (valid.contains(audio.canPlayType('audio/mpeg'))) 'mp3',
+      if (valid.contains(audio.canPlayType('audio/mp4'))) 'mp4',
+      if (valid.contains(audio.canPlayType('audio/ogg'))) 'ogg',
+      if (valid.contains(audio.canPlayType('audio/ac3'))) 'ac3',
+      if (valid.contains(audio.canPlayType('audio/wav'))) 'wav',
+    ];
 
     print('StageXL audio types   : $supportedTypes');
 

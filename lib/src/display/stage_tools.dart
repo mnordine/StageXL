@@ -7,9 +7,9 @@ class _MouseButton {
   final String mouseDoubleClickEventType;
 
   InteractiveObject? target;
-  bool buttonDown = false;
-  int clickTime = 0;
-  int clickCount = 0;
+  var buttonDown = false;
+  var clickTime = 0;
+  var clickCount = 0;
 
   _MouseButton(this.mouseDownEventType, this.mouseUpEventType,
       this.mouseClickEventType, this.mouseDoubleClickEventType);
@@ -27,7 +27,7 @@ class _MouseButton {
 //------------------------------------------------------------------------------
 
 class _TouchPoint {
-  static int _globalTouchPointID = 1;
+  static var _globalTouchPointID = 1;
 
   final int touchPointID = _globalTouchPointID++;
   final bool primaryTouchPoint;

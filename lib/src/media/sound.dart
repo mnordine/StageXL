@@ -12,7 +12,7 @@ abstract class Sound {
 
   /// The default loading options for the [Sound.load] method.
 
-  static SoundLoadOptions defaultLoadOptions = SoundLoadOptions();
+  static var defaultLoadOptions = SoundLoadOptions();
 
   /// Loads a sound from a file url.
   ///
@@ -27,14 +27,11 @@ abstract class Sound {
 
   static Future<Sound> load(String url, [SoundLoadOptions? soundLoadOptions, AssetManifest? manifest]) {
     final options = soundLoadOptions ?? Sound.defaultLoadOptions;
-    switch (options.engine ?? SoundMixer.engine) {
-      case SoundEngine.WebAudioApi:
-        return WebAudioApiSound.load(url, options, manifest);
-      case SoundEngine.AudioElement:
-        return AudioElementSound.load(url, options, manifest);
-      default:
-        return MockSound.load(url, options);
-    }
+    return switch (options.engine ?? SoundMixer.engine) {
+      .WebAudioApi => WebAudioApiSound.load(url, options, manifest),
+      .AudioElement => AudioElementSound.load(url, options, manifest),
+      _ => MockSound.load(url, options),
+    };
   }
 
   /// Loads a sound from a data url.
@@ -48,14 +45,11 @@ abstract class Sound {
   static Future<Sound> loadDataUrl(String dataUrl,
       [SoundLoadOptions? soundLoadOptions]) {
     final options = soundLoadOptions ?? Sound.defaultLoadOptions;
-    switch (options.engine ?? SoundMixer.engine) {
-      case SoundEngine.WebAudioApi:
-        return WebAudioApiSound.loadDataUrl(dataUrl, options);
-      case SoundEngine.AudioElement:
-        return AudioElementSound.loadDataUrl(dataUrl, options);
-      default:
-        return MockSound.loadDataUrl(dataUrl, options);
-    }
+    return switch (options.engine ?? SoundMixer.engine) {
+      .WebAudioApi => WebAudioApiSound.loadDataUrl(dataUrl, options),
+      .AudioElement => AudioElementSound.loadDataUrl(dataUrl, options),
+      _ => MockSound.loadDataUrl(dataUrl, options),
+    };
   }
 
   //---------------------------------------------------------------------------

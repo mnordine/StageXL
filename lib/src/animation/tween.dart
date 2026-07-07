@@ -30,7 +30,7 @@ part of '../animation.dart';
 class Tween implements Animatable {
   final TweenObject _tweenObject;
   final TransitionFunction _transition;
-  final List<TweenProperty> _tweenPropertyList = <TweenProperty>[];
+  final _tweenPropertyList = <TweenProperty>[];
 
   void Function()? _onStart;
   void Function()? _onUpdate;
@@ -43,9 +43,9 @@ class Tween implements Animatable {
   /// Specifies if the values should be rounded to an integer.
   ///
   /// Default is false.
-  bool roundToInt = false;
+  var roundToInt = false;
 
-  bool _started = false;
+  var _started = false;
 
   final _completer = Completer<Tween>();
 

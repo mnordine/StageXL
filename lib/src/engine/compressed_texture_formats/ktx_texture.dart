@@ -35,8 +35,7 @@ class KtxTexture extends CompressedTexture {
         // Switch the ByteArray to reading in big endian
         // TODO(CEksal): Test on big endian files to make sure they work as expected.
         print('warning: ktx file is big endian, this is untested');
-        bytes.endian = Endian.big;
-        break;
+        bytes.endian = .big;
       default:
         throw LoadError('compressed texture has unrecognized endianness, not a ktx header');
     }

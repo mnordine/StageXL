@@ -4,9 +4,9 @@ class _DisplayObjectCache {
   final DisplayObject displayObject;
 
   num pixelRatio = 1.0;
-  bool debugBorder = true;
+  var debugBorder = true;
 
-  Rectangle<num> bounds = Rectangle<num>(0, 0, 256, 256);
+  var bounds = Rectangle<num>(0, 0, 256, 256);
   RenderTexture? renderTexture;
   RenderTextureQuad? renderTextureQuad;
 

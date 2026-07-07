@@ -10,16 +10,16 @@ import '../internal/filter_helpers.dart';
 import '../internal/tools.dart';
 
 class GlowFilter extends BitmapFilter {
-  int color = 0xFF000000;
+  var color = 0xFF000000;
   late int _blurX;
   late int _blurY;
   late int _quality;
 
-  bool knockout = false;
-  bool hideObject = false;
+  var knockout = false;
+  var hideObject = false;
 
-  final List<int> _renderPassSources = <int>[];
-  final List<int> _renderPassTargets = <int>[];
+  final _renderPassSources = <int>[];
+  final _renderPassTargets = <int>[];
 
   GlowFilter(
       [this.color = 0xFF000000,

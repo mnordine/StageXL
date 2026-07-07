@@ -22,9 +22,6 @@ analyzer:
     avoid_positional_boolean_parameters: ignore
     constant_identifier_names: ignore
 
-    # TODO(CEksal): Should probably switch at some point
-    use_string_in_part_of_directives: ignore
-
 linter:
   rules:
     - always_put_required_named_parameters_first
@@ -84,3 +81,41 @@ linter:
     - use_string_buffers
     - use_super_parameters
     - invalid_runtime_check_with_js_interop_types
+    - omit_obvious_local_variable_types
+    - omit_obvious_property_types
+    - unnecessary_ignore
+    - simple_directive_paths
+    - unnecessary_breaks
+    - eol_at_end_of_file
+    - prefer_final_fields
+    - prefer_final_in_for_each
+    - prefer_final_locals
+    - use_truncating_division
+    - avoid_futureor_void
+    - strict_top_level_inference
+    - unnecessary_underscores
+    - unnecessary_async
+    - use_null_aware_elements
+    - switch_on_type
+    - unnecessary_unawaited
+    - remove_deprecations_in_breaking_versions
+    - simplify_variable_pattern
+    - prefer_initializing_formals
+    - unnecessary_library_name
+    - no_self_assignments
+    - invalid_case_patterns
+    - unreachable_from_main
+    - unnecessary_null_aware_operator_on_extension_on_nullable
+    - use_enums
+    - void_checks
+    - avoid_renaming_method_parameters
+    - avoid_shadowing_type_parameters
+    - avoid_types_on_closure_parameters
+    - prefer_iterable_whereType
+    - collection_methods_unrelated_type
+    - prefer_spread_collections
+    - prefer_const_literals_to_create_immutables
+    - prefer_collection_literals
+    - prefer_contains
+    - prefer_conditional_assignment
+    - unnecessary_to_list_in_spreads

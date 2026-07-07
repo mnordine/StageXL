@@ -1,8 +1,8 @@
 part of '../display.dart';
 
 class ColorTransform {
-  final Float32List multipliers = Float32List(4);
-  final Int32List offsets = Int32List(4);
+  final multipliers = Float32List(4);
+  final offsets = Int32List(4);
 
   ColorTransform(
       [num redMultiplier = 1.0,

@@ -22,7 +22,7 @@ class DelayedCall implements Animatable {
   /// The number of times the delayed call should be executed.
   ///
   /// Default is 1.
-  int repeatCount = 1;
+  var repeatCount = 1;
 
   /// Creates a new [DelayedCall].
   ///

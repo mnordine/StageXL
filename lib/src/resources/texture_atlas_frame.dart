@@ -48,7 +48,7 @@ class TextureAtlasFrame {
       q.setQuadVertices();
     }
 
-    _bitmapData = BitmapData.fromRenderTextureQuad(q);
+    _bitmapData = .fromRenderTextureQuad(q);
   }
 
   //---------------------------------------------------------------------------

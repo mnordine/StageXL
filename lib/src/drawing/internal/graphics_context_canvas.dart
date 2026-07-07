@@ -151,15 +151,15 @@ class _GraphicsContextCanvas extends GraphicsContext {
 
   String _getLineJoin(JointStyle jointStyle) {
     var lineJoin = 'round';
-    if (jointStyle == JointStyle.MITER) lineJoin = 'miter';
-    if (jointStyle == JointStyle.BEVEL) lineJoin = 'bevel';
+    if (jointStyle == .MITER) lineJoin = 'miter';
+    if (jointStyle == .BEVEL) lineJoin = 'bevel';
     return lineJoin;
   }
 
   String _getLineCap(CapsStyle capsStyle) {
     var lineCap = 'round';
-    if (capsStyle == CapsStyle.NONE) lineCap = 'butt';
-    if (capsStyle == CapsStyle.SQUARE) lineCap = 'square';
+    if (capsStyle == .NONE) lineCap = 'butt';
+    if (capsStyle == .SQUARE) lineCap = 'square';
     return lineCap;
   }
 

@@ -2,8 +2,8 @@ part of '../../drawing.dart';
 
 class _GraphicsStrokeSegment extends _GraphicsMeshSegment {
   final _GraphicsStroke stroke;
-  int _jointIndex1 = -1;
-  int _jointIndex2 = -1;
+  var _jointIndex1 = -1;
+  var _jointIndex2 = -1;
 
   _GraphicsStrokeSegment(this.stroke, _GraphicsPathSegment pathSegment)
       : super(pathSegment.vertexCount * 4, pathSegment.vertexCount * 6) {
@@ -101,10 +101,10 @@ class _GraphicsStrokeSegment extends _GraphicsMeshSegment {
   //---------------------------------------------------------------------------
 
   void _addCapStart(double vx, double vy, num nx, num ny, CapsStyle capsStyle) {
-    if (capsStyle == CapsStyle.SQUARE) {
+    if (capsStyle == .SQUARE) {
       _jointIndex1 = addVertex(vx + nx - ny, vy + ny + nx);
       _jointIndex2 = addVertex(vx - nx - ny, vy - ny + nx);
-    } else if (capsStyle == CapsStyle.ROUND) {
+    } else if (capsStyle == .ROUND) {
       _jointIndex1 = addVertex(vx + nx, vy + ny);
       _jointIndex2 = addVertex(vx - nx, vy - ny);
       _addArc(vx, vy, -nx, -ny, nx, ny, _jointIndex1, _jointIndex2, true);
@@ -118,10 +118,10 @@ class _GraphicsStrokeSegment extends _GraphicsMeshSegment {
 
   void _addCapEnd(double vx, double vy, num nx, num ny, CapsStyle capsStyle) {
     final i1 = _jointIndex1, i2 = _jointIndex2;
-    if (capsStyle == CapsStyle.SQUARE) {
+    if (capsStyle == .SQUARE) {
       _jointIndex1 = addVertex(vx + nx + ny, vy + ny - nx);
       _jointIndex2 = addVertex(vx - nx + ny, vy - ny - nx);
-    } else if (capsStyle == CapsStyle.ROUND) {
+    } else if (capsStyle == .ROUND) {
       _jointIndex1 = addVertex(vx + nx, vy + ny);
       _jointIndex2 = addVertex(vx - nx, vy - ny);
       _addArc(vx, vy, nx, ny, -nx, -ny, _jointIndex2, _jointIndex1, true);
@@ -146,14 +146,14 @@ class _GraphicsStrokeSegment extends _GraphicsMeshSegment {
       it = itAbs = 0.0;
     }
 
-    if (jointStyle != JointStyle.MITER && itAbs < 0.10) {
+    if (jointStyle != .MITER && itAbs < 0.10) {
       // overrule jointStyle in case of very flat joints
-      jointStyle = JointStyle.MITER;
+      jointStyle = .MITER;
     }
 
-    if (jointStyle == JointStyle.MITER && itAbs > 10.0) {
+    if (jointStyle == .MITER && itAbs > 10.0) {
       // miter limit exceeded
-      jointStyle = JointStyle.BEVEL;
+      jointStyle = .BEVEL;
     }
 
     final vmx = ax - it * ay; // miter-x
@@ -165,7 +165,7 @@ class _GraphicsStrokeSegment extends _GraphicsMeshSegment {
     final i2 = it >= 0.0 ? _jointIndex2 : _jointIndex1;
     var i3 = 0, i4 = 0, i5 = 0;
 
-    if (jointStyle == JointStyle.MITER) {
+    if (jointStyle == .MITER) {
       if (isOverlap == false) {
         i3 = _jointIndex2;
         i4 = _jointIndex1 = addVertex(vx + vmx, vy + vmy);
@@ -186,7 +186,7 @@ class _GraphicsStrokeSegment extends _GraphicsMeshSegment {
 
       addIndices(i1, i2, i4);
       addIndices(i3, i4, i5);
-    } else if (jointStyle == JointStyle.BEVEL) {
+    } else if (jointStyle == .BEVEL) {
       if (isOverlap == false && it >= 0.0) {
         i3 = _jointIndex1 = addVertex(vx + vmx, vy + vmy);
         i4 = addVertex(vx - ax, vy - ay);
@@ -210,7 +210,7 @@ class _GraphicsStrokeSegment extends _GraphicsMeshSegment {
       addIndices(i1, i2, i3);
       addIndices(i2, i3, i4);
       addIndices(i3, i4, i5);
-    } else if (jointStyle == JointStyle.ROUND) {
+    } else if (jointStyle == .ROUND) {
       if (isOverlap == false && it >= 0.0) {
         i3 = _jointIndex1 = addVertex(vx + vmx, vy + vmy);
         i4 = addVertex(vx - ax, vy - ay);

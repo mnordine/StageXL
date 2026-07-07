@@ -12,8 +12,8 @@ typedef EventListener<T extends Event> = void Function(T event);
 
 class EventStreamSubscription<T extends Event> implements StreamSubscription<T> {
   final int _priority;
-  int _pauseCount = 0;
-  bool _canceled = false;
+  var _pauseCount = 0;
+  var _canceled = false;
   final bool _captures;
 
   final EventStream<T> _eventStream;

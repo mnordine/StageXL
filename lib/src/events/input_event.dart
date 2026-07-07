@@ -64,7 +64,7 @@ abstract class InputEvent extends Event {
 
   //---------------------------------------------------------------------------
 
-  bool _isDefaultPrevented = false;
+  var _isDefaultPrevented = false;
 
   void preventDefault() {
     _isDefaultPrevented = true;

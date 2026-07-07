@@ -16,16 +16,16 @@ class DropShadowFilter extends BitmapFilter {
   /// The angle where the shadow is casted to.
   num angle;
 
-  int _blurX = 4;
-  int _blurY = 4;
-  int _quality = 1;
+  var _blurX = 4;
+  var _blurY = 4;
+  var _quality = 1;
   int color;
 
-  bool knockout = false;
-  bool hideObject = false;
+  var knockout = false;
+  var hideObject = false;
 
-  final List<int> _renderPassSources = <int>[];
-  final List<int> _renderPassTargets = <int>[];
+  final _renderPassSources = <int>[];
+  final _renderPassTargets = <int>[];
 
   DropShadowFilter(
       [this.distance = 8,

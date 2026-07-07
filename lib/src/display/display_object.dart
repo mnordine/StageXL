@@ -30,8 +30,8 @@ part of '../display.dart';
 
 abstract class DisplayObject extends EventDispatcher
     implements RenderObject, TweenObject2D, BitmapDrawable {
-  static int _nextID = 0;
-  final int displayObjectID = _nextID++;
+  static var _nextID = 0;
+  final displayObjectID = _nextID++;
 
   num _x = 0.0;
   num _y = 0.0;
@@ -49,7 +49,7 @@ abstract class DisplayObject extends EventDispatcher
   ///
   /// Display objects that are not visible are disabled. For example, if
   /// visible=false for an [InteractiveObject] instance, it cannot be clicked.
-  bool visible = true;
+  var visible = true;
 
   /// The availability and visibility of the display object.
   ///
@@ -58,41 +58,34 @@ abstract class DisplayObject extends EventDispatcher
   /// StageXL_Toolkit to disable a DisplayObject without changing the [visible]
   /// state or removing it from the container. It's recommended that users
   /// do not use [off] but [visible] instead.
-  bool off = false;
+  var off = false;
 
   Mask? _mask;
   BlendMode? _blendMode;
-  List<BitmapFilter> _filters = <BitmapFilter>[];
+  var _filters = <BitmapFilter>[];
   _DisplayObjectCache? _cache;
 
   /// The instance name of this display object.
   ///
   /// The object can be identified in the child list of its parent display
   /// object container by calling [DisplayObjectContainer.getChildByName].
-  String name = '';
+  var name = '';
 
   DisplayObjectParent? _parent;
 
-  final Matrix _transformationMatrix = Matrix.fromIdentity();
-  bool _transformationMatrixRefresh = true;
+  final _transformationMatrix = Matrix.fromIdentity();
+  var _transformationMatrixRefresh = true;
 
   //-------------------------------------------------------------------------------------------------
 
-  static const EventStreamProvider<Event> addedEvent =
-      EventStreamProvider<Event>(Event.ADDED);
-  static const EventStreamProvider<Event> removedEvent =
-      EventStreamProvider<Event>(Event.REMOVED);
-  static const EventStreamProvider<Event> addedToStageEvent =
-      EventStreamProvider<Event>(Event.ADDED_TO_STAGE);
-  static const EventStreamProvider<Event> removedFromStageEvent =
-      EventStreamProvider<Event>(Event.REMOVED_FROM_STAGE);
+  static const addedEvent = EventStreamProvider<Event>(Event.ADDED);
+  static const removedEvent = EventStreamProvider<Event>(Event.REMOVED);
+  static const addedToStageEvent = EventStreamProvider<Event>(Event.ADDED_TO_STAGE);
+  static const removedFromStageEvent = EventStreamProvider<Event>(Event.REMOVED_FROM_STAGE);
 
-  static const EventStreamProvider<EnterFrameEvent> enterFrameEvent =
-      EventStreamProvider<EnterFrameEvent>(Event.ENTER_FRAME);
-  static const EventStreamProvider<ExitFrameEvent> exitFrameEvent =
-      EventStreamProvider<ExitFrameEvent>(Event.EXIT_FRAME);
-  static const EventStreamProvider<RenderEvent> renderEvent =
-      EventStreamProvider<RenderEvent>(Event.RENDER);
+  static const enterFrameEvent = EventStreamProvider<EnterFrameEvent>(Event.ENTER_FRAME);
+  static const exitFrameEvent = EventStreamProvider<ExitFrameEvent>(Event.EXIT_FRAME);
+  static const renderEvent = EventStreamProvider<RenderEvent>(Event.RENDER);
 
   /// Dispatched when a display object is added to the display list.
   ///
@@ -674,7 +667,7 @@ abstract class DisplayObject extends EventDispatcher
   /// you are working with 3D display objects.
 
   Matrix3D getTransformationMatrix3D(DisplayObject targetSpace) {
-    if (targetSpace == this) return Matrix3D.fromIdentity();
+    if (targetSpace == this) return .fromIdentity();
 
     final ancestor = _getCommonAncestor(targetSpace);
 
@@ -747,15 +740,19 @@ abstract class DisplayObject extends EventDispatcher
   /// Aligns the display object's pivot point relative to the current bounds.
 
   void alignPivot(
-      [HorizontalAlign hAlign = HorizontalAlign.Center,
-      VerticalAlign vAlign = VerticalAlign.Center]) {
+      [HorizontalAlign hAlign = .Center,
+      VerticalAlign vAlign = .Center]) {
     final b = bounds;
-    if (hAlign == HorizontalAlign.Left) pivotX = b.left;
-    if (hAlign == HorizontalAlign.Center) pivotX = b.left + b.width / 2;
-    if (hAlign == HorizontalAlign.Right) pivotX = b.right;
-    if (vAlign == VerticalAlign.Top) pivotY = b.top;
-    if (vAlign == VerticalAlign.Center) pivotY = b.top + b.height / 2;
-    if (vAlign == VerticalAlign.Bottom) pivotY = b.bottom;
+    pivotX = switch (hAlign) {
+        .Left => b.left,
+        .Center => b.left + b.width / 2,
+        .Right => b.right
+    };
+    pivotY = switch (vAlign) {
+        .Top => b.top,
+        .Center => b.top + b.height / 2,
+        .Bottom => b.bottom
+    };
   }
 
   //----------------------------------------------------------------------------
@@ -931,15 +928,15 @@ abstract class DisplayObject extends EventDispatcher
     }
 
     for (var i = ancestors.length - 1; i >= 0 && event.captures; i--) {
-      ancestors[i].dispatchEventRaw(event, this, EventPhase.CAPTURING_PHASE);
+      ancestors[i].dispatchEventRaw(event, this, .CAPTURING_PHASE);
       if (event.isPropagationStopped) return;
     }
 
-    dispatchEventRaw(event, this, EventPhase.AT_TARGET);
+    dispatchEventRaw(event, this, .AT_TARGET);
     if (event.isPropagationStopped) return;
 
     for (var i = 0; i < ancestors.length && event.bubbles; i++) {
-      ancestors[i].dispatchEventRaw(event, this, EventPhase.BUBBLING_PHASE);
+      ancestors[i].dispatchEventRaw(event, this, .BUBBLING_PHASE);
       if (event.isPropagationStopped) return;
     }
   }
@@ -985,7 +982,6 @@ abstract class DisplayObject extends EventDispatcher
       obj1 = obj1?.parent;
       depth1 -= 1;
     }
-    // ignore: invariant_booleans
     while (depth2 > depth1) {
       obj2 = obj2?.parent;
       depth2 -= 1;

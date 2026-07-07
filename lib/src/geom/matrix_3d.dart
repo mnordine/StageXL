@@ -8,7 +8,7 @@ import 'point.dart';
 import 'rectangle.dart';
 
 class Matrix3D {
-  final Float32List _data = Float32List(16);
+  final _data = Float32List(16);
 
   Matrix3D.fromIdentity() {
     setIdentity();
@@ -26,7 +26,7 @@ class Matrix3D {
     copyFrom(matrix);
   }
 
-  Matrix3D clone() => Matrix3D.fromMatrix3D(this);
+  Matrix3D clone() => .fromMatrix3D(this);
 
   //-----------------------------------------------------------------------------------------------
 

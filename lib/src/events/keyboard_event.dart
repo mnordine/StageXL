@@ -7,8 +7,8 @@ part of '../events.dart';
 /// * [KeyboardEvent.KEY_DOWN]
 /// * [KeyboardEvent.KEY_UP]
 class KeyboardEvent extends Event {
-  static const String KEY_DOWN = 'keyDown';
-  static const String KEY_UP = 'keyUp';
+  static const KEY_DOWN = 'keyDown';
+  static const KEY_UP = 'keyUp';
 
   //----------------------------------------------------------------------------
 
@@ -51,7 +51,7 @@ class KeyboardEvent extends Event {
 
   //---------------------------------------------------------------------------
 
-  bool _isDefaultPrevented = false;
+  var _isDefaultPrevented = false;
 
   void preventDefault() {
     _isDefaultPrevented = true;

@@ -16,4 +16,3 @@ class TextureInfo {
   @override
   int get hashCode => Object.hash(target, pixelFormat, pixelType);
 }
-

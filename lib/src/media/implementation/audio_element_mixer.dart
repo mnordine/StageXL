@@ -3,8 +3,7 @@ part of '../../media.dart';
 class AudioElementMixer {
   num _volume = 1.0;
 
-  final StreamController<num> _volumeChangedEvent =
-      StreamController<num>.broadcast();
+  final _volumeChangedEvent = StreamController<num>.broadcast();
 
   Stream<num> get onVolumeChanged => _volumeChangedEvent.stream;
 

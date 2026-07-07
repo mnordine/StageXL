@@ -12,7 +12,7 @@ part of '../resources.dart';
 /// https://github.com/realbluesky/soundsprite
 
 class SoundSprite {
-  final List<SoundSpriteSegment> _segments = <SoundSpriteSegment>[];
+  final _segments = <SoundSpriteSegment>[];
   late final Sound _sound;
 
   //----------------------------------------------------------------------------
@@ -21,14 +21,14 @@ class SoundSprite {
       [SoundLoadOptions? soundLoadOptions]) async {
     final soundSprite = SoundSprite();
 
-    final soundSpriteJson = await http.get(Uri.parse(url));
+    final soundSpriteJson = await http.get(.parse(url));
     final data = json.decode(soundSpriteJson.body) as Map;
     final urls = (data['urls'] as List).cast<String>();
     final segments = data['sprite'];
     final soundUrls = <String>[];
 
     if (segments is Map) {
-      for (var segment in segments.keys as Iterable<String>) {
+      for (final segment in segments.keys as Iterable<String>) {
         final segmentList = segments[segment] as List;
         final startTime = segmentList[0] as num;
         final duration = segmentList[1] as num;

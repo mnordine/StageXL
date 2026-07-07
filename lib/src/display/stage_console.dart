@@ -1,7 +1,7 @@
 part of '../display.dart';
 
 class StageConsole extends DisplayObject {
-  final String _fontImage =
+  final _fontImage =
       'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAcAAAAAOAQAAAACQy/GuAAABsE'
       'lEQVR4Aa3OMWsTUQDA8f97eV6fEpvT6YZgX4qDYwoOAdE+IQ5OfoXzG7S46KA8HZSC1PQLaN'
       'Cln8ElFxyaQWg3XZQLBAyi5BqjJDHeE7whoE7i7xP8+He1Wq38WGkLIFmyphryV2JQAQnIhw'
@@ -13,12 +13,12 @@ class StageConsole extends DisplayObject {
       'MweTtq+7tMhnin9YTDF4/chDftUsKcoW97B2RQEIC24GDJWsNvDAWRVrjHUgmWhOMPEf/DT5'
       'NSmGlKVHTvAAAAAElFTkSuQmCC';
 
-  final List<RenderTextureQuad> _glyphs = <RenderTextureQuad>[];
-  final Matrix _matrix = Matrix.fromIdentity();
-  final List<String> _lines = <String>[];
+  final _glyphs = <RenderTextureQuad>[];
+  final _matrix = Matrix.fromIdentity();
+  final _lines = <String>[];
 
-  int _consoleWidth = 0;
-  int _consoleHeight = 0;
+  var _consoleWidth = 0;
+  var _consoleHeight = 0;
 
   StageConsole() {
     BitmapData.load(_fontImage).then(_calculateGlyphs);
@@ -54,7 +54,7 @@ class StageConsole extends DisplayObject {
         var index = x < _lines[y].length ? _lines[y].codeUnitAt(x) - 32 : 0;
         if (index < 0 || index >= 64) index = 0;
         _matrix.setTo(1.0, 0.0, 0.0, 1.0, x * 7, y * 14);
-        renderState.push(_matrix, 1.0, BlendMode.NORMAL);
+        renderState.push(_matrix, 1.0, .NORMAL);
         renderState.renderTextureQuad(_glyphs[index]);
         renderState.pop();
       }
@@ -64,7 +64,7 @@ class StageConsole extends DisplayObject {
   //----------------------------------------------------------------------------
 
   void _calculateGlyphs(BitmapData fontBitmapData) {
-    fontBitmapData.renderTexture.filtering = RenderTextureFiltering.NEAREST;
+    fontBitmapData.renderTexture.filtering = .NEAREST;
     for (var i = 0; i < 64; i++) {
       final rectangle = Rectangle<int>(i * 7, 0, 7, 14);
       _glyphs.add(fontBitmapData.renderTextureQuad.cut(rectangle));

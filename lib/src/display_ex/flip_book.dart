@@ -9,10 +9,10 @@ class FlipBook extends InteractiveObject implements Animatable {
   final List<BitmapData> _bitmapDatas;
   final List<num> _frameDurations;
 
-  int _currentFrame = 0;
+  var _currentFrame = 0;
   double? _frameTime;
 
-  bool _play = false;
+  var _play = false;
   bool loop;
   final Event _progressEvent;
   final Event _completeEvent;
@@ -26,11 +26,8 @@ class FlipBook extends InteractiveObject implements Animatable {
 
   //---------------------------------------------------------------------------
 
-  static const EventStreamProvider<Event> progressEvent =
-      EventStreamProvider<Event>(Event.PROGRESS);
-
-  static const EventStreamProvider<Event> completeEvent =
-      EventStreamProvider<Event>(Event.COMPLETE);
+  static const progressEvent = EventStreamProvider<Event>(Event.PROGRESS);
+  static const completeEvent = EventStreamProvider<Event>(Event.COMPLETE);
 
   EventStream<Event> get onProgress => FlipBook.progressEvent.forTarget(this);
   EventStream<Event> get onComplete => FlipBook.completeEvent.forTarget(this);
