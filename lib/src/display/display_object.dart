@@ -743,12 +743,16 @@ abstract class DisplayObject extends EventDispatcher
       [HorizontalAlign hAlign = .Center,
       VerticalAlign vAlign = .Center]) {
     final b = bounds;
-    if (hAlign == .Left) pivotX = b.left;
-    if (hAlign == .Center) pivotX = b.left + b.width / 2;
-    if (hAlign == .Right) pivotX = b.right;
-    if (vAlign == .Top) pivotY = b.top;
-    if (vAlign == .Center) pivotY = b.top + b.height / 2;
-    if (vAlign == .Bottom) pivotY = b.bottom;
+    pivotX = switch (hAlign) {
+        .Left => b.left,
+        .Center => b.left + b.width / 2,
+        .Right => b.right
+    };
+    pivotY = switch (vAlign) {
+        .Top => b.top,
+        .Center => b.top + b.height / 2,
+        .Bottom => b.bottom
+    };
   }
 
   //----------------------------------------------------------------------------
