@@ -1,5 +1,21 @@
 part of '../drawing.dart';
 
+typedef _Parameters = ({RenderState renderState, GraphicsGradient gradient});
+
+final _linearProgramGpu = RenderProgramSimpleWebGPU<_Parameters>(
+  label: 'StageXL linear graphics gradient',
+  shaderSource: _linearShaderGpu,
+  uniformByteSize: 32,
+  writeUniforms: _writeLinearUniformsGpu,
+);
+
+final _radialProgramGpu = RenderProgramSimpleWebGPU<_Parameters>(
+  label: 'StageXL radial graphics gradient',
+  shaderSource: _radialShaderGpu,
+  uniformByteSize: 64,
+  writeUniforms: _writeRadialUniformsGpu,
+);
+
 abstract class _GraphicsGradientProgram extends RenderProgramWebGL<void> {
   GraphicsGradient? activeGradient;
 
@@ -247,3 +263,91 @@ class _RadialGraphicsGradientProgram extends _GraphicsGradientProgram {
     renderingContext.uniform3f(uniforms['uvC'], c0, c1, c2);
   }
 }
+
+void _writeLinearUniformsGpu(_Parameters parameters, Float32List data) {
+  final m = parameters.renderState.globalMatrix;
+  final g = parameters.gradient;
+  final startX = m.tx + m.a * g.startX + m.c * g.startY;
+  final startY = m.ty + m.b * g.startX + m.d * g.startY;
+  final vectorX = (m.tx + m.a * g.endX + m.c * g.endY) - startX;
+  var vectorY = (m.ty + m.b * g.endX + m.d * g.endY) - startY;
+  if (vectorX == 0 && vectorY == 0) vectorY = 1;
+  data[0] = startX;
+  data[1] = startY;
+  data[2] = vectorX;
+  data[3] = vectorY;
+  data[4] = parameters.renderState.globalAlpha;
+  data[5] = 0;
+  data[6] = 0;
+  data[7] = 0;
+}
+
+void _writeRadialUniformsGpu(_Parameters parameters, Float32List data) {
+  final m = parameters.renderState.globalMatrix;
+  final g = parameters.gradient;
+  final scaleR = sqrt(m.a * m.a + m.c * m.c);
+  final startX = m.tx + m.a * g.startX + m.c * g.startY;
+  final startY = m.ty + m.b * g.startX + m.d * g.startY;
+  final vectorX = (m.tx + m.a * g.endX + m.c * g.endY) - startX;
+  final vectorY = (m.ty + m.b * g.endX + m.d * g.endY) - startY;
+  final startRadius = g.startRadius * scaleR;
+  var radiusOffset = (g.endRadius - g.startRadius) * scaleR;
+  if (vectorX == 0 && vectorY == 0 && radiusOffset == 0) radiusOffset = 1;
+
+  data[0] = vectorX * vectorX + vectorY * vectorY - radiusOffset * radiusOffset;
+  data[1] = radiusOffset >= 0 ? -1 : 1;
+  data[2] = parameters.renderState.globalAlpha;
+  data[3] = 0;
+  data[4] = -2 * vectorX;
+  data[5] = -2 * vectorY;
+  data[6] = 2 * startX * vectorX + 2 * startY * vectorY - 2 * startRadius * radiusOffset;
+  data[7] = 0;
+  data[8] = -2 * startX;
+  data[9] = -2 * startY;
+  data[10] = startX * startX + startY * startY - startRadius * startRadius;
+  data[11] = 0;
+  data[12] = 0;
+  data[13] = 0;
+  data[14] = 0;
+  data[15] = 0;
+}
+
+const _gpuHeader = '''
+  @group(0) @binding(0) var gradientSampler: sampler;
+  @group(0) @binding(1) var gradientTexture: texture_2d<f32>;
+  struct VertexInput { @location(0) clip: vec4<f32>, @location(1) position: vec2<f32>, };
+  struct VertexOutput { @builtin(position) clip: vec4<f32>, @location(0) position: vec2<f32>, };
+  @vertex
+  fn vs_main(input: VertexInput) -> VertexOutput {
+    var output: VertexOutput;
+    output.clip = input.clip;
+    output.position = input.position;
+    return output;
+  }
+''';
+
+const _linearShaderGpu = '''
+  $_gpuHeader
+  struct Uniforms { geometry: vec4<f32>, alpha: vec4<f32>, };
+  @group(0) @binding(2) var<uniform> gradient: Uniforms;
+  @fragment
+  fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
+    let pixelVector = input.position - gradient.geometry.xy;
+    let t = dot(pixelVector, gradient.geometry.zw) / dot(gradient.geometry.zw, gradient.geometry.zw);
+    return textureSample(gradientTexture, gradientSampler, vec2<f32>(0.5, t)) * gradient.alpha.x;
+  }
+''';
+
+const _radialShaderGpu = '''
+  $_gpuHeader
+  struct Uniforms { a: vec4<f32>, b: vec4<f32>, c: vec4<f32>, unused: vec4<f32>, };
+  @group(0) @binding(2) var<uniform> gradient: Uniforms;
+  @fragment
+  fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
+    let b = dot(gradient.b.xyz, vec3<f32>(input.position, 1));
+    let c = dot(input.position, input.position) + dot(gradient.c.xyz, vec3<f32>(input.position, 1));
+    let discriminant = max(b * b - 4.0 * gradient.a.x * c, 0.0);
+    let t = (-b + gradient.a.y * sqrt(discriminant)) / (2.0 * gradient.a.x);
+    return textureSample(gradientTexture, gradientSampler, vec2<f32>(0.5, t)) * gradient.a.z;
+  }
+''';

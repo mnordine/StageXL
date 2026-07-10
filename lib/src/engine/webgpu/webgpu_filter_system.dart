@@ -1014,6 +1014,79 @@ class WebGpuFilterSystem {
     );
   }
 
+  /// Renders a position-only triangle mesh with a one-texture program.
+  ///
+  /// The program receives clip-space position at location 0 and the
+  /// transformed stage position at location 1.
+  void renderPositionMeshWithProgram<TParameters>(
+    RenderState renderState,
+    RenderTexture renderTexture,
+    Int16List ixList,
+    Float32List vxList,
+    RenderProgramSimpleWebGPU<TParameters> program,
+    TParameters parameters,
+  ) {
+    final vertexCount = vxList.length >> 1;
+    if (vertexCount == 0 || ixList.isEmpty) return;
+
+    final resources = _resourcesForProgram(program);
+    program.writeUniforms(parameters, resources.uniformData);
+    final vertices = _createFloat32Data(vertexCount * _floatsPerVertex);
+    final indices = _createUint32Data(ixList.length);
+    final globalMatrix = renderState.globalMatrix;
+    final combined = Matrix3D.fromIdentity()
+      ..copyFrom2DAndConcat(globalMatrix, renderContext.activeProjectionMatrix);
+
+    var vertexIndex = 0;
+    for (var i = 0, sourceIndex = 0; i < vertexCount; i++, sourceIndex += 2) {
+      final x = vxList[sourceIndex];
+      final y = vxList[sourceIndex + 1];
+      final clipX = combined.m00 * x + combined.m10 * y + combined.m30;
+      final clipY = combined.m01 * x + combined.m11 * y + combined.m31;
+      final clipZ = combined.m02 * x + combined.m12 * y + combined.m32;
+      final clipW = combined.m03 * x + combined.m13 * y + combined.m33;
+      vertices[vertexIndex++] = clipX;
+      vertices[vertexIndex++] = clipY;
+      vertices[vertexIndex++] = clipZ * 0.5 + clipW * 0.5;
+      vertices[vertexIndex++] = clipW;
+      vertices[vertexIndex++] = globalMatrix.tx + globalMatrix.a * x + globalMatrix.c * y;
+      vertices[vertexIndex++] = globalMatrix.ty + globalMatrix.b * x + globalMatrix.d * y;
+    }
+
+    for (var i = 0; i < ixList.length; i++) {
+      indices[i] = ixList[i];
+    }
+
+    final vertexBytes = vertices.lengthInBytes;
+    final indexBytes = indices.lengthInBytes;
+    _ensureVertexCapacity(vertexBytes);
+    _ensureIndexCapacity(indexBytes);
+    final vertexBuffer = _vertexBuffer!;
+    final indexBuffer = _indexBuffer!;
+    renderContext.device.queue
+      ..writeBuffer(vertexBuffer, 0, vertices.toJS, 0, vertices.length)
+      ..writeBuffer(indexBuffer, 0, indices.toJS, 0, indices.length)
+      ..writeBuffer(resources.uniformBuffer, 0, resources.uniformData.toJS, 0, resources.uniformData.length);
+
+    final bindGroup = _getSingleTextureBindGroup(renderTexture, resources.uniformBuffer, program.uniformByteSize);
+    final stencilValue = renderContext.maskSystem.activeStencilValue;
+    final pass = renderContext.commandSystem.beginColorPass(renderContext.consumeClearColor());
+    pass
+      ..setPipeline(resources.getPipeline(renderState.globalBlendMode, stencilValue > 0))
+      ..setBindGroup(0, bindGroup)
+      ..setVertexBuffer(0, vertexBuffer, 0, vertexBytes)
+      ..setIndexBuffer(indexBuffer, 'uint32', 0, indexBytes);
+    if (stencilValue > 0) pass.setStencilReference(stencilValue);
+    pass.drawIndexed(ixList.length, 1, 0, 0, 0);
+    pass.end();
+    renderContext.commandSystem.submit();
+
+    final statistics = renderContext.renderStatistics;
+    statistics.drawCount++;
+    statistics.vertexCount += vertexCount;
+    statistics.indexCount += ixList.length;
+  }
+
   void renderTextureQuadWithTwoTextureProgram<TParameters>(
     RenderState renderState,
     RenderTextureQuad renderTextureQuad,

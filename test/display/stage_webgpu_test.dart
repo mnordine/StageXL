@@ -80,6 +80,43 @@ void main() {
     expect(() => stage.materialize(0, 16), returnsNormally);
   });
 
+  test('WebGPU renders graphics gradient fills and strokes when available', () async {
+    final options = StageOptions()
+      ..renderEngine = .WebGPU
+      ..backgroundColor = Color.Transparent
+      ..stageRenderMode = .ONCE;
+    final canvas = HTMLCanvasElement()
+      ..width = 96
+      ..height = 96;
+    final stage = await Stage.create(canvas, width: 96, height: 96, options: options);
+
+    if (stage.renderEngine != .WebGPU) return;
+
+    final linear = GraphicsGradient.linear(0, 0, 40, 0)
+      ..addColorStop(0, Color.Red)
+      ..addColorStop(1, Color.Blue);
+    final radial = GraphicsGradient.radial(68, 24, 0, 68, 24, 20)
+      ..addColorStop(0, Color.White)
+      ..addColorStop(1, Color.Black);
+    final stroke = GraphicsGradient.linear(8, 70, 88, 70)
+      ..addColorStop(0, Color.Green)
+      ..addColorStop(1, Color.Yellow);
+    final shape = Shape();
+    shape.graphics
+      ..rect(8, 8, 40, 32)
+      ..fillGradient(linear)
+      ..circle(68, 24, 20)
+      ..fillGradient(radial)
+      ..beginPath()
+      ..moveTo(8, 70)
+      ..lineTo(88, 70)
+      ..strokeGradient(stroke, 8);
+    stage.addChild(shape);
+
+    expect(() => stage.materialize(0, 16), returnsNormally);
+    expect(stage.renderContext.renderStatistics.webgpuRenderPassCount, greaterThanOrEqualTo(3));
+  });
+
   test('WebGPU renders ColorMatrixFilter bitmap quads when available', () async {
     final options = StageOptions()
       ..renderEngine = .WebGPU

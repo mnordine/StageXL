@@ -116,8 +116,27 @@ abstract class _GraphicsMeshSegment {
   void fillGradient(RenderState renderState, GraphicsGradient gradient) {
     final ixList = Int16List.view(_indexBuffer.buffer, 0, _indexCount);
     final vxList = Float32List.view(_vertexBuffer.buffer, 0, _vertexCount * 2);
-    final renderContext = renderState.renderContext as RenderContextWebGL;
     final renderTexture = gradient.getRenderTexture();
+    final renderContext = renderState.renderContext;
+
+    if (renderContext is RenderContextWebGPU) {
+      final renderProgram = switch (gradient.type) {
+        .Linear => _linearProgramGpu,
+        .Radial => _radialProgramGpu,
+      };
+      renderContext.flush();
+      renderContext.filterSystem.renderPositionMeshWithProgram(
+        renderState,
+        renderTexture,
+        ixList,
+        vxList,
+        renderProgram,
+        (renderState: renderState, gradient: gradient),
+      );
+      return;
+    }
+
+    renderContext as RenderContextWebGL;
 
     final renderProgram = switch (gradient.type) {
       .Linear => renderContext.getRenderProgram(r'$LinearGraphicsGradientProgram', _LinearGraphicsGradientProgram.new),
