@@ -114,24 +114,11 @@ class WebGpuMaskSystem {
     final scissor = _activeScissor;
     if (scissor == null) return;
 
-    var left = scissor.left.floor();
-    var top = scissor.top.floor();
-    var width = scissor.width.ceil();
-    var height = scissor.height.ceil();
-
-    if (left < 0) {
-      width += left;
-      left = 0;
-    }
-    if (top < 0) {
-      height += top;
-      top = 0;
-    }
-
-    width = math.min(width, renderContext.viewportWidth - left);
-    height = math.min(height, renderContext.viewportHeight - top);
-    if (width <= 0 || height <= 0) return;
-    pass.setScissorRect(left, top, width, height);
+    final left = scissor.left.round().clamp(0, renderContext.viewportWidth);
+    final top = scissor.top.round().clamp(0, renderContext.viewportHeight);
+    final right = scissor.right.round().clamp(left, renderContext.viewportWidth);
+    final bottom = scissor.bottom.round().clamp(top, renderContext.viewportHeight);
+    pass.setScissorRect(left, top, right - left, bottom - top);
   }
 
   Float32List _bakeStencilVertices(List<double> maskVertices) {
