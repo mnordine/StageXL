@@ -303,6 +303,8 @@ class WebGpuFilterSystem {
     final boundsHeight = boundsBottom - boundsTop;
     if (boundsWidth <= 0 || boundsHeight <= 0) return;
 
+    if (!renderContext.batchSystem.isEmpty) renderContext.flush();
+
     final initialRenderTexture = renderContext.activeRenderTexture;
     final initialProjectionMatrix = renderContext.activeProjectionMatrix.clone();
     final maskSnapshot = renderContext.maskSystem._detach();
