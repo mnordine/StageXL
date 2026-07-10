@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:stagexl/stagexl.dart';
 import 'package:web/web.dart';
 
@@ -69,6 +71,30 @@ Future<void> main() async {
     ..addChild(linearShape)
     ..addChild(radialShape)
     ..addChild(strokeShape);
+
+  _animateGradients(stage, linear, radial, strokeGradient);
+}
+
+void _animateGradients(
+  Stage stage,
+  GraphicsGradient linear,
+  GraphicsGradient radial,
+  GraphicsGradient stroke,
+) {
+  stage.juggler.addTranslation(0, math.pi * 2, 6, Transition.linear, (phase) {
+    final wave = math.sin(phase);
+    final secondWave = math.sin(phase + math.pi / 2);
+
+    linear
+      ..startX = wave * 90
+      ..endX = 360 + wave * 90;
+    radial.endRadius = 150 + secondWave * 40;
+    stroke
+      ..startY = wave * 70
+      ..endY = secondWave * 70;
+  }, onComplete: () {
+    _animateGradients(stage, linear, radial, stroke);
+  });
 }
 
 void _addLabel(
