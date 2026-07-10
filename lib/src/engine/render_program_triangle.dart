@@ -1,6 +1,6 @@
 part of '../engine.dart';
 
-class RenderProgramTriangle extends RenderProgram {
+class RenderProgramTriangleWebGL extends RenderProgramWebGL<void> {
   // aVertexPosition:   Float32(x), Float32(y)
   // aVertexAlpha:      Float32(r), Float32(g), Float32(b), Float32(a)
 
@@ -36,7 +36,7 @@ class RenderProgramTriangle extends RenderProgram {
   String get fragmentShaderSource => isWebGL2 ? '''
     #version 300 es
 
-    precision ${RenderProgram.fragmentPrecision} float;
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
 
     in vec4 vColor;
     out vec4 fragColor;
@@ -46,7 +46,7 @@ class RenderProgramTriangle extends RenderProgram {
     }
     ''' : '''
 
-    precision ${RenderProgram.fragmentPrecision} float;
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
     varying vec4 vColor;
 
     void main() {

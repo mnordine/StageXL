@@ -264,7 +264,7 @@ class RenderTexture {
 
     // Determine the upload unit (use the last available texture unit)
     // This avoids interfering with units 0, 1, etc., which are used first by the batcher.
-    final lastUnitIndex = RenderProgramBatch._maxTextures - 1;
+    final lastUnitIndex = RenderProgramBatchWebGL._maxTextures - 1;
     final lastUnit = WebGL.TEXTURE0 + lastUnitIndex;
 
     // Save the currently active texture unit. We need to restore this later.
@@ -295,7 +295,7 @@ class RenderTexture {
 
     renderContext.flush();
 
-    final lastUnitIndex = RenderProgramBatch._maxTextures - 1;
+    final lastUnitIndex = RenderProgramBatchWebGL._maxTextures - 1;
     final lastUnit = WebGL.TEXTURE0 + lastUnitIndex;
     final activeUnit = (renderingContext.getParameter(WebGL.ACTIVE_TEXTURE) as JSNumber).toDartInt;
 

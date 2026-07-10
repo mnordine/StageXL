@@ -1,6 +1,8 @@
 @TestOn('browser')
 library;
 
+import 'dart:typed_data';
+
 import 'package:stagexl/stagexl.dart';
 import 'package:test/test.dart';
 import 'package:web/web.dart' hide Float32List;
@@ -268,6 +270,29 @@ void main() {
     expect(stage.renderContext.renderStatistics.webgpuRenderPassCount, greaterThanOrEqualTo(1));
   });
 
+  for (final renderEngine in [RenderEngine.WebGL, RenderEngine.WebGL2]) {
+    test('$renderEngine renders custom one-texture filter programs', () {
+      final options = StageOptions()
+        ..renderEngine = renderEngine
+        ..backgroundColor = Color.Transparent
+        ..stageRenderMode = .ONCE;
+      final canvas = HTMLCanvasElement()
+        ..width = 64
+        ..height = 64;
+      final stage = Stage(canvas, width: 64, height: 64, options: options);
+      if (stage.renderEngine != renderEngine) return;
+
+      final bitmap = Bitmap(BitmapData(48, 48, Color.Red))
+        ..x = 8
+        ..y = 8
+        ..filters = [_CustomTintFilter(0.25, 0.5, 1, 0.75)];
+      stage.addChild(bitmap);
+
+      expect(() => stage.materialize(0, 16), returnsNormally);
+      expect(stage.renderContext.renderStatistics.drawCount, greaterThanOrEqualTo(1));
+    });
+  }
+
   test('WebGPU batches batch-preserving filtered display objects when available', () async {
     final options = StageOptions()
       ..renderEngine = .WebGPU
@@ -372,11 +397,10 @@ void main() {
   });
 }
 
+typedef _TintParameters = ({double red, double green, double blue, double alpha});
+
 class _CustomTintFilter extends BitmapFilter {
-  static final _program = WebGpuFilterProgram(
-    label: 'StageXL custom test tint filter pipeline',
-    uniformByteSize: 16,
-    shaderSource: '''
+  static const _webGPUShaderSource = '''
       @group(0) @binding(0) var stageSampler: sampler;
       @group(0) @binding(1) var stageTexture: texture_2d<f32>;
 
@@ -408,8 +432,19 @@ class _CustomTintFilter extends BitmapFilter {
       fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
         return textureSample(stageTexture, stageSampler, input.uv) * tint.colorScale;
       }
-    ''',
+    ''';
+  static final _webGPUProgram = _TintProgramWebGPU();
+  static final _programs = RenderProgramSet<_TintParameters>(
+    webGL: _TintProgramWebGL(),
+    webGPU: _webGPUProgram,
   );
+
+  static void _writeUniforms(_TintParameters parameters, Float32List uniformData) {
+    uniformData[0] = parameters.red;
+    uniformData[1] = parameters.green;
+    uniformData[2] = parameters.blue;
+    uniformData[3] = parameters.alpha;
+  }
 
   final double factorR;
   final double factorG;
@@ -419,21 +454,71 @@ class _CustomTintFilter extends BitmapFilter {
   _CustomTintFilter(this.factorR, this.factorG, this.factorB, this.factorA);
 
   @override
-  bool get supportsWebGPU => true;
+  RenderProgramSet<_TintParameters> get renderPrograms => _programs;
 
   @override
   BitmapFilter clone() => _CustomTintFilter(factorR, factorG, factorB, factorA);
 
   @override
-  void renderWebGpuFilter(WebGpuFilterContext context) {
-    context.renderSingleTextureProgram(
-      _program,
-      .fromList([
-        factorR,
-        factorG,
-        factorB,
-        factorA * context.renderState.globalAlpha,
-      ]),
+  void renderFilter(RenderFilterContext context) {
+    context.render(
+      _programs,
+      (
+        red: factorR,
+        green: factorG,
+        blue: factorB,
+        alpha: factorA * context.renderState.globalAlpha,
+      ),
     );
   }
+}
+
+final class _TintProgramWebGL extends RenderProgramSimpleWebGL<_TintParameters> {
+  @override
+  String get fragmentShaderSourceWebGL2 => '''
+    #version 300 es
+
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
+    uniform sampler2D uSampler;
+    uniform vec4 uTint;
+    in vec2 vTextCoord;
+    out vec4 fragColor;
+
+    void main() {
+      fragColor = texture(uSampler, vTextCoord) * uTint;
+    }
+    ''';
+
+  @override
+  String get fragmentShaderSourceWebGL1 => '''
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
+    uniform sampler2D uSampler;
+    uniform vec4 uTint;
+    varying vec2 vTextCoord;
+
+    void main() {
+      gl_FragColor = texture2D(uSampler, vTextCoord) * uTint;
+    }
+    ''';
+
+  @override
+  void uploadParameters(_TintParameters parameters) {
+    renderingContext.uniform4f(
+      uniforms['uTint'],
+      parameters.red,
+      parameters.green,
+      parameters.blue,
+      parameters.alpha,
+    );
+  }
+}
+
+final class _TintProgramWebGPU extends RenderProgramSimpleWebGPU<_TintParameters> {
+  _TintProgramWebGPU()
+      : super(
+          label: 'StageXL custom test tint filter pipeline',
+          shaderSource: _CustomTintFilter._webGPUShaderSource,
+          uniformByteSize: 16,
+          writeUniforms: _CustomTintFilter._writeUniforms,
+        );
 }

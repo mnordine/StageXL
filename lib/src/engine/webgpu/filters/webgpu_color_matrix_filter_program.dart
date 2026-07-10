@@ -1,10 +1,11 @@
 part of '../../../engine.dart';
 
 class _WebGpuColorMatrixFilterProgram {
-  static final program = WebGpuFilterProgram(
+  static final program = RenderProgramSimpleWebGPU<Float32List>(
     label: 'StageXL color matrix filter pipeline',
     shaderSource: _shaderSource,
     uniformByteSize: 80,
+    writeUniforms: _copyWebGpuUniformData,
   );
 
   static const _shaderSource = '''

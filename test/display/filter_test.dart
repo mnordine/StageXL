@@ -5,6 +5,21 @@ import 'package:stagexl/stagexl.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('RenderProgramSet requires at least one backend', () {
+    expect(RenderProgramSet<Object?>.new, throwsArgumentError);
+  });
+
+  test('RenderProgramSet derives supported render engines from its programs', () {
+    final programs = RenderProgramSet<void>(
+      webGPU: RenderProgramWebGPU.callback((context, parameters) {}),
+    );
+
+    expect(programs.supports(.WebGPU), isTrue);
+    expect(programs.supports(.WebGL), isFalse);
+    expect(programs.supports(.WebGL2), isFalse);
+    expect(programs.supports(.Canvas2D), isFalse);
+  });
+
   test('DisplacementMapFilter apply uses scaleY for vertical displacement', () {
     final bitmapData = BitmapData(1, 3, Color.Transparent)
       ..setPixel32(0, 0, Color.Red)

@@ -10,6 +10,11 @@ import '../internal/environment.dart' as env;
 import '../internal/tools.dart';
 
 class TintFilter extends BitmapFilter {
+  static final _programs = RenderProgramSet<TintFilter>(
+    webGL: RenderProgramWebGL.callback(_renderWebGL),
+    webGPU: RenderProgramWebGPU.callback(_renderWebGPU),
+  );
+
   num factorR;
   num factorG;
   num factorB;
@@ -27,7 +32,7 @@ class TintFilter extends BitmapFilter {
   BitmapFilter clone() => TintFilter(factorR, factorG, factorB, factorA);
 
   @override
-  bool get supportsWebGPU => true;
+  RenderProgramSet<TintFilter> get renderPrograms => _programs;
 
   @override
   bool get rendersInWebGpuBatch => true;
@@ -75,27 +80,32 @@ class TintFilter extends BitmapFilter {
   //---------------------------------------------------------------------------
 
   @override
-  void renderFilter(
-      RenderState renderState, RenderTextureQuad renderTextureQuad, int pass) {
-    final renderContext = renderState.renderContext;
+  void renderFilter(RenderFilterContext context) => context.render(_programs, this);
 
-    if (renderContext is RenderContextWebGPU) {
-      renderContext.batchSystem.renderTextureQuad(
-        renderState,
-        renderTextureQuad,
-        factorR,
-        factorG,
-        factorB,
-        factorA,
-      );
-      return;
-    }
-
-    renderContext as RenderContextWebGL;
+  static void _renderWebGL(RenderFilterContext context, TintFilter filter) {
+    final renderContext = context.renderContext as RenderContextWebGL;
     final renderProgram = renderContext.renderProgramBatch;
-
     renderContext.activateRenderProgram(renderProgram);
-    renderProgram.renderTextureQuad(renderState, renderContext, renderTextureQuad,
-        factorR, factorG, factorB, factorA);
+    renderProgram.renderTextureQuad(
+      context.renderState,
+      renderContext,
+      context.renderTextureQuad,
+      filter.factorR,
+      filter.factorG,
+      filter.factorB,
+      filter.factorA,
+    );
+  }
+
+  static void _renderWebGPU(RenderFilterContext context, TintFilter filter) {
+    final renderContext = context.renderContext as RenderContextWebGPU;
+    renderContext.batchSystem.renderTextureQuad(
+      context.renderState,
+      context.renderTextureQuad,
+      filter.factorR,
+      filter.factorG,
+      filter.factorB,
+      filter.factorA,
+    );
   }
 }

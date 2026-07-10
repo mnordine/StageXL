@@ -10,6 +10,11 @@ import '../internal/filter_helpers.dart';
 import '../internal/tools.dart';
 
 class DropShadowFilter extends BitmapFilter {
+  static final _programs = RenderProgramSet<DropShadowFilter>(
+    webGL: RenderProgramWebGL.callback(_renderWebGL),
+    webGPU: RenderProgramWebGPU.callback(_renderWebGPU),
+  );
+
   /// The distance from the object to the shadow.
   num distance;
 
@@ -49,7 +54,7 @@ class DropShadowFilter extends BitmapFilter {
       distance, angle, color, blurX, blurY, quality, knockout, hideObject);
 
   @override
-  bool get supportsWebGPU => true;
+  RenderProgramSet<DropShadowFilter> get renderPrograms => _programs;
 
   @override
   Rectangle<int> get overlap {
@@ -161,62 +166,70 @@ class DropShadowFilter extends BitmapFilter {
   //---------------------------------------------------------------------------
 
   @override
-  void renderFilter(
-      RenderState renderState, RenderTextureQuad renderTextureQuad, int pass) {
-    final renderContext = renderState.renderContext;
-    final renderTexture = renderTextureQuad.renderTexture;
-    final passCount = _renderPassSources.length;
-    final passScale = pow(0.5, pass >> 1);
-    final pixelRatio = sqrt(renderState.globalMatrix.det.abs());
-    final pixelRatioScale = pixelRatio * passScale;
-    final pixelRatioDistance = pixelRatio * distance;
+  void renderFilter(RenderFilterContext context) => context.render(_programs, this);
 
-    if (renderContext is RenderContextWebGPU) {
-      if (pass == passCount - 1) {
-        if (!knockout && !hideObject) {
-          renderContext.renderTextureQuad(renderState, renderTextureQuad);
+  static ({int passCount, num shiftX, num shiftY, num radiusX, num radiusY}) _parameters(
+    RenderFilterContext context,
+    DropShadowFilter filter,
+  ) {
+    final renderTexture = context.renderTextureQuad.renderTexture;
+    final passCount = filter._renderPassSources.length;
+    final passScale = pow(0.5, context.pass >> 1);
+    final pixelRatio = sqrt(context.renderState.globalMatrix.det.abs());
+    final pixelRatioScale = pixelRatio * passScale;
+    final pixelRatioDistance = pixelRatio * filter.distance;
+    return (
+      passCount: passCount,
+      shiftX: context.pass == 0 ? pixelRatioDistance * cos(filter.angle) / renderTexture.width : 0.0,
+      shiftY: context.pass == 0 ? pixelRatioDistance * sin(filter.angle) / renderTexture.height : 0.0,
+      radiusX: context.pass.isEven ? pixelRatioScale * filter.blurX / renderTexture.width : 0.0,
+      radiusY: context.pass.isEven ? 0.0 : pixelRatioScale * filter.blurY / renderTexture.height,
+    );
+  }
+
+  static void _renderWebGPU(RenderFilterContext context, DropShadowFilter filter) {
+      final renderContext = context.renderContext as RenderContextWebGPU;
+      final parameters = _parameters(context, filter);
+      if (context.pass == parameters.passCount - 1) {
+        if (!filter.knockout && !filter.hideObject) {
+          renderContext.renderTextureQuad(context.renderState, context.renderTextureQuad);
         }
       } else {
         renderContext.filterSystem.renderDropShadowFilterQuad(
-          renderState,
-          renderTextureQuad,
-          pass == passCount - 2 ? color : color | 0xFF000000,
-          pass == passCount - 2 ? renderState.globalAlpha : 1.0,
-          pass == 0 ? pixelRatioDistance * cos(angle) / renderTexture.width : 0.0,
-          pass == 0 ? pixelRatioDistance * sin(angle) / renderTexture.height : 0.0,
-          pass.isEven ? pixelRatioScale * blurX / renderTexture.width : 0.0,
-          pass.isEven ? 0.0 : pixelRatioScale * blurY / renderTexture.height,
+          context.renderState,
+          context.renderTextureQuad,
+          context.pass == parameters.passCount - 2 ? filter.color : filter.color | 0xFF000000,
+          context.pass == parameters.passCount - 2 ? context.renderState.globalAlpha : 1.0,
+          parameters.shiftX,
+          parameters.shiftY,
+          parameters.radiusX,
+          parameters.radiusY,
         );
       }
-      return;
-    }
+  }
 
-    renderContext as RenderContextWebGL;
-
-    if (pass == passCount - 1) {
-      if (!knockout && !hideObject) {
-        renderContext.renderTextureQuad(renderState, renderTextureQuad);
+  static void _renderWebGL(RenderFilterContext context, DropShadowFilter filter) {
+    final renderContext = context.renderContext as RenderContextWebGL;
+    final parameters = _parameters(context, filter);
+    if (context.pass == parameters.passCount - 1) {
+      if (!filter.knockout && !filter.hideObject) {
+        renderContext.renderTextureQuad(context.renderState, context.renderTextureQuad);
       }
     } else {
+      final renderTexture = context.renderTextureQuad.renderTexture;
       final renderProgram = renderContext.getRenderProgram(
-          r'$DropShadowFilterProgram', DropShadowFilterProgram.new);
-
+          r'$DropShadowFilterProgramWebGL', DropShadowFilterProgramWebGL.new);
       renderContext.activateRenderProgram(renderProgram);
       renderContext.activateRenderTexture(renderTexture);
-
       renderProgram.configure(
-          pass == passCount - 2 ? color : color | 0xFF000000,
-          pass == passCount - 2 ? renderState.globalAlpha : 1.0,
-          pass == 0
-              ? pixelRatioDistance * cos(angle) / renderTexture.width
-              : 0.0,
-          pass == 0
-              ? pixelRatioDistance * sin(angle) / renderTexture.height
-              : 0.0,
-          pass.isEven ? pixelRatioScale * blurX / renderTexture.width : 0.0,
-          pass.isEven ? 0.0 : pixelRatioScale * blurY / renderTexture.height);
-
-      renderProgram.renderTextureQuad(renderState, renderTextureQuad);
+        context.pass == parameters.passCount - 2 ? filter.color : filter.color | 0xFF000000,
+        context.pass == parameters.passCount - 2 ? context.renderState.globalAlpha : 1.0,
+        parameters.shiftX,
+        parameters.shiftY,
+        parameters.radiusX,
+        parameters.radiusY,
+      );
+      renderProgram.renderTextureQuad(context.renderState, context.renderTextureQuad);
       renderProgram.flush();
     }
   }
@@ -225,7 +238,7 @@ class DropShadowFilter extends BitmapFilter {
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 
-class DropShadowFilterProgram extends RenderProgramSimple {
+class DropShadowFilterProgramWebGL extends RenderProgramSimpleWebGL<DropShadowFilter> {
   @override
   String get vertexShaderSource => isWebGL2 ? '''
     #version 300 es
@@ -278,7 +291,7 @@ class DropShadowFilterProgram extends RenderProgramSimple {
   String get fragmentShaderSource => isWebGL2 ? '''
     #version 300 es
 
-    precision ${RenderProgram.fragmentPrecision} float;
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
 
     uniform sampler2D uSampler;
     uniform vec4 uColor;
@@ -300,7 +313,7 @@ class DropShadowFilterProgram extends RenderProgramSimple {
     }
     ''' : '''
 
-    precision ${RenderProgram.fragmentPrecision} float;
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
 
     uniform sampler2D uSampler;
     uniform vec4 uColor;

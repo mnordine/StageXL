@@ -16,7 +16,7 @@ class _DrawCommand {
   });
 }
 
-class RenderProgramBatch extends RenderProgram {
+class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
   // aVertexPosition:   Float32(x), Float32(y)
   // aVertexTextCoord:  Float32(u), Float32(v)
   // aVertexColor:      Float32(r), Float32(g), Float32(b), Float32(a)
@@ -111,7 +111,7 @@ class RenderProgramBatch extends RenderProgram {
       return '''
       #version 300 es
 
-      precision ${RenderProgram.fragmentPrecision} float;
+      precision ${RenderProgramWebGL.fragmentPrecision} float;
 
       $samplerDeclaration
 
@@ -145,7 +145,7 @@ class RenderProgramBatch extends RenderProgram {
         }''');
 
       return '''
-      precision ${RenderProgram.fragmentPrecision} float;
+      precision ${RenderProgramWebGL.fragmentPrecision} float;
 
       $samplerDeclarations // Use individual samplers
 
@@ -232,7 +232,7 @@ class RenderProgramBatch extends RenderProgram {
     final lastBlendMode = _lastBlendMode;
     if (lastBlendMode.srcFactor != BlendMode.NORMAL.srcFactor ||
          lastBlendMode.dstFactor != BlendMode.NORMAL.dstFactor) {
-      _renderingContext.blendFunc(BlendMode.NORMAL.srcFactor, BlendMode.NORMAL.dstFactor);
+      renderingContext.blendFunc(BlendMode.NORMAL.srcFactor, BlendMode.NORMAL.dstFactor);
       _lastBlendMode = .NORMAL;
     }
   }

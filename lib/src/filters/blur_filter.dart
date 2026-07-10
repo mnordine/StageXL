@@ -9,6 +9,11 @@ import '../geom.dart';
 import '../internal/filter_helpers.dart';
 
 class BlurFilter extends BitmapFilter {
+  static final _programs = RenderProgramSet<BlurFilter>(
+    webGL: RenderProgramWebGL.callback(_renderWebGL),
+    webGPU: RenderProgramWebGPU.callback(_renderWebGPU),
+  );
+
   late int _blurX;
   late int _blurY;
   late int _quality;
@@ -33,7 +38,7 @@ class BlurFilter extends BitmapFilter {
   BitmapFilter clone() => BlurFilter(blurX, blurY);
 
   @override
-  bool get supportsWebGPU => true;
+  RenderProgramSet<BlurFilter> get renderPrograms => _programs;
 
   @override
   Rectangle<int> get overlap =>
@@ -128,48 +133,52 @@ class BlurFilter extends BitmapFilter {
   //---------------------------------------------------------------------------
 
   @override
-  void renderFilter(
-      RenderState renderState, RenderTextureQuad renderTextureQuad, int pass) {
-    final renderContext = renderState.renderContext;
-    final renderTexture = renderTextureQuad.renderTexture;
-    final passCount = _renderPassSources.length;
-    final passScale = pow(0.5, pass >> 1);
-    final pixelRatio = sqrt(renderState.globalMatrix.det.abs());
+  void renderFilter(RenderFilterContext context) => context.render(_programs, this);
+
+  static ({num alpha, num radiusX, num radiusY}) _parameters(RenderFilterContext context, BlurFilter filter) {
+    final renderTexture = context.renderTextureQuad.renderTexture;
+    final passCount = filter._renderPassSources.length;
+    final passScale = pow(0.5, context.pass >> 1);
+    final pixelRatio = sqrt(context.renderState.globalMatrix.det.abs());
     final pixelRatioScale = pixelRatio * passScale;
+    return (
+      alpha: context.pass == passCount - 1 ? context.renderState.globalAlpha : 1.0,
+      radiusX: context.pass.isEven ? pixelRatioScale * filter.blurX / renderTexture.width : 0.0,
+      radiusY: context.pass.isEven ? 0.0 : pixelRatioScale * filter.blurY / renderTexture.height,
+    );
+  }
 
-    if (renderContext is RenderContextWebGPU) {
-      renderContext.filterSystem.renderBlurFilterQuad(
-        renderState,
-        renderTextureQuad,
-        pass == passCount - 1 ? renderState.globalAlpha : 1.0,
-        pass.isEven ? pixelRatioScale * blurX / renderTexture.width : 0.0,
-        pass.isEven ? 0.0 : pixelRatioScale * blurY / renderTexture.height,
-      );
-      return;
-    }
-
-    renderContext as RenderContextWebGL;
+  static void _renderWebGL(RenderFilterContext context, BlurFilter filter) {
+    final renderContext = context.renderContext as RenderContextWebGL;
+    final parameters = _parameters(context, filter);
+    final renderTexture = context.renderTextureQuad.renderTexture;
 
     final renderProgram = renderContext.getRenderProgram(
-        r'$BlurFilterProgram', BlurFilterProgram.new);
-
+        r'$BlurFilterProgramWebGL', BlurFilterProgramWebGL.new);
     renderContext.activateRenderProgram(renderProgram);
     renderContext.activateRenderTexture(renderTexture);
-
-    renderProgram.configure(
-        pass == passCount - 1 ? renderState.globalAlpha : 1.0,
-        pass.isEven ? pixelRatioScale * blurX / renderTexture.width : 0.0,
-        pass.isEven ? 0.0 : pixelRatioScale * blurY / renderTexture.height);
-
-    renderProgram.renderTextureQuad(renderState, renderTextureQuad);
+    renderProgram.configure(parameters.alpha, parameters.radiusX, parameters.radiusY);
+    renderProgram.renderTextureQuad(context.renderState, context.renderTextureQuad);
     renderProgram.flush();
+  }
+
+  static void _renderWebGPU(RenderFilterContext context, BlurFilter filter) {
+    final renderContext = context.renderContext as RenderContextWebGPU;
+    final parameters = _parameters(context, filter);
+    renderContext.filterSystem.renderBlurFilterQuad(
+      context.renderState,
+      context.renderTextureQuad,
+      parameters.alpha,
+      parameters.radiusX,
+      parameters.radiusY,
+    );
   }
 }
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 
-class BlurFilterProgram extends RenderProgramSimple {
+class BlurFilterProgramWebGL extends RenderProgramSimpleWebGL<BlurFilter> {
   @override
   String get vertexShaderSource => isWebGL2 ? '''
     #version 300 es
@@ -218,7 +227,7 @@ class BlurFilterProgram extends RenderProgramSimple {
   String get fragmentShaderSource => isWebGL2 ? '''
     #version 300 es
     
-    precision ${RenderProgram.fragmentPrecision} float;
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
 
     uniform sampler2D uSampler;
     uniform float uAlpha;
@@ -239,7 +248,7 @@ class BlurFilterProgram extends RenderProgramSimple {
     }
     ''' : '''
 
-    precision ${RenderProgram.fragmentPrecision} float;
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
 
     uniform sampler2D uSampler;
     uniform float uAlpha;

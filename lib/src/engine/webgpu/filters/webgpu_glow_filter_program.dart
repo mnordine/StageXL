@@ -1,10 +1,11 @@
 part of '../../../engine.dart';
 
 class _WebGpuGlowFilterProgram {
-  static final program = WebGpuFilterProgram(
+  static final program = RenderProgramSimpleWebGPU<Float32List>(
     label: 'StageXL glow filter pipeline',
     shaderSource: _shaderSource,
     uniformByteSize: 32,
+    writeUniforms: _copyWebGpuUniformData,
   );
 
   static const _shaderSource = '''

@@ -1,10 +1,11 @@
 part of '../../../engine.dart';
 
 class _WebGpuFxaaFilterProgram {
-  static final program = WebGpuFilterProgram(
+  static final program = RenderProgramSimpleWebGPU<Float32List>(
     label: 'StageXL fxaa filter pipeline',
     shaderSource: _shaderSource,
     uniformByteSize: 16,
+    writeUniforms: _copyWebGpuUniformData,
   );
 
   static const _shaderSource = '''

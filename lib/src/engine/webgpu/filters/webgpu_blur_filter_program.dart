@@ -1,10 +1,11 @@
 part of '../../../engine.dart';
 
 class _WebGpuBlurFilterProgram {
-  static final program = WebGpuFilterProgram(
+  static final program = RenderProgramSimpleWebGPU<Float32List>(
     label: 'StageXL blur filter pipeline',
     shaderSource: _shaderSource,
     uniformByteSize: 16,
+    writeUniforms: _copyWebGpuUniformData,
   );
 
   static const _shaderSource = '''

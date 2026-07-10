@@ -1,57 +1,45 @@
 part of '../engine.dart';
 
-abstract class RenderProgram {
-  var _contextIdentifier = -1;
+typedef RenderProgramCallback<TParameters> = void Function(RenderFilterContext context, TParameters parameters);
 
-  late WebGL _renderingContext;
-  late WebGLProgram _program;
-  WebGLVertexArrayObject? _vao;
-  WebGLVertexArrayObjectOES? _vaoOes;
-  var _supportsVao = false;
-  OES_vertex_array_object? _vaoExtension;
+abstract class RenderProgram<TContext extends RenderContext, TParameters> {
+  const RenderProgram();
+}
 
-  final Map<String, int> _attributes;
-  final Map<String, WebGLUniformLocation> _uniforms;
-  RenderBufferIndex _renderBufferIndex;
-  RenderBufferVertex _renderBufferVertex;
-  RenderStatistics _renderStatistics;
+abstract class RenderProgramWebGL<TParameters> extends RenderProgram<RenderContextWebGL, TParameters> {
+  late _Resources _resources;
+  RenderContextWebGL? _activeRenderContext;
+  var _hasResources = false;
 
   static var fragmentPrecision = 'mediump';
 
   static WebGLVertexArrayObject? currentVao;
   static WebGLVertexArrayObjectOES? currentVaoOes;
 
-  // Track enabled vertex attrib arrays globally so we can disable those
-  // that are not used by the newly activated program. This avoids
-  // leftover vertex attribute state from other programs (for example
-  // filter programs) causing incorrect vertex attribute pointers.
-  static final _enabledVertexAttribArrays = <int>{};
+  bool get isWebGL2 => _resources.driver.isWebGL2;
 
-  bool? _isWebGL2;
-  bool get isWebGL2 => 
-    _isWebGL2 ??= _renderingContext.isA<WebGL2RenderingContext>();
+  RenderProgramWebGL();
 
-  RenderProgram()
-      : _attributes = <String, int>{},
-        _uniforms = <String, WebGLUniformLocation>{},
-        _renderBufferIndex = RenderBufferIndex(0),
-        _renderBufferVertex = RenderBufferVertex(0),
-        _renderStatistics = RenderStatistics();
+  factory RenderProgramWebGL.callback(RenderProgramCallback<TParameters> render) = _WebGLCallback<TParameters>;
 
   //---------------------------------------------------------------------------
 
   String get vertexShaderSource;
   String get fragmentShaderSource;
 
-  int get contextIdentifier => _contextIdentifier;
-  RenderBufferIndex get renderBufferIndex => _renderBufferIndex;
-  RenderBufferVertex get renderBufferVertex => _renderBufferVertex;
-  RenderStatistics get renderStatistics => _renderStatistics;
-  WebGL get renderingContext => _renderingContext;
-  WebGLProgram get program => _program;
+  int get contextIdentifier => _resources.renderContext.contextIdentifier;
+  RenderBufferIndex get renderBufferIndex => _resources.renderContext.renderBufferIndex;
+  RenderBufferVertex get renderBufferVertex => _resources.renderContext.renderBufferVertex;
+  RenderStatistics get renderStatistics => _resources.renderContext.renderStatistics;
+  WebGL get renderingContext => _resources.renderingContext;
+  WebGLProgram get program => _resources.program!;
 
-  Map<String, int> get attributes => _attributes;
-  Map<String, WebGLUniformLocation> get uniforms => _uniforms;
+  Map<String, int> get attributes => _resources.attributes;
+  Map<String, WebGLUniformLocation> get uniforms => _resources.uniforms;
+
+  void renderFilter(RenderFilterContext context, TParameters parameters) {
+    throw UnsupportedError('$runtimeType cannot render a filter pass.');
+  }
 
   //---------------------------------------------------------------------------
 
@@ -63,35 +51,26 @@ abstract class RenderProgram {
   //---------------------------------------------------------------------------
 
   void activate(RenderContextWebGL renderContext) {
-    if (contextIdentifier != renderContext.contextIdentifier) {
-      _contextIdentifier = renderContext.contextIdentifier;
-      _renderingContext = renderContext.rawContext;
-      _renderStatistics = renderContext.renderStatistics;
-      _renderBufferIndex = renderContext.renderBufferIndex;
-      _renderBufferVertex = renderContext.renderBufferVertex;
-      
-      // Check for VAO support
-      _supportsVao = isWebGL2;
-      if (!_supportsVao) {
-        _vaoExtension = renderContext.vaoExtension;
-        _supportsVao = _vaoExtension != null;
-      }
-
+    _resources = renderContext._resourcesForProgram(this);
+    _activeRenderContext = renderContext;
+    _hasResources = true;
+    if (!_resources.initialized) {
       _createVao();
       _bindVAO();
 
-      _program = _createProgram(_renderingContext);
-      _updateAttributes(_renderingContext, _program);
-      _updateUniforms(_renderingContext, _program);
+      _resources.program = _createProgram(renderingContext);
+      _updateAttributes(renderingContext, program);
+      _updateUniforms(renderingContext, program);
 
-      _renderBufferIndex.activate(renderContext);
-      _renderBufferVertex.activate(renderContext);
+      renderBufferIndex.activate(renderContext);
+      renderBufferVertex.activate(renderContext);
       setupAttributes();
+      _resources.initialized = true;
     }
 
-    if (!_supportsVao) {
-      _renderBufferIndex.activate(renderContext);
-      _renderBufferVertex.activate(renderContext);
+    if (!_resources.driver.supportsVao) {
+      renderBufferIndex.activate(renderContext);
+      renderBufferVertex.activate(renderContext);
       setupAttributes();
     }
 
@@ -105,54 +84,23 @@ abstract class RenderProgram {
   }
 
   void _createVao() {
-    if (!_supportsVao) return;
-
-    if (isWebGL2) {
-      final vao = (_renderingContext as WebGL2RenderingContext).createVertexArray();
-      if (vao == null) {
-        throw StateError(_renderingContext.isContextLost() ? 'ContextLost' : 'Failed to create WebGL vertex array.');
-      }
-      _vao = vao;
-    } else {
-      final vao = _vaoExtension?.createVertexArrayOES();
-      if (vao == null) {
-        throw StateError(_renderingContext.isContextLost() ? 'ContextLost' : 'Failed to create WebGL vertex array.');
-      }
-      _vaoOes = vao;
-    }
+    _resources.driver.createVao();
   }
 
-  void _bindVAO() {
-    if (!_supportsVao) return;
-
-    if (isWebGL2) {
-      if (currentVao != _vao) {
-        (_renderingContext as WebGL2RenderingContext).bindVertexArray(_vao);
-        currentVao = _vao;
-      }
-    } else {
-      if (currentVaoOes != _vaoOes) {
-        _vaoExtension?.bindVertexArrayOES(_vaoOes);
-        currentVaoOes = _vaoOes;
-      }
-    }
-  }
+  void _bindVAO() => _resources.driver.bindVao();
 
   void setupAttributes();
 
   //---------------------------------------------------------------------------
 
   void dispose() {
-    if (_vao != null) {
-      (_renderingContext as WebGL2RenderingContext).deleteVertexArray(_vao);
-      _vao = null;
-    } 
-    
-    if (_vaoOes != null) {
-      _vaoExtension?.deleteVertexArrayOES(_vaoOes);
-      _vaoOes = null;
-    }
+    if (!_hasResources) return;
+    _resources.dispose();
+    _activeRenderContext = null;
+    _hasResources = false;
   }
+
+  bool hasActiveResourcesFor(RenderContextWebGL renderContext) => identical(_activeRenderContext, renderContext);
 
   void flush() {
     if (renderBufferIndex.position > 0 && renderBufferVertex.position > 0) {
@@ -224,15 +172,15 @@ abstract class RenderProgram {
     // arrays globally can corrupt other VAOs' state (this was breaking
     // WebGL2 runs). When VAOs are supported we just enable attributes for
     // the currently bound VAO and record their locations.
-    if (_supportsVao) {
-      _attributes.clear();
+    if (_resources.driver.supportsVao) {
+      attributes.clear();
       for (var i = 0; i < count; i++) {
         final activeInfo = rc.getActiveAttrib(program, i)!;
         final location = rc.getAttribLocation(program, activeInfo.name);
         try {
           rc.enableVertexAttribArray(location);
         } catch (_) {}
-        _attributes[activeInfo.name] = location;
+        attributes[activeInfo.name] = location;
       }
       return;
     }
@@ -248,38 +196,168 @@ abstract class RenderProgram {
       newLocations.add(location);
     }
 
-    for (final loc in _enabledVertexAttribArrays.toList()) {
+    final enabledVertexAttribArrays = _resources.renderContext._enabledVertexAttribArrays;
+    for (final loc in enabledVertexAttribArrays.toList()) {
       if (!newLocations.contains(loc)) {
         try {
           rc.disableVertexAttribArray(loc);
         } catch (_) {
           // ignore errors when disabling invalid locations
         }
-        _enabledVertexAttribArrays.remove(loc);
+        enabledVertexAttribArrays.remove(loc);
       }
     }
 
-    _attributes.clear();
+    attributes.clear();
     newAttributes.forEach((name, location) {
       try {
         rc.enableVertexAttribArray(location);
       } catch (_) {}
-      _enabledVertexAttribArrays.add(location);
-      _attributes[name] = location;
+      enabledVertexAttribArrays.add(location);
+      attributes[name] = location;
     });
   }
 
   //---------------------------------------------------------------------------
 
   void _updateUniforms(WebGL rc, WebGLProgram program) {
-    _uniforms.clear();
+    uniforms.clear();
     final count =
         (rc.getProgramParameter(program, WebGL.ACTIVE_UNIFORMS)! as JSNumber).toDartInt;
 
     for (var i = 0; i < count; i++) {
       final activeInfo = rc.getActiveUniform(program, i)!;
       final location = rc.getUniformLocation(program, activeInfo.name)!;
-      _uniforms[activeInfo.name] = location;
+      uniforms[activeInfo.name] = location;
     }
   }
+}
+
+sealed class _WebGLDriver<TContext extends JSObject, TVao extends JSObject> {
+  final TContext renderingContext;
+  TVao? vao;
+
+  _WebGLDriver(this.renderingContext);
+
+  bool get isWebGL2;
+  bool get supportsVao;
+
+  void createVao();
+  void bindVao();
+  void dispose();
+
+  Never vaoCreationFailed() => throw StateError(
+        isContextLost ? 'ContextLost' : 'Failed to create WebGL vertex array.',
+      );
+
+  bool get isContextLost;
+}
+
+final class _WebGL1Driver extends _WebGLDriver<WebGLRenderingContext, WebGLVertexArrayObjectOES> {
+  final OES_vertex_array_object? extension;
+
+  _WebGL1Driver(super.renderingContext, this.extension);
+
+  @override
+  bool get isWebGL2 => false;
+
+  @override
+  bool get supportsVao => extension != null;
+
+  @override
+  bool get isContextLost => renderingContext.isContextLost();
+
+  @override
+  void createVao() {
+    if (!supportsVao) return;
+    vao = extension!.createVertexArrayOES() ?? vaoCreationFailed();
+  }
+
+  @override
+  void bindVao() {
+    if (!supportsVao || RenderProgramWebGL.currentVaoOes == vao) return;
+    extension!.bindVertexArrayOES(vao);
+    RenderProgramWebGL.currentVaoOes = vao;
+  }
+
+  @override
+  void dispose() {
+    if (vao == null) return;
+    extension?.deleteVertexArrayOES(vao);
+    vao = null;
+  }
+}
+
+final class _WebGL2Driver extends _WebGLDriver<WebGL2RenderingContext, WebGLVertexArrayObject> {
+  _WebGL2Driver(super.renderingContext);
+
+  @override
+  bool get isWebGL2 => true;
+
+  @override
+  bool get supportsVao => true;
+
+  @override
+  bool get isContextLost => renderingContext.isContextLost();
+
+  @override
+  void createVao() {
+    vao = renderingContext.createVertexArray() ?? vaoCreationFailed();
+  }
+
+  @override
+  void bindVao() {
+    if (RenderProgramWebGL.currentVao == vao) return;
+    renderingContext.bindVertexArray(vao);
+    RenderProgramWebGL.currentVao = vao;
+  }
+
+  @override
+  void dispose() {
+    if (vao == null) return;
+    renderingContext.deleteVertexArray(vao);
+    vao = null;
+  }
+}
+
+final class _Resources {
+  final RenderContextWebGL renderContext;
+  final WebGL renderingContext;
+  final _WebGLDriver driver;
+  final attributes = <String, int>{};
+  final uniforms = <String, WebGLUniformLocation>{};
+  WebGLProgram? program;
+  var initialized = false;
+
+  _Resources(this.renderContext)
+      : renderingContext = renderContext.rawContext,
+        driver = renderContext.isWebGL2
+            ? _WebGL2Driver(renderContext.rawContext as WebGL2RenderingContext)
+            : _WebGL1Driver(renderContext.rawContext, renderContext.vaoExtension);
+
+  void dispose() {
+    driver.dispose();
+    final program = this.program;
+    if (program != null) renderingContext.deleteProgram(program);
+    this.program = null;
+    initialized = false;
+  }
+}
+
+final class _WebGLCallback<TParameters> extends RenderProgramWebGL<TParameters> {
+  final RenderProgramCallback<TParameters> _render;
+
+  _WebGLCallback(this._render);
+
+  @override
+  String get vertexShaderSource => throw UnsupportedError('Callback programs do not define shaders.');
+
+  @override
+  String get fragmentShaderSource => throw UnsupportedError('Callback programs do not define shaders.');
+
+  @override
+  void setupAttributes() => throw UnsupportedError('Callback programs do not define attributes.');
+
+  @override
+  void renderFilter(RenderFilterContext context, TParameters parameters) => _render(context, parameters);
 }

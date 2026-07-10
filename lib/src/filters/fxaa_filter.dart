@@ -20,11 +20,16 @@ import '../geom.dart';
 /// transparency.
 
 class FxaaFilter extends BitmapFilter {
+  static final _programs = RenderProgramSet<FxaaFilter>(
+    webGL: RenderProgramWebGL.callback(_renderWebGL),
+    webGPU: RenderProgramWebGPU.callback(_renderWebGPU),
+  );
+
   @override
   BitmapFilter clone() => FxaaFilter();
 
   @override
-  bool get supportsWebGPU => true;
+  RenderProgramSet<FxaaFilter> get renderPrograms => _programs;
 
   //----------------------------------------------------------------------------
 
@@ -36,32 +41,30 @@ class FxaaFilter extends BitmapFilter {
   //----------------------------------------------------------------------------
 
   @override
-  void renderFilter(
-      RenderState renderState, RenderTextureQuad renderTextureQuad, int pass) {
-    final renderContext = renderState.renderContext;
-    if (renderContext is RenderContextWebGPU) {
-      renderContext.filterSystem.renderFxaaFilterQuad(renderState, renderTextureQuad);
-      return;
-    }
+  void renderFilter(RenderFilterContext context) => context.render(_programs, this);
 
-    renderContext as RenderContextWebGL;
-    final renderTexture = renderTextureQuad.renderTexture;
-
+  static void _renderWebGL(RenderFilterContext context, FxaaFilter filter) {
+    final renderContext = context.renderContext as RenderContextWebGL;
+    final renderTexture = context.renderTextureQuad.renderTexture;
     final renderProgram = renderContext.getRenderProgram(
-        r'$FxaaFilterProgram', FxaaFilterProgram.new);
-
+        r'$FxaaFilterProgramWebGL', FxaaFilterProgramWebGL.new);
     renderContext.activateRenderProgram(renderProgram);
     renderContext.activateRenderTexture(renderTexture);
     renderProgram.configure(renderTexture.width, renderTexture.height);
-    renderProgram.renderTextureQuad(renderState, renderTextureQuad);
+    renderProgram.renderTextureQuad(context.renderState, context.renderTextureQuad);
     renderProgram.flush();
+  }
+
+  static void _renderWebGPU(RenderFilterContext context, FxaaFilter filter) {
+    final renderContext = context.renderContext as RenderContextWebGPU;
+    renderContext.filterSystem.renderFxaaFilterQuad(context.renderState, context.renderTextureQuad);
   }
 }
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 
-class FxaaFilterProgram extends RenderProgramSimple {
+class FxaaFilterProgramWebGL extends RenderProgramSimpleWebGL<FxaaFilter> {
   // aVertexPosition:   Float32(x), Float32(y)
   // aVertexTextCoord:  Float32(u), Float32(v)
   // aVertexAlpha:      Float32(alpha)
@@ -128,7 +131,7 @@ class FxaaFilterProgram extends RenderProgramSimple {
   String get fragmentShaderSource => isWebGL2 ? '''
     #version 300 es
 
-    precision ${RenderProgram.fragmentPrecision} float;
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
 
     uniform sampler2D uSampler;
     uniform vec2 uTexel;
@@ -179,7 +182,7 @@ class FxaaFilterProgram extends RenderProgramSimple {
     }
     ''' : '''
 
-    precision ${RenderProgram.fragmentPrecision} float;
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
 
     uniform sampler2D uSampler;
     uniform vec2 uTexel;

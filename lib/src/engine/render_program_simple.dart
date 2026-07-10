@@ -1,12 +1,14 @@
 part of '../engine.dart';
 
-class RenderProgramSimple extends RenderProgram {
+abstract class RenderProgramSimpleWebGL<TParameters> extends RenderProgramWebGL<TParameters> {
   // aVertexPosition:   Float32(x), Float32(y)
   // aVertexTextCoord:  Float32(u), Float32(v)
   // aVertexAlpha:      Float32(alpha)
 
   @override
-  String get vertexShaderSource => isWebGL2 ? '''
+  String get vertexShaderSource => isWebGL2 ? vertexShaderWebGL2 : vertexShaderWebGL1;
+
+  String get vertexShaderWebGL2 => '''
     #version 300 es
 
     uniform mat4 uProjectionMatrix;
@@ -22,7 +24,9 @@ class RenderProgramSimple extends RenderProgram {
       vAlpha = aVertexAlpha;
       gl_Position = vec4(aVertexPosition, 0.0, 1.0) * uProjectionMatrix;
     }
-    ''' : '''
+    ''';
+
+  String get vertexShaderWebGL1 => '''
 
     uniform mat4 uProjectionMatrix;
     attribute vec2 aVertexPosition;
@@ -39,10 +43,12 @@ class RenderProgramSimple extends RenderProgram {
     ''';
 
   @override
-  String get fragmentShaderSource => isWebGL2 ? '''
+  String get fragmentShaderSource => isWebGL2 ? fragmentShaderSourceWebGL2 : fragmentShaderSourceWebGL1;
+
+  String get fragmentShaderSourceWebGL2 => '''
     #version 300 es
 
-    precision ${RenderProgram.fragmentPrecision} float;
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
     uniform sampler2D uSampler;
 
     in vec2 vTextCoord;
@@ -53,9 +59,11 @@ class RenderProgramSimple extends RenderProgram {
     void main() {
       fragColor = texture(uSampler, vTextCoord) * vAlpha;
     }
-    ''' : '''
+    ''';
 
-    precision ${RenderProgram.fragmentPrecision} float;
+  String get fragmentShaderSourceWebGL1 => '''
+
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
     uniform sampler2D uSampler;
     varying vec2 vTextCoord;
     varying float vAlpha;
@@ -280,5 +288,17 @@ class RenderProgramSimple extends RenderProgram {
 
     renderBufferVertex.position += vxListCount * 5;
     renderBufferVertex.count += vxListCount;
+  }
+
+  void uploadParameters(TParameters parameters) {}
+
+  @override
+  void renderFilter(RenderFilterContext context, TParameters parameters) {
+    final renderContext = context.renderContext as RenderContextWebGL;
+    renderContext.activateRenderProgram(this);
+    renderContext.activateRenderTexture(context.renderTextureQuad.renderTexture);
+    uploadParameters(parameters);
+    renderTextureQuad(context.renderState, context.renderTextureQuad);
+    flush();
   }
 }

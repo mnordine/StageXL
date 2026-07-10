@@ -1,6 +1,6 @@
 part of '../engine.dart';
 
-class RenderProgramTinted extends RenderProgram {
+class RenderProgramTintedWebGL extends RenderProgramWebGL<void> {
   // aVertexPosition:   Float32(x), Float32(y)
   // aVertexTextCoord:  Float32(u), Float32(v)
   // aVertextColor:     Float32(r), Float32(g), Float32(b), Float32(a)
@@ -43,7 +43,7 @@ class RenderProgramTinted extends RenderProgram {
   String get fragmentShaderSource => isWebGL2 ? '''
     #version 300 es
 
-    precision ${RenderProgram.fragmentPrecision} float;
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
 
     uniform sampler2D uSampler;
 
@@ -57,7 +57,7 @@ class RenderProgramTinted extends RenderProgram {
     }
     ''' : '''
 
-    precision ${RenderProgram.fragmentPrecision} float;
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
     uniform sampler2D uSampler;
     varying vec2 vTextCoord;
     varying vec4 vColor;

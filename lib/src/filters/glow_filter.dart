@@ -10,6 +10,11 @@ import '../internal/filter_helpers.dart';
 import '../internal/tools.dart';
 
 class GlowFilter extends BitmapFilter {
+  static final _programs = RenderProgramSet<GlowFilter>(
+    webGL: RenderProgramWebGL.callback(_renderWebGL),
+    webGPU: RenderProgramWebGPU.callback(_renderWebGPU),
+  );
+
   var color = 0xFF000000;
   late int _blurX;
   late int _blurY;
@@ -40,7 +45,7 @@ class GlowFilter extends BitmapFilter {
       GlowFilter(color, blurX, blurY, quality, knockout, hideObject);
 
   @override
-  bool get supportsWebGPU => true;
+  RenderProgramSet<GlowFilter> get renderPrograms => _programs;
 
   @override
   Rectangle<int> get overlap =>
@@ -142,53 +147,63 @@ class GlowFilter extends BitmapFilter {
   //---------------------------------------------------------------------------
 
   @override
-  void renderFilter(
-      RenderState renderState, RenderTextureQuad renderTextureQuad, int pass) {
-    final renderContext = renderState.renderContext;
-    final renderTexture = renderTextureQuad.renderTexture;
-    final passCount = _renderPassSources.length;
-    final passScale = pow(0.5, pass >> 1);
-    final pixelRatio = sqrt(renderState.globalMatrix.det.abs());
-    final pixelRatioScale = pixelRatio * passScale;
+  void renderFilter(RenderFilterContext context) => context.render(_programs, this);
 
-    if (renderContext is RenderContextWebGPU) {
-      if (pass == passCount - 1) {
-        if (!knockout && !hideObject) {
-          renderContext.renderTextureQuad(renderState, renderTextureQuad);
+  static ({int passCount, num radiusX, num radiusY}) _parameters(
+    RenderFilterContext context,
+    GlowFilter filter,
+  ) {
+    final renderTexture = context.renderTextureQuad.renderTexture;
+    final passCount = filter._renderPassSources.length;
+    final passScale = pow(0.5, context.pass >> 1);
+    final pixelRatio = sqrt(context.renderState.globalMatrix.det.abs());
+    final pixelRatioScale = pixelRatio * passScale;
+    return (
+      passCount: passCount,
+      radiusX: context.pass.isEven ? pixelRatioScale * filter.blurX / renderTexture.width : 0.0,
+      radiusY: context.pass.isEven ? 0.0 : pixelRatioScale * filter.blurY / renderTexture.height,
+    );
+  }
+
+  static void _renderWebGPU(RenderFilterContext context, GlowFilter filter) {
+      final renderContext = context.renderContext as RenderContextWebGPU;
+      final parameters = _parameters(context, filter);
+      if (context.pass == parameters.passCount - 1) {
+        if (!filter.knockout && !filter.hideObject) {
+          renderContext.renderTextureQuad(context.renderState, context.renderTextureQuad);
         }
       } else {
         renderContext.filterSystem.renderGlowFilterQuad(
-          renderState,
-          renderTextureQuad,
-          pass == passCount - 2 ? color : color | 0xFF000000,
-          pass == passCount - 2 ? renderState.globalAlpha : 1.0,
-          pass.isEven ? pixelRatioScale * blurX / renderTexture.width : 0.0,
-          pass.isEven ? 0.0 : pixelRatioScale * blurY / renderTexture.height,
+          context.renderState,
+          context.renderTextureQuad,
+          context.pass == parameters.passCount - 2 ? filter.color : filter.color | 0xFF000000,
+          context.pass == parameters.passCount - 2 ? context.renderState.globalAlpha : 1.0,
+          parameters.radiusX,
+          parameters.radiusY,
         );
       }
-      return;
-    }
+  }
 
-    renderContext as RenderContextWebGL;
-
-    if (pass == passCount - 1) {
-      if (!knockout && !hideObject) {
-        renderContext.renderTextureQuad(renderState, renderTextureQuad);
+  static void _renderWebGL(RenderFilterContext context, GlowFilter filter) {
+    final renderContext = context.renderContext as RenderContextWebGL;
+    final parameters = _parameters(context, filter);
+    if (context.pass == parameters.passCount - 1) {
+      if (!filter.knockout && !filter.hideObject) {
+        renderContext.renderTextureQuad(context.renderState, context.renderTextureQuad);
       }
     } else {
+      final renderTexture = context.renderTextureQuad.renderTexture;
       final renderProgram = renderContext.getRenderProgram(
-          r'$GlowFilterProgram', GlowFilterProgram.new);
-
+          r'$GlowFilterProgramWebGL', GlowFilterProgramWebGL.new);
       renderContext.activateRenderProgram(renderProgram);
       renderContext.activateRenderTexture(renderTexture);
-
       renderProgram.configure(
-          pass == passCount - 2 ? color : color | 0xFF000000,
-          pass == passCount - 2 ? renderState.globalAlpha : 1.0,
-          pass.isEven ? pixelRatioScale * blurX / renderTexture.width : 0.0,
-          pass.isEven ? 0.0 : pixelRatioScale * blurY / renderTexture.height);
-
-      renderProgram.renderTextureQuad(renderState, renderTextureQuad);
+        context.pass == parameters.passCount - 2 ? filter.color : filter.color | 0xFF000000,
+        context.pass == parameters.passCount - 2 ? context.renderState.globalAlpha : 1.0,
+        parameters.radiusX,
+        parameters.radiusY,
+      );
+      renderProgram.renderTextureQuad(context.renderState, context.renderTextureQuad);
       renderProgram.flush();
     }
   }
@@ -197,7 +212,7 @@ class GlowFilter extends BitmapFilter {
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 
-class GlowFilterProgram extends RenderProgramSimple {
+class GlowFilterProgramWebGL extends RenderProgramSimpleWebGL<GlowFilter> {
   @override
   String get vertexShaderSource => isWebGL2 ? '''
     #version 300 es
@@ -246,7 +261,7 @@ class GlowFilterProgram extends RenderProgramSimple {
   String get fragmentShaderSource => isWebGL2 ? '''
     #version 300 es
 
-    precision ${RenderProgram.fragmentPrecision} float;
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
 
     uniform sampler2D uSampler;
     uniform vec4 uColor;
@@ -269,7 +284,7 @@ class GlowFilterProgram extends RenderProgramSimple {
     }
     ''' : '''
 
-    precision ${RenderProgram.fragmentPrecision} float;
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
 
     uniform sampler2D uSampler;
     uniform vec4 uColor;

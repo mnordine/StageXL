@@ -8,6 +8,11 @@ import '../engine.dart';
 import '../geom.dart';
 
 class DisplacementMapFilter extends BitmapFilter {
+  static final _programs = RenderProgramSet<DisplacementMapFilter>(
+    webGL: .callback(_renderWebGL),
+    webGPU: .callback(_renderWebGPU),
+  );
+
   final BitmapData bitmapData;
   final Matrix matrix;
   final num scaleX;
@@ -24,7 +29,7 @@ class DisplacementMapFilter extends BitmapFilter {
       DisplacementMapFilter(bitmapData, matrix.clone(), scaleX, scaleY);
 
   @override
-  bool get supportsWebGPU => true;
+  RenderProgramSet<DisplacementMapFilter> get renderPrograms => _programs;
 
   @override
   Rectangle<int> get overlap {
@@ -105,40 +110,39 @@ class DisplacementMapFilter extends BitmapFilter {
   //-----------------------------------------------------------------------------------------------
 
   @override
-  void renderFilter(
-      RenderState renderState, RenderTextureQuad renderTextureQuad, int pass) {
-    final renderContext = renderState.renderContext;
+  void renderFilter(RenderFilterContext context) => context.render(_programs, this);
 
-    if (renderContext is RenderContextWebGPU) {
+  static void _renderWebGPU(RenderFilterContext context, DisplacementMapFilter filter) {
+      final renderContext = context.renderContext as RenderContextWebGPU;
+      final renderTextureQuad = context.renderTextureQuad;
       final mapMatrix = Matrix.fromIdentity();
-      mapMatrix.copyFromAndConcat(matrix, renderTextureQuad.samplerMatrix);
-      mapMatrix.invertAndConcat(bitmapData.renderTextureQuad.samplerMatrix);
+      mapMatrix.copyFromAndConcat(filter.matrix, renderTextureQuad.samplerMatrix);
+      mapMatrix.invertAndConcat(filter.bitmapData.renderTextureQuad.samplerMatrix);
 
       final disMatrix = Matrix.fromIdentity();
       disMatrix.copyFrom(renderTextureQuad.samplerMatrix);
-      disMatrix.scale(scaleX, scaleY);
+      disMatrix.scale(filter.scaleX, filter.scaleY);
 
       renderContext.filterSystem.renderDisplacementMapFilterQuad(
-        renderState,
+        context.renderState,
         renderTextureQuad,
-        bitmapData.renderTextureQuad,
+        filter.bitmapData.renderTextureQuad,
         mapMatrix,
         disMatrix,
       );
-      return;
-    }
+  }
 
-    renderContext as RenderContextWebGL;
+  static void _renderWebGL(RenderFilterContext context, DisplacementMapFilter filter) {
+    final renderContext = context.renderContext as RenderContextWebGL;
+    final renderTextureQuad = context.renderTextureQuad;
     final renderTexture = renderTextureQuad.renderTexture;
-
     final renderProgram = renderContext.getRenderProgram(
-        r'$DisplacementMapFilterProgram', DisplacementMapFilterProgram.new);
-
+        r'$DisplacementMapFilterProgramWebGL', DisplacementMapFilterProgramWebGL.new);
     renderContext.activateRenderProgram(renderProgram);
     renderContext.activateRenderTextureAt(renderTexture, 0);
-    renderContext.activateRenderTextureAt(bitmapData.renderTexture, 1);
-    renderProgram.configure(this, renderTextureQuad);
-    renderProgram.renderTextureQuad(renderState, renderTextureQuad);
+    renderContext.activateRenderTextureAt(filter.bitmapData.renderTexture, 1);
+    renderProgram.configure(filter, renderTextureQuad);
+    renderProgram.renderTextureQuad(context.renderState, renderTextureQuad);
     renderProgram.flush();
   }
 }
@@ -146,12 +150,12 @@ class DisplacementMapFilter extends BitmapFilter {
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 
-class DisplacementMapFilterProgram extends RenderProgramSimple {
+class DisplacementMapFilterProgramWebGL extends RenderProgramSimpleWebGL<DisplacementMapFilter> {
   @override
   String get fragmentShaderSource => isWebGL2 ? '''
     #version 300 es
 
-    precision ${RenderProgram.fragmentPrecision} float;
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
 
     uniform sampler2D uTexSampler;
     uniform sampler2D uMapSampler;
@@ -170,7 +174,7 @@ class DisplacementMapFilterProgram extends RenderProgramSimple {
     }
     ''' : '''
 
-    precision ${RenderProgram.fragmentPrecision} float;
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
     uniform sampler2D uTexSampler;
     uniform sampler2D uMapSampler;
     uniform mat3 uMapMatrix;

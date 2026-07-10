@@ -29,6 +29,11 @@ import '../internal/tools.dart';
 ///
 
 class ChromaKeyFilter extends BitmapFilter {
+  static final _programs = RenderProgramSet<ChromaKeyFilter>(
+    webGL: RenderProgramWebGL.callback(_renderWebGL),
+    webGPU: RenderProgramWebGPU.callback(_renderWebGPU),
+  );
+
   int backgroundColor;
   int _solidThreshold;
   int _invisibleThreshold;
@@ -88,48 +93,48 @@ class ChromaKeyFilter extends BitmapFilter {
   //-----------------------------------------------------------------------------------------------
 
   @override
-  bool get supportsWebGPU => true;
+  RenderProgramSet<ChromaKeyFilter> get renderPrograms => _programs;
 
   @override
-  void renderFilter(
-      RenderState renderState, RenderTextureQuad renderTextureQuad, int pass) {
-    final renderContext = renderState.renderContext;
+  void renderFilter(RenderFilterContext context) => context.render(_programs, this);
 
-    if (renderContext is RenderContextWebGPU) {
-      renderContext.filterSystem.renderChromaKeyFilterQuad(
-        renderState,
-        renderTextureQuad,
-        backgroundColor,
-        solidThreshold,
-        invisibleThreshold,
-      );
-      return;
-    }
-
-    renderContext as RenderContextWebGL;
-    final renderTexture = renderTextureQuad.renderTexture;
-
+  static void _renderWebGL(RenderFilterContext context, ChromaKeyFilter filter) {
+    final renderContext = context.renderContext as RenderContextWebGL;
+    final renderTexture = context.renderTextureQuad.renderTexture;
     final renderProgram = renderContext.getRenderProgram(
-        r'$ChromaKeyFilterProgram', ChromaKeyFilterProgram.new);
-
+        r'$ChromaKeyFilterProgramWebGL', ChromaKeyFilterProgramWebGL.new);
     renderContext.activateRenderProgram(renderProgram);
     renderContext.activateRenderTexture(renderTexture);
     renderProgram.configure(
-        backgroundColor, solidThreshold, invisibleThreshold);
-    renderProgram.renderTextureQuad(renderState, renderTextureQuad);
+      filter.backgroundColor,
+      filter.solidThreshold,
+      filter.invisibleThreshold,
+    );
+    renderProgram.renderTextureQuad(context.renderState, context.renderTextureQuad);
     renderProgram.flush();
+  }
+
+  static void _renderWebGPU(RenderFilterContext context, ChromaKeyFilter filter) {
+    final renderContext = context.renderContext as RenderContextWebGPU;
+    renderContext.filterSystem.renderChromaKeyFilterQuad(
+      context.renderState,
+      context.renderTextureQuad,
+      filter.backgroundColor,
+      filter.solidThreshold,
+      filter.invisibleThreshold,
+    );
   }
 }
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 
-class ChromaKeyFilterProgram extends RenderProgramSimple {
+class ChromaKeyFilterProgramWebGL extends RenderProgramSimpleWebGL<ChromaKeyFilter> {
   @override
   String get fragmentShaderSource => isWebGL2 ? '''
     #version 300 es
 
-    precision ${RenderProgram.fragmentPrecision} float;
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
     uniform sampler2D uSampler;
     uniform vec4 backgroundColor;
     uniform float solidThreshold;
@@ -186,7 +191,7 @@ class ChromaKeyFilterProgram extends RenderProgramSimple {
     }
     ''' : '''
 
-    precision ${RenderProgram.fragmentPrecision} float;
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
     uniform sampler2D uSampler;
     varying vec2 vTextCoord;
 

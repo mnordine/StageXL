@@ -46,6 +46,7 @@ class WebGpuFilterSystem {
   static const _floatsPerVertex = 6;
   static const _bytesPerVertex = _floatsPerVertex * 4;
   static const _singleTextureBindGroupLayout = 1;
+  static const _twoTextureBindGroupLayout = 2;
 
   final RenderContextWebGPU renderContext;
   late final GPUBindGroupLayout _colorMatrixBindGroupLayout =
@@ -69,6 +70,38 @@ class WebGpuFilterSystem {
   late final GPUPipelineLayout _colorMatrixPipelineLayout =
       renderContext.device.createPipelineLayout(GPUPipelineLayoutDescriptor(
     bindGroupLayouts: [_colorMatrixBindGroupLayout].toJS,
+  ));
+  late final GPUBindGroupLayout _twoTextureProgramBindGroupLayout =
+      renderContext.device.createBindGroupLayout(GPUBindGroupLayoutDescriptor(entries: [
+    GPUBindGroupLayoutEntry(
+      binding: 0,
+      visibility: $GPUShaderStage.FRAGMENT,
+      sampler: GPUSamplerBindingLayout(type: 'filtering'),
+    ),
+    GPUBindGroupLayoutEntry(
+      binding: 1,
+      visibility: $GPUShaderStage.FRAGMENT,
+      texture: GPUTextureBindingLayout(sampleType: 'float'),
+    ),
+    GPUBindGroupLayoutEntry(
+      binding: 2,
+      visibility: $GPUShaderStage.FRAGMENT,
+      sampler: GPUSamplerBindingLayout(type: 'filtering'),
+    ),
+    GPUBindGroupLayoutEntry(
+      binding: 3,
+      visibility: $GPUShaderStage.FRAGMENT,
+      texture: GPUTextureBindingLayout(sampleType: 'float'),
+    ),
+    GPUBindGroupLayoutEntry(
+      binding: 4,
+      visibility: $GPUShaderStage.FRAGMENT,
+      buffer: GPUBufferBindingLayout(type: 'uniform'),
+    ),
+  ].toJS));
+  late final GPUPipelineLayout _twoTextureProgramPipelineLayout =
+      renderContext.device.createPipelineLayout(GPUPipelineLayoutDescriptor(
+    bindGroupLayouts: [_twoTextureProgramBindGroupLayout].toJS,
   ));
   late final GPUBindGroupLayout _normalMapBindGroupLayout =
       _WebGpuNormalMapFilterProgram.createBindGroupLayout(renderContext.device);
@@ -102,7 +135,8 @@ class WebGpuFilterSystem {
   final _displacementMapPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
   final _alphaMaskPipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
   final _filterBindGroups = <_BindGroupKey, GPUBindGroup>{};
-  final _programResources = <WebGpuFilterProgram, _WebGpuFilterProgramResources>{};
+  final _programResources = <Object, _RenderProgramWebGPUResources>{};
+  final _twoTextureProgramResources = <Object, _RenderProgramTwoTextureWebGPUResources>{};
   final _batchColorScale = Float32List(4);
   var _filterBindGroupGeneration = -1;
   var _vertexCapacity = 0;
@@ -212,9 +246,13 @@ class WebGpuFilterSystem {
       return;
     }
 
-    if (firstFilter != null && firstFilter.isSimple && firstFilter.supportsWebGPU) {
+    if (firstFilter != null && firstFilter.isSimple && firstFilter.renderPrograms.supports(.WebGPU)) {
       if (!firstFilter.rendersInWebGpuBatch) renderContext.flush();
-      firstFilter.renderFilter(renderState, renderTextureQuad, 0);
+      firstFilter.renderFilter(RenderFilterContext(
+        renderState: renderState,
+        renderTextureQuad: renderTextureQuad,
+        pass: 0,
+      ));
       return;
     }
 
@@ -329,7 +367,7 @@ class WebGpuFilterSystem {
 
   bool _supportsWebGpu(List<RenderFilter> filters) {
     for (var i = 0; i < filters.length; i++) {
-      if (!filters[i].supportsWebGPU) return false;
+      if (!filters[i].renderPrograms.supports(.WebGPU)) return false;
     }
     return true;
   }
@@ -337,7 +375,7 @@ class WebGpuFilterSystem {
   bool _canRenderInWebGpuBatch(List<RenderFilter> filters) {
     for (var i = 0; i < filters.length; i++) {
       final filter = filters[i];
-      if (!filter.isSimple || !filter.supportsWebGPU || !filter.rendersInWebGpuBatch) return false;
+      if (!filter.isSimple || !filter.renderPrograms.supports(.WebGPU) || !filter.rendersInWebGpuBatch) return false;
     }
     return true;
   }
@@ -410,8 +448,7 @@ class WebGpuFilterSystem {
         boundsHeight,
         pixelRatio,
       );
-      filter.renderWebGpuFilter(WebGpuFilterContext(
-        filterSystem: this,
+      filter.renderFilter(RenderFilterContext(
         renderState: passRenderState,
         renderTextureQuad: sourceRenderTextureQuad,
         pass: pass,
@@ -958,25 +995,62 @@ class WebGpuFilterSystem {
   ) =>
       renderTextureQuadWithProgram(renderState, renderTextureQuad, _WebGpuFxaaFilterProgram.program, uniformData);
 
-  void renderTextureQuadWithProgram(
+  void renderTextureQuadWithProgram<TParameters>(
     RenderState renderState,
     RenderTextureQuad renderTextureQuad,
-    WebGpuFilterProgram program,
-    Float32List uniformData,
+    RenderProgramSimpleWebGPU<TParameters> program,
+    TParameters parameters,
   ) {
     final resources = _resourcesForProgram(program);
+    program.writeUniforms(parameters, resources.uniformData);
     _renderTextureQuadWithUniform(
       renderState,
       renderTextureQuad,
-      uniformData,
+      resources.uniformData,
       resources.uniformBuffer,
       resources.getPipeline,
       program.uniformByteSize,
+      _getSingleTextureBindGroup,
     );
   }
 
-  _WebGpuFilterProgramResources _resourcesForProgram(WebGpuFilterProgram program) =>
-      _programResources.putIfAbsent(program, () => _WebGpuFilterProgramResources(this, program));
+  void renderTextureQuadWithTwoTextureProgram<TParameters>(
+    RenderState renderState,
+    RenderTextureQuad renderTextureQuad,
+    RenderProgramTwoTextureWebGPU<TParameters> program,
+    TParameters parameters,
+  ) {
+    final resources = _resourcesForTwoTextureProgram(program);
+    program.writeUniforms(parameters, resources.uniformData);
+    final secondTexture = program.secondTexture(parameters);
+    _renderTextureQuadWithUniform(
+      renderState,
+      renderTextureQuad,
+      resources.uniformData,
+      resources.uniformBuffer,
+      resources.getPipeline,
+      program.uniformByteSize,
+      (texture, uniformBuffer, uniformByteSize) => _getTwoTextureBindGroup(
+        layoutKey: _twoTextureBindGroupLayout,
+        layout: _twoTextureProgramBindGroupLayout,
+        texture: texture,
+        secondTexture: secondTexture,
+        uniformBuffer: uniformBuffer,
+        uniformByteSize: uniformByteSize,
+      ),
+    );
+  }
+
+  _RenderProgramWebGPUResources _resourcesForProgram(RenderProgramSimpleWebGPU<dynamic> program) =>
+      _programResources.putIfAbsent(program, () => _RenderProgramWebGPUResources(this, program));
+
+  _RenderProgramTwoTextureWebGPUResources _resourcesForTwoTextureProgram(
+    RenderProgramTwoTextureWebGPU<dynamic> program,
+  ) =>
+      _twoTextureProgramResources.putIfAbsent(
+        program,
+        () => _RenderProgramTwoTextureWebGPUResources(this, program),
+      );
 
   void _renderTextureQuadWithUniform(
     RenderState renderState,
@@ -985,6 +1059,7 @@ class WebGpuFilterSystem {
     GPUBuffer uniformBuffer,
     GPURenderPipeline Function(BlendMode blendMode, bool stencilTest) getPipeline,
     int uniformByteSize,
+    GPUBindGroup Function(RenderTexture texture, GPUBuffer uniformBuffer, int uniformByteSize) getBindGroup,
   ) {
     final ixList = renderTextureQuad.ixList;
     final vxList = renderTextureQuad.vxList;
@@ -1033,7 +1108,7 @@ class WebGpuFilterSystem {
       ..writeBuffer(indexBuffer, 0, indices.toJS, 0, indices.length)
       ..writeBuffer(uniformBuffer, 0, uniformData.toJS, 0, uniformData.length);
 
-    final bindGroup = _getSingleTextureBindGroup(texture, uniformBuffer, uniformByteSize);
+    final bindGroup = getBindGroup(texture, uniformBuffer, uniformByteSize);
 
     final stencilValue = renderContext.maskSystem.activeStencilValue;
     final pass = renderContext.commandSystem.beginColorPass(renderContext.consumeClearColor());
@@ -1124,6 +1199,45 @@ class WebGpuFilterSystem {
     return renderContext.device.createRenderPipeline(GPURenderPipelineDescriptor(
       label: label,
       layout: _colorMatrixPipelineLayout,
+      vertex: GPUVertexState(
+        module: shaderModule,
+        entryPoint: 'vs_main',
+        buffers: [
+          GPUVertexBufferLayout(
+            arrayStride: _bytesPerVertex,
+            attributes: [
+              GPUVertexAttribute(format: 'float32x4', offset: 0, shaderLocation: 0),
+              GPUVertexAttribute(format: 'float32x2', offset: 16, shaderLocation: 1),
+            ].toJS,
+          ),
+        ].toJS,
+      ),
+      fragment: GPUFragmentState(
+        module: shaderModule,
+        entryPoint: 'fs_main',
+        targets: [
+          GPUColorTargetState(
+            format: renderContext.preferredTextureFormat,
+            blend: renderContext.pipelineSystem.getBlendState(blendMode),
+          ),
+        ].toJS,
+      ),
+      primitive: GPUPrimitiveState(topology: 'triangle-list'),
+      depthStencil: _depthStencilState(stencilTest),
+      multisample: GPUMultisampleState(count: renderContext.sampleCount),
+    ));
+  }
+
+  GPURenderPipeline _createTwoTextureFilterPipeline(
+    String label,
+    GPUShaderModule shaderModule,
+    BlendMode blendMode,
+    bool stencilTest,
+  ) {
+    renderContext.renderStatistics.webgpuPipelineCreateCount++;
+    return renderContext.device.createRenderPipeline(GPURenderPipelineDescriptor(
+      label: label,
+      layout: _twoTextureProgramPipelineLayout,
       vertex: GPUVertexState(
         module: shaderModule,
         entryPoint: 'vs_main',

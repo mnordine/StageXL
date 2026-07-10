@@ -1,6 +1,6 @@
 part of '../drawing.dart';
 
-abstract class _GraphicsGradientProgram extends RenderProgram {
+abstract class _GraphicsGradientProgram extends RenderProgramWebGL<void> {
   GraphicsGradient? activeGradient;
 
   // aVertexPosition:   Float32(x), Float32(y)
@@ -111,7 +111,7 @@ class _LinearGraphicsGradientProgram extends _GraphicsGradientProgram {
   String get fragmentShaderSource => isWebGL2 ? '''
     #version 300 es
 
-    precision ${RenderProgram.fragmentPrecision} float;
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
 
     uniform sampler2D uSampler;
     uniform vec2 uvGradientStart;
@@ -129,7 +129,7 @@ class _LinearGraphicsGradientProgram extends _GraphicsGradientProgram {
     }
     ''' : '''
 
-    precision ${RenderProgram.fragmentPrecision} float;
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
     uniform sampler2D uSampler;
     uniform vec2 uvGradientStart;
     uniform vec2 uvGradientVector;
@@ -171,7 +171,7 @@ class _RadialGraphicsGradientProgram extends _GraphicsGradientProgram {
   String get fragmentShaderSource => isWebGL2 ? '''
     #version 300 es
 
-    precision ${RenderProgram.fragmentPrecision} float;
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
 
     uniform sampler2D uSampler;
     uniform vec2 uvA;
@@ -193,7 +193,7 @@ class _RadialGraphicsGradientProgram extends _GraphicsGradientProgram {
     }
     ''' : '''
 
-    precision ${RenderProgram.fragmentPrecision} float;
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
     uniform sampler2D uSampler;
     uniform vec2 uvA;
     uniform vec3 uvB;

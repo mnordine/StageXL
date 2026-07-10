@@ -9,6 +9,11 @@ import '../internal/tools.dart';
 import '../ui/color.dart';
 
 class NormalMapFilter extends BitmapFilter {
+  static final _programs = RenderProgramSet<NormalMapFilter>(
+    webGL: RenderProgramWebGL.callback(_renderWebGL),
+    webGPU: RenderProgramWebGPU.callback(_renderWebGPU),
+  );
+
   final BitmapData bitmapData;
 
   int ambientColor = Color.White;
@@ -25,7 +30,7 @@ class NormalMapFilter extends BitmapFilter {
   BitmapFilter clone() => NormalMapFilter(bitmapData);
 
   @override
-  bool get supportsWebGPU => true;
+  RenderProgramSet<NormalMapFilter> get renderPrograms => _programs;
 
   //-----------------------------------------------------------------------------------------------
 
@@ -35,42 +40,39 @@ class NormalMapFilter extends BitmapFilter {
   //-----------------------------------------------------------------------------------------------
 
   @override
-  void renderFilter(
-      RenderState renderState, RenderTextureQuad renderTextureQuad, int pass) {
-    final renderContext = renderState.renderContext;
+  void renderFilter(RenderFilterContext context) => context.render(_programs, this);
 
-    if (renderContext is RenderContextWebGPU) {
+  static void _renderWebGPU(RenderFilterContext context, NormalMapFilter filter) {
+      final renderContext = context.renderContext as RenderContextWebGPU;
       renderContext.filterSystem.renderNormalMapFilterQuad(
-        renderState,
-        renderTextureQuad,
-        bitmapData.renderTextureQuad,
-        ambientColor,
-        lightColor,
-        lightX,
-        lightY,
-        lightZ,
-        lightRadius,
+        context.renderState,
+        context.renderTextureQuad,
+        filter.bitmapData.renderTextureQuad,
+        filter.ambientColor,
+        filter.lightColor,
+        filter.lightX,
+        filter.lightY,
+        filter.lightZ,
+        filter.lightRadius,
       );
-      return;
-    }
+  }
 
-    renderContext as RenderContextWebGL;
-    final renderTexture = renderTextureQuad.renderTexture;
-
+  static void _renderWebGL(RenderFilterContext context, NormalMapFilter filter) {
+    final renderContext = context.renderContext as RenderContextWebGL;
+    final renderTexture = context.renderTextureQuad.renderTexture;
     final renderProgram = renderContext.getRenderProgram(
-        r'$NormalMapFilterProgram', NormalMapFilterProgram.new);
-
+        r'$NormalMapFilterProgramWebGL', NormalMapFilterProgramWebGL.new);
     renderContext.activateRenderProgram(renderProgram);
     renderContext.activateRenderTextureAt(renderTexture, 0);
-    renderContext.activateRenderTextureAt(bitmapData.renderTexture, 1);
-    renderProgram.renderNormalMapQuad(renderState, renderTextureQuad, this);
+    renderContext.activateRenderTextureAt(filter.bitmapData.renderTexture, 1);
+    renderProgram.renderNormalMapQuad(context.renderState, context.renderTextureQuad, filter);
   }
 }
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 
-class NormalMapFilterProgram extends RenderProgram {
+class NormalMapFilterProgramWebGL extends RenderProgramWebGL<NormalMapFilter> {
   // aVertexPosition:      Float32(x), Float32(y)
   // aVertexTexCoord:      Float32(u), Float32(v)
   // aVertexMapCoord:      Float32(v), Float32(v)
@@ -143,7 +145,7 @@ class NormalMapFilterProgram extends RenderProgram {
   String get fragmentShaderSource => isWebGL2 ? '''
     #version 300 es
 
-    precision ${RenderProgram.fragmentPrecision} float;
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
     uniform sampler2D uTexSampler;
     uniform sampler2D uMapSampler;
 
@@ -185,7 +187,7 @@ class NormalMapFilterProgram extends RenderProgram {
     }
     ''' : '''
 
-    precision ${RenderProgram.fragmentPrecision} float;
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
     uniform sampler2D uTexSampler;
     uniform sampler2D uMapSampler;
 

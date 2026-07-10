@@ -7,6 +7,11 @@ import '../engine.dart';
 import '../geom.dart';
 
 class AlphaMaskFilter extends BitmapFilter {
+  static final _programs = RenderProgramSet<AlphaMaskFilter>(
+    webGL: RenderProgramWebGL.callback(_renderWebGL),
+    webGPU: RenderProgramWebGPU.callback(_renderWebGPU),
+  );
+
   final BitmapData bitmapData;
   final Matrix matrix;
 
@@ -17,7 +22,7 @@ class AlphaMaskFilter extends BitmapFilter {
   BitmapFilter clone() => AlphaMaskFilter(bitmapData, matrix.clone());
 
   @override
-  bool get supportsWebGPU => true;
+  RenderProgramSet<AlphaMaskFilter> get renderPrograms => _programs;
 
   //---------------------------------------------------------------------------
 
@@ -49,36 +54,36 @@ class AlphaMaskFilter extends BitmapFilter {
   //---------------------------------------------------------------------------
 
   @override
-  void renderFilter(
-      RenderState renderState, RenderTextureQuad renderTextureQuad, int pass) {
-    final renderContext = renderState.renderContext;
+  void renderFilter(RenderFilterContext context) => context.render(_programs, this);
 
-    if (renderContext is RenderContextWebGPU) {
-      final mskQuad = bitmapData.renderTextureQuad;
+  static void _renderWebGPU(RenderFilterContext context, AlphaMaskFilter filter) {
+    final renderContext = context.renderContext as RenderContextWebGPU;
+      final mskQuad = filter.bitmapData.renderTextureQuad;
       final mskMatrix = mskQuad.samplerMatrix;
-      mskMatrix.invertAndConcat(matrix);
+      mskMatrix.invertAndConcat(filter.matrix);
       mskMatrix.invert();
 
       renderContext.filterSystem.renderAlphaMaskFilterQuad(
-        renderState,
-        renderTextureQuad,
+        context.renderState,
+        context.renderTextureQuad,
         mskQuad,
         mskMatrix,
       );
-      return;
-    }
+  }
 
-    renderContext as RenderContextWebGL;
-    final renderTexture = renderTextureQuad.renderTexture;
-
+  static void _renderWebGL(RenderFilterContext context, AlphaMaskFilter filter) {
+    final renderContext = context.renderContext as RenderContextWebGL;
+    final renderTexture = context.renderTextureQuad.renderTexture;
     final renderProgram = renderContext.getRenderProgram(
-        r'$AlphaMaskFilterProgram', AlphaMaskFilterProgram.new);
-
+        r'$AlphaMaskFilterProgramWebGL', AlphaMaskFilterProgramWebGL.new);
     renderContext.activateRenderProgram(renderProgram);
     renderContext.activateRenderTextureAt(renderTexture, 0);
-    renderContext.activateRenderTextureAt(bitmapData.renderTexture, 1);
+    renderContext.activateRenderTextureAt(filter.bitmapData.renderTexture, 1);
     renderProgram.renderAlphaMaskFilterQuad(
-        renderState, renderTextureQuad, this);
+      context.renderState,
+      context.renderTextureQuad,
+      filter,
+    );
   }
 }
 
@@ -86,7 +91,7 @@ class AlphaMaskFilter extends BitmapFilter {
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 
-class AlphaMaskFilterProgram extends RenderProgram {
+class AlphaMaskFilterProgramWebGL extends RenderProgramWebGL<AlphaMaskFilter> {
   // aVertexPosition:  Float32(x), Float32(y)
   // aVertexTxtCoord:  Float32(u), Float32(v)
   // aVertexMskCoord:  Float32(u), Float32(v)
@@ -145,7 +150,7 @@ class AlphaMaskFilterProgram extends RenderProgram {
   String get fragmentShaderSource => isWebGL2 ? '''
     #version 300 es
 
-    precision ${RenderProgram.fragmentPrecision} float;
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
     uniform sampler2D uTexSampler;
     uniform sampler2D uMskSampler;
 
@@ -166,7 +171,7 @@ class AlphaMaskFilterProgram extends RenderProgram {
     }
     ''' : '''
 
-    precision ${RenderProgram.fragmentPrecision} float;
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
     uniform sampler2D uTexSampler;
     uniform sampler2D uMskSampler;
 

@@ -9,7 +9,7 @@
 ///
 /// Another basic building block of the engine are the [RenderTexture] and
 /// [RenderTextureQuad] classes. More advanced uses may even implement custom
-/// WebGL shaders by extending the [RenderProgram] class.
+/// shaders by extending [RenderProgramWebGL] or [RenderProgramWebGPU].
 ///
 library;
 

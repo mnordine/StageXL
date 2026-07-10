@@ -1,10 +1,11 @@
 part of '../../../engine.dart';
 
 class _WebGpuChromaKeyFilterProgram {
-  static final program = WebGpuFilterProgram(
+  static final program = RenderProgramSimpleWebGPU<Float32List>(
     label: 'StageXL chroma key filter pipeline',
     shaderSource: _shaderSource,
     uniformByteSize: 32,
+    writeUniforms: _copyWebGpuUniformData,
   );
 
   static const _shaderSource = '''

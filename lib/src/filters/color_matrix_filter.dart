@@ -11,6 +11,11 @@ import '../internal/environment.dart' as env;
 import '../internal/tools.dart';
 
 class ColorMatrixFilter extends BitmapFilter {
+  static final _programs = RenderProgramSet<ColorMatrixFilter>(
+    webGL: RenderProgramWebGL.callback(_renderWebGL),
+    webGPU: RenderProgramWebGPU.callback(_renderWebGPU),
+  );
+
   var _colorMatrixList = Float32List(16);
   var _colorOffsetList = Float32List(4);
 
@@ -80,7 +85,7 @@ class ColorMatrixFilter extends BitmapFilter {
   BitmapFilter clone() => ColorMatrixFilter(_colorMatrixList, _colorOffsetList);
 
   @override
-  bool get supportsWebGPU => true;
+  RenderProgramSet<ColorMatrixFilter> get renderPrograms => _programs;
 
   @override
   bool get rendersInWebGpuBatch => _isWebGpuBatchColorScale;
@@ -290,48 +295,49 @@ class ColorMatrixFilter extends BitmapFilter {
   //-----------------------------------------------------------------------------------------------
 
   @override
-  void renderFilter(
-      RenderState renderState, RenderTextureQuad renderTextureQuad, int pass) {
-    final renderContext = renderState.renderContext;
-    if (renderContext is RenderContextWebGPU) {
-      if (_isWebGpuBatchColorScale) {
+  void renderFilter(RenderFilterContext context) => context.render(_programs, this);
+
+  static void _renderWebGPU(RenderFilterContext context, ColorMatrixFilter filter) {
+      final renderContext = context.renderContext as RenderContextWebGPU;
+      if (filter._isWebGpuBatchColorScale) {
         renderContext.batchSystem.renderTextureQuad(
-          renderState,
-          renderTextureQuad,
-          _colorMatrixList[0],
-          _colorMatrixList[5],
-          _colorMatrixList[10],
-          _colorMatrixList[15],
+          context.renderState,
+          context.renderTextureQuad,
+          filter._colorMatrixList[0],
+          filter._colorMatrixList[5],
+          filter._colorMatrixList[10],
+          filter._colorMatrixList[15],
         );
         return;
       }
 
       renderContext.filterSystem.renderColorMatrixFilterQuad(
-        renderState,
-        renderTextureQuad,
-        _colorMatrixList,
-        _colorOffsetList,
+        context.renderState,
+        context.renderTextureQuad,
+        filter._colorMatrixList,
+        filter._colorOffsetList,
       );
-      return;
-    }
+  }
 
-    renderContext as RenderContextWebGL;
-    final renderTexture = renderTextureQuad.renderTexture;
-
+  static void _renderWebGL(RenderFilterContext context, ColorMatrixFilter filter) {
+    final renderContext = context.renderContext as RenderContextWebGL;
+    final renderTexture = context.renderTextureQuad.renderTexture;
     final renderProgram = renderContext.getRenderProgram(
-        r'$ColorMatrixFilterProgram', ColorMatrixFilterProgram.new);
-
+        r'$ColorMatrixFilterProgramWebGL', ColorMatrixFilterProgramWebGL.new);
     renderContext.activateRenderProgram(renderProgram);
     renderContext.activateRenderTexture(renderTexture);
     renderProgram.renderColorMatrixFilterQuad(
-        renderState, renderTextureQuad, this);
+      context.renderState,
+      context.renderTextureQuad,
+      filter,
+    );
   }
 }
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 
-class ColorMatrixFilterProgram extends RenderProgram {
+class ColorMatrixFilterProgramWebGL extends RenderProgramWebGL<ColorMatrixFilter> {
   // aPosition:  Float32(x), Float32(y)
   // aTexCoord:  Float32(u), Float32(v)
   // aMatrixR:   Float32(r), Float32(g), Float32(b), Float32(a)
@@ -392,7 +398,7 @@ class ColorMatrixFilterProgram extends RenderProgram {
   String get fragmentShaderSource => isWebGL2 ? '''
     #version 300 es
 
-    precision ${RenderProgram.fragmentPrecision} float;
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
     uniform sampler2D uSampler;
 
     in vec2 vTexCoord;
@@ -410,7 +416,7 @@ class ColorMatrixFilterProgram extends RenderProgram {
     }
     ''' : '''
 
-    precision ${RenderProgram.fragmentPrecision} float;
+    precision ${RenderProgramWebGL.fragmentPrecision} float;
     uniform sampler2D uSampler;
 
     varying vec2 vTexCoord;

@@ -13,21 +13,89 @@ part of '../../engine.dart';
 /// The vertex entry point must be `vs_main` and accept StageXL's standard
 /// filter vertices: `@location(0) clip: vec4<f32>` and
 /// `@location(1) uv: vec2<f32>`. The fragment entry point must be `fs_main`.
-class WebGpuFilterProgram {
+abstract class RenderProgramWebGPU<TParameters>
+    extends RenderProgram<RenderContextWebGPU, TParameters> {
+  const RenderProgramWebGPU();
+
+  factory RenderProgramWebGPU.callback(
+    void Function(RenderFilterContext context, TParameters parameters) render,
+  ) = _RenderProgramWebGPUCallback<TParameters>;
+
+  void renderFilter(RenderFilterContext context, TParameters parameters);
+}
+
+final class _RenderProgramWebGPUCallback<TParameters> extends RenderProgramWebGPU<TParameters> {
+  final void Function(RenderFilterContext context, TParameters parameters) _render;
+
+  const _RenderProgramWebGPUCallback(this._render);
+
+  @override
+  void renderFilter(RenderFilterContext context, TParameters parameters) => _render(context, parameters);
+}
+
+class RenderProgramSimpleWebGPU<TParameters> extends RenderProgramWebGPU<TParameters> {
   final String label;
   final String shaderSource;
   final int uniformByteSize;
 
-  WebGpuFilterProgram({
+  final void Function(TParameters parameters, Float32List uniformData) writeUniforms;
+
+  RenderProgramSimpleWebGPU({
     required this.label,
     required this.shaderSource,
     required this.uniformByteSize,
+    required this.writeUniforms,
   });
+
+  @override
+  void renderFilter(RenderFilterContext context, TParameters parameters) {
+    final renderContext = context.renderContext as RenderContextWebGPU;
+    renderContext.filterSystem.renderTextureQuadWithProgram(
+      context.renderState,
+      context.renderTextureQuad,
+      this,
+      parameters,
+    );
+  }
 }
 
-class _WebGpuFilterProgramResources {
+/// A reusable WebGPU program for filters that sample the source texture and
+/// one additional texture. Its WGSL resources use sampler/texture bindings
+/// 0-3 and a uniform buffer at binding 4.
+class RenderProgramTwoTextureWebGPU<TParameters> extends RenderProgramWebGPU<TParameters> {
+  final String label;
+  final String shaderSource;
+  final int uniformByteSize;
+  final RenderTexture Function(TParameters parameters) secondTexture;
+  final void Function(TParameters parameters, Float32List uniformData) writeUniforms;
+
+  RenderProgramTwoTextureWebGPU({
+    required this.label,
+    required this.shaderSource,
+    required this.uniformByteSize,
+    required this.secondTexture,
+    required this.writeUniforms,
+  });
+
+  @override
+  void renderFilter(RenderFilterContext context, TParameters parameters) {
+    final renderContext = context.renderContext as RenderContextWebGPU;
+    renderContext.filterSystem.renderTextureQuadWithTwoTextureProgram(
+      context.renderState,
+      context.renderTextureQuad,
+      this,
+      parameters,
+    );
+  }
+}
+
+void _copyWebGpuUniformData(Float32List parameters, Float32List uniformData) {
+  uniformData.setAll(0, parameters);
+}
+
+class _RenderProgramWebGPUResources {
   final WebGpuFilterSystem filterSystem;
-  final WebGpuFilterProgram program;
+  final RenderProgramSimpleWebGPU<dynamic> program;
   final pipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
 
   late final shaderModule = filterSystem.renderContext.device.createShaderModule(
@@ -36,7 +104,10 @@ class _WebGpuFilterProgramResources {
 
   late final GPUBuffer uniformBuffer = filterSystem._createUniformBuffer(program.uniformByteSize);
 
-  _WebGpuFilterProgramResources(this.filterSystem, this.program);
+  final Float32List uniformData;
+
+  _RenderProgramWebGPUResources(this.filterSystem, this.program)
+      : uniformData = Float32List(program.uniformByteSize ~/ 4);
 
   GPURenderPipeline getPipeline(BlendMode blendMode, bool stencilTest) {
     final blendPipelines = pipelines.putIfAbsent(blendMode, () => <int, GPURenderPipeline>{});
@@ -47,26 +118,26 @@ class _WebGpuFilterProgramResources {
   }
 }
 
-/// Context passed to a filter when WebGPU is applying one of its render passes.
-///
-/// Custom filters can override [RenderFilter.renderWebGpuFilter] and use this
-/// context to render a shader pass without reaching into WebGPU internals.
-class WebGpuFilterContext {
+class _RenderProgramTwoTextureWebGPUResources {
   final WebGpuFilterSystem filterSystem;
-  final RenderState renderState;
-  final RenderTextureQuad renderTextureQuad;
-  final int pass;
+  final RenderProgramTwoTextureWebGPU<dynamic> program;
+  final pipelines = <BlendMode, Map<int, GPURenderPipeline>>{};
 
-  WebGpuFilterContext({
-    required this.filterSystem,
-    required this.renderState,
-    required this.renderTextureQuad,
-    required this.pass,
-  });
+  late final shaderModule = filterSystem.renderContext.device.createShaderModule(
+    GPUShaderModuleDescriptor(code: program.shaderSource),
+  );
 
-  RenderContextWebGPU get renderContext => filterSystem.renderContext;
+  late final GPUBuffer uniformBuffer = filterSystem._createUniformBuffer(program.uniformByteSize);
+  final Float32List uniformData;
 
-  void renderSingleTextureProgram(WebGpuFilterProgram program, Float32List uniformData) {
-    filterSystem.renderTextureQuadWithProgram(renderState, renderTextureQuad, program, uniformData);
+  _RenderProgramTwoTextureWebGPUResources(this.filterSystem, this.program)
+      : uniformData = Float32List(program.uniformByteSize ~/ 4);
+
+  GPURenderPipeline getPipeline(BlendMode blendMode, bool stencilTest) {
+    final blendPipelines = pipelines.putIfAbsent(blendMode, () => <int, GPURenderPipeline>{});
+    return blendPipelines.putIfAbsent(
+      filterSystem._pipelineKey(stencilTest),
+      () => filterSystem._createTwoTextureFilterPipeline(program.label, shaderModule, blendMode, stencilTest),
+    );
   }
 }

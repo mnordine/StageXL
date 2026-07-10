@@ -7,8 +7,9 @@ class RenderContextWebGL extends RenderContext {
   late final WebGL _renderingContext;
   final _projectionMatrix = Matrix3D.fromIdentity();
   final _maskStates = <_MaskState>[];
+  final _enabledVertexAttribArrays = <int>{};
 
-  late RenderProgram _activeRenderProgram;
+  late RenderProgramWebGL<Object?> _activeRenderProgram;
   RenderFrameBuffer? _activeRenderFrameBuffer;
   RenderStencilBuffer? _activeRenderStencilBuffer;
   BlendMode? _activeBlendMode;
@@ -38,16 +39,17 @@ class RenderContextWebGL extends RenderContext {
 
   //---------------------------------------------------------------------------
 
-  final renderProgramTinted = RenderProgramTinted();
-  final renderProgramTriangle = RenderProgramTriangle();
-  final renderProgramBatch = RenderProgramBatch();
+  final renderProgramTinted = RenderProgramTintedWebGL();
+  final renderProgramTriangle = RenderProgramTriangleWebGL();
+  final renderProgramBatch = RenderProgramBatchWebGL();
 
   final renderBufferIndex = RenderBufferIndex(16384 * 2);
   final renderBufferVertex = RenderBufferVertex(32768 * 2);
 
   late final List<RenderTexture?> _activeRenderTextures;
   final _renderFrameBufferPool = <RenderFrameBuffer>[];
-  final _renderPrograms = <String, RenderProgram>{};
+  final _renderPrograms = <String, RenderProgramWebGL<Object?>>{};
+  final _renderProgramResources = <RenderProgramWebGL<Object?>, _Resources>{};
 
   final bool _resetScissorTest;
   final bool _resetStencilTest;
@@ -93,8 +95,8 @@ class RenderContextWebGL extends RenderContext {
 
     _renderingContext = renderingContext;
 
-    // Initialize max textures for RenderProgramBatch
-    final maxTextureUnits = RenderProgramBatch.initializeMaxTextures(_renderingContext, isWebGL2: _isWebGL2);
+    // Initialize max textures for RenderProgramBatchWebGL
+    final maxTextureUnits = RenderProgramBatchWebGL.initializeMaxTextures(_renderingContext, isWebGL2: _isWebGL2);
     _activeRenderTextures = .filled(maxTextureUnits, null);
 
     _contextValid = true;
@@ -106,6 +108,7 @@ class RenderContextWebGL extends RenderContext {
   }
 
   void _initializeAfterContextChange() {
+    _renderProgramResources.clear();
     _configureRenderingContext();
     _invalidateCachedState();
 
@@ -134,6 +137,7 @@ class RenderContextWebGL extends RenderContext {
   }
 
   void _invalidateCachedState() {
+    _enabledVertexAttribArrays.clear();
     _activeRenderFrameBuffer = null;
     _activeRenderStencilBuffer = null;
     _activeBlendMode = null;
@@ -155,8 +159,8 @@ class RenderContextWebGL extends RenderContext {
       _activeRenderTextures[i] = null;
     }
 
-    RenderProgram.currentVao = null;
-    RenderProgram.currentVaoOes = null;
+    RenderProgramWebGL.currentVao = null;
+    RenderProgramWebGL.currentVaoOes = null;
   }
 
   // Add this method to set up VAO for WebGL 1
@@ -198,7 +202,7 @@ class RenderContextWebGL extends RenderContext {
 
     // Unbind VAO
     _vaoExtension!.bindVertexArrayOES(null);
-    RenderProgram.currentVaoOes = null;
+    RenderProgramWebGL.currentVaoOes = null;
 
     // Restore previous program
     _renderingContext.useProgram(currentProgram);
@@ -239,7 +243,7 @@ class RenderContextWebGL extends RenderContext {
 
     // Unbind VAO to prevent accidental modifications
     gl2.bindVertexArray(null);
-    RenderProgram.currentVao = null;
+    RenderProgramWebGL.currentVao = null;
 
     gl2.useProgram(currentProgram);
   }
@@ -351,7 +355,7 @@ class RenderContextWebGL extends RenderContext {
   int? get maxTextureSize => (_renderingContext.getParameter(WebGL.MAX_TEXTURE_SIZE) as JSNumber?)?.toDartInt;
 
   RenderTexture? get activeRenderTexture => _activeRenderTextures[0];
-  RenderProgram get activeRenderProgram => _activeRenderProgram;
+  RenderProgramWebGL<Object?> get activeRenderProgram => _activeRenderProgram;
   RenderFrameBuffer? get activeRenderFrameBuffer => _activeRenderFrameBuffer;
   Matrix3D get activeProjectionMatrix => _projectionMatrix;
   BlendMode? get activeBlendMode => _activeBlendMode;
@@ -502,11 +506,11 @@ class RenderContextWebGL extends RenderContext {
 
         // Use VAO for efficient rendering
         _vaoExtension!.bindVertexArrayOES(_maskQuadVAOWebGL1);
-        RenderProgram.currentVaoOes = _maskQuadVAOWebGL1;
+        RenderProgramWebGL.currentVaoOes = _maskQuadVAOWebGL1;
         _renderingContext.useProgram(_maskProgram);
         _renderingContext.drawElements(WebGL.TRIANGLES, 6, WebGL.UNSIGNED_SHORT, 0);
         _vaoExtension!.bindVertexArrayOES(null);
-        RenderProgram.currentVaoOes = null;
+        RenderProgramWebGL.currentVaoOes = null;
 
         // Restore previous program if there was one
         if (currentProgram != null) {
@@ -541,14 +545,14 @@ class RenderContextWebGL extends RenderContext {
         // Use our minimal mask program and VAO
         gl2.useProgram(_maskProgram);
         gl2.bindVertexArray(_maskQuadVao);
-        RenderProgram.currentVao = _maskQuadVao;
+        RenderProgramWebGL.currentVao = _maskQuadVao;
 
         // Draw the quad
         gl2.drawElements(WebGL.TRIANGLES, 6, WebGL.UNSIGNED_SHORT, 0);
 
         // Restore state
         gl2.bindVertexArray(null);
-        RenderProgram.currentVao = null;
+        RenderProgramWebGL.currentVao = null;
         gl2.useProgram(currentProgram);
       } else {
         _renderFullScreenQuadFallback();
@@ -635,7 +639,11 @@ class RenderContextWebGL extends RenderContext {
     if (renderFilters.isEmpty) {
       // Don't render anything
     } else if (firstFilter is RenderFilter && firstFilter.isSimple) {
-      firstFilter.renderFilter(renderState, renderTextureQuad, 0);
+      firstFilter.renderFilter(RenderFilterContext(
+        renderState: renderState,
+        renderTextureQuad: renderTextureQuad,
+        pass: 0,
+      ));
     } else {
       final renderObject =
           _RenderTextureQuadObject(renderTextureQuad, renderFilters);
@@ -765,7 +773,11 @@ class RenderContextWebGL extends RenderContext {
 
         // render filter
 
-        filter.renderFilter(filterRenderState, sourceRenderTextureQuad, pass);
+        filter.renderFilter(RenderFilterContext(
+          renderState: filterRenderState,
+          renderTextureQuad: sourceRenderTextureQuad,
+          pass: pass,
+        ));
 
         // release obsolete source RenderFrameBuffer
 
@@ -785,9 +797,12 @@ class RenderContextWebGL extends RenderContext {
   //---------------------------------------------------------------------------
   //---------------------------------------------------------------------------
 
-  T getRenderProgram<T extends RenderProgram>(
+  T getRenderProgram<T extends RenderProgramWebGL<Object?>>(
           String name, T Function() ifAbsent) =>
       _renderPrograms.putIfAbsent(name, ifAbsent) as T;
+
+  _Resources _resourcesForProgram(RenderProgramWebGL<Object?> program) =>
+      _renderProgramResources.putIfAbsent(program, () => _Resources(this));
 
   RenderFrameBuffer getRenderFrameBuffer(int width, int height) {
     if (_renderFrameBufferPool.isEmpty) {
@@ -851,10 +866,13 @@ class RenderContextWebGL extends RenderContext {
     }
   }
 
-  void activateRenderProgram(RenderProgram renderProgram) {
-    if (!identical(renderProgram, _activeRenderProgram)) {
+  void activateRenderProgram(RenderProgramWebGL<Object?> renderProgram) {
+    final changed = !identical(renderProgram, _activeRenderProgram);
+    if (changed) {
       _activeRenderProgram.flush();
       _activeRenderProgram = renderProgram;
+    }
+    if (changed || !renderProgram.hasActiveResourcesFor(this)) {
       _activeRenderProgram.activate(this);
       _activeRenderProgram.projectionMatrix = _projectionMatrix;
     }
@@ -863,13 +881,13 @@ class RenderContextWebGL extends RenderContext {
   void activateBlendMode(BlendMode blendMode) {
     if (!identical(blendMode, _activeBlendMode)) {
       // Batch renderer manages its own flushing/drawing.
-      if (_activeRenderProgram is! RenderProgramBatch) {
+      if (_activeRenderProgram is! RenderProgramBatchWebGL) {
         _activeRenderProgram.flush();
       }
 
       _activeBlendMode = blendMode;
 
-      if (_activeRenderProgram is! RenderProgramBatch) {
+      if (_activeRenderProgram is! RenderProgramBatchWebGL) {
         // Batch renderer program has its own blend handling.
         _renderingContext.blendFunc(blendMode.srcFactor, blendMode.dstFactor);
       }

@@ -136,7 +136,7 @@ class StageOptions {
       .high => 'highp',
     };
 
-    RenderProgram.fragmentPrecision = _shaderPrecision;
+    RenderProgramWebGL.fragmentPrecision = _shaderPrecision;
   }
 
   var resetScissorTestOnRenderStart = true;
