@@ -325,7 +325,10 @@ class Stage extends DisplayObjectContainer {
   num get pixelRatio => _pixelRatio;
 
   set pixelRatio(num value) {
+    if (_pixelRatio == value) return;
     _pixelRatio = value;
+    _stageWidth = 0;
+    _stageHeight = 0;
     _updateCanvasSize();
   }
 
