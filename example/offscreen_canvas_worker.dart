@@ -5,6 +5,8 @@ import 'package:stagexl/stagexl_worker.dart';
 
 void main() {
   runStageXLWorker((host) async {
+    Sound.defaultLoadOptions.opus = true;
+    final clickSound = await Sound.load('music.opus');
     final options = StageOptions()
       ..renderEngine = .WebGPU
       ..inputEventMode = .MouseAndTouch
@@ -22,7 +24,7 @@ void main() {
       ..y = 24
       ..autoSize = TextFieldAutoSize.LEFT;
     final detail = TextField(
-      'The Stage, display list, input hit testing, juggler, filters and WebGL renderer run in the worker.',
+      'The scene runtime runs in the worker; audio is hosted on the browser main thread.',
       TextFormat('Arial', 14, 0xFFB9C7D8),
     )
       ..x = 30
@@ -62,7 +64,8 @@ void main() {
     var direction = 1;
     void reverse(InputEvent _) {
       direction *= -1;
-      status.text = 'Input handled in worker';
+      clickSound.playSegment(0, 0.25, false, SoundTransform(0.35));
+      status.text = 'Input and audio handled through the worker host';
       host.postMessage({'kind': 'example:input'});
     }
     card.onMouseDown.listen(reverse);

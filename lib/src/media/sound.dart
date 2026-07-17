@@ -8,7 +8,7 @@ abstract class Sound {
   /// Get a list of the audio types supported by the browser.
 
   static List<String> get supportedTypes =>
-      AudioLoader.supportedTypes.toList(growable: false);
+      (SoundMixer._workerAdapter?.supportedTypes ?? AudioLoader.supportedTypes).toList(growable: false);
 
   /// The default loading options for the [Sound.load] method.
 
@@ -27,9 +27,11 @@ abstract class Sound {
 
   static Future<Sound> load(String url, [SoundLoadOptions? soundLoadOptions, AssetManifest? manifest]) {
     final options = soundLoadOptions ?? Sound.defaultLoadOptions;
+    if (SoundMixer._workerAdapter != null) return WorkerSound.load(url, options, manifest);
     return switch (options.engine ?? SoundMixer.engine) {
       .WebAudioApi => WebAudioApiSound.load(url, options, manifest),
       .AudioElement => AudioElementSound.load(url, options, manifest),
+      .Worker => WorkerSound.load(url, options, manifest),
       _ => MockSound.load(url, options),
     };
   }
@@ -45,9 +47,11 @@ abstract class Sound {
   static Future<Sound> loadDataUrl(String dataUrl,
       [SoundLoadOptions? soundLoadOptions]) {
     final options = soundLoadOptions ?? Sound.defaultLoadOptions;
+    if (SoundMixer._workerAdapter != null) return WorkerSound.loadDataUrl(dataUrl, options);
     return switch (options.engine ?? SoundMixer.engine) {
       .WebAudioApi => WebAudioApiSound.loadDataUrl(dataUrl, options),
       .AudioElement => AudioElementSound.loadDataUrl(dataUrl, options),
+      .Worker => WorkerSound.loadDataUrl(dataUrl, options),
       _ => MockSound.loadDataUrl(dataUrl, options),
     };
   }

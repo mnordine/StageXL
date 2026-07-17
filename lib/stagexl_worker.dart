@@ -37,8 +37,10 @@ extension type _StageXLWorkerMessage(JSObject _) implements JSObject {
   external bool get altKey;
   external bool get ctrlKey;
   external bool get shiftKey;
+  external bool get audioEnabled;
   external String get error;
   external String get stackTrace;
+  external JSAny? get audioTypes;
   external JSAny? get data;
 }
 
@@ -62,6 +64,7 @@ class StageWorkerClientOptions {
   final bool preventDefaultOnWheel;
   final bool preventDefaultOnKeyboard;
   final bool emulateMouseFromTouch;
+  final bool enableAudio;
   final web.WorkerOptions? workerOptions;
   final Object? initialData;
 
@@ -72,6 +75,7 @@ class StageWorkerClientOptions {
     this.preventDefaultOnWheel = false,
     this.preventDefaultOnKeyboard = false,
     this.emulateMouseFromTouch = false,
+    this.enableAudio = true,
     this.workerOptions,
     this.initialData,
   });
@@ -92,6 +96,7 @@ class StageWorkerClient {
   final _readyCompleter = Completer<void>();
   late final web.ResizeObserver _resizeObserver;
   late final JSFunction _scrollListener;
+  late final _StageWorkerAudioHost? _audioHost;
   var _disposed = false;
 
   StageWorkerClient(
@@ -101,12 +106,17 @@ class StageWorkerClient {
   }) : worker = options.workerOptions == null
            ? web.Worker(workerUrl.toJS)
            : web.Worker(workerUrl.toJS, options.workerOptions!) {
+    _audioHost = options.enableAudio ? _StageWorkerAudioHost(worker) : null;
     worker.onmessage = ((web.MessageEvent event) {
       final data = event.data;
       if (data != null && data.isA<JSObject>()) {
         final object = data as JSObject;
         if (object.has('kind')) {
           final message = _StageXLWorkerMessage(object);
+          if (message.kind == 'stagexl:audio') {
+            _audioHost?._handleMessage(message.data.dartify());
+            return;
+          }
           if (message.kind == 'stagexl:cursor') canvas.style.cursor = message.eventType;
           if (message.kind == 'stagexl:focus') canvas.focus();
           if (message.kind == 'stagexl:ready' && !_readyCompleter.isCompleted) {
@@ -159,6 +169,8 @@ class StageWorkerClient {
     final viewport = _viewportMessage('stagexl:init');
     viewport['canvas'] = offscreenCanvas;
     viewport['data'] = options.initialData;
+    viewport['audioEnabled'] = options.enableAudio;
+    viewport['audioTypes'] = options.enableAudio ? Sound.supportedTypes : const <String>[];
     worker.postMessage(viewport.jsify(), [offscreenCanvas].toJS);
   }
 
@@ -207,7 +219,10 @@ class StageWorkerClient {
 
   void _postMouseEvent(web.MouseEvent event) {
     if (options.preventDefaultOnMouse) event.preventDefault();
-    if (event.type == 'mousedown') canvas.focus();
+    if (event.type == 'mousedown') {
+      canvas.focus();
+      if (options.enableAudio) SoundMixer.unlockMobileAudio();
+    }
     worker.postMessage({
       'kind': 'stagexl:input',
       'source': 'mouse',
@@ -242,6 +257,7 @@ class StageWorkerClient {
 
   void _postTouchEvent(web.TouchEvent event) {
     if (options.preventDefaultOnTouch) event.preventDefault();
+    if (event.type == 'touchstart' && options.enableAudio) SoundMixer.unlockMobileAudio();
     final touches = event.changedTouches;
     for (var i = 0; i < touches.length; i++) {
       final touch = touches.item(i);
@@ -282,6 +298,7 @@ class StageWorkerClient {
 
   void _postKeyboardEvent(web.KeyboardEvent event) {
     if (options.preventDefaultOnKeyboard) event.preventDefault();
+    if (event.type == 'keydown' && options.enableAudio) SoundMixer.unlockMobileAudio();
     final keyLocation = switch (event.location) {
       web.KeyLocation.LEFT => stagexlKeyLocationLeft,
       web.KeyLocation.RIGHT => stagexlKeyLocationRight,
@@ -316,10 +333,239 @@ class StageWorkerClient {
       unawaited(subscription.cancel());
     }
     _subscriptions.clear();
+    _audioHost?.dispose();
     worker.terminate();
     unawaited(_messageController.close());
     unawaited(_errorController.close());
   }
+}
+
+class _StageWorkerAudioHost {
+  final web.Worker _worker;
+  final _sounds = <int, Sound>{};
+  final _channels = <int, SoundChannel>{};
+  var _nextSoundId = 1;
+
+  _StageWorkerAudioHost(this._worker);
+
+  void _handleMessage(Object? rawData) {
+    if (rawData is! Map<Object?, Object?>) return;
+    final data = rawData;
+    switch (data['command']) {
+      case 'load':
+        unawaited(_load(data));
+      case 'loadDataUrl':
+        unawaited(_loadDataUrl(data));
+      case 'play':
+        _play(data);
+      case 'position':
+        _channels[data['channelId']]?.position = data['position']! as num;
+      case 'paused':
+        _channels[data['channelId']]?.paused = data['paused']! as bool;
+      case 'channelTransform':
+        _channels[data['channelId']]?.soundTransform = _soundTransform(data);
+      case 'stop':
+        _channels[data['channelId']]?.stop();
+      case 'mixerTransform':
+        SoundMixer.soundTransform = _soundTransform(data);
+      case 'unlock':
+        SoundMixer.unlockMobileAudio();
+    }
+  }
+
+  Future<void> _load(Map<Object?, Object?> data) async {
+    final requestId = data['requestId']! as int;
+    try {
+      final urls = (data['urls']! as List).cast<String>();
+      final options = SoundLoadOptions()
+        ..opus = true
+        ..alternativeUrls = urls.skip(1).toList(growable: false)
+        ..ignoreErrors = data['ignoreErrors']! as bool
+        ..corsEnabled = data['corsEnabled']! as bool;
+      final sound = await Sound.load(urls.firstOrNull ?? '', options);
+      _completeLoad(requestId, sound);
+    } catch (error) {
+      _post({'command': 'loadError', 'requestId': requestId, 'error': '$error'});
+    }
+  }
+
+  Future<void> _loadDataUrl(Map<Object?, Object?> data) async {
+    final requestId = data['requestId']! as int;
+    try {
+      final options = SoundLoadOptions()..ignoreErrors = data['ignoreErrors']! as bool;
+      final sound = await Sound.loadDataUrl(data['dataUrl']! as String, options);
+      _completeLoad(requestId, sound);
+    } catch (error) {
+      _post({'command': 'loadError', 'requestId': requestId, 'error': '$error'});
+    }
+  }
+
+  void _completeLoad(int requestId, Sound sound) {
+    final soundId = _nextSoundId++;
+    _sounds[soundId] = sound;
+    _post({
+      'command': 'loaded',
+      'requestId': requestId,
+      'soundId': soundId,
+      'length': sound.length,
+    });
+  }
+
+  void _play(Map<Object?, Object?> data) {
+    final channelId = data['channelId']! as int;
+    final sound = _sounds[data['soundId']];
+    if (sound == null) {
+      _post({'command': 'complete', 'channelId': channelId});
+      return;
+    }
+
+    final channel = sound.playSegment(
+      data['startTime']! as num,
+      data['duration']! as num,
+      data['loop']! as bool,
+      _soundTransform(data),
+    );
+    _channels[channelId] = channel;
+    channel.onComplete.first.then((_) {
+      if (_channels.remove(channelId) != null) {
+        _post({'command': 'complete', 'channelId': channelId});
+      }
+    });
+  }
+
+  SoundTransform _soundTransform(Map<Object?, Object?> data) =>
+      SoundTransform(data['volume']! as num, data['pan']! as num);
+
+  void _post(Map<String, Object?> data) =>
+      _worker.postMessage({'kind': 'stagexl:audio', 'data': data}.jsify());
+
+  void dispose() {
+    for (final channel in _channels.values.toList(growable: false)) {
+      channel.stop();
+    }
+    _channels.clear();
+    _sounds.clear();
+  }
+}
+
+class _StageWorkerAudioAdapter implements SoundWorkerAdapter {
+  @override
+  final List<String> supportedTypes;
+  final _completeController = StreamController<int>.broadcast(sync: true);
+  final _loadCompleters = <int, Completer<SoundWorkerLoadResult>>{};
+  var _nextRequestId = 1;
+  var _nextChannelId = 1;
+
+  _StageWorkerAudioAdapter(List<String> supportedTypes)
+      : supportedTypes = supportedTypes.toList(growable: false);
+
+  @override
+  Stream<int> get onChannelComplete => _completeController.stream;
+
+  @override
+  Future<SoundWorkerLoadResult> load(
+    List<String> urls, {
+    required bool ignoreErrors,
+    required bool corsEnabled,
+  }) => _request({
+    'command': 'load',
+    'urls': urls,
+    'ignoreErrors': ignoreErrors,
+    'corsEnabled': corsEnabled,
+  });
+
+  @override
+  Future<SoundWorkerLoadResult> loadDataUrl(
+    String dataUrl, {
+    required bool ignoreErrors,
+  }) => _request({
+    'command': 'loadDataUrl',
+    'dataUrl': dataUrl,
+    'ignoreErrors': ignoreErrors,
+  });
+
+  Future<SoundWorkerLoadResult> _request(Map<String, Object?> data) {
+    final requestId = _nextRequestId++;
+    final completer = Completer<SoundWorkerLoadResult>();
+    _loadCompleters[requestId] = completer;
+    _post({...data, 'requestId': requestId});
+    return completer.future;
+  }
+
+  @override
+  int play(
+    int soundId, {
+    required num startTime,
+    required num duration,
+    required bool loop,
+    required SoundTransform soundTransform,
+  }) {
+    final channelId = _nextChannelId++;
+    _post({
+      'command': 'play',
+      'soundId': soundId,
+      'channelId': channelId,
+      'startTime': startTime,
+      'duration': duration,
+      'loop': loop,
+      ..._transformData(soundTransform),
+    });
+    return channelId;
+  }
+
+  @override
+  void setChannelPosition(int channelId, num position) =>
+      _post({'command': 'position', 'channelId': channelId, 'position': position});
+
+  @override
+  void setChannelPaused(int channelId, bool paused) =>
+      _post({'command': 'paused', 'channelId': channelId, 'paused': paused});
+
+  @override
+  void setChannelSoundTransform(int channelId, SoundTransform soundTransform) => _post({
+    'command': 'channelTransform',
+    'channelId': channelId,
+    ..._transformData(soundTransform),
+  });
+
+  @override
+  void stopChannel(int channelId) => _post({'command': 'stop', 'channelId': channelId});
+
+  @override
+  void setSoundTransform(SoundTransform soundTransform) => _post({
+    'command': 'mixerTransform',
+    ..._transformData(soundTransform),
+  });
+
+  @override
+  void unlock() => _post({'command': 'unlock'});
+
+  void _handleMessage(Object? rawData) {
+    if (rawData is! Map<Object?, Object?>) return;
+    final data = rawData;
+    switch (data['command']) {
+      case 'loaded':
+        final requestId = data['requestId']! as int;
+        _loadCompleters.remove(requestId)?.complete(
+          SoundWorkerLoadResult(data['soundId']! as int, data['length']! as num),
+        );
+      case 'loadError':
+        final requestId = data['requestId']! as int;
+        _loadCompleters.remove(requestId)?.completeError(
+          StateError(data['error']! as String),
+        );
+      case 'complete':
+        _completeController.add(data['channelId']! as int);
+    }
+  }
+
+  Map<String, Object?> _transformData(SoundTransform transform) => {
+    'volume': transform.volume,
+    'pan': transform.pan,
+  };
+
+  void _post(Map<String, Object?> data) =>
+      _workerScope.postMessage({'kind': 'stagexl:audio', 'data': data}.jsify());
 }
 
 const stagexlKeyLocationStandard = 0;
@@ -337,13 +583,21 @@ class StageWorkerHost implements StageHost {
   StageViewport _viewport;
   Stage? _stage;
   final _messageController = StreamController<Object?>.broadcast(sync: true);
+  _StageWorkerAudioAdapter? _audioAdapter;
 
   StageWorkerHost._(
     this.canvas, {
     required this.devicePixelRatio,
     required this._viewport,
     required this.initialData,
-  });
+    required bool audioEnabled,
+    required List<String> audioTypes,
+  }) {
+    if (audioEnabled) {
+      _audioAdapter = _StageWorkerAudioAdapter(audioTypes);
+      SoundMixer.useWorkerAdapter(_audioAdapter!);
+    }
+  }
 
   @override
   RenderSurface get renderSurface => renderSurfaceFrom(canvas);
@@ -378,6 +632,10 @@ class StageWorkerHost implements StageHost {
   Stream<Object?> get onMessage => _messageController.stream;
 
   void _handleMessage(_StageXLWorkerMessage message) {
+    if (message.kind == 'stagexl:audio') {
+      _audioAdapter?._handleMessage(message.data.dartify());
+      return;
+    }
     if (message.kind == 'stagexl:viewport') {
       _viewport = StageViewport(
         left: message.left,
@@ -466,6 +724,8 @@ void runStageXLWorker(Future<void> Function(StageWorkerHost host) initialize) {
         message.canvas,
         devicePixelRatio: message.devicePixelRatio,
         initialData: message.data.dartify(),
+        audioEnabled: message.audioEnabled,
+        audioTypes: (message.audioTypes.dartify() as List).cast<String>(),
         viewport: StageViewport(
           left: message.left,
           top: message.top,

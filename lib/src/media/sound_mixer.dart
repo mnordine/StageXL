@@ -6,6 +6,7 @@ class SoundMixer {
   static SoundEngine? _engineDetected;
   static SoundEngine? _engineOverride;
   static var _soundTransform = SoundTransform();
+  static SoundWorkerAdapter? _workerAdapter;
 
   static WebAudioApiMixer? _webAudioApiMixer;
   static AudioElementMixer? _audioElementMixer;
@@ -36,6 +37,7 @@ class SoundMixer {
   static set soundTransform(SoundTransform value) {
     _initEngine();
     _soundTransform = value;
+    _workerAdapter?.setSoundTransform(value);
     _webAudioApiMixer?.applySoundTransform(_soundTransform);
     _audioElementMixer?.applySoundTransform(_soundTransform);
   }
@@ -53,6 +55,7 @@ class SoundMixer {
   ///     });
 
   static void unlockMobileAudio() {
+    _workerAdapter?.unlock();
     if (engine == .WebAudioApi) {
       try {
         final context = WebAudioApiMixer.audioContext;
@@ -64,6 +67,21 @@ class SoundMixer {
         // There is nothing we can do :(
       }
     }
+  }
+
+  //---------------------------------------------------------------------------
+  //---------------------------------------------------------------------------
+
+  /// Routes sound loading and playback through the browser host of a worker.
+  ///
+  /// Applications normally do not call this directly. `StageWorkerHost`
+  /// installs the adapter before invoking the worker entry point.
+  static void useWorkerAdapter(SoundWorkerAdapter adapter) {
+    _workerAdapter = adapter;
+    _engineDetected = .Worker;
+    _engineOverride = null;
+    adapter.setSoundTransform(_soundTransform);
+    print('StageXL sound engine  : ${engine.name}');
   }
 
   //---------------------------------------------------------------------------

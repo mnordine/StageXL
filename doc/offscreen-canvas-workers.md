@@ -62,6 +62,16 @@ void main() {
 dedicated worker. Bitmap loading uses worker-compatible `fetch`/`createImageBitmap`, and runtime-created bitmap and
 text surfaces use `OffscreenCanvas` when no document exists.
 
+## Audio
+
+The normal StageXL `Sound`, `SoundChannel`, and `SoundMixer` APIs can be used by worker scene code. Audio commands
+are forwarded to a main-thread host, which owns the browser Web Audio or media-element engine and performs mobile
+audio unlocking synchronously from the original DOM input event. Loads, playback completion, pause/resume, position,
+volume, pan, and mixer transforms are bridged back to the worker.
+
+Audio forwarding is enabled by default. Set `enableAudio: false` in `StageWorkerClientOptions` when an application
+does not need it. `SoundAnalyzer` is not currently bridged because its API returns synchronous analyzer data.
+
 ## Compile both entry points
 
 Compile the main host and worker as independent Dart web programs. The worker URL passed to `StageWorkerClient` must
@@ -98,10 +108,10 @@ first build is therefore slower, but the host and worker outputs are both standa
 
 ## Platform boundaries
 
-DOM display objects, HTML media-element fallbacks, synchronous canvas data URLs, and other APIs that inherently
-require `document` remain main-thread-only. Prefer `BitmapData.load`, `ImageBitmap`, WebGL/WebGPU textures, and
-StageXL scene objects in worker applications. WebGPU in workers also depends on browser support for `navigator.gpu`;
-StageXL keeps its existing WebGPU-to-WebGL fallback behavior.
+DOM display objects, synchronous canvas data URLs, and other APIs that inherently require `document` remain
+main-thread-only. Audio media-element fallbacks are available through the worker audio host. Prefer `BitmapData.load`,
+`ImageBitmap`, WebGL/WebGPU textures, and StageXL scene objects in worker applications. WebGPU in workers also depends
+on browser support for `navigator.gpu`; StageXL keeps its existing WebGPU-to-WebGL fallback behavior.
 
 The normal `Stage(HTMLCanvasElement)` and `Stage.create(HTMLCanvasElement)` APIs continue to use the built-in
 `BrowserStageHost` and require no application changes.
