@@ -6,7 +6,7 @@ var _globalFrameCallbackId = -1;
 
 void _globalFrameCallback(double frameTime) {
     final currentFrameTime = frameTime / 1000.0;
-    final deltaTime = currentFrameTime - _globalFrameTime;
+    final deltaTime = _globalFrameTime == double.maxFinite ? 0.0 : currentFrameTime - _globalFrameTime;
     _globalFrameTime = currentFrameTime;
     _globalFrameCallbackId = -1;
     _globalFrameRequest();
@@ -18,8 +18,12 @@ void _globalFrameCallback(double frameTime) {
 
 void _globalFrameRequest() {
   if (_globalFrameCallbackId == -1) {
-    _globalFrameCallbackId = window.requestAnimationFrame(_globalFrameCallback.toJS);
+    _globalFrameCallbackId = _FrameSchedulerGlobal(_globalScope).requestAnimationFrame(_globalFrameCallback.toJS);
   }
+}
+
+extension type _FrameSchedulerGlobal(JSObject _) implements JSObject {
+  external int requestAnimationFrame(JSFunction callback);
 }
 
 //-----------------------------------------------------------------------------

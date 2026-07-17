@@ -2,7 +2,7 @@ part of '../engine.dart';
 
 class RenderContextWebGL extends RenderContext {
   static var _globalContextIdentifier = 0;
-  final HTMLCanvasElement _canvasElement;
+  final RenderSurface _canvasElement;
 
   late final WebGL _renderingContext;
   final _projectionMatrix = Matrix3D.fromIdentity();
@@ -67,8 +67,8 @@ class RenderContextWebGL extends RenderContext {
     this._resetStencilTest = true,
     this._resetColor = true,
   }) {
-    _canvasElement.onWebGlContextLost.listen(_onContextLost);
-    _canvasElement.onWebGlContextRestored.listen(_onContextRestored);
+    _canvasElement.addEventListener('webglcontextlost', _onContextLost.toJS);
+    _canvasElement.addEventListener('webglcontextrestored', _onContextRestored.toJS);
 
     WebGLRenderingContext? renderingContext;
 
@@ -86,8 +86,13 @@ class RenderContextWebGL extends RenderContext {
     _isWebGL2 = renderingContext != null;
 
     // Fall back to WebGL 1 if WebGL 2 is not available
-    renderingContext ??= _canvasElement.getContext3d(
-        alpha: alpha, antialias: antialias, depth: false, stencil: true) as WebGL?;
+    renderingContext ??= _canvasElement.getContext('webgl', {
+      'alpha': alpha,
+      'antialias': antialias,
+      'depth': false,
+      'powerPreference': powerPreference.value,
+      'stencil': true,
+    }.jsify()) as WebGL?;
 
     if (renderingContext == null) {
       throw StateError('Failed to get WebGL context.');

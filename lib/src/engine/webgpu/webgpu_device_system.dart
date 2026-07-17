@@ -4,8 +4,12 @@ extension type _StageXLGpuSupportedFeatures._(JSObject _) implements JSObject {
   external bool has(String feature);
 }
 
+extension type _StageXLNavigator(JSObject _) implements JSObject {
+  external GPU? get gpu;
+}
+
 class WebGpuDeviceSystem {
-  final HTMLCanvasElement canvas;
+  final RenderSurface canvas;
   final GPUDevice device;
   final GPUCanvasContext canvasContext;
   final GPUTextureFormat preferredTextureFormat;
@@ -24,12 +28,13 @@ class WebGpuDeviceSystem {
   });
 
   static Future<WebGpuDeviceSystem?> create(
-    HTMLCanvasElement canvas, {
+    RenderSurface canvas, {
     required PowerPreference powerPreference,
     required bool alpha,
     required bool antialias,
   }) async {
-    final gpu = window.navigator.gpu;
+    final navigator = _globalScope.getProperty<JSObject>('navigator'.toJS);
+    final gpu = _StageXLNavigator(navigator).gpu;
     if (gpu == null) return null;
 
     final adapterOptions = GPURequestAdapterOptions(

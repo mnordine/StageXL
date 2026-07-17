@@ -528,7 +528,7 @@ class TextField extends InteractiveObject {
     }
 
     final matrix = _renderTextureQuad!.drawMatrix;
-    final context = _renderTexture!.canvas.context2D;
+    final context = _renderTexture!.context2D;
     context.setTransform(
         matrix.a.toJS, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
     context.clearRect(0, 0, _width, _height);

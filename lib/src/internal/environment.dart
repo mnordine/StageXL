@@ -6,6 +6,26 @@ import 'dart:js_interop_unsafe';
 import 'package:web/web.dart' hide Int32List;
 import 'dart:typed_data';
 
+@JS('globalThis')
+external JSObject get _globalScope;
+
+extension type _EnvironmentGlobal(JSObject _) implements JSObject {
+  external double get devicePixelRatio;
+  external _EnvironmentNavigator get navigator;
+  external _EnvironmentScreen get screen;
+}
+
+extension type _EnvironmentNavigator(JSObject _) implements JSObject {
+  external String get userAgent;
+}
+
+extension type _EnvironmentScreen(JSObject _) implements JSObject {
+  external int get width;
+  external int get height;
+}
+
+final _environmentGlobal = _EnvironmentGlobal(_globalScope);
+
 final bool autoHiDPI = _checkAutoHiDPI();
 final num devicePixelRatio = _checkDevicePixelRatio();
 final Future<bool> isWebpSupported = _checkWebpSupport();
@@ -13,16 +33,18 @@ final Future<bool> isAvifSupported = _checkAvifSupport();
 final bool isMobileDevice = _checkMobileDevice();
 final bool isLittleEndianSystem = _checkLittleEndianSystem();
 final bool isTouchEventSupported = _checkTouchEventSupport();
-bool get isImageBitmapSupported => window.has('createImageBitmap');
+bool get isImageBitmapSupported => _globalScope.has('createImageBitmap');
+bool get hasDocument => _globalScope.has('document');
 
 //-------------------------------------------------------------------------------------
 
-num _checkDevicePixelRatio() => window.devicePixelRatio;
+num _checkDevicePixelRatio() =>
+    _globalScope.has('devicePixelRatio') ? _environmentGlobal.devicePixelRatio : 1.0;
 
 //-------------------------------------------------------------------------------------
 
 bool _checkMobileDevice() {
-  final ua = window.navigator.userAgent.toLowerCase();
+  final ua = _environmentGlobal.navigator.userAgent.toLowerCase();
   final identifiers = [
     'iphone',
     'ipad',
@@ -47,7 +69,8 @@ bool _checkLittleEndianSystem() {
 
 bool _checkAutoHiDPI() {
   var autoHiDPI = devicePixelRatio > 1.0;
-  final screen = window.screen;
+  if (!_globalScope.has('screen')) return autoHiDPI;
+  final screen = _environmentGlobal.screen;
 
   // only recent devices (> iPhone4) and hi-dpi desktops
 
@@ -71,13 +94,14 @@ extension type _ImageDecoder._(JSObject _) implements JSObject {
   }
 }
 
-bool get _hasImageDecoder => window.has('ImageDecoder');
+bool get _hasImageDecoder => _globalScope.has('ImageDecoder');
 
 Future<bool> _checkWebpSupport() async {
   try {
     if (_hasImageDecoder) return await _ImageDecoder.isTypeSupported('image/webp');
   } catch (_) {}
 
+  if (!_globalScope.has('document')) return false;
   final completer = Completer<bool>();
   final img = HTMLImageElement();
 
@@ -98,6 +122,7 @@ Future<bool> _checkAvifSupport() async {
     if (_hasImageDecoder) return await _ImageDecoder.isTypeSupported('image/avif');
   } catch (_) {}
 
+  if (!_globalScope.has('document')) return false;
   final completer = Completer<bool>();
   final img = HTMLImageElement();
 

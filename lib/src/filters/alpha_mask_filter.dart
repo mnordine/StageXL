@@ -34,7 +34,7 @@ class AlphaMaskFilter extends BitmapFilter {
 
     final matrix = renderTextureQuad.drawMatrix;
     final vxList = renderTextureQuad.vxList;
-    final canvas = renderTextureQuad.renderTexture.canvas;
+    final canvas = renderTextureQuad.renderTexture.surface;
     final renderContext = RenderContextCanvas(canvas);
     final renderState = RenderState(renderContext, matrix);
     final context = renderContext.rawContext;

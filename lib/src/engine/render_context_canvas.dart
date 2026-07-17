@@ -1,7 +1,7 @@
 part of '../engine.dart';
 
 class RenderContextCanvas extends RenderContext {
-  final HTMLCanvasElement _canvasElement;
+  final RenderSurface _canvasElement;
   final CanvasRenderingContext2D _renderingContext;
 
   final _identityMatrix = Matrix.fromIdentity();
@@ -9,7 +9,7 @@ class RenderContextCanvas extends RenderContext {
   double _activeAlpha = 1;
 
   RenderContextCanvas(this._canvasElement)
-      : _renderingContext = _canvasElement.context2D {
+      : _renderingContext = _canvasElement.getContext('2d') as CanvasRenderingContext2D {
     reset();
   }
 

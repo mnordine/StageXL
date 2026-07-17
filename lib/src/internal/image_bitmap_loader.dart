@@ -8,6 +8,13 @@ import 'package:web/web.dart';
 import 'image_loader.dart';
 import 'package:http/http.dart' as http;
 
+@JS('globalThis')
+external JSObject get _globalScope;
+
+extension type _ImageBitmapGlobal(JSObject _) implements JSObject {
+  external JSPromise<ImageBitmap> createImageBitmap(JSObject image);
+}
+
 class ImageBitmapLoader implements BaseImageLoader<ImageBitmap> {
   final String _url;
   final _completer = Completer<ImageBitmap>();
@@ -25,7 +32,8 @@ class ImageBitmapLoader implements BaseImageLoader<ImageBitmap> {
       } 
       if (response.statusCode == 200) {
         try {
-          final imageBitmap = window.createImageBitmap(Blob([response.bodyBytes.toJS].toJS)).toDart;
+          final blob = Blob([response.bodyBytes.toJS].toJS);
+          final imageBitmap = _ImageBitmapGlobal(_globalScope).createImageBitmap(blob).toDart;
           _completer.complete(imageBitmap);
         } catch (e) {
           _completer.completeError(e);

@@ -157,16 +157,14 @@ class GraphicsGradient {
     }
 
     if (_gradientTexture == null) {
-      final canvas = HTMLCanvasElement()
-        ..width = 1
-        ..height = GRADIENT_TEXTURE_SIZE;
-      final canvasGradient =
-          canvas.context2D.createLinearGradient(0, 0, 0, GRADIENT_TEXTURE_SIZE);
+      final canvas = createRenderSurface(1, GRADIENT_TEXTURE_SIZE);
+      final context = renderSurfaceContext2D(canvas);
+      final canvasGradient = context.createLinearGradient(0, 0, 0, GRADIENT_TEXTURE_SIZE);
       _colorStops.forEach(
           (cs) => canvasGradient.addColorStop(cs.offset, color2rgba(cs.color)));
-      canvas.context2D.fillStyle = canvasGradient;
-      canvas.context2D.fillRect(0, 0, 1, GRADIENT_TEXTURE_SIZE);
-      _gradientTexture = .fromCanvasElement(canvas);
+      context.fillStyle = canvasGradient;
+      context.fillRect(0, 0, 1, GRADIENT_TEXTURE_SIZE);
+      _gradientTexture = .fromRenderSurface(canvas);
       _gradientTextureCache.addObject(_textureCacheKey!, _gradientTexture!);
     }
 

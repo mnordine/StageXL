@@ -1,7 +1,7 @@
 part of '../engine.dart';
 
 class RenderContextWebGPU extends RenderContext {
-  final HTMLCanvasElement _canvasElement;
+  final RenderSurface _canvasElement;
   final WebGpuDeviceSystem deviceSystem;
   final bool renderBundles;
   late final WebGpuCommandSystem commandSystem;
@@ -29,7 +29,7 @@ class RenderContextWebGPU extends RenderContext {
   }
 
   static Future<RenderContextWebGPU?> create(
-    HTMLCanvasElement canvas, {
+    RenderSurface canvas, {
     required PowerPreference powerPreference,
     bool alpha = false,
     bool antialias = false,

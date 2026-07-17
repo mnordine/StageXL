@@ -194,6 +194,10 @@ class Environment {
 
   final bool isImageBitmapSupported = env.isImageBitmapSupported;
 
+  /// Whether the current JavaScript environment provides a DOM document.
+
+  final bool hasDocument = env.hasDocument;
+
   final Future<bool> isWebpSupported = env.isWebpSupported;
   final Future<bool> isAvifSupported = env.isAvifSupported;
 }

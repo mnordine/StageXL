@@ -15,6 +15,7 @@ library;
 
 import 'dart:async';
 import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
 import 'package:web/web.dart'
     hide Float32List, Int32List, Uint32List, $GPUColorWrite, $GPUShaderStage, $GPUBufferUsage, $GPUTextureUsage;
 import 'dart:math' as math;
@@ -22,7 +23,6 @@ import 'dart:typed_data';
 
 import 'package:byte_array/byte_array.dart';
 import 'package:webgpu_interop/generated.dart';
-import 'package:webgpu_interop/webgpu_interop.dart' hide GPUSupportedFeatures;
 
 import 'errors.dart';
 import 'geom/matrix.dart';
@@ -52,6 +52,7 @@ part 'engine/render_program_triangle.dart';
 part 'engine/render_state.dart';
 part 'engine/render_statistics.dart';
 part 'engine/render_stencil_buffer.dart';
+part 'engine/render_surface.dart';
 part 'engine/render_texture.dart';
 part 'engine/render_texture_filtering.dart';
 part 'engine/render_texture_quad.dart';
@@ -81,3 +82,6 @@ part 'engine/webgpu/webgpu_texture_system.dart';
 typedef WebGL = WebGLRenderingContext;
 typedef WebGL2 = WebGL2RenderingContext;
 typedef GLContext = WebGLRenderingContext;
+
+@JS('globalThis')
+external JSObject get _globalScope;

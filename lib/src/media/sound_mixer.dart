@@ -72,6 +72,12 @@ class SoundMixer {
   static void _initEngine() {
     if (_engineDetected != null) return;
 
+    if (!env.hasDocument) {
+      _engineDetected = .Mockup;
+      print('StageXL sound engine  : ${engine.name}');
+      return;
+    }
+
     _engineDetected = .AudioElement;
     _audioElementMixer = AudioElementMixer();
 

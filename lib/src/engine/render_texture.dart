@@ -5,7 +5,7 @@ class RenderTexture {
   var _height = 0;
 
   CanvasImageSource? _source;
-  HTMLCanvasElement? _canvas;
+  RenderSurface? _canvas;
   RenderTextureFiltering _filtering = .LINEAR;
   RenderTextureWrapping _wrappingX = .CLAMP;
   RenderTextureWrapping _wrappingY = .CLAMP;
@@ -29,12 +29,10 @@ class RenderTexture {
 
     _width = width;
     _height = height;
-    _source = _canvas = HTMLCanvasElement()
-      ..width = _width
-      ..height = _height;
+    _source = _canvas = createRenderSurface(_width, _height);
 
     if (fillColor != 0) {
-      final context = _canvas!.context2D;
+      final context = renderSurfaceContext2D(_canvas!);
       context.fillStyle = color2rgba(fillColor).toJS;
       context.fillRect(0, 0, _width, _height);
     }
@@ -55,7 +53,22 @@ class RenderTexture {
   RenderTexture.fromCanvasElement(HTMLCanvasElement canvasElement) {
     _width = canvasElement.width;
     _height = canvasElement.height;
-    _source = _canvas = canvasElement;
+    _source = canvasElement;
+    _canvas = renderSurfaceFrom(canvasElement);
+  }
+
+  RenderTexture.fromOffscreenCanvas(OffscreenCanvas canvas) {
+    _width = canvas.width;
+    _height = canvas.height;
+    _source = canvas;
+    _canvas = renderSurfaceFrom(canvas);
+  }
+
+  RenderTexture.fromRenderSurface(RenderSurface surface) {
+    _width = surface.width;
+    _height = surface.height;
+    _source = surface;
+    _canvas = surface;
   }
 
   RenderTexture.fromVideoElement(HTMLVideoElement videoElement) {
@@ -98,24 +111,47 @@ class RenderTexture {
       return _source as HTMLCanvasElement;
     } else if (_source.isA<HTMLImageElement>()) {
       final imageElement = _source as HTMLImageElement;
-      _source = _canvas = HTMLCanvasElement()
-        ..width = _width
-        ..height = _height;
-      
-      _canvas!.context2D.drawImage(imageElement, 0, 0, _width, _height);
-      return _canvas!;
+      _source = _canvas = createRenderSurface(_width, _height);
+
+      renderSurfaceContext2D(_canvas!).drawImage(imageElement, 0, 0, _width, _height);
+      if (!_source.isA<HTMLCanvasElement>()) {
+        throw UnsupportedError('HTMLCanvasElement is unavailable in a worker. Use RenderTexture.surface.');
+      }
+      return _source as HTMLCanvasElement;
     } else if (_source.isA<ImageBitmap>()) {
       final image = _source as ImageBitmap;
-      final canvas = _source = _canvas = HTMLCanvasElement()
-        ..width = _width
-        ..height = _height;
+      final canvas = _source = _canvas = createRenderSurface(_width, _height);
 
-      canvas.context2D.drawImage(image, 0, 0, _width, _height);
-      return canvas;
+      renderSurfaceContext2D(canvas).drawImage(image, 0, 0, _width, _height);
+      if (!_source.isA<HTMLCanvasElement>()) {
+        throw UnsupportedError('HTMLCanvasElement is unavailable in a worker. Use RenderTexture.surface.');
+      }
+      return _source as HTMLCanvasElement;
     } else {
       throw StateError('RenderTexture is read only.');
     }
   }
+
+  /// The canvas-compatible surface backing this texture.
+  ///
+  /// This is an `HTMLCanvasElement` on the main thread and an
+  /// `OffscreenCanvas` in a worker.
+  RenderSurface get surface {
+    if (_canvas != null) return _canvas!;
+    final source = _source;
+    if (source != null && (source.isA<HTMLCanvasElement>() || source.isA<OffscreenCanvas>())) {
+      return renderSurfaceFrom(source);
+    }
+    final surface = createRenderSurface(_width, _height);
+    final imageSource = _source;
+    if (imageSource != null) {
+      renderSurfaceContext2D(surface).drawImage(imageSource, 0, 0, _width, _height);
+    }
+    _source = _canvas = surface;
+    return surface;
+  }
+
+  CanvasRenderingContext2D get context2D => renderSurfaceContext2D(surface);
 
   WebGLTexture? get texture => _texture;
   int get contextIdentifier => _contextIdentifier;
@@ -236,9 +272,7 @@ class RenderTexture {
     } else {
       _width = width;
       _height = height;
-      _source = _canvas = HTMLCanvasElement()
-        ..width = _width
-        ..height = _height;
+      _source = _canvas = createRenderSurface(_width, _height);
     }
   }
 

@@ -136,7 +136,7 @@ class GraphicsPattern {
       final textureHeight = _renderTextureQuad.offsetRectangle.height;
       final renderTexture = RenderTexture(textureWidth, textureHeight, 0);
       final renderTextureQuad = renderTexture.quad.withPixelRatio(pixelRatio);
-      final renderContext = RenderContextCanvas(renderTexture.canvas);
+      final renderContext = RenderContextCanvas(renderTexture.surface);
       final renderState =
           RenderState(renderContext, renderTextureQuad.drawMatrix);
       renderState.renderTextureQuad(_renderTextureQuad);

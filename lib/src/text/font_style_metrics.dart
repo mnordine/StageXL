@@ -17,6 +17,13 @@ class _FontStyleMetrics {
   var height = 0;
 
   _FontStyleMetrics(TextFormat textFormat) {
+    if (!isDocumentAvailable) {
+      height = textFormat.size.toInt();
+      ascent = textFormat.size * 7 ~/ 8;
+      descent = height - ascent;
+      return;
+    }
+
     final fontStyle = textFormat._cssFontStyle;
     final text = html.HTMLSpanElement();
     final block = html.HTMLDivElement();

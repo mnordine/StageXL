@@ -14,6 +14,13 @@ rich animation framework, audio and video support, interaction events,
 3D transformations of 2D objects, resource management, text rendering 
 and many other features as well as extensibility for even more features.
 
+## OffscreenCanvas and Web Workers
+
+StageXL supports running the complete scene and rendering runtime in a dedicated Web Worker using an
+`OffscreenCanvas`. The normal main-thread API is unchanged. See
+[OffscreenCanvas and Web Workers](doc/offscreen-canvas-workers.md) for the host/worker entry points, event forwarding,
+platform boundaries, and commands for compiling both programs.
+
 ## Extension Libraries
 
 StageXL provides a rich set of built-in features. Even more advanced use cases 
@@ -68,7 +75,6 @@ care about most. Some of the things we will tackle in the near future are:
 * Support for Flutter (This is happening on a separate repo)
 * A new StageXL homepage with more articles / blog posts.
 * Changing functions from positional parameters to named parameters.
-* Adding ability use Web Workers.
 
 ## Adobe Flash heritage
 

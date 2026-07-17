@@ -34,6 +34,7 @@ import 'dart:math';
 import 'errors.dart';
 import 'events.dart';
 import 'internal/audio_loader.dart';
+import 'internal/environment.dart' as env;
 import 'internal/video_loader.dart';
 import 'resources.dart';
 

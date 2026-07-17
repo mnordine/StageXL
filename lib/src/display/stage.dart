@@ -53,7 +53,7 @@ enum StageAlign {
 class Stage extends DisplayObjectContainer {
   static var defaultOptions = StageOptions();
 
-  late HTMLCanvasElement _canvas;
+  late StageHost _host;
   late final RenderContext _renderContext;
   RenderLoop? _renderLoop;
   StageConsole? _console;
@@ -148,13 +148,14 @@ class Stage extends DisplayObjectContainer {
           'RenderEngine.WebGPU requires async initialization. Use Stage.create(...) instead of Stage(...).');
     }
 
-    final renderContext = _createRenderContext(canvas, options);
-    _initialize(canvas, renderContext, width: width, height: height, options: options, console: console);
+    final host = BrowserStageHost(canvas);
+    final renderContext = _createRenderContext(host.renderSurface, options);
+    _initialize(host, renderContext, width: width, height: height, options: options, console: console);
   }
 
-  Stage._withRenderContext(HTMLCanvasElement canvas, RenderContext renderContext,
+  Stage._withRenderContext(StageHost host, RenderContext renderContext,
       {required StageOptions options, int? width, int? height, bool console = false}) {
-    _initialize(canvas, renderContext, width: width, height: height, options: options, console: console);
+    _initialize(host, renderContext, width: width, height: height, options: options, console: console);
   }
 
   /// Creates a [Stage] asynchronously.
@@ -165,9 +166,10 @@ class Stage extends DisplayObjectContainer {
   static Future<Stage> create(HTMLCanvasElement canvas,
       {int? width, int? height, StageOptions? options, bool console = false}) async {
     options ??= Stage.defaultOptions;
-    final renderContext = await _createRenderContextAsync(canvas, options);
+    final host = BrowserStageHost(canvas);
+    final renderContext = await _createRenderContextAsync(host.renderSurface, options);
     return Stage._withRenderContext(
-      canvas,
+      host,
       renderContext,
       width: width,
       height: height,
@@ -176,12 +178,27 @@ class Stage extends DisplayObjectContainer {
     );
   }
 
-  void _initialize(HTMLCanvasElement canvas, RenderContext renderContext,
+  /// Creates a Stage for a platform host such as an OffscreenCanvas worker.
+  ///
+  /// Applications running on the main thread should keep using [Stage.create].
+  static Future<Stage> createWithHost(StageHost host,
+      {int? width, int? height, StageOptions? options, bool console = false}) async {
+    options ??= Stage.defaultOptions;
+    final renderContext = await _createRenderContextAsync(host.renderSurface, options);
+    return Stage._withRenderContext(
+      host,
+      renderContext,
+      width: width,
+      height: height,
+      options: options,
+      console: console,
+    );
+  }
+
+  void _initialize(StageHost host, RenderContext renderContext,
       {required StageOptions options, int? width, int? height, bool console = false}) {
-    if (canvas.tabIndex <= 0) canvas.tabIndex = 1;
-    if (canvas.style.outline == '') canvas.style.outline = 'none';
-    width ??= canvas.width;
-    height ??= canvas.height;
+    width ??= host.renderSurface.width;
+    height ??= host.renderSurface.height;
 
     backgroundColor = options.backgroundColor;
     preventDefaultOnTouch = options.preventDefaultOnTouch;
@@ -189,7 +206,7 @@ class Stage extends DisplayObjectContainer {
     preventDefaultOnWheel = options.preventDefaultOnWheel;
     preventDefaultOnKeyboard = options.preventDefaultOnKeyboard;
 
-    _canvas = canvas;
+    _host = host;
     _stageAlign = options.stageAlign;
     _stageScaleMode = options.stageScaleMode;
     renderMode = options.stageRenderMode;
@@ -197,7 +214,7 @@ class Stage extends DisplayObjectContainer {
 
     _sourceWidth = width;
     _sourceHeight = height;
-    _pixelRatio = min(options.maxPixelRatio, env.devicePixelRatio);
+    _pixelRatio = min(options.maxPixelRatio, host.devicePixelRatio);
     _renderContext = renderContext;
     _renderState = RenderState(_renderContext);
 
@@ -217,31 +234,7 @@ class Stage extends DisplayObjectContainer {
 
     print('StageXL render engine : ${_renderContext.renderEngine.name}');
 
-    canvas.onKeyDown.listen(_onKeyEvent);
-    canvas.onKeyUp.listen(_onKeyEvent);
-    canvas.onKeyPress.listen(_onKeyEvent);
-
-    final listenToMouseEvents = _inputEventMode == .MouseOnly || _inputEventMode == .MouseAndTouch;
-
-    if (listenToMouseEvents) {
-      canvas.onMouseDown.listen(_onMouseEvent);
-      canvas.onMouseUp.listen(_onMouseEvent);
-      canvas.onMouseMove.listen(_onMouseEvent);
-      canvas.onMouseOut.listen(_onMouseEvent);
-      canvas.onContextMenu.listen(_onMouseEvent);
-      canvas.onMouseWheel.listen(_onMouseWheelEvent);
-    }
-
-    final listenToTouchEvents = _inputEventMode == .TouchOnly || _inputEventMode == .MouseAndTouch;
-
-    if (listenToTouchEvents && env.isTouchEventSupported) {
-      canvas.onTouchStart.listen(_onTouchEvent);
-      canvas.onTouchEnd.listen(_onTouchEvent);
-      canvas.onTouchMove.listen(_onTouchEvent);
-      canvas.onTouchEnter.listen(_onTouchEvent);
-      canvas.onTouchLeave.listen(_onTouchEvent);
-      canvas.onTouchCancel.listen(_onTouchEvent);
-    }
+    host.attach(this);
 
     Mouse.onCursorChanged.listen((cursorName) => _updateMouseCursor());
 
@@ -505,7 +498,7 @@ class Stage extends DisplayObjectContainer {
   //----------------------------------------------------------------------------
 
   static Future<RenderContext> _createRenderContextAsync(
-      HTMLCanvasElement canvas, StageOptions options) async {
+      RenderSurface canvas, StageOptions options) async {
     if (options.renderEngine == .WebGPU) {
       final webgpuContext = await RenderContextWebGPU.create(
         canvas,
@@ -523,7 +516,7 @@ class Stage extends DisplayObjectContainer {
   }
 
   static RenderContext _createRenderContext(
-      HTMLCanvasElement canvas, StageOptions options) {
+      RenderSurface canvas, StageOptions options) {
     switch (options.renderEngine) {
       case .WebGL || .WebGL2:
         final RenderContextWebGL context;
@@ -593,11 +586,11 @@ class Stage extends DisplayObjectContainer {
     final sourceWidth = _sourceWidth;
     final sourceHeight = _sourceHeight;
 
-    final clientRectangle = _canvas.getBoundingClientRect();
-    clientLeft = _canvas.clientLeft + clientRectangle.left.round();
-    clientTop = _canvas.clientTop + clientRectangle.top.round();
-    clientWidth = _canvas.clientWidth;
-    clientHeight = _canvas.clientHeight;
+    final viewport = _host.viewport;
+    clientLeft = viewport.left;
+    clientTop = viewport.top;
+    clientWidth = viewport.width;
+    clientHeight = viewport.height;
 
     if (clientWidth == 0 || clientHeight == 0) return;
 
@@ -676,16 +669,12 @@ class Stage extends DisplayObjectContainer {
     if (_stageWidth != clientWidth || _stageHeight != clientHeight) {
       _stageWidth = clientWidth;
       _stageHeight = clientHeight;
-      _canvas.width = (clientWidth * pixelRatio).round();
-      _canvas.height = (clientHeight * pixelRatio).round();
+      _host.renderSurface.width = (clientWidth * pixelRatio).round();
+      _host.renderSurface.height = (clientHeight * pixelRatio).round();
 
       // update hi-dpi canvas style size if client size has changed
 
-      if (_canvas.clientWidth != clientWidth ||
-          _canvas.clientHeight != clientHeight) {
-        _canvas.style.width = '${clientWidth}px';
-        _canvas.style.height = '${clientHeight}px';
-      }
+      _host.setViewportSize(clientWidth, clientHeight);
 
       dispatchEvent(Event(Event.RESIZE));
     }
@@ -709,17 +698,34 @@ class Stage extends DisplayObjectContainer {
 
     if (_mouseCursor != mouseCursor) {
       _mouseCursor = mouseCursor;
-      _canvas.style.cursor = Mouse.getCursorStyle(mouseCursor);
+      _host.setCursor(Mouse.getCursorStyle(mouseCursor));
     }
   }
 
   Point<num> transformPoint(math.Point<num> pt, [Point<num>? returnPoint]) =>
       _clientTransformation.transformPoint(pt, returnPoint);
 
+  /// Dispatches input supplied by the active [StageHost].
+  ///
+  /// Worker hosts call this after deserializing events forwarded by the main
+  /// thread. Hit testing and StageXL event propagation still happen locally in
+  /// the Stage runtime.
+  void dispatchInputEvent(StageInputEvent event) {
+    switch (event) {
+      case StageMouseInput(type: 'wheel'):
+        _processMouseWheelInput(event);
+      case StageMouseInput():
+        _processMouseInput(event);
+      case StageTouchInput():
+        _processTouchInput(event);
+      case StageKeyboardInput():
+        _processKeyboardInput(event);
+    }
+  }
+
   //----------------------------------------------------------------------------
 
-  void _onMouseEvent(html.MouseEvent event) {
-    if (preventDefaultOnMouse) event.preventDefault();
+  void _processMouseInput(StageMouseInput event) {
 
     final time = DateTime.now().millisecondsSinceEpoch;
     final button = event.button;
@@ -854,7 +860,7 @@ class Stage extends DisplayObjectContainer {
     var isDoubleClick = false;
 
     if (event.type == 'mousedown') {
-      _canvas.focus();
+      _host.focus();
       mouseEventType = mouseButton.mouseDownEventType;
 
       if (target != mouseButton.target || time > mouseButton.clickTime + 500) {
@@ -928,8 +934,7 @@ class Stage extends DisplayObjectContainer {
 
   //----------------------------------------------------------------------------
 
-  void _onMouseWheelEvent(html.WheelEvent event) {
-    if (preventDefaultOnWheel) event.preventDefault();
+  MouseEvent _processMouseWheelInput(StageMouseInput event) {
 
     final stagePoint = _clientTransformation.transformPoint(Point(event.clientX, event.clientY));
     final localPoint = Point<num>(0.0, 0.0);
@@ -954,172 +959,167 @@ class Stage extends DisplayObjectContainer {
         0);
 
     target.dispatchEvent(mouseEvent);
-
-    if (mouseEvent.isImmediatePropagationStopped) {
-      event.stopImmediatePropagation();
-    }
-    if (mouseEvent.isPropagationStopped) {
-      event.stopPropagation();
-    }
-    if (mouseEvent.isDefaultPrevented) {
-      event.preventDefault();
-    }
+    return mouseEvent;
   }
 
   //----------------------------------------------------------------------------
   //----------------------------------------------------------------------------
 
-  void _onTouchEvent(html.TouchEvent event) {
-    if (preventDefaultOnTouch) event.preventDefault();
-
+  void _processTouchInput(StageTouchInput event) {
     final eventType = event.type;
     final altKey = event.altKey;
     final ctrlKey = event.ctrlKey;
     final shiftKey = event.shiftKey;
+    final identifier = event.identifier;
+    final clientPoint = Point(event.clientX, event.clientY);
+    final stagePoint = _clientTransformation.transformPoint(clientPoint);
+    final localPoint = Point<num>(0.0, 0.0);
+    final target = hitTestInput(stagePoint.x, stagePoint.y) as InteractiveObject;
 
-    final touches = event.changedTouches;
-    for (var i = 0; i < touches.length; i++) {
-      final changedTouch = touches.item(i);
-      if (changedTouch == null) continue;
+    final touchPoint = _touchPoints.putIfAbsent(
+        identifier, () => _TouchPoint(target, _touchPoints.isEmpty));
 
-      final identifier = changedTouch.identifier;
+    final touchPointID = touchPoint.touchPointID;
+    final primaryTouchPoint = touchPoint.primaryTouchPoint;
 
-      final clientPoint = Point(changedTouch.clientX, changedTouch.clientY);
-      final stagePoint = _clientTransformation.transformPoint(clientPoint);
-      final localPoint = Point<num>(0.0, 0.0);
-      final target =
-          hitTestInput(stagePoint.x, stagePoint.y) as InteractiveObject;
+    _drags.forEach((d) => d.update(touchPointID, stagePoint));
 
-      final touchPoint = _touchPoints.putIfAbsent(
-          identifier, () => _TouchPoint(target, _touchPoints.isEmpty));
+    //---------------------------------------------------------------
+    // TOUCH_OUT, TOUCH_ROLL_OUT, TOUCH_ROLL_OVER, TOUCH_OVER
 
-      final touchPointID = touchPoint.touchPointID;
-      final primaryTouchPoint = touchPoint.primaryTouchPoint;
+    if (touchPoint.currentTarget != target) {
+      final oldTarget = touchPoint.currentTarget;
+      final newTarget = target;
+      final oldTargetList = <DisplayObject>[];
+      final newTargetList = <DisplayObject>[];
+      var commonCount = 0;
 
-      _drags.forEach((d) => d.update(touchPointID, stagePoint));
-
-      //---------------------------------------------------------------
-      // TOUCH_OUT, TOUCH_ROLL_OUT, TOUCH_ROLL_OVER, TOUCH_OVER
-
-      if (touchPoint.currentTarget != target) {
-        final oldTarget = touchPoint.currentTarget;
-        final newTarget = target;
-        final oldTargetList = <DisplayObject>[];
-        final newTargetList = <DisplayObject>[];
-        var commonCount = 0;
-
-        for (DisplayObject? p = oldTarget; p != null; p = p.parent) {
-          oldTargetList.add(p);
-        }
-
-        for (DisplayObject? p = newTarget; p != null; p = p.parent) {
-          newTargetList.add(p);
-        }
-
-        for (;; commonCount++) {
-          if (commonCount == oldTargetList.length) break;
-          if (commonCount == newTargetList.length) break;
-          final ot = oldTargetList[oldTargetList.length - commonCount - 1];
-          final nt = newTargetList[newTargetList.length - commonCount - 1];
-          if (ot != nt) break;
-        }
-
-        oldTarget.globalToLocal(stagePoint, localPoint);
-        oldTarget.dispatchEvent(TouchEvent(
-            TouchEvent.TOUCH_OUT,
-            true,
-            localPoint.x,
-            localPoint.y,
-            stagePoint.x,
-            stagePoint.y,
-            altKey,
-            ctrlKey,
-            shiftKey,
-            touchPointID,
-            primaryTouchPoint));
-
-        for (var i = 0; i < oldTargetList.length - commonCount; i++) {
-          final target = oldTargetList[i];
-          target.globalToLocal(stagePoint, localPoint);
-          target.dispatchEvent(TouchEvent(
-              TouchEvent.TOUCH_ROLL_OUT,
-              false,
-              localPoint.x,
-              localPoint.y,
-              stagePoint.x,
-              stagePoint.y,
-              altKey,
-              ctrlKey,
-              shiftKey,
-              touchPointID,
-              primaryTouchPoint));
-        }
-
-        for (var i = newTargetList.length - commonCount - 1; i >= 0; i--) {
-          final target = newTargetList[i];
-          target.globalToLocal(stagePoint, localPoint);
-          target.dispatchEvent(TouchEvent(
-              TouchEvent.TOUCH_ROLL_OVER,
-              false,
-              localPoint.x,
-              localPoint.y,
-              stagePoint.x,
-              stagePoint.y,
-              altKey,
-              ctrlKey,
-              shiftKey,
-              touchPointID,
-              primaryTouchPoint));
-        }
-
-        newTarget.globalToLocal(stagePoint, localPoint);
-        newTarget.dispatchEvent(TouchEvent(
-            TouchEvent.TOUCH_OVER,
-            true,
-            localPoint.x,
-            localPoint.y,
-            stagePoint.x,
-            stagePoint.y,
-            altKey,
-            ctrlKey,
-            shiftKey,
-            touchPointID,
-            primaryTouchPoint));
-
-        touchPoint.currentTarget = newTarget;
+      for (DisplayObject? p = oldTarget; p != null; p = p.parent) {
+        oldTargetList.add(p);
       }
 
-      //---------------------------------------------------------------
-      // TOUCH_BEGIN, TOUCH_MOVE, TOUCH_END, TOUCH_CANCEL, TOUCH_TAP
-
-      String? touchEventType;
-      var isTap = false;
-
-      if (eventType == 'touchstart') {
-        _canvas.focus();
-        _touchPoints[identifier] = touchPoint;
-        touchEventType = TouchEvent.TOUCH_BEGIN;
+      for (DisplayObject? p = newTarget; p != null; p = p.parent) {
+        newTargetList.add(p);
       }
 
-      if (eventType == 'touchend') {
-        _touchPoints.remove(identifier);
-        touchEventType = TouchEvent.TOUCH_END;
-        isTap = touchPoint.target == target;
+      for (;; commonCount++) {
+        if (commonCount == oldTargetList.length) break;
+        if (commonCount == newTargetList.length) break;
+        final ot = oldTargetList[oldTargetList.length - commonCount - 1];
+        final nt = newTargetList[newTargetList.length - commonCount - 1];
+        if (ot != nt) break;
       }
 
-      if (eventType == 'touchcancel') {
-        _touchPoints.remove(identifier);
-        touchEventType = TouchEvent.TOUCH_CANCEL;
-      }
+      oldTarget.globalToLocal(stagePoint, localPoint);
+      oldTarget.dispatchEvent(TouchEvent(
+          TouchEvent.TOUCH_OUT,
+          true,
+          localPoint.x,
+          localPoint.y,
+          stagePoint.x,
+          stagePoint.y,
+          altKey,
+          ctrlKey,
+          shiftKey,
+          touchPointID,
+          primaryTouchPoint));
 
-      if (eventType == 'touchmove') {
-        touchEventType = TouchEvent.TOUCH_MOVE;
-      }
-
-      if (touchEventType != null) {
+      for (var i = 0; i < oldTargetList.length - commonCount; i++) {
+        final target = oldTargetList[i];
         target.globalToLocal(stagePoint, localPoint);
         target.dispatchEvent(TouchEvent(
-            touchEventType,
+            TouchEvent.TOUCH_ROLL_OUT,
+            false,
+            localPoint.x,
+            localPoint.y,
+            stagePoint.x,
+            stagePoint.y,
+            altKey,
+            ctrlKey,
+            shiftKey,
+            touchPointID,
+            primaryTouchPoint));
+      }
+
+      for (var i = newTargetList.length - commonCount - 1; i >= 0; i--) {
+        final target = newTargetList[i];
+        target.globalToLocal(stagePoint, localPoint);
+        target.dispatchEvent(TouchEvent(
+            TouchEvent.TOUCH_ROLL_OVER,
+            false,
+            localPoint.x,
+            localPoint.y,
+            stagePoint.x,
+            stagePoint.y,
+            altKey,
+            ctrlKey,
+            shiftKey,
+            touchPointID,
+            primaryTouchPoint));
+      }
+
+      newTarget.globalToLocal(stagePoint, localPoint);
+      newTarget.dispatchEvent(TouchEvent(
+          TouchEvent.TOUCH_OVER,
+          true,
+          localPoint.x,
+          localPoint.y,
+          stagePoint.x,
+          stagePoint.y,
+          altKey,
+          ctrlKey,
+          shiftKey,
+          touchPointID,
+          primaryTouchPoint));
+
+      touchPoint.currentTarget = newTarget;
+    }
+
+    //---------------------------------------------------------------
+    // TOUCH_BEGIN, TOUCH_MOVE, TOUCH_END, TOUCH_CANCEL, TOUCH_TAP
+
+    String? touchEventType;
+    var isTap = false;
+
+    if (eventType == 'touchstart') {
+      _host.focus();
+      _touchPoints[identifier] = touchPoint;
+      touchEventType = TouchEvent.TOUCH_BEGIN;
+    }
+
+    if (eventType == 'touchend') {
+      _touchPoints.remove(identifier);
+      touchEventType = TouchEvent.TOUCH_END;
+      isTap = touchPoint.target == target;
+    }
+
+    if (eventType == 'touchcancel') {
+      _touchPoints.remove(identifier);
+      touchEventType = TouchEvent.TOUCH_CANCEL;
+    }
+
+    if (eventType == 'touchmove') {
+      touchEventType = TouchEvent.TOUCH_MOVE;
+    }
+
+    if (touchEventType != null) {
+      target.globalToLocal(stagePoint, localPoint);
+      target.dispatchEvent(TouchEvent(
+          touchEventType,
+          true,
+          localPoint.x,
+          localPoint.y,
+          stagePoint.x,
+          stagePoint.y,
+          altKey,
+          ctrlKey,
+          shiftKey,
+          touchPointID,
+          primaryTouchPoint));
+
+      if (isTap) {
+        target.dispatchEvent(TouchEvent(
+            TouchEvent.TOUCH_TAP,
             true,
             localPoint.x,
             localPoint.y,
@@ -1130,21 +1130,6 @@ class Stage extends DisplayObjectContainer {
             shiftKey,
             touchPointID,
             primaryTouchPoint));
-
-        if (isTap) {
-          target.dispatchEvent(TouchEvent(
-              TouchEvent.TOUCH_TAP,
-              true,
-              localPoint.x,
-              localPoint.y,
-              stagePoint.x,
-              stagePoint.y,
-              altKey,
-              ctrlKey,
-              shiftKey,
-              touchPointID,
-              primaryTouchPoint));
-        }
       }
     }
   }
@@ -1152,32 +1137,21 @@ class Stage extends DisplayObjectContainer {
   //----------------------------------------------------------------------------
   //----------------------------------------------------------------------------
 
-  void _onKeyEvent(html.KeyboardEvent event) {
-    if (preventDefaultOnKeyboard) event.preventDefault();
-    if (focus == null) return;
+  Event? _processKeyboardInput(StageKeyboardInput event) {
+    if (focus == null) return null;
 
     if (event.type == 'keypress') {
       var charCode = event.charCode;
       final keyCode = event.keyCode;
       if (keyCode == 13) charCode = 13;
-      if (charCode == 0) return;
+      if (charCode == 0) return null;
 
       final text = String.fromCharCodes([charCode]);
       final textEvent = TextEvent(TextEvent.TEXT_INPUT, true, text);
 
       focus!.dispatchEvent(textEvent);
-
-      if (textEvent.isImmediatePropagationStopped) {
-        event.stopImmediatePropagation();
-      }
-      if (textEvent.isPropagationStopped) {
-        event.stopPropagation();
-      }
-      if (textEvent.isDefaultPrevented) {
-        event.preventDefault();
-      }
+      return textEvent;
     } else {
-      var keyLocation = KeyLocation.STANDARD;
       var keyboardEventType = '';
 
       if (event.type == 'keyup') {
@@ -1186,42 +1160,25 @@ class Stage extends DisplayObjectContainer {
       if (event.type == 'keydown') {
         keyboardEventType = KeyboardEvent.KEY_DOWN;
       }
-      if (event.location == html.KeyLocation.LEFT) {
-        keyLocation = .LEFT;
-      }
-      if (event.location == html.KeyLocation.RIGHT) {
-        keyLocation = .RIGHT;
-      }
-      if (event.location == html.KeyLocation.NUMPAD) {
-        keyLocation = .NUM_PAD;
-      }
-      if (event.location == html.KeyLocation.JOYSTICK) {
-        keyLocation = .D_PAD;
-      }
-      if (event.location == html.KeyLocation.MOBILE) {
-        keyLocation = .D_PAD;
-      }
-
       final keyboardEvent = KeyboardEvent(
           keyboardEventType,
           true,
           event.keyCode,
-          keyLocation,
+          event.keyLocation,
           event.altKey,
           event.ctrlKey,
           event.shiftKey);
 
       focus!.dispatchEvent(keyboardEvent);
-
-      if (keyboardEvent.isImmediatePropagationStopped) {
-        event.stopImmediatePropagation();
-      }
-      if (keyboardEvent.isPropagationStopped) {
-        event.stopPropagation();
-      }
-      if (keyboardEvent.isDefaultPrevented) {
-        event.preventDefault();
-      }
+      return keyboardEvent;
     }
   }
+}
+
+extension on Event {
+  bool get _isInputDefaultPrevented => switch (this) {
+    KeyboardEvent() => (this as KeyboardEvent).isDefaultPrevented,
+    TextEvent() => (this as TextEvent).isDefaultPrevented,
+    _ => false,
+  };
 }

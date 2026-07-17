@@ -46,7 +46,7 @@ class _DisplayObjectCache {
 
     // render display object to texture
 
-    final canvas = renderTexture!.canvas;
+    final canvas = renderTexture!.surface;
     final matrix = renderTextureQuad!.drawMatrix;
     final renderContext = RenderContextCanvas(canvas);
     final renderState = RenderState(renderContext, matrix);
@@ -65,7 +65,7 @@ class _DisplayObjectCache {
     // draw optional debug border
 
     if (debugBorder) {
-      final context = canvas.context2D;
+      final context = renderSurfaceContext2D(canvas);
       context.setTransform(1.0.toJS, 0.0, 0.0, 1.0, 0.0, 0.0);
       context.lineWidth = 1;
       context.lineJoin = 'miter';

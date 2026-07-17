@@ -1,0 +1,11 @@
+targets:
+  $default:
+    builders:
+      build_web_compilers|entrypoint:
+        generate_for:
+          - example/*.dart
+        dev_options:
+          # A dedicated worker cannot reliably initialize dartdevc's multi-file RequireJS bootstrap.
+          compiler: dart2js
+        release_options:
+          compiler: dart2js

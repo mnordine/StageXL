@@ -11,7 +11,7 @@ library;
 import 'dart:js_interop';
 
 import 'package:web/web.dart' as html;
-import 'package:web/web.dart' show HTMLCanvasElement, CanvasRenderingContext2D, CanvasGradient;
+import 'package:web/web.dart' show CanvasRenderingContext2D, CanvasGradient;
 import 'dart:math' hide Point, Rectangle;
 
 import 'display.dart';
@@ -30,7 +30,5 @@ part 'text/text_format.dart';
 part 'text/text_format_align.dart';
 part 'text/text_line_metrics.dart';
 
-final _dummyCanvas = HTMLCanvasElement()
-  ..width = 16
-  ..height = 16;
-final CanvasRenderingContext2D _dummyCanvasContext = _dummyCanvas.context2D;
+final _dummyCanvas = createRenderSurface(16, 16);
+final CanvasRenderingContext2D _dummyCanvasContext = renderSurfaceContext2D(_dummyCanvas);
