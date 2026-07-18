@@ -8,6 +8,7 @@ library;
 import 'dart:async';
 import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
+import 'dart:typed_data';
 
 import 'package:stagexl/stagexl.dart';
 import 'package:web/web.dart' as web;
@@ -344,6 +345,7 @@ class _StageWorkerAudioHost {
   final web.Worker _worker;
   final _sounds = <int, Sound>{};
   final _channels = <int, SoundChannel>{};
+  final _analysisBuffers = <int, Uint8List>{};
   var _nextSoundId = 1;
 
   _StageWorkerAudioHost(this._worker);
@@ -364,6 +366,12 @@ class _StageWorkerAudioHost {
         _channels[data['channelId']]?.paused = data['paused']! as bool;
       case 'channelTransform':
         _channels[data['channelId']]?.soundTransform = _soundTransform(data);
+      case 'analyzerConfig':
+        _configureAnalyzer(data);
+      case 'analyzerByteData':
+        _analyzeByteData(data);
+      case 'analyzerRangeLevel':
+        _analyzeRangeLevel(data);
       case 'stop':
         _channels[data['channelId']]?.stop();
       case 'mixerTransform':
@@ -428,8 +436,53 @@ class _StageWorkerAudioHost {
     _channels[channelId] = channel;
     channel.onComplete.first.then((_) {
       if (_channels.remove(channelId) != null) {
+        _analysisBuffers.remove(channelId);
         _post({'command': 'complete', 'channelId': channelId});
       }
+    });
+  }
+
+  void _configureAnalyzer(Map<Object?, Object?> data) {
+    final analyzer = _channels[data['channelId']]?.soundAnalyzer;
+    if (analyzer == null) return;
+    analyzer
+      ..fftSize = data['fftSize']! as int
+      ..minDecibels = data['minDecibels']! as num
+      ..maxDecibels = data['maxDecibels']! as num
+      ..smoothingTimeConstant = data['smoothingTimeConstant']! as num;
+  }
+
+  void _analyzeByteData(Map<Object?, Object?> data) {
+    final channelId = data['channelId']! as int;
+    final analyzer = _channels[channelId]?.soundAnalyzer;
+    if (analyzer == null) {
+      _post({'command': 'analysisByteData', 'channelId': channelId, 'sampleRate': 0, 'bytes': const <int>[]});
+      return;
+    }
+
+    var bytes = _analysisBuffers[channelId];
+    if (bytes?.length != analyzer.frequencyBinCount) {
+      bytes = Uint8List(analyzer.frequencyBinCount);
+      _analysisBuffers[channelId] = bytes;
+    }
+    analyzer.getByteFrequencyData(bytes!);
+    _post({
+      'command': 'analysisByteData',
+      'channelId': channelId,
+      'sampleRate': analyzer.sampleRate,
+      'bytes': bytes.toJS,
+    });
+  }
+
+  void _analyzeRangeLevel(Map<Object?, Object?> data) {
+    final channelId = data['channelId']! as int;
+    final analyzer = _channels[channelId]?.soundAnalyzer;
+    final level = analyzer?.getFrequencyRangeLevel(data['minHz']! as num, data['maxHz']! as num) ?? 0.0;
+    _post({
+      'command': 'analysisRangeLevel',
+      'channelId': channelId,
+      'sampleRate': analyzer?.sampleRate ?? 0,
+      'level': level,
     });
   }
 
@@ -444,6 +497,7 @@ class _StageWorkerAudioHost {
       channel.stop();
     }
     _channels.clear();
+    _analysisBuffers.clear();
     _sounds.clear();
   }
 }
@@ -452,6 +506,7 @@ class _StageWorkerAudioAdapter implements SoundWorkerAdapter {
   @override
   final List<String> supportedTypes;
   final _completeController = StreamController<int>.broadcast(sync: true);
+  final _analysisController = StreamController<SoundWorkerAnalysisResult>.broadcast(sync: true);
   final _loadCompleters = <int, Completer<SoundWorkerLoadResult>>{};
   var _nextRequestId = 1;
   var _nextChannelId = 1;
@@ -461,6 +516,9 @@ class _StageWorkerAudioAdapter implements SoundWorkerAdapter {
 
   @override
   Stream<int> get onChannelComplete => _completeController.stream;
+
+  @override
+  Stream<SoundWorkerAnalysisResult> get onAnalysis => _analysisController.stream;
 
   @override
   Future<SoundWorkerLoadResult> load(
@@ -529,6 +587,34 @@ class _StageWorkerAudioAdapter implements SoundWorkerAdapter {
   });
 
   @override
+  void configureAnalyzer(
+    int channelId, {
+    required int fftSize,
+    required num minDecibels,
+    required num maxDecibels,
+    required num smoothingTimeConstant,
+  }) => _post({
+    'command': 'analyzerConfig',
+    'channelId': channelId,
+    'fftSize': fftSize,
+    'minDecibels': minDecibels,
+    'maxDecibels': maxDecibels,
+    'smoothingTimeConstant': smoothingTimeConstant,
+  });
+
+  @override
+  void requestByteFrequencyData(int channelId) =>
+      _post({'command': 'analyzerByteData', 'channelId': channelId});
+
+  @override
+  void requestFrequencyRangeLevel(int channelId, num minHz, num maxHz) => _post({
+    'command': 'analyzerRangeLevel',
+    'channelId': channelId,
+    'minHz': minHz,
+    'maxHz': maxHz,
+  });
+
+  @override
   void stopChannel(int channelId) => _post({'command': 'stop', 'channelId': channelId});
 
   @override
@@ -556,6 +642,28 @@ class _StageWorkerAudioAdapter implements SoundWorkerAdapter {
         );
       case 'complete':
         _completeController.add(data['channelId']! as int);
+      case 'analysisByteData':
+        final rawBytes = data['bytes'];
+        final bytes = switch (rawBytes) {
+          final Uint8List value => value,
+          final List<Object?> value => Uint8List.fromList(value.cast<int>()),
+          _ => Uint8List(0),
+        };
+        _analysisController.add(
+          SoundWorkerAnalysisResult(
+            data['channelId']! as int,
+            data['sampleRate']! as num,
+            byteFrequencyData: bytes,
+          ),
+        );
+      case 'analysisRangeLevel':
+        _analysisController.add(
+          SoundWorkerAnalysisResult(
+            data['channelId']! as int,
+            data['sampleRate']! as num,
+            frequencyRangeLevel: (data['level']! as num).toDouble(),
+          ),
+        );
     }
   }
 

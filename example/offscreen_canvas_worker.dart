@@ -62,9 +62,17 @@ void main() {
     });
 
     var direction = 1;
+    SoundAnalyzer? soundAnalyzer;
     void reverse(InputEvent _) {
       direction *= -1;
-      clickSound.playSegment(0, 0.25, false, SoundTransform(0.35));
+      final channel = clickSound.playSegment(0, 1, false, SoundTransform(0.35));
+      final analyzer = channel.soundAnalyzer!
+        ..fftSize = 512
+        ..smoothingTimeConstant = 0.2;
+      soundAnalyzer = analyzer;
+      channel.onComplete.first.then((_) {
+        if (identical(soundAnalyzer, analyzer)) soundAnalyzer = null;
+      });
       status.text = 'Input and audio handled through the worker host';
       host.postMessage({'kind': 'example:input'});
     }
@@ -82,6 +90,10 @@ void main() {
       elapsed += event.passedTime.toDouble() * direction;
       card.rotation = math.sin(elapsed * 0.9) * 0.12;
       card.scaleX = card.scaleY = 1 + math.sin(elapsed * 1.3) * 0.04;
+      if (soundAnalyzer case final analyzer?) {
+        final level = analyzer.getFrequencyRangeLevel(30, 120);
+        status.text = 'Worker audio bass level: ${level.toStringAsFixed(6)}';
+      }
     });
 
     // Keep ownership explicit for applications that later stop or replace it.

@@ -70,7 +70,10 @@ audio unlocking synchronously from the original DOM input event. Loads, playback
 volume, pan, and mixer transforms are bridged back to the worker.
 
 Audio forwarding is enabled by default. Set `enableAudio: false` in `StageWorkerClientOptions` when an application
-does not need it. `SoundAnalyzer` is not currently bridged because its API returns synchronous analyzer data.
+does not need it. `SoundAnalyzer` uses the most recent completed sample so its synchronous API remains unchanged.
+Analyzer requests allow only one sample in flight per channel. `getFrequencyRangeLevel` computes the range on the
+main-thread `AnalyserNode` and returns only one scalar, while `getByteFrequencyData` remains available when a complete
+spectrum is required.
 
 ## Compile both entry points
 

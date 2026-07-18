@@ -2,6 +2,7 @@
 library;
 
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:stagexl/stagexl.dart';
 import 'package:test/test.dart';
@@ -65,25 +66,96 @@ void main() {
     SoundMixer.soundTransform = SoundTransform(0.3, -0.1);
     expect(adapter.mixerTransform, (volume: 0.3, pan: -0.1));
   });
+
+  test('uses a backpressured scalar request for frequency ranges', () async {
+    final sound = await Sound.load('/audio/test.opus', SoundLoadOptions()..opus = true);
+    final channel = sound.play();
+    final analyzer = channel.soundAnalyzer!;
+    final channelId = adapter.lastChannelId;
+
+    analyzer
+      ..fftSize = 512
+      ..minDecibels = -64
+      ..maxDecibels = -16
+      ..smoothingTimeConstant = 0.16;
+
+    expect(analyzer.getFrequencyRangeLevel(30, 120), 0);
+    expect(adapter.analyzerConfiguration, (
+      channelId: channelId,
+      fftSize: 512,
+      minDecibels: -64,
+      maxDecibels: -16,
+      smoothingTimeConstant: 0.16,
+    ));
+    expect(adapter.rangeRequests, [(channelId: channelId, minHz: 30, maxHz: 120)]);
+    expect(analyzer.getFrequencyRangeLevel(30, 120), 0);
+    expect(adapter.rangeRequests.length, 1);
+
+    adapter.completeRangeAnalysis(channelId, 0.42);
+
+    analyzer
+      ..fftSize = 512
+      ..minDecibels = -64
+      ..maxDecibels = -16
+      ..smoothingTimeConstant = 0.16;
+    expect(analyzer.getFrequencyRangeLevel(30, 120), 0.42);
+    expect(analyzer.sampleRate, 48000);
+    expect(adapter.rangeRequests.length, 2);
+    expect(adapter.analyzerConfigurationCount, 1);
+    channel.stop();
+  });
+
+  test('supports full byte frequency data when requested', () async {
+    final sound = await Sound.load('/audio/test.opus', SoundLoadOptions()..opus = true);
+    final channel = sound.play();
+    final analyzer = channel.soundAnalyzer!..fftSize = 32;
+    final channelId = adapter.lastChannelId;
+    final data = Uint8List(analyzer.frequencyBinCount);
+
+    analyzer.getByteFrequencyData(data);
+    expect(data, everyElement(0));
+    expect(adapter.byteDataRequests, [channelId]);
+
+    adapter.completeByteAnalysis(channelId, Uint8List.fromList(List.generate(16, (index) => index)));
+    analyzer.getByteFrequencyData(data);
+
+    expect(data, List.generate(16, (index) => index));
+    expect(adapter.byteDataRequests, [channelId, channelId]);
+    channel.stop();
+  });
 }
 
 class _TestSoundWorkerAdapter implements SoundWorkerAdapter {
   @override
   final supportedTypes = ['opus'];
   final _completeController = StreamController<int>.broadcast(sync: true);
+  final _analysisController = StreamController<SoundWorkerAnalysisResult>.broadcast(sync: true);
   final positions = <int, num>{};
   final paused = <int, bool>{};
   final transforms = <int, ({num volume, num pan})>{};
+  final rangeRequests = <({int channelId, num minHz, num maxHz})>[];
+  final byteDataRequests = <int>[];
   List<String>? loadedUrls;
   Map<String, Object?>? lastPlay;
   ({num volume, num pan})? mixerTransform;
+  ({
+    int channelId,
+    int fftSize,
+    num minDecibels,
+    num maxDecibels,
+    num smoothingTimeConstant,
+  })? analyzerConfiguration;
   bool? ignoreErrors;
   bool? corsEnabled;
+  var analyzerConfigurationCount = 0;
   var lastChannelId = -1;
   var _nextChannelId = 0;
 
   @override
   Stream<int> get onChannelComplete => _completeController.stream;
+
+  @override
+  Stream<SoundWorkerAnalysisResult> get onAnalysis => _analysisController.stream;
 
   @override
   Future<SoundWorkerLoadResult> load(
@@ -133,6 +205,31 @@ class _TestSoundWorkerAdapter implements SoundWorkerAdapter {
       transforms[channelId] = (volume: soundTransform.volume, pan: soundTransform.pan);
 
   @override
+  void configureAnalyzer(
+    int channelId, {
+    required int fftSize,
+    required num minDecibels,
+    required num maxDecibels,
+    required num smoothingTimeConstant,
+  }) {
+    analyzerConfigurationCount++;
+    analyzerConfiguration = (
+      channelId: channelId,
+      fftSize: fftSize,
+      minDecibels: minDecibels,
+      maxDecibels: maxDecibels,
+      smoothingTimeConstant: smoothingTimeConstant,
+    );
+  }
+
+  @override
+  void requestByteFrequencyData(int channelId) => byteDataRequests.add(channelId);
+
+  @override
+  void requestFrequencyRangeLevel(int channelId, num minHz, num maxHz) =>
+      rangeRequests.add((channelId: channelId, minHz: minHz, maxHz: maxHz));
+
+  @override
   void stopChannel(int channelId) => complete(channelId);
 
   @override
@@ -143,4 +240,12 @@ class _TestSoundWorkerAdapter implements SoundWorkerAdapter {
   void unlock() {}
 
   void complete(int channelId) => _completeController.add(channelId);
+
+  void completeRangeAnalysis(int channelId, double level) => _analysisController.add(
+    SoundWorkerAnalysisResult(channelId, 48000, frequencyRangeLevel: level),
+  );
+
+  void completeByteAnalysis(int channelId, Uint8List data) => _analysisController.add(
+    SoundWorkerAnalysisResult(channelId, 48000, byteFrequencyData: data),
+  );
 }

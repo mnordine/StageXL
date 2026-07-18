@@ -44,6 +44,7 @@ part 'media/implementation/audio_element_sound_channel.dart';
 part 'media/implementation/mock_sound.dart';
 part 'media/implementation/mock_sound_channel.dart';
 part 'media/implementation/worker_sound.dart';
+part 'media/implementation/worker_sound_analyzer.dart';
 part 'media/implementation/worker_sound_channel.dart';
 part 'media/implementation/web_audio_api_mixer.dart';
 part 'media/implementation/web_audio_api_sound.dart';

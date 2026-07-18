@@ -9,6 +9,7 @@ class WorkerSoundChannel extends SoundChannel {
   late final int _channelId;
   late final StreamSubscription<int> _completeSubscription;
   late SoundTransform _soundTransform;
+  WorkerSoundAnalyzer? _soundAnalyzer;
   num _position = 0;
   var _paused = false;
   var _stopped = false;
@@ -89,6 +90,9 @@ class WorkerSoundChannel extends SoundChannel {
   }
 
   @override
+  SoundAnalyzer get soundAnalyzer => _soundAnalyzer ??= WorkerSoundAnalyzer(_channelId);
+
+  @override
   void stop() {
     if (_stopped) return;
     _position = position;
@@ -101,6 +105,7 @@ class WorkerSoundChannel extends SoundChannel {
     _stopped = true;
     _paused = true;
     _stopwatch.stop();
+    _soundAnalyzer?.dispose();
     unawaited(_completeSubscription.cancel());
     dispatchEvent(Event(Event.COMPLETE));
   }
