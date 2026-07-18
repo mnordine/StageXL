@@ -28,9 +28,11 @@ RenderSurface createRenderSurface(int width, int height) {
   } else {
     canvas = OffscreenCanvas(width, height);
   }
-  return RenderSurface(canvas)
+  final surface = RenderSurface(canvas)
     ..width = width
     ..height = height;
+  renderSurfaceContext2D(surface);
+  return surface;
 }
 
 CanvasRenderingContext2D renderSurfaceContext2D(RenderSurface surface) =>

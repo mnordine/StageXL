@@ -52,6 +52,24 @@ void main() {
     expect(stage.renderContext.renderStatistics.webgpuRenderPassCount, greaterThanOrEqualTo(2));
   });
 
+  test('WebGPU uploads untouched transparent canvas textures when available', () async {
+    final options = StageOptions()
+      ..renderEngine = .WebGPU
+      ..backgroundColor = Color.Transparent
+      ..stageRenderMode = .ONCE;
+    final canvas = HTMLCanvasElement()
+      ..width = 32
+      ..height = 32;
+    final stage = await Stage.create(canvas, width: 32, height: 32, options: options);
+
+    if (stage.renderEngine != .WebGPU) return;
+
+    stage.addChild(Bitmap(BitmapData(16, 16, Color.Transparent)));
+
+    expect(() => stage.materialize(0, 16), returnsNormally);
+    expect(stage.renderContext.renderStatistics.webgpuTextureUploadCount, greaterThanOrEqualTo(1));
+  });
+
   test('WebGPU restores nested stencil masks when available', () async {
     final options = StageOptions()
       ..renderEngine = .WebGPU
