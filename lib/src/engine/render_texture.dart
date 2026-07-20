@@ -127,6 +127,9 @@ class RenderTexture {
         throw UnsupportedError('HTMLCanvasElement is unavailable in a worker. Use RenderTexture.surface.');
       }
       return _source as HTMLCanvasElement;
+    } else if (_source.isA<OffscreenCanvas>()) {
+      throw UnsupportedError(
+          'HTMLCanvasElement is unavailable in a worker. Use RenderTexture.surface or RenderTexture.context2D.');
     } else {
       throw StateError('RenderTexture is read only.');
     }

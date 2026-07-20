@@ -35,6 +35,9 @@ void main() {
 
   test('BitmapData uses an OffscreenCanvas backing surface without a DOM dependency', () {
     final renderTexture = RenderTexture.fromOffscreenCanvas(OffscreenCanvas(8, 8));
+    expect(renderTexture.context2D, isNotNull);
+    expect(() => renderTexture.canvas, throwsUnsupportedError);
+
     final bitmapData = BitmapData.fromRenderTextureQuad(renderTexture.quad)
       ..fillRect(Rectangle<num>(0, 0, 8, 8), Color.Blue);
 
