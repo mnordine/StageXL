@@ -106,7 +106,7 @@ class RenderTexture {
       0,
       1.0);
 
-  HTMLCanvasElement get canvas {
+  HTMLCanvasElement? get canvas {
     if (_source.isA<HTMLCanvasElement>()) {
       return _source as HTMLCanvasElement;
     } else if (_source.isA<HTMLImageElement>()) {
@@ -127,12 +127,9 @@ class RenderTexture {
         throw UnsupportedError('HTMLCanvasElement is unavailable in a worker. Use RenderTexture.surface.');
       }
       return _source as HTMLCanvasElement;
-    } else if (_source.isA<OffscreenCanvas>()) {
-      throw UnsupportedError(
-          'HTMLCanvasElement is unavailable in a worker. Use RenderTexture.surface or RenderTexture.context2D.');
-    } else {
-      throw StateError('RenderTexture is read only.');
     }
+
+    return null;
   }
 
   /// The canvas-compatible surface backing this texture.

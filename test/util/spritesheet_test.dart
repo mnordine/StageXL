@@ -3,7 +3,6 @@ library;
 
 import 'package:stagexl/stagexl.dart';
 import 'package:test/test.dart';
-import 'package:web/web.dart';
 
 void main() {
   late ResourceManager resourceManager;
@@ -33,7 +32,7 @@ void main() {
       final x = index % 7;
       final y = index ~/ 7;
       final id1 = spritesheet.frames[index].renderTextureQuad.getImageData();
-      final id2 = spiders.renderTexture.canvas.context2D
+      final id2 = spiders.renderTexture.context2D
           .getImageData(x * 32, y * 32, 32, 32);
       expect(id1.data, equals(id2.data), reason: '@frame $index');
     }

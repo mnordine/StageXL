@@ -3,7 +3,6 @@ library;
 
 import 'package:stagexl/stagexl.dart';
 import 'package:test/test.dart';
-import 'package:web/web.dart';
 
 void main() {
   late ResourceManager resourceManager;
@@ -37,7 +36,7 @@ void main() {
         final x = index % 3;
         final y = index ~/ 3;
         final id1 = bitmapDatas[index].renderTextureQuad.getImageData();
-        final id2 = monster.renderTexture.canvas.context2D
+        final id2 = monster.renderTexture.context2D
             .getImageData(x * 32, y * 64, 32, 64);
         expect(id1.data, equals(id2.data), reason: '@frame $index');
       }
