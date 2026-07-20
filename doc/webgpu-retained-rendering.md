@@ -13,6 +13,10 @@ The frame is split into these phases:
 
 WebGL and Canvas2D keep their immediate rendering behavior.
 
+Calls through `WebGpuBatchSystem` are also redirected into the active instruction set while collection is in progress.
+This preserves ordering for integrations such as StageXL_Spine that historically submitted tinted meshes directly to
+the WebGPU batcher.
+
 ## Structural validation
 
 An instruction set is reused when its render roots, instruction kinds, mask/filter boundaries, resource identities,
@@ -22,6 +26,9 @@ projection values update retained data without rebuilding the instruction order.
 Visibility changes, child reordering, texture replacement, blend-mode changes, geometry resizing, filter topology
 changes, and mask/filter/projection boundary changes rebuild only the affected retained instruction slots and batch run
 plans. The backing instruction and renderable lists retain their capacity.
+
+Mutable mask geometry is captured during traversal. This is required for renderers such as StageXL_Spine that reuse one
+clipping-mask object for multiple slots before the retained instructions execute.
 
 ## Batching and uploads
 

@@ -184,12 +184,12 @@ class RenderContextWebGPU extends RenderContext {
   @override
   void renderTextureMesh(
       RenderState renderState, RenderTexture renderTexture, Int16List ixList, Float32List vxList) {
-    if (instructionSystem.isCollecting) {
-      instructionSystem.recordTextureMesh(renderState, renderTexture, ixList, vxList);
-      return;
-    }
     if (maskSystem.isRenderingStencilMask) {
       maskSystem.renderTriangleMesh(renderState, ixList, vxList);
+      return;
+    }
+    if (instructionSystem.isCollecting) {
+      instructionSystem.recordTextureMesh(renderState, renderTexture, ixList, vxList);
       return;
     }
 
@@ -227,10 +227,6 @@ class RenderContextWebGPU extends RenderContext {
 
   @override
   void renderTriangle(RenderState renderState, num x1, num y1, num x2, num y2, num x3, num y3, int color) {
-    if (instructionSystem.isCollecting) {
-      instructionSystem.recordTriangle(renderState, x1, y1, x2, y2, x3, y3, color);
-      return;
-    }
     final vertices = _solidFillVertexList;
     vertices[0] = x1.toDouble();
     vertices[1] = y1.toDouble();
@@ -238,17 +234,25 @@ class RenderContextWebGPU extends RenderContext {
     vertices[3] = y2.toDouble();
     vertices[4] = x3.toDouble();
     vertices[5] = y3.toDouble();
+    if (maskSystem.isRenderingStencilMask) {
+      maskSystem.renderTriangleMesh(renderState, _solidFillIndexList, vertices);
+      return;
+    }
+    if (instructionSystem.isCollecting) {
+      instructionSystem.recordTriangle(renderState, x1, y1, x2, y2, x3, y3, color);
+      return;
+    }
     renderTriangleMesh(renderState, _solidFillIndexList, vertices, color);
   }
 
   @override
   void renderTriangleMesh(RenderState renderState, Int16List ixList, Float32List vxList, int color) {
-    if (instructionSystem.isCollecting) {
-      instructionSystem.recordTriangleMesh(renderState, ixList, vxList, color);
-      return;
-    }
     if (maskSystem.isRenderingStencilMask) {
       maskSystem.renderTriangleMesh(renderState, ixList, vxList);
+      return;
+    }
+    if (instructionSystem.isCollecting) {
+      instructionSystem.recordTriangleMesh(renderState, ixList, vxList, color);
       return;
     }
 

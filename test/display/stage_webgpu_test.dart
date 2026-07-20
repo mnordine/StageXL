@@ -106,6 +106,35 @@ void main() {
     expect(stage.renderContext.renderStatistics.webgpuInstructionBuildCount, 1);
   });
 
+  test('WebGPU captures direct batch-system draws in display-list order when available', () async {
+    final options = StageOptions()
+      ..renderEngine = .WebGPU
+      ..backgroundColor = Color.Transparent
+      ..stageRenderMode = .AUTO;
+    final canvas = HTMLCanvasElement()
+      ..width = 64
+      ..height = 64;
+    final stage = await Stage.create(canvas, width: 64, height: 64, options: options);
+
+    if (stage.renderEngine != .WebGPU) return;
+
+    final bitmapData = BitmapData(16, 16, Color.Red);
+    stage
+      ..addChild(Bitmap(bitmapData))
+      ..addChild(_DirectWebGpuBatchBitmap(bitmapData)..x = 16)
+      ..addChild(Bitmap(bitmapData)..x = 32);
+
+    stage.materialize(0, 16);
+
+    final renderContext = stage.renderContext as RenderContextWebGPU;
+    expect(renderContext.batchSystem.isEmpty, isTrue);
+    expect(renderContext.renderStatistics.drawCount, 1);
+    expect(renderContext.renderStatistics.webgpuInstructionBuildCount, 1);
+
+    stage.materialize(16, 16);
+    expect(renderContext.renderStatistics.webgpuInstructionReuseCount, 1);
+  });
+
   test('WebGPU restores nested stencil masks when available', () async {
     final options = StageOptions()
       ..renderEngine = .WebGPU
@@ -490,6 +519,29 @@ void main() {
 }
 
 typedef _TintParameters = ({double red, double green, double blue, double alpha});
+
+class _DirectWebGpuBatchBitmap extends Bitmap {
+  _DirectWebGpuBatchBitmap(super.bitmapData);
+
+  @override
+  void render(RenderState renderState) {
+    final renderContext = renderState.renderContext;
+    if (renderContext is! RenderContextWebGPU) {
+      super.render(renderState);
+      return;
+    }
+
+    final quad = bitmapData!.renderTextureQuad;
+    renderContext.batchSystem.renderTextureMesh(
+      renderState,
+      quad.renderTexture,
+      quad.ixList,
+      quad.vxList,
+      0.75,
+      0.5,
+    );
+  }
+}
 
 class _CustomTintFilter extends BitmapFilter {
   static const _webGPUShaderSource = '''

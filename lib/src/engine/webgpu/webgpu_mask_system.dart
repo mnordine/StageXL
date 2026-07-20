@@ -60,9 +60,26 @@ class WebGpuMaskSystem {
     _renderingStencilMask = snapshot.renderingStencilMask;
   }
 
-  void beginMask(RenderState renderState, RenderMask mask) {
+  List<double> captureMask(RenderState renderState, RenderMask mask) {
+    _maskVertices.clear();
+    _renderingStencilMask = true;
+    try {
+      mask.renderMask(renderState);
+    } finally {
+      _renderingStencilMask = false;
+    }
+    return _maskVertices;
+  }
+
+  void beginMask(
+    RenderState renderState,
+    RenderMask mask, {
+    bool useCapturedData = false,
+    Rectangle<num>? capturedScissor,
+    List<double>? capturedVertices,
+  }) {
     if (mask is ScissorRenderMask) {
-      final rectangle = mask.getScissorRectangle(renderState);
+      final rectangle = useCapturedData ? capturedScissor : mask.getScissorRectangle(renderState);
       if (rectangle == null) return;
       _activeScissor = _activeScissor == null ? rectangle : _activeScissor!.intersection(rectangle);
       _scissorStack.add(_activeScissor!);
@@ -70,12 +87,12 @@ class WebGpuMaskSystem {
       return;
     }
 
-    _maskVertices.clear();
-    _renderingStencilMask = true;
-    try {
-      mask.renderMask(renderState);
-    } finally {
-      _renderingStencilMask = false;
+    if (useCapturedData) {
+      _maskVertices
+        ..clear()
+        ..addAll(capturedVertices!);
+    } else {
+      captureMask(renderState, mask);
     }
 
     if (_maskVertices.isEmpty) return;

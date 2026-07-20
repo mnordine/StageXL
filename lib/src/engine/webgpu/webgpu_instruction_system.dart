@@ -116,12 +116,23 @@ class WebGpuInstructionSystem {
     _activeBatch = null;
   }
 
-  void recordTextureQuad(RenderState state, RenderTextureQuad quad) {
+  void recordTextureQuad(
+    RenderState state,
+    RenderTextureQuad quad, [
+    num red = 1,
+    num green = 1,
+    num blue = 1,
+    num alpha = 1,
+  ]) {
     recordTextureMesh(
       state,
       quad.renderTexture,
       quad.hasCustomVertices ? quad.ixList : quad.ixListQuad,
       quad.hasCustomVertices ? quad.vxList : quad.vxListQuad,
+      red,
+      green,
+      blue,
+      alpha,
     );
   }
 
@@ -239,6 +250,7 @@ class WebGpuInstructionSystem {
       ..copyFrom(state)
       ..currentTime = state.currentTime
       ..deltaTime = state.deltaTime;
+    if (begin) instruction.captureMask();
     _instructionCursor++;
   }
 
@@ -858,6 +870,8 @@ class _WebGpuMaskInstruction implements RenderInstruction {
   final RenderMask mask;
   final bool begin;
   final RenderState state;
+  final capturedVertices = <double>[];
+  Rectangle<num>? capturedScissor;
 
   _WebGpuMaskInstruction(RenderContextWebGPU renderContext, this.mask, this.begin)
       : state = RenderState(renderContext);
@@ -867,6 +881,18 @@ class _WebGpuMaskInstruction implements RenderInstruction {
 
   @override
   bool get canBundle => false;
+
+  void captureMask() {
+    if (mask is ScissorRenderMask) {
+      capturedScissor = (mask as ScissorRenderMask).getScissorRectangle(state);
+      capturedVertices.clear();
+    } else {
+      capturedScissor = null;
+      capturedVertices
+        ..clear()
+        ..addAll((state.renderContext as RenderContextWebGPU).maskSystem.captureMask(state, mask));
+    }
+  }
 }
 
 class _WebGpuMaskPipe implements InstructionPipe<_WebGpuMaskInstruction> {
@@ -880,7 +906,13 @@ class _WebGpuMaskPipe implements InstructionPipe<_WebGpuMaskInstruction> {
   @override
   void execute(_WebGpuMaskInstruction instruction) {
     if (instruction.begin) {
-      renderContext.maskSystem.beginMask(instruction.state, instruction.mask);
+      renderContext.maskSystem.beginMask(
+        instruction.state,
+        instruction.mask,
+        useCapturedData: true,
+        capturedScissor: instruction.capturedScissor,
+        capturedVertices: instruction.capturedVertices,
+      );
     } else {
       renderContext.maskSystem.endMask(instruction.state, instruction.mask);
     }

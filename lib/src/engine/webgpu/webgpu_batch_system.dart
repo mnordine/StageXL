@@ -147,6 +147,18 @@ class WebGpuBatchSystem {
     num b = 1,
     num a = 1,
   ]) {
+    if (renderContext.maskSystem.isRenderingStencilMask) {
+      renderContext.maskSystem.renderTriangleMesh(
+        renderState,
+        renderTextureQuad.hasCustomVertices ? renderTextureQuad.ixList : renderTextureQuad.ixListQuad,
+        renderTextureQuad.hasCustomVertices ? renderTextureQuad.vxList : renderTextureQuad.vxListQuad,
+      );
+      return;
+    }
+    if (renderContext.instructionSystem.isCollecting) {
+      renderContext.instructionSystem.recordTextureQuad(renderState, renderTextureQuad, r, g, b, a);
+      return;
+    }
     if (renderTextureQuad.hasCustomVertices) {
       renderTextureMesh(
         renderState,
@@ -184,6 +196,14 @@ class WebGpuBatchSystem {
     num b = 1,
     num a = 1,
   ]) {
+    if (renderContext.maskSystem.isRenderingStencilMask) {
+      renderContext.maskSystem.renderTriangleMesh(renderState, ixList, vxList);
+      return;
+    }
+    if (renderContext.instructionSystem.isCollecting) {
+      renderContext.instructionSystem.recordTextureMesh(renderState, renderTexture, ixList, vxList, r, g, b, a);
+      return;
+    }
     final vertexCount = vxList.length >> 2;
     if (vertexCount == 0 || ixList.isEmpty) return;
 
