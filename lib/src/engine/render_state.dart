@@ -135,6 +135,7 @@ class RenderState {
   //---------------------------------------------------------------------------
 
   void renderObject(RenderObject renderObject) {
+    _renderContext.beginRenderObject(renderObject);
     final matrix = renderObject.transformationMatrix;
     final blendMode = renderObject.blendMode;
     final alpha = renderObject.alpha;
@@ -206,6 +207,7 @@ class RenderState {
     }
 
     if (maskBefore) renderContext.endRenderMask(this, mask);
+    _renderContext.endRenderObject(renderObject);
   }
 
   //---------------------------------------------------------------------------

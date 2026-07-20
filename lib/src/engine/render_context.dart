@@ -32,6 +32,15 @@ abstract class RenderContext {
   void clear(int color);
   void flush();
 
+  void buildRenderFrame(RenderState renderState, RenderObject renderObject) =>
+      renderState.renderObject(renderObject);
+
+  void executeRenderFrame(RenderState renderState) => renderState.flush();
+
+  void beginRenderObject(RenderObject renderObject) {}
+
+  void endRenderObject(RenderObject renderObject) {}
+
   void beginRenderMask(RenderState renderState, RenderMask mask);
   void endRenderMask(RenderState renderState, RenderMask mask);
 

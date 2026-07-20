@@ -146,6 +146,9 @@ class WebGpuFilterSystem {
 
   WebGpuFilterSystem(this.renderContext);
 
+  Float32List? tryGetBatchColorScale(List<RenderFilter> filters) =>
+      _canRenderInWebGpuBatch(filters) ? _webGpuBatchColorScale(filters) : null;
+
   void _syncFilterBindGroupGeneration() {
     final generation = renderContext.textureSystem.bindGroupGeneration;
     if (_filterBindGroupGeneration == generation) return;

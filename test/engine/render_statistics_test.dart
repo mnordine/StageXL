@@ -18,6 +18,10 @@ void main() {
       ..webgpuBufferUploadMicroseconds = 40
       ..webgpuPassEncodeMicroseconds = 50
       ..webgpuSubmitMicroseconds = 60
+      ..webgpuInstructionBuildCount = 8
+      ..webgpuInstructionReuseCount = 9
+      ..webgpuInstructionUploadCount = 10
+      ..webgpuRenderableCount = 11
       ..addWebGpuFallbackCause('compressed texture')
       ..addWebGpuFallbackCause('unsupported filter');
 
@@ -37,6 +41,10 @@ void main() {
     expect(statistics.webgpuBufferUploadMicroseconds, 0);
     expect(statistics.webgpuPassEncodeMicroseconds, 0);
     expect(statistics.webgpuSubmitMicroseconds, 0);
+    expect(statistics.webgpuInstructionBuildCount, 0);
+    expect(statistics.webgpuInstructionReuseCount, 0);
+    expect(statistics.webgpuInstructionUploadCount, 0);
+    expect(statistics.webgpuRenderableCount, 0);
     expect(statistics.webgpuFallbackCount, 0);
     expect(statistics.webgpuFallbackCauses, isEmpty);
   });

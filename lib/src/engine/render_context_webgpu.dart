@@ -8,6 +8,7 @@ class RenderContextWebGPU extends RenderContext {
   late final WebGpuTextureSystem textureSystem;
   late final WebGpuPipelineSystem pipelineSystem;
   late final WebGpuBatchSystem batchSystem;
+  late final WebGpuInstructionSystem instructionSystem;
   late final WebGpuMaskSystem maskSystem;
   late final WebGpuFilterSystem filterSystem;
   final _projectionMatrix = Matrix3D.fromIdentity();
@@ -22,6 +23,7 @@ class RenderContextWebGPU extends RenderContext {
     textureSystem = WebGpuTextureSystem(this);
     pipelineSystem = WebGpuPipelineSystem(this);
     batchSystem = WebGpuBatchSystem(this);
+    instructionSystem = WebGpuInstructionSystem(this);
     maskSystem = WebGpuMaskSystem(this);
     filterSystem = WebGpuFilterSystem(this);
     _updateStageProjection();
@@ -97,14 +99,36 @@ class RenderContextWebGPU extends RenderContext {
 
   @override
   void flush() {
+    if (instructionSystem.isCollecting) {
+      instructionSystem.flushBatch();
+      return;
+    }
     batchSystem.flush(_clearColor);
     _clearColor = null;
   }
 
   void activateProjectionMatrix(Matrix3D matrix) {
+    if (instructionSystem.isCollecting) {
+      instructionSystem.recordProjection(matrix);
+      _projectionMatrix.copyFrom(matrix);
+      return;
+    }
     if (!batchSystem.isEmpty) flush();
     _projectionMatrix.copyFrom(matrix);
   }
+
+  @override
+  void buildRenderFrame(RenderState renderState, RenderObject renderObject) =>
+      instructionSystem.collect(renderState, renderObject);
+
+  @override
+  void executeRenderFrame(RenderState renderState) => instructionSystem.execute();
+
+  @override
+  void beginRenderObject(RenderObject renderObject) => instructionSystem.beginRenderable(renderObject);
+
+  @override
+  void endRenderObject(RenderObject renderObject) => instructionSystem.endRenderable(renderObject);
 
   void activateRenderTexture(RenderTexture? renderTexture) {
     if (identical(renderTexture, _activeRenderTexture)) return;
@@ -130,24 +154,40 @@ class RenderContextWebGPU extends RenderContext {
 
   @override
   void beginRenderMask(RenderState renderState, RenderMask mask) {
+    if (instructionSystem.isCollecting) {
+      instructionSystem.recordMask(renderState, mask, begin: true);
+      return;
+    }
     flush();
     maskSystem.beginMask(renderState, mask);
   }
 
   @override
   void endRenderMask(RenderState renderState, RenderMask mask) {
+    if (instructionSystem.isCollecting) {
+      instructionSystem.recordMask(renderState, mask, begin: false);
+      return;
+    }
     flush();
     maskSystem.endMask(renderState, mask);
   }
 
   @override
   void renderTextureQuad(RenderState renderState, RenderTextureQuad renderTextureQuad) {
+    if (instructionSystem.isCollecting) {
+      instructionSystem.recordTextureQuad(renderState, renderTextureQuad);
+      return;
+    }
     batchSystem.renderTextureQuad(renderState, renderTextureQuad);
   }
 
   @override
   void renderTextureMesh(
       RenderState renderState, RenderTexture renderTexture, Int16List ixList, Float32List vxList) {
+    if (instructionSystem.isCollecting) {
+      instructionSystem.recordTextureMesh(renderState, renderTexture, ixList, vxList);
+      return;
+    }
     if (maskSystem.isRenderingStencilMask) {
       maskSystem.renderTriangleMesh(renderState, ixList, vxList);
       return;
@@ -164,6 +204,10 @@ class RenderContextWebGPU extends RenderContext {
     Int16List ixList,
     Float32List vxList,
   ) {
+    if (instructionSystem.isCollecting) {
+      instructionSystem.recordTextureMapping(renderState, renderTexture, mappingMatrix, ixList, vxList);
+      return;
+    }
     final vertexCount = vxList.length >> 1;
     if (vertexCount == 0 || ixList.isEmpty) return;
 
@@ -183,6 +227,10 @@ class RenderContextWebGPU extends RenderContext {
 
   @override
   void renderTriangle(RenderState renderState, num x1, num y1, num x2, num y2, num x3, num y3, int color) {
+    if (instructionSystem.isCollecting) {
+      instructionSystem.recordTriangle(renderState, x1, y1, x2, y2, x3, y3, color);
+      return;
+    }
     final vertices = _solidFillVertexList;
     vertices[0] = x1.toDouble();
     vertices[1] = y1.toDouble();
@@ -195,6 +243,10 @@ class RenderContextWebGPU extends RenderContext {
 
   @override
   void renderTriangleMesh(RenderState renderState, Int16List ixList, Float32List vxList, int color) {
+    if (instructionSystem.isCollecting) {
+      instructionSystem.recordTriangleMesh(renderState, ixList, vxList, color);
+      return;
+    }
     if (maskSystem.isRenderingStencilMask) {
       maskSystem.renderTriangleMesh(renderState, ixList, vxList);
       return;
@@ -228,11 +280,19 @@ class RenderContextWebGPU extends RenderContext {
   @override
   void renderTextureQuadFiltered(
       RenderState renderState, RenderTextureQuad renderTextureQuad, List<RenderFilter> renderFilters) {
+    if (instructionSystem.isCollecting) {
+      instructionSystem.recordFilteredQuad(renderState, renderTextureQuad, renderFilters);
+      return;
+    }
     filterSystem.renderTextureQuadFiltered(renderState, renderTextureQuad, renderFilters);
   }
 
   @override
   void renderObjectFiltered(RenderState renderState, RenderObject renderObject) {
+    if (instructionSystem.isCollecting) {
+      instructionSystem.recordFilteredObject(renderState, renderObject);
+      return;
+    }
     filterSystem.renderObjectFiltered(renderState, renderObject);
   }
 }

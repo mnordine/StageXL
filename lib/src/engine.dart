@@ -5,7 +5,8 @@
 /// The render engine of StageXL supports the Canvas2D API for older browsers
 /// and the more performant and flexible WebGL API for newer browsers.
 /// The [RenderContext] and [RenderState] classes do abstract the internal
-/// differences of those two render pathes.
+/// differences of those render paths. WebGPU records reusable instruction sets
+/// before instruction pipes upload changed resources and encode draw commands.
 ///
 /// Another basic building block of the engine are the [RenderTexture] and
 /// [RenderTextureQuad] classes. More advanced uses may even implement custom
@@ -44,6 +45,7 @@ part 'engine/render_frame_buffer.dart';
 part 'engine/render_loop_base.dart';
 part 'engine/render_mask.dart';
 part 'engine/render_object.dart';
+part 'engine/render_pipeline.dart';
 part 'engine/render_program.dart';
 part 'engine/render_program_batch.dart';
 part 'engine/render_program_simple.dart';
@@ -75,6 +77,7 @@ part 'engine/webgpu/filters/webgpu_fxaa_filter_program.dart';
 part 'engine/webgpu/filters/webgpu_glow_filter_program.dart';
 part 'engine/webgpu/filters/webgpu_normal_map_filter_program.dart';
 part 'engine/webgpu/webgpu_filter_system.dart';
+part 'engine/webgpu/webgpu_instruction_system.dart';
 part 'engine/webgpu/webgpu_mask_system.dart';
 part 'engine/webgpu/webgpu_pipeline_system.dart';
 part 'engine/webgpu/webgpu_texture_system.dart';

@@ -21,6 +21,10 @@ class RenderStatistics {
   var webgpuRenderPassCount = 0;
   var webgpuSubmitMicroseconds = 0;
   var webgpuTextureUploadCount = 0;
+  var webgpuInstructionBuildCount = 0;
+  var webgpuInstructionReuseCount = 0;
+  var webgpuInstructionUploadCount = 0;
+  var webgpuRenderableCount = 0;
   final webgpuFallbackCauses = <String>[];
 
   void addWebGpuFallbackCause(String cause) {
@@ -49,6 +53,10 @@ class RenderStatistics {
     webgpuRenderPassCount = 0;
     webgpuSubmitMicroseconds = 0;
     webgpuTextureUploadCount = 0;
+    webgpuInstructionBuildCount = 0;
+    webgpuInstructionReuseCount = 0;
+    webgpuInstructionUploadCount = 0;
+    webgpuRenderableCount = 0;
     webgpuFallbackCauses.clear();
   }
 

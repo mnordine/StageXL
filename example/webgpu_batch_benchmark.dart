@@ -16,12 +16,14 @@ Future<void> main() async {
   final moving = query['moving'] != 'false';
   final useBitmapContainer = query['container'] == 'bitmap';
   final antialias = query['antialias'] == 'true';
+  final renderBundles = query['bundles'] == 'true';
 
   final options = StageOptions()
     ..stageAlign = .TOP_LEFT
     ..stageScaleMode = .NO_SCALE
     ..backgroundColor = 0xFF111720
     ..antialias = antialias
+    ..renderBundles = renderBundles
     ..renderEngine = engine;
 
   final canvas = document.querySelector('#stage') as HTMLCanvasElement;
@@ -45,7 +47,8 @@ Future<void> main() async {
   _addLabel(stage, 'StageXL Batch Benchmark', 20, 20, 24, 0xFFFFFFFF);
   _addLabel(
     stage,
-    'Use ?engine=webgpu or ?engine=webgl2, ?sprites=2048, ?textures=16, ?moving=false, ?container=bitmap',
+    'Use ?engine=webgpu or ?engine=webgl2, ?sprites=2048, ?textures=16, '
+    '?moving=false, ?container=bitmap, ?bundles=true',
     20,
     50,
     13,
@@ -74,6 +77,9 @@ Future<void> main() async {
   var renderBundleHits = 0;
   var renderPasses = 0;
   var textureUploads = 0;
+  var instructionBuilds = 0;
+  var instructionReuses = 0;
+  var instructionUploads = 0;
 
   stage.onEnterFrame.listen((event) {
     final delta = event.passedTime.toDouble();
@@ -112,6 +118,9 @@ Future<void> main() async {
     renderBundleHits += stats.webgpuRenderBundleCacheHitCount;
     renderPasses += stats.webgpuRenderPassCount;
     textureUploads += stats.webgpuTextureUploadCount;
+    instructionBuilds += stats.webgpuInstructionBuildCount;
+    instructionReuses += stats.webgpuInstructionReuseCount;
+    instructionUploads += stats.webgpuInstructionUploadCount;
 
     if (sampleTime < 0.5) return;
 
@@ -133,6 +142,7 @@ Future<void> main() async {
       'textures: $textureCount',
       'container: ${useBitmapContainer ? 'bitmap' : 'stage'}',
       'antialias: $antialias',
+      'render bundles: $renderBundles',
       'moving: $moving',
       'avg stage materialize: ${avgFrameMs.toStringAsFixed(2)} ms',
       'avg render object: ${avgRenderObjectMs.toStringAsFixed(2)} ms',
@@ -153,6 +163,9 @@ Future<void> main() async {
       'webgpu render-bundle builds/sample: $renderBundleBuilds',
       'webgpu render-bundle hits/sample: $renderBundleHits',
       'webgpu texture uploads/sample: $textureUploads',
+      'webgpu instruction builds/sample: $instructionBuilds',
+      'webgpu instruction reuses/sample: $instructionReuses',
+      'webgpu instruction uploads/sample: $instructionUploads',
     ].join('\n');
 
     sampleTime = 0;
@@ -176,6 +189,9 @@ Future<void> main() async {
     renderBundleHits = 0;
     renderPasses = 0;
     textureUploads = 0;
+    instructionBuilds = 0;
+    instructionReuses = 0;
+    instructionUploads = 0;
   });
 }
 

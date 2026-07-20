@@ -70,6 +70,42 @@ void main() {
     expect(stage.renderContext.renderStatistics.webgpuTextureUploadCount, greaterThanOrEqualTo(1));
   });
 
+  test('WebGPU reuses instructions and only uploads dirty batch data when available', () async {
+    final options = StageOptions()
+      ..renderEngine = .WebGPU
+      ..backgroundColor = Color.Transparent
+      ..stageRenderMode = .AUTO;
+    final canvas = HTMLCanvasElement()
+      ..width = 64
+      ..height = 64;
+    final stage = await Stage.create(canvas, width: 64, height: 64, options: options);
+
+    if (stage.renderEngine != .WebGPU) return;
+
+    final bitmapData = BitmapData(16, 16, Color.Red);
+    final bitmap = Bitmap(bitmapData);
+    stage.addChild(bitmap);
+
+    stage.materialize(0, 16);
+    expect(stage.renderContext.renderStatistics.webgpuInstructionBuildCount, 1);
+    expect(stage.renderContext.renderStatistics.webgpuInstructionUploadCount, 2);
+
+    stage.materialize(16, 16);
+    expect(stage.renderContext.renderStatistics.webgpuInstructionBuildCount, 0);
+    expect(stage.renderContext.renderStatistics.webgpuInstructionReuseCount, 1);
+    expect(stage.renderContext.renderStatistics.webgpuInstructionUploadCount, 0);
+
+    bitmap.x = 8;
+    stage.materialize(32, 16);
+    expect(stage.renderContext.renderStatistics.webgpuInstructionBuildCount, 0);
+    expect(stage.renderContext.renderStatistics.webgpuInstructionReuseCount, 1);
+    expect(stage.renderContext.renderStatistics.webgpuInstructionUploadCount, 1);
+
+    stage.addChild(Bitmap(bitmapData)..x = 32);
+    stage.materialize(48, 16);
+    expect(stage.renderContext.renderStatistics.webgpuInstructionBuildCount, 1);
+  });
+
   test('WebGPU restores nested stencil masks when available', () async {
     final options = StageOptions()
       ..renderEngine = .WebGPU
@@ -428,7 +464,8 @@ void main() {
     final options = StageOptions()
       ..renderEngine = .WebGPU
       ..backgroundColor = Color.Transparent
-      ..stageRenderMode = .ONCE;
+      ..stageRenderMode = .AUTO
+      ..renderBundles = true;
     final canvas = HTMLCanvasElement()
       ..width = 64
       ..height = 64;

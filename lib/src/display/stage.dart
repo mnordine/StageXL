@@ -460,9 +460,9 @@ class Stage extends DisplayObjectContainer {
       _renderState.currentTime = currentTime;
       _renderState.deltaTime = deltaTime;
       final renderObjectStart = stopwatch.elapsedMicroseconds;
-      _renderState.renderObject(this);
+      _renderContext.buildRenderFrame(_renderState, this);
       final renderObjectEnd = stopwatch.elapsedMicroseconds;
-      _renderState.flush();
+      _renderContext.executeRenderFrame(_renderState);
       final flushEnd = stopwatch.elapsedMicroseconds;
       _renderAfterContextRestore = false;
       _invalid = false;
@@ -483,8 +483,8 @@ class Stage extends DisplayObjectContainer {
         if (console.visible && console.off == false) {
           console.updateRenderStatistics(stats);
           _renderState.reset(_consoleTransformation);
-          _renderState.renderObject(console);
-          _renderState.flush();
+          _renderContext.buildRenderFrame(_renderState, console);
+          _renderContext.executeRenderFrame(_renderState);
         }
       }
     }
