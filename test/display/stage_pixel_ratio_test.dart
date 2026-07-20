@@ -11,7 +11,9 @@ void main() {
       ..style.width = '320px'
       ..style.height = '180px';
     document.body!.append(canvas);
-    addTearDown(() => canvas.remove());
+
+    // Tear-offs of external extension type interop member 'remove' are disallowed. 
+    addTearDown(() => canvas.remove()); // ignore: unnecessary_lambdas
 
     final stage = Stage(
       canvas,
