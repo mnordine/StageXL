@@ -318,4 +318,13 @@ class WebGpuTextureSystem {
     entry?.texture.destroy();
     _clearBindGroups();
   }
+
+  void dispose() {
+    for (final entry in _textures.values) {
+      entry.texture.destroy();
+    }
+    _textures.clear();
+    _samplers.clear();
+    _clearBindGroups();
+  }
 }

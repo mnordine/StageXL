@@ -93,6 +93,11 @@ class WebGpuDeviceSystem {
 
   int? get maxTextureSize => device.limits.maxTextureDimension2D;
 
+  void dispose() {
+    canvasContext.unconfigure();
+    device.destroy();
+  }
+
   static int _resolveMaxBatchTextures(GPUAdapter adapter) {
     try {
       final limits = adapter.limits;

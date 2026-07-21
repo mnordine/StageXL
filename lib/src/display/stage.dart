@@ -57,6 +57,10 @@ class Stage extends DisplayObjectContainer {
   late final RenderContext _renderContext;
   RenderLoop? _renderLoop;
   StageConsole? _console;
+  StreamSubscription<RenderContextEvent>? _contextLostSubscription;
+  StreamSubscription<RenderContextEvent>? _contextRestoredSubscription;
+  StreamSubscription<String>? _cursorSubscription;
+  var _disposed = false;
 
   var _sourceWidth = 0;
   var _sourceHeight = 0;
@@ -219,13 +223,13 @@ class Stage extends DisplayObjectContainer {
     _renderContext.renderPipes.copyFrom(options.renderPipes);
     _renderState = RenderState(_renderContext);
 
-    _renderContext.onContextLost.listen((_) {
+    _contextLostSubscription = _renderContext.onContextLost.listen((_) {
       _renderContextLost = true;
       _renderAfterContextRestore = false;
       _invalid = true;
     });
 
-    _renderContext.onContextRestored.listen((_) {
+    _contextRestoredSubscription = _renderContext.onContextRestored.listen((_) {
       _renderContextLost = false;
       _renderAfterContextRestore = true;
       _invalid = true;
@@ -237,7 +241,7 @@ class Stage extends DisplayObjectContainer {
 
     host.attach(this);
 
-    Mouse.onCursorChanged.listen((cursorName) => _updateMouseCursor());
+    _cursorSubscription = Mouse.onCursorChanged.listen((cursorName) => _updateMouseCursor());
 
     _updateMouseCursor();
     _updateCanvasSize();
@@ -254,6 +258,8 @@ class Stage extends DisplayObjectContainer {
   RenderEngine get renderEngine => _renderContext.renderEngine;
 
   RenderContext get renderContext => _renderContext;
+
+  bool get isDisposed => _disposed;
 
   /// Gets the [RenderLoop] where this Stage was added to, or
   /// NULL in case this Stage is not added to a [RenderLoop].
@@ -436,9 +442,30 @@ class Stage extends DisplayObjectContainer {
   /// Scene objects and textures are not disposed. The plans are recreated if
   /// [materialize] is called again.
   void releaseRenderPlan() {
+    if (_renderContext.isDisposed) return;
     _renderContext.releaseRenderPlan(this);
     final console = _console;
     if (console != null) _renderContext.releaseRenderPlan(console);
+  }
+
+  /// Detaches this Stage and permanently releases its renderer resources.
+  ///
+  /// Display objects and application-owned textures remain available, but
+  /// this Stage cannot render again. Calling this method more than once is safe.
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    renderMode = .STOP;
+    _renderLoop?.removeStage(this);
+    _host.detach(this);
+    unawaited(_contextLostSubscription?.cancel());
+    unawaited(_contextRestoredSubscription?.cancel());
+    unawaited(_cursorSubscription?.cancel());
+    _contextLostSubscription = null;
+    _contextRestoredSubscription = null;
+    _cursorSubscription = null;
+    releaseRenderPlan();
+    _renderContext.dispose();
   }
 
   //----------------------------------------------------------------------------
@@ -448,6 +475,7 @@ class Stage extends DisplayObjectContainer {
   /// on your own and therefore get full control of the rendering of this Stage.
 
   void materialize(num currentTime, num deltaTime) {
+    if (_disposed) return;
     if (_renderContextLost) return;
     if (renderMode == .STOP) {
       _renderAfterContextRestore = false;
@@ -722,6 +750,7 @@ class Stage extends DisplayObjectContainer {
   /// thread. Hit testing and StageXL event propagation still happen locally in
   /// the Stage runtime.
   void dispatchInputEvent(StageInputEvent event) {
+    if (_disposed) return;
     switch (event) {
       case StageMouseInput(type: 'wheel'):
         _processMouseWheelInput(event);

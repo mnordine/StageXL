@@ -717,6 +717,11 @@ class StageWorkerHost implements StageHost {
   void attach(Stage stage) => _stage = stage;
 
   @override
+  void detach(Stage stage) {
+    if (identical(_stage, stage)) _stage = null;
+  }
+
+  @override
   void focus() => _postProtocol({'kind': 'stagexl:focus'});
 
   @override

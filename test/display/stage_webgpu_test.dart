@@ -195,6 +195,32 @@ void main() {
     expect(stage.renderContext.renderStatistics.webgpuInstructionReuseCount, 0);
   });
 
+  test('WebGPU Stage disposal releases the device context when available', () async {
+    final options = StageOptions()
+      ..renderEngine = .WebGPU
+      ..backgroundColor = Color.Transparent
+      ..stageRenderMode = .AUTO;
+    final canvas = HTMLCanvasElement()
+      ..width = 32
+      ..height = 32;
+    final stage = await Stage.create(canvas, width: 32, height: 32, options: options);
+
+    if (stage.renderEngine != .WebGPU) {
+      stage.dispose();
+      return;
+    }
+
+    stage.addChild(Bitmap(BitmapData(16, 16, Color.Red)));
+    stage.materialize(0, 16);
+    final renderContext = stage.renderContext as RenderContextWebGPU;
+
+    expect(stage.dispose, returnsNormally);
+    expect(stage.isDisposed, isTrue);
+    expect(renderContext.isDisposed, isTrue);
+    expect(() => stage.materialize(16, 16), returnsNormally);
+    expect(stage.dispose, returnsNormally);
+  });
+
   test('WebGPU restores nested stencil masks when available', () async {
     final options = StageOptions()
       ..renderEngine = .WebGPU

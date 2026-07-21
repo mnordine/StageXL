@@ -1,5 +1,3 @@
-// ignore_for_file: close_sinks
-
 part of '../engine.dart';
 
 /// The implementation kind of the render context.
@@ -8,13 +6,19 @@ enum RenderEngine { WebGL2, WebGL, WebGPU, Canvas2D }
 
 /// The base class for all events fired by a render context.
 
-class RenderContextEvent {}
+class RenderContextEvent {
+  final String? reason;
+  final String? message;
+
+  const RenderContextEvent({this.reason, this.message});
+}
 
 /// The interface for all implementations of a render context.
 
 abstract class RenderContext {
   final renderStatistics = RenderStatistics();
   final renderPipes = RenderPipeRegistry();
+  var _disposed = false;
 
   final _contextLostEvent = StreamController<RenderContextEvent>.broadcast();
   final _contextRestoredEvent =
@@ -23,6 +27,8 @@ abstract class RenderContext {
   Stream<RenderContextEvent> get onContextLost => _contextLostEvent.stream;
   Stream<RenderContextEvent> get onContextRestored =>
       _contextRestoredEvent.stream;
+
+  bool get isDisposed => _disposed;
 
   RenderEngine get renderEngine;
 
@@ -62,6 +68,17 @@ abstract class RenderContext {
   /// Call this outside frame collection and execution when an independent
   /// render root will no longer be rendered. A later build recreates the plan.
   void releaseRenderPlan(RenderObject renderObject) => _retainedInstructionSystem?.release(renderObject);
+
+  /// Releases backend resources owned by this context.
+  ///
+  /// A disposed context cannot render again. Scene objects and externally
+  /// owned textures are not disposed.
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    unawaited(_contextLostEvent.close());
+    unawaited(_contextRestoredEvent.close());
+  }
 
   void beginRenderObject(RenderState renderState, RenderObject renderObject) {}
 

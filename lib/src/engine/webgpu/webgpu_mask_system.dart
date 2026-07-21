@@ -231,6 +231,15 @@ class _WebGpuMaskSystem {
     _indexBuffer.destroy();
     _indexBuffer = _createIndexBuffer(size * 2);
   }
+
+  void dispose() {
+    _vertexBuffer.destroy();
+    _indexBuffer.destroy();
+    resetFrame();
+    _maskVertices.clear();
+    _vertexCapacity = 0;
+    _indexCapacity = 0;
+  }
 }
 
 class _WebGpuMaskState {

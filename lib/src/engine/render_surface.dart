@@ -15,6 +15,8 @@ extension type RenderSurface(JSObject _) implements JSObject {
   external JSAny? getContext(String contextId, [JSAny? options]);
 
   external void addEventListener(String type, JSFunction listener);
+
+  external void removeEventListener(String type, JSFunction listener);
 }
 
 RenderSurface renderSurfaceFrom(JSObject canvas) => RenderSurface(canvas);

@@ -31,6 +31,15 @@ void main() {
     expect(mouseDownCount, 1);
     expect(canvas.width, 320);
     expect(canvas.height, 180);
+
+    stage.dispose();
+    stage.dispatchInputEvent(const StageMouseInput('mousedown', clientX: 20, clientY: 20));
+
+    expect(stage.isDisposed, isTrue);
+    expect(stage.renderContext.isDisposed, isTrue);
+    expect(host.attachedStage, isNull);
+    expect(mouseDownCount, 1);
+    expect(stage.dispose, returnsNormally);
   });
 
   test('BitmapData uses an OffscreenCanvas backing surface without a DOM dependency', () {
@@ -65,6 +74,11 @@ class _TestOffscreenHost implements StageHost {
 
   @override
   void attach(Stage stage) => attachedStage = stage;
+
+  @override
+  void detach(Stage stage) {
+    if (identical(attachedStage, stage)) attachedStage = null;
+  }
 
   @override
   void focus() => focusCount++;

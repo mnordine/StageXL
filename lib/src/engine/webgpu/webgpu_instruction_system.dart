@@ -68,6 +68,22 @@ class _WebGpuInstructionSystem {
     if (identical(_rootRenderObject, renderObject)) _rootRenderObject = null;
   }
 
+  void dispose() {
+    if (_isCollecting) throw StateError('Cannot dispose WebGPU instructions during collection.');
+    final rootRenderObject = _rootRenderObject;
+    if (rootRenderObject != null) {
+      release(rootRenderObject);
+    } else if (instructionSet.instructionCount != 0 || instructionSet.slotCount != 0) {
+      _disposeInstructionSet(instructionSet);
+      _clearInstructionSet(instructionSet);
+      instructionSet = InstructionSet();
+    }
+    _collectionStates.clear();
+    _groupStack.clear();
+    _activeBatch = null;
+    _pendingClearColor = null;
+  }
+
   void _upload(InstructionSet instructions) {
     for (var i = 0; i < instructions.instructionCount; i++) {
       _instructionPipes.upload(instructions.instructionAt(i));

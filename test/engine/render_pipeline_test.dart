@@ -2,10 +2,11 @@
 library;
 
 import 'dart:js_interop';
+import 'dart:typed_data';
 
 import 'package:stagexl/stagexl.dart';
 import 'package:test/test.dart';
-import 'package:web/web.dart';
+import 'package:web/web.dart' hide WebGL;
 
 class _Instruction implements RenderInstruction {
   static const pipeId = InstructionPipeId<_Instruction>('test.instruction');
@@ -314,6 +315,14 @@ void main() {
     expect(stage.renderContext.renderStatistics.retainedInstructionReuseCount, 1);
   });
 
+  test('WebGL1 retained batches upload only changed buffer data when available', () {
+    _expectWebGlRetainedUploads(.WebGL);
+  });
+
+  test('WebGL2 retained batches upload only changed buffer data when available', () {
+    _expectWebGlRetainedUploads(.WebGL2);
+  });
+
   test('Stage releases and recreates retained render plans', () {
     final canvas = HTMLCanvasElement()
       ..width = 16
@@ -331,4 +340,73 @@ void main() {
     expect(stage.renderContext.renderStatistics.retainedInstructionBuildCount, 1);
     expect(stage.renderContext.renderStatistics.retainedInstructionReuseCount, 0);
   });
+
+  test('Stage disposal releases its context and prevents later rendering', () {
+    final canvas = HTMLCanvasElement()
+      ..width = 16
+      ..height = 16;
+    final options = StageOptions()..renderEngine = .Canvas2D;
+    final stage = Stage(canvas, width: 16, height: 16, options: options)
+      ..addChild(Bitmap(BitmapData(16, 16, Color.Red)));
+    final renderLoop = RenderLoop()..addStage(stage);
+
+    stage.materialize(0, 16);
+    final buildCount = stage.renderContext.renderStatistics.retainedInstructionBuildCount;
+    stage.dispose();
+
+    expect(stage.isDisposed, isTrue);
+    expect(stage.renderContext.isDisposed, isTrue);
+    expect(stage.renderLoop, isNull);
+    expect(() => stage.materialize(16, 16), returnsNormally);
+    expect(stage.renderContext.renderStatistics.retainedInstructionBuildCount, buildCount);
+    expect(stage.dispose, returnsNormally);
+    renderLoop.stop();
+  });
+}
+
+void _expectWebGlRetainedUploads(RenderEngine engine) {
+  final canvas = HTMLCanvasElement()
+    ..width = 32
+    ..height = 16;
+  final options = StageOptions()
+    ..renderEngine = engine
+    ..backgroundColor = Color.Transparent;
+  final bitmapData = BitmapData(8, 8, Color.Red);
+  final first = Bitmap(bitmapData);
+  final vector = Sprite();
+  vector.graphics
+    ..rect(0, 0, 8, 8)
+    ..fillColor(Color.Green);
+  final stage = Stage(canvas, width: 32, height: 16, options: options)
+    ..addChild(first)
+    ..addChild(vector..x = 2)
+    ..addChild(Bitmap(BitmapData(8, 8, Color.Blue))..x = 4);
+  if (stage.renderEngine != engine) {
+    stage.dispose();
+    return;
+  }
+
+  stage.materialize(0, 16);
+  expect(stage.renderContext.renderStatistics.retainedInstructionUploadCount, 2);
+  expect(stage.renderContext.renderStatistics.drawCount, 1);
+  final gl = (stage.renderContext as RenderContextWebGL).rawContext;
+  final pixel = Uint8List(4);
+  gl.readPixels(6, 12, 1, 1, WebGL.RGBA, WebGL.UNSIGNED_BYTE, pixel.toJS);
+  expect(pixel, [0, 0, 255, 255]);
+
+  stage.materialize(16, 16);
+  expect(stage.renderContext.renderStatistics.retainedInstructionUploadCount, 0);
+
+  first.x = 2;
+  stage.materialize(32, 16);
+  expect(stage.renderContext.renderStatistics.retainedInstructionBuildCount, 0);
+  expect(stage.renderContext.renderStatistics.retainedInstructionUploadCount, 1);
+
+  stage.addChild(Bitmap(BitmapData(8, 8, Color.Yellow))..x = 4);
+  stage.materialize(48, 16);
+  expect(stage.renderContext.renderStatistics.retainedInstructionBuildCount, 1);
+  expect(stage.renderContext.renderStatistics.retainedInstructionUploadCount, 2);
+  gl.readPixels(6, 12, 1, 1, WebGL.RGBA, WebGL.UNSIGNED_BYTE, pixel.toJS);
+  expect(pixel, [255, 255, 0, 255]);
+  stage.dispose();
 }

@@ -17,6 +17,7 @@ class RenderContextWebGPU extends RenderContext {
   RenderTexture? _solidFillTexture;
   RenderTexture? _activeRenderTexture;
   List<num>? _clearColor;
+  GPUDeviceLostInfo? _deviceLostInfo;
 
   RenderContextWebGPU._(this._canvasElement, this.deviceSystem, {required this.renderBundles}) {
     commandSystem = WebGpuCommandSystem(this);
@@ -27,7 +28,8 @@ class RenderContextWebGPU extends RenderContext {
     _maskSystem = _WebGpuMaskSystem(this);
     filterSystem = WebGpuFilterSystem(this);
     _updateStageProjection();
-    _contextRestoredEvent.add(RenderContextEvent());
+    unawaited(device.lost.toDart.then(_onDeviceLost));
+    _contextRestoredEvent.add(const RenderContextEvent());
   }
 
   static Future<RenderContextWebGPU?> create(
@@ -48,6 +50,7 @@ class RenderContextWebGPU extends RenderContext {
   }
 
   GPUDevice get device => deviceSystem.device;
+  GPUDeviceLostInfo? get deviceLostInfo => _deviceLostInfo;
   GPUCanvasContext get canvasContext => deviceSystem.canvasContext;
   GPUTextureFormat get preferredTextureFormat => deviceSystem.preferredTextureFormat;
   int get viewportWidth => _activeRenderTexture?.width ?? _canvasElement.width;
@@ -351,5 +354,30 @@ class RenderContextWebGPU extends RenderContext {
       return;
     }
     filterSystem.renderObjectFiltered(renderState, renderObject);
+  }
+
+  void _onDeviceLost(GPUDeviceLostInfo info) {
+    if (isDisposed) return;
+    _deviceLostInfo = info;
+    _clearColor = null;
+    _contextLostEvent.add(RenderContextEvent(reason: info.reason, message: info.message));
+  }
+
+  @override
+  void dispose() {
+    if (isDisposed) return;
+    super.dispose();
+    _instructionSystem.dispose();
+    _batchSystem.dispose();
+    _maskSystem.dispose();
+    filterSystem.dispose();
+    commandSystem.dispose();
+    textureSystem.dispose();
+    pipelineSystem.dispose();
+    _solidFillTexture?.dispose();
+    _solidFillTexture = null;
+    _activeRenderTexture = null;
+    _clearColor = null;
+    deviceSystem.dispose();
   }
 }

@@ -103,6 +103,8 @@ abstract interface class StageHost {
 
   void attach(Stage stage);
 
+  void detach(Stage stage);
+
   void focus();
 
   void setCursor(String cursor);
@@ -113,6 +115,8 @@ abstract interface class StageHost {
 /// The normal browser main-thread host used by [Stage].
 class BrowserStageHost implements StageHost {
   final HTMLCanvasElement canvas;
+  final _subscriptions = <StreamSubscription<dynamic>>[];
+  Stage? _stage;
 
   BrowserStageHost(this.canvas);
 
@@ -135,33 +139,51 @@ class BrowserStageHost implements StageHost {
 
   @override
   void attach(Stage stage) {
+    final attachedStage = _stage;
+    if (attachedStage != null) detach(attachedStage);
+    _stage = stage;
+
     if (canvas.tabIndex <= 0) canvas.tabIndex = 1;
     if (canvas.style.outline == '') canvas.style.outline = 'none';
 
-    canvas.onKeyDown.listen((event) => _onKeyEvent(stage, event));
-    canvas.onKeyUp.listen((event) => _onKeyEvent(stage, event));
-    canvas.onKeyPress.listen((event) => _onKeyEvent(stage, event));
+    _listen(canvas.onKeyDown, (event) => _onKeyEvent(stage, event));
+    _listen(canvas.onKeyUp, (event) => _onKeyEvent(stage, event));
+    _listen(canvas.onKeyPress, (event) => _onKeyEvent(stage, event));
 
     final mode = stage._inputEventMode;
     final listenToMouseEvents = mode == .MouseOnly || mode == .MouseAndTouch;
     if (listenToMouseEvents) {
-      canvas.onMouseDown.listen((event) => _onMouseEvent(stage, event));
-      canvas.onMouseUp.listen((event) => _onMouseEvent(stage, event));
-      canvas.onMouseMove.listen((event) => _onMouseEvent(stage, event));
-      canvas.onMouseOut.listen((event) => _onMouseEvent(stage, event));
-      canvas.onContextMenu.listen((event) => _onMouseEvent(stage, event));
-      canvas.onMouseWheel.listen((event) => _onMouseWheelEvent(stage, event));
+      _listen(canvas.onMouseDown, (event) => _onMouseEvent(stage, event));
+      _listen(canvas.onMouseUp, (event) => _onMouseEvent(stage, event));
+      _listen(canvas.onMouseMove, (event) => _onMouseEvent(stage, event));
+      _listen(canvas.onMouseOut, (event) => _onMouseEvent(stage, event));
+      _listen(canvas.onContextMenu, (event) => _onMouseEvent(stage, event));
+      _listen(canvas.onMouseWheel, (event) => _onMouseWheelEvent(stage, event));
     }
 
     final listenToTouchEvents = mode == .TouchOnly || mode == .MouseAndTouch;
     if (listenToTouchEvents && env.isTouchEventSupported) {
-      canvas.onTouchStart.listen((event) => _onTouchEvent(stage, event));
-      canvas.onTouchEnd.listen((event) => _onTouchEvent(stage, event));
-      canvas.onTouchMove.listen((event) => _onTouchEvent(stage, event));
-      canvas.onTouchEnter.listen((event) => _onTouchEvent(stage, event));
-      canvas.onTouchLeave.listen((event) => _onTouchEvent(stage, event));
-      canvas.onTouchCancel.listen((event) => _onTouchEvent(stage, event));
+      _listen(canvas.onTouchStart, (event) => _onTouchEvent(stage, event));
+      _listen(canvas.onTouchEnd, (event) => _onTouchEvent(stage, event));
+      _listen(canvas.onTouchMove, (event) => _onTouchEvent(stage, event));
+      _listen(canvas.onTouchEnter, (event) => _onTouchEvent(stage, event));
+      _listen(canvas.onTouchLeave, (event) => _onTouchEvent(stage, event));
+      _listen(canvas.onTouchCancel, (event) => _onTouchEvent(stage, event));
     }
+  }
+
+  void _listen<T>(Stream<T> stream, void Function(T) listener) {
+    _subscriptions.add(stream.listen(listener));
+  }
+
+  @override
+  void detach(Stage stage) {
+    if (!identical(_stage, stage)) return;
+    _stage = null;
+    for (final subscription in _subscriptions) {
+      unawaited(subscription.cancel());
+    }
+    _subscriptions.clear();
   }
 
   void _onMouseEvent(Stage stage, html.MouseEvent event) {

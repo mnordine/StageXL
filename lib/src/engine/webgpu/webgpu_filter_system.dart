@@ -1437,6 +1437,27 @@ class WebGpuFilterSystem {
     _alphaMaskVertexBuffer = _createAlphaMaskVertexBuffer(size * 2);
   }
 
+  void dispose() {
+    _vertexBuffer?.destroy();
+    _indexBuffer?.destroy();
+    _normalMapVertexBuffer?.destroy();
+    _alphaMaskVertexBuffer?.destroy();
+    _vertexBuffer = null;
+    _indexBuffer = null;
+    _normalMapVertexBuffer = null;
+    _alphaMaskVertexBuffer = null;
+    _vertexCapacity = 0;
+    _indexCapacity = 0;
+    _normalMapVertexCapacity = 0;
+    _alphaMaskVertexCapacity = 0;
+    _normalMapPipelines.clear();
+    _displacementMapPipelines.clear();
+    _alphaMaskPipelines.clear();
+    _filterBindGroups.clear();
+    _programResources.clear();
+    _twoTextureProgramResources.clear();
+  }
+
   Never _throwUnsupported() {
     renderContext.renderStatistics.addWebGpuFallbackCause('unsupported filter');
     throw UnsupportedError('WebGPU filter parity requires the WGSL multi-pass filter implementation.');

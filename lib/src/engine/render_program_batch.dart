@@ -247,6 +247,7 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
     _bindVAO();
     renderBufferIndex.activate(renderContext);
     renderBufferVertex.activate(renderContext);
+    setupAttributes();
 
     // Upload all vertex and index data that was accumulated.
     renderBufferVertex.update();
@@ -317,6 +318,53 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
     renderBufferIndex.count = 0;
     
     _executingBatch = false;
+  }
+
+  void _executeRetainedBatch(
+    RenderContextWebGL renderContext,
+    WebGLBuffer vertexBuffer,
+    WebGLBuffer indexBuffer,
+    _RetainedWebGLBatchSlice slice,
+  ) {
+    if (_drawCommands.isNotEmpty || renderBufferIndex.position > 0) flush();
+    _renderContextWebGL = renderContext;
+    _executingBatch = true;
+    final gl = renderContext.rawContext;
+    _bindVAO();
+    gl
+      ..bindBuffer(WebGL.ARRAY_BUFFER, vertexBuffer)
+      ..bindBuffer(WebGL.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    final vertexByteOffset = slice.vertexFloatOffset * 4;
+    _bindRetainedAttribute('aVertexPosition', 2, vertexByteOffset + 0);
+    _bindRetainedAttribute('aVertexTextCoord', 2, vertexByteOffset + 8);
+    _bindRetainedAttribute('aVertexColor', 4, vertexByteOffset + 16);
+    _bindRetainedAttribute('aVertexTexIndex', 1, vertexByteOffset + 32);
+
+    for (var runIndex = 0; runIndex < slice.runCount; runIndex++) {
+      final run = slice.runs[runIndex];
+      if (run.indexCount == 0) continue;
+      if (_lastBlendMode.srcFactor != run.blendMode.srcFactor ||
+          _lastBlendMode.dstFactor != run.blendMode.dstFactor) {
+        gl.blendFunc(run.blendMode.srcFactor, run.blendMode.dstFactor);
+        _lastBlendMode = run.blendMode;
+      }
+      for (var i = 0; i < run.textures.length; i++) {
+        renderContext.activateRenderTextureAt(run.textures[i], i, flush: false);
+      }
+      gl.drawElements(WebGL.TRIANGLES, run.indexCount, WebGL.UNSIGNED_SHORT, run.indexOffset * 2);
+      renderStatistics.drawCount++;
+      renderStatistics.vertexCount += run.vertexCount;
+      renderStatistics.indexCount += run.indexCount;
+    }
+    _executingBatch = false;
+  }
+
+  void _bindRetainedAttribute(String name, int size, int offset) {
+    final index = attributes[name];
+    if (index == null) return;
+    renderingContext
+      ..enableVertexAttribArray(index)
+      ..vertexAttribPointer(index, size, WebGL.FLOAT, false, 36, offset);
   }
 
   //---------------------------------------------------------------------------

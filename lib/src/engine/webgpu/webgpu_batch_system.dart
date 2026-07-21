@@ -601,4 +601,16 @@ class _WebGpuBatchSystem {
     _renderBundleObservations.clear();
     _lastRenderBundleKey = null;
   }
+
+  void dispose() {
+    _vertexBuffer.destroy();
+    _indexBuffer.destroy();
+    _runs.clear();
+    _clearRenderBundleCache();
+    _vertexPosition = 0;
+    _indexPosition = 0;
+    _vertexCount = 0;
+    _vertexCapacity = 0;
+    _indexCapacity = 0;
+  }
 }

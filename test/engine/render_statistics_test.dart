@@ -11,6 +11,7 @@ void main() {
       ..frameTimeMicroseconds = 1200
       ..renderObjectMicroseconds = 700
       ..renderFlushMicroseconds = 300
+      ..retainedInstructionUploadCount = 3
       ..webgpuBatchBlendBreakCount = 4
       ..webgpuBatchFlushCount = 5
       ..webgpuBatchRunCount = 6
@@ -34,6 +35,7 @@ void main() {
     expect(statistics.frameTimeMicroseconds, 0);
     expect(statistics.renderObjectMicroseconds, 0);
     expect(statistics.renderFlushMicroseconds, 0);
+    expect(statistics.retainedInstructionUploadCount, 0);
     expect(statistics.webgpuBatchBlendBreakCount, 0);
     expect(statistics.webgpuBatchFlushCount, 0);
     expect(statistics.webgpuBatchRunCount, 0);

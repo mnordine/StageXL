@@ -42,10 +42,11 @@ class WebGpuPipelineSystem {
       renderContext.device.createShaderModule(GPUShaderModuleDescriptor(code: _batchShaderSource(maxBatchTextures)));
   late final GPUShaderModule stencilShaderModule =
       renderContext.device.createShaderModule(GPUShaderModuleDescriptor(code: _stencilShaderSource));
-  late final GPUBuffer projectionBuffer = renderContext.device.createBuffer(GPUBufferDescriptor(
-    size: 64,
-    usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.UNIFORM,
-  ));
+  GPUBuffer? _projectionBuffer;
+  GPUBuffer get projectionBuffer => _projectionBuffer ??= renderContext.device.createBuffer(GPUBufferDescriptor(
+        size: 64,
+        usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.UNIFORM,
+      ));
   late final GPUBindGroup projectionBindGroup = renderContext.device.createBindGroup(GPUBindGroupDescriptor(
     layout: projectionBindGroupLayout,
     entries: [
@@ -265,4 +266,11 @@ class WebGpuPipelineSystem {
       return vec4<f32>(0.0);
     }
   ''';
+
+  void dispose() {
+    _projectionBuffer?.destroy();
+    _projectionBuffer = null;
+    _pipelineCache.clear();
+    _stencilWritePipelines.clear();
+  }
 }

@@ -10,6 +10,7 @@ class RenderStatistics {
   var retainedInstructionBuildCount = 0;
   var retainedInstructionCount = 0;
   var retainedInstructionReuseCount = 0;
+  var retainedInstructionUploadCount = 0;
   var webgpuBindGroupCreateCount = 0;
   var webgpuBatchBlendBreakCount = 0;
   var webgpuBatchFlushCount = 0;
@@ -45,6 +46,7 @@ class RenderStatistics {
     retainedInstructionBuildCount = 0;
     retainedInstructionCount = 0;
     retainedInstructionReuseCount = 0;
+    retainedInstructionUploadCount = 0;
     webgpuBindGroupCreateCount = 0;
     webgpuBatchBlendBreakCount = 0;
     webgpuBatchFlushCount = 0;

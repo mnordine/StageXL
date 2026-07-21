@@ -23,9 +23,10 @@ The frame is split into these phases:
 6. Instruction pipes execute the retained order through the selected backend.
 
 Canvas2D and WebGL1/2 share a retained semantic command plan. Canvas2D's upload phase is intentionally empty. WebGL
-replays the retained plan through its existing batch programs; moving its buffer writes completely into the upload phase
-is still in progress. WebGPU uses specialized batch, mask, filter, projection, custom-draw, and render-group instruction
-pipes.
+collects adjacent texture instructions into reusable aggregate buffers. Its upload phase bakes transformed vertices,
+uploads only changed vertex or index ranges, and prepares textures before the execution phase draws stable buffer
+offsets.
+WebGPU uses specialized batch, mask, filter, projection, custom-draw, and render-group instruction pipes.
 
 WebGPU batch, mask, and instruction systems are private backend details. StageXL_Spine now uses one render pipe for all
 renderers, so its tinted meshes and clipping boundaries enter the instruction set in display-list order without a direct
@@ -57,6 +58,11 @@ marks vertex data dirty. Index data is uploaded independently when index values 
 coalesced into buffer ranges, so one changed item does not force a full-batch upload. Texture uploads and bind-group
 refreshes happen during the upload phase before command encoding.
 
+WebGL uses the same dirty-range rule for its retained aggregate buffers.
+`RenderStatistics.retainedInstructionUploadCount` counts actual retained vertex/index buffer writes; an unchanged
+retained WebGL frame reports zero. Legacy custom draw operations continue to use the immediate WebGL buffers and remain
+explicit execution boundaries.
+
 When `StageOptions.renderBundles` is enabled, stable batch instructions compile to render bundles after they have been
 observed twice. Vertex or index data changes do not invalidate a bundle because its buffer identities and draw layout are
 unchanged. Structural changes, buffer replacement, pipeline changes, or bind-group changes invalidate it.
@@ -76,3 +82,14 @@ Removing or replacing a nested render group disposes its retained instructions r
 buffers and render bundles. Independent roots are retained weakly and can also be released deterministically with
 `RenderContext.releaseRenderPlan`. `Stage.releaseRenderPlan` releases both the Stage and optional console plans without
 disposing scene objects or textures; rendering the Stage again rebuilds those plans.
+
+`Stage.dispose` is the terminal lifecycle operation. It removes the Stage from its render loop, detaches host input,
+cancels context and cursor subscriptions, releases retained plans, and disposes the render context. `StageHost`
+implementations must pair `attach` with `detach`; this prevents DOM or worker input from keeping a discarded Stage
+alive. WebGL contexts delete renderer-owned programs, buffers, vertex arrays, and framebuffers. WebGPU contexts destroy
+retained batch buffers, internal textures and attachments, clear renderer caches, and finally destroy the `GPUDevice`.
+
+WebGPU device loss is forwarded through `RenderContext.onContextLost`. Its `RenderContextEvent` includes the WebGPU
+reason and message. StageXL stops rendering that Stage because resources from the lost device cannot be reused; create a
+new Stage to request a replacement device. Intentional device destruction during `Stage.dispose` is not reported as an
+unexpected context-loss event.

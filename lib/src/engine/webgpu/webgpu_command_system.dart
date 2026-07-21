@@ -171,4 +171,18 @@ class WebGpuCommandSystem {
     final entry = _renderTargetDepthStencilEntries.remove(renderTexture);
     entry?.texture.destroy();
   }
+
+  void dispose() {
+    _canvasMultisampleColorEntry?.texture.destroy();
+    _canvasDepthStencilEntry?.texture.destroy();
+    for (final entry in _renderTargetDepthStencilEntries.values) {
+      entry.texture.destroy();
+    }
+    _renderTargetDepthStencilEntries.clear();
+    _encoder = null;
+    _swapTexture = null;
+    _swapTextureView = null;
+    _canvasMultisampleColorEntry = null;
+    _canvasDepthStencilEntry = null;
+  }
 }

@@ -3,6 +3,8 @@ part of '../engine.dart';
 class RenderContextWebGL extends RenderContext {
   static var _globalContextIdentifier = 0;
   final RenderSurface _canvasElement;
+  late final JSFunction _contextLostListener;
+  late final JSFunction _contextRestoredListener;
 
   late final WebGL _renderingContext;
   final _projectionMatrix = Matrix3D.fromIdentity();
@@ -38,6 +40,8 @@ class RenderContextWebGL extends RenderContext {
   // WebGL 2 specific properties
   WebGLVertexArrayObject? _maskQuadVao;
   WebGLProgram? _maskProgram;
+  WebGLBuffer? _maskVertexBuffer;
+  WebGLBuffer? _maskIndexBuffer;
 
   WebGLVertexArrayObjectOES? _maskQuadVAOWebGL1;
 
@@ -54,6 +58,7 @@ class RenderContextWebGL extends RenderContext {
   final _renderFrameBufferPool = <RenderFrameBuffer>[];
   final _renderPrograms = <String, RenderProgramWebGL<Object?>>{};
   final _renderProgramResources = <RenderProgramWebGL<Object?>, _Resources>{};
+  RenderTexture? _solidFillTexture;
 
   final bool _resetScissorTest;
   final bool _resetStencilTest;
@@ -71,8 +76,10 @@ class RenderContextWebGL extends RenderContext {
     this._resetStencilTest = true,
     this._resetColor = true,
   }) {
-    _canvasElement.addEventListener('webglcontextlost', _onContextLost.toJS);
-    _canvasElement.addEventListener('webglcontextrestored', _onContextRestored.toJS);
+    _contextLostListener = _onContextLost.toJS;
+    _contextRestoredListener = _onContextRestored.toJS;
+    _canvasElement.addEventListener('webglcontextlost', _contextLostListener);
+    _canvasElement.addEventListener('webglcontextrestored', _contextRestoredListener);
 
     WebGLRenderingContext? renderingContext;
 
@@ -194,13 +201,13 @@ class RenderContextWebGL extends RenderContext {
     _vaoExtension!.bindVertexArrayOES(_maskQuadVAOWebGL1);
 
     // Set up vertex buffer
-    final vertexBuffer = _renderingContext.createBuffer();
-    _renderingContext.bindBuffer(WebGL.ARRAY_BUFFER, vertexBuffer);
+    _maskVertexBuffer = _renderingContext.createBuffer();
+    _renderingContext.bindBuffer(WebGL.ARRAY_BUFFER, _maskVertexBuffer);
     _renderingContext.bufferData(WebGL.ARRAY_BUFFER, _maskQuadVertices.toJS, WebGL.STATIC_DRAW);
 
     // Set up index buffer
-    final indexBuffer = _renderingContext.createBuffer();
-    _renderingContext.bindBuffer(WebGL.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    _maskIndexBuffer = _renderingContext.createBuffer();
+    _renderingContext.bindBuffer(WebGL.ELEMENT_ARRAY_BUFFER, _maskIndexBuffer);
     _renderingContext.bufferData(WebGL.ELEMENT_ARRAY_BUFFER, _maskQuadIndices.toJS, WebGL.STATIC_DRAW);
 
     _renderingContext.enableVertexAttribArray(positionLocation);
@@ -235,13 +242,13 @@ class RenderContextWebGL extends RenderContext {
     gl2.bindVertexArray(_maskQuadVao);
 
     // Set up vertex buffer
-    final vertexBuffer = gl2.createBuffer();
-    gl2.bindBuffer(WebGL.ARRAY_BUFFER, vertexBuffer);
+    _maskVertexBuffer = gl2.createBuffer();
+    gl2.bindBuffer(WebGL.ARRAY_BUFFER, _maskVertexBuffer);
     gl2.bufferData(WebGL.ARRAY_BUFFER, _maskQuadVertices.toJS, WebGL.STATIC_DRAW);
 
     // Set up index buffer
-    final indexBuffer = gl2.createBuffer();
-    gl2.bindBuffer(WebGL.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    _maskIndexBuffer = gl2.createBuffer();
+    gl2.bindBuffer(WebGL.ELEMENT_ARRAY_BUFFER, _maskIndexBuffer);
     gl2.bufferData(WebGL.ELEMENT_ARRAY_BUFFER, _maskQuadIndices.toJS, WebGL.STATIC_DRAW);
 
     gl2.useProgram(_maskProgram);
@@ -677,6 +684,13 @@ class RenderContextWebGL extends RenderContext {
       renderState, ixList, vxList, color);
   }
 
+  RenderTexture _getSolidFillTexture() {
+    var texture = _solidFillTexture;
+    if (texture != null) return texture;
+    texture = RenderTexture(1, 1, 0xFFFFFFFF)..filtering = RenderTextureFiltering.NEAREST;
+    return _solidFillTexture = texture;
+  }
+
   //---------------------------------------------------------------------------
 
   @override
@@ -1038,23 +1052,27 @@ class RenderContextWebGL extends RenderContext {
   //---------------------------------------------------------------------------
 
   void _onContextLost(WebGLContextEvent contextEvent) {
+    if (isDisposed) return;
     contextEvent.preventDefault();
     _contextValid = false;
     _invalidateCachedState();
     _clearContextResources();
 
-    _contextLostEvent.add(RenderContextEvent());
+    _contextLostEvent.add(const RenderContextEvent());
   }
 
   void _clearContextResources() {
     _maskQuadVao = null;
     _maskQuadVAOWebGL1 = null;
     _maskProgram = null;
+    _maskVertexBuffer = null;
+    _maskIndexBuffer = null;
 
     _vaoExtension = null;
   }
 
   void _onContextRestored(WebGLContextEvent contextEvent) {
+    if (isDisposed) return;
     _contextValid = true;
     _contextIdentifier = ++_globalContextIdentifier;
 
@@ -1069,6 +1087,48 @@ class RenderContextWebGL extends RenderContext {
       return;
     }
 
-    _contextRestoredEvent.add(RenderContextEvent());
+    _contextRestoredEvent.add(const RenderContextEvent());
+  }
+
+  @override
+  void dispose() {
+    if (isDisposed) return;
+    _instructions.dispose();
+    _canvasElement
+      ..removeEventListener('webglcontextlost', _contextLostListener)
+      ..removeEventListener('webglcontextrestored', _contextRestoredListener);
+
+    if (_contextValid) {
+      for (final resources in _renderProgramResources.values) {
+        resources.dispose();
+      }
+      final maskQuadVao = _maskQuadVao;
+      if (maskQuadVao != null && _isWebGL2) {
+        (_renderingContext as WebGL2RenderingContext).deleteVertexArray(maskQuadVao);
+      }
+      final maskQuadVaoWebGL1 = _maskQuadVAOWebGL1;
+      if (maskQuadVaoWebGL1 != null) _vaoExtension?.deleteVertexArrayOES(maskQuadVaoWebGL1);
+      _renderingContext
+        ..deleteProgram(_maskProgram)
+        ..deleteBuffer(_maskVertexBuffer)
+        ..deleteBuffer(_maskIndexBuffer);
+    }
+    _renderProgramResources.clear();
+    renderBufferIndex.dispose();
+    renderBufferVertex.dispose();
+    final activeRenderFrameBuffer = _activeRenderFrameBuffer;
+    if (activeRenderFrameBuffer != null && !_renderFrameBufferPool.contains(activeRenderFrameBuffer)) {
+      activeRenderFrameBuffer.dispose();
+    }
+    for (final frameBuffer in _renderFrameBufferPool) {
+      frameBuffer.dispose();
+    }
+    _renderFrameBufferPool.clear();
+    _renderPrograms.clear();
+    _solidFillTexture?.dispose();
+    _solidFillTexture = null;
+    _clearContextResources();
+    _contextValid = false;
+    super.dispose();
   }
 }
