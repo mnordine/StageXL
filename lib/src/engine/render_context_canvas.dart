@@ -7,6 +7,8 @@ class RenderContextCanvas extends RenderContext {
   final _identityMatrix = Matrix.fromIdentity();
   BlendMode _activeBlendMode = .NORMAL;
   double _activeAlpha = 1;
+  final _shadowAlphas = <double>[];
+  final _shadowBlendModes = <BlendMode>[];
   late final _instructions = _RetainedInstructionSystem(this);
 
   RenderContextCanvas(this._canvasElement)
@@ -180,6 +182,25 @@ class RenderContextCanvas extends RenderContext {
         vxList[8] - vxList[0]
       );
     }
+  }
+
+  @override
+  void beginCanvasShadow(RenderState renderState, int color, num blur, num offsetX, num offsetY) {
+    final matrix = renderState.globalMatrix;
+    _shadowAlphas.add(_activeAlpha);
+    _shadowBlendModes.add(_activeBlendMode);
+    _renderingContext.save();
+    _renderingContext.shadowColor = color2rgba(color);
+    _renderingContext.shadowBlur = math.sqrt(matrix.det) * blur;
+    _renderingContext.shadowOffsetX = offsetX * matrix.a + offsetY * matrix.c;
+    _renderingContext.shadowOffsetY = offsetX * matrix.b + offsetY * matrix.d;
+  }
+
+  @override
+  void endCanvasShadow() {
+    _renderingContext.restore();
+    _activeAlpha = _shadowAlphas.removeLast();
+    _activeBlendMode = _shadowBlendModes.removeLast();
   }
 
   @override

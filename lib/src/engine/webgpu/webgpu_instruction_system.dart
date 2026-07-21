@@ -91,25 +91,26 @@ class _WebGpuInstructionSystem {
     instructionSet._slotCount = _renderableCursor;
   }
 
-  void beginRenderable(RenderObject renderable) {
+  void beginRenderable(RenderState renderState, RenderObject renderable) {
     if (!_isCollecting) return;
     if (!identical(renderable, _rootRenderObject) &&
         renderable is RenderGroupRenderable &&
         (renderable as RenderGroupRenderable).isRenderGroup) {
-      _beginRenderGroup(renderable);
+      _beginRenderGroup(renderable, renderState.globalMatrix);
+      renderState.globalMatrix.identity();
     }
     final old = _renderableCursor < _oldRenderableSize ? instructionSet._slots[_renderableCursor] : null;
     final reusable = old is _WebGpuSceneRenderable &&
         identical(old.renderable, renderable) &&
         old.pipeId == renderable.renderPipeId &&
         old.structureVersion == renderable.renderStructureVersion &&
-        _scenePipe.validateRenderable(old);
+        _scenePipe.validateSlot(old);
     if (reusable) {
       old.update();
-      _scenePipe.updateRenderable(old);
+      _scenePipe.updateSlot(old);
       _renderableCursor++;
     } else {
-      _addRenderable(_WebGpuSceneRenderable(renderable), _scenePipe);
+      _addSlot(_WebGpuSceneRenderable(renderable), _scenePipe);
     }
   }
 
@@ -117,13 +118,14 @@ class _WebGpuInstructionSystem {
     if (_groupStack.isNotEmpty && identical(_groupStack.last, renderable)) _endRenderGroup();
   }
 
-  void _beginRenderGroup(RenderObject renderable) {
+  void _beginRenderGroup(RenderObject renderable, Matrix groupMatrix) {
     flushBatch();
     final old = _instructionAtCursor;
     final groupInstructions = _renderGroups[renderable] ??= InstructionSet();
     final reusable = old is _WebGpuRenderGroupInstruction && identical(old.renderable, renderable);
     final instruction = reusable ? old : _WebGpuRenderGroupInstruction(renderable, groupInstructions);
     if (!reusable) _replaceInstruction(instruction);
+    instruction.matrix.copyFrom(groupMatrix);
     _instructionCursor++;
 
     _pushCollectionState();
@@ -214,12 +216,12 @@ class _WebGpuInstructionSystem {
     final reusable = !rebuilt &&
         _renderableCursor < _oldRenderableSize &&
         identical(instructionSet._slots[_renderableCursor], renderable) &&
-        _batchPipe.validateRenderable(renderable);
+        _batchPipe.validateSlot(renderable);
     if (reusable) {
-      _batchPipe.updateRenderable(renderable);
+      _batchPipe.updateSlot(renderable);
       _renderableCursor++;
     } else {
-      _addRenderable(renderable, _batchPipe);
+      _addSlot(renderable, _batchPipe);
     }
     if (rebuilt) {
       _structureChanged = true;
@@ -406,12 +408,12 @@ class _WebGpuInstructionSystem {
     }
   }
 
-  void _addRenderable<TRenderable extends RetainedSlot>(
-    TRenderable renderable,
-    InstructionBuilderPipe<TRenderable> pipe,
+  void _addSlot<TSlot extends RetainedSlot>(
+    TSlot slot,
+    RetainedSlotPipe<TSlot> pipe,
   ) {
     instructionSet._slotCount = _renderableCursor;
-    pipe.addRenderable(renderable, instructionSet);
+    pipe.addSlot(slot, instructionSet);
     _renderableCursor = instructionSet.slotCount;
     _structureChanged = true;
   }
@@ -459,6 +461,7 @@ class _WebGpuRenderGroupInstruction implements RenderInstruction {
 
   final RenderObject renderable;
   final InstructionSet instructions;
+  final matrix = Matrix.fromIdentity();
 
   _WebGpuRenderGroupInstruction(this.renderable, this.instructions);
 
@@ -468,6 +471,9 @@ class _WebGpuRenderGroupInstruction implements RenderInstruction {
 
 class _WebGpuRenderGroupPipe implements InstructionPipe<_WebGpuRenderGroupInstruction> {
   final _WebGpuInstructionSystem instructionSystem;
+  final _savedProjections = <Matrix3D>[];
+  final _groupProjections = <Matrix3D>[];
+  var _depth = 0;
 
   _WebGpuRenderGroupPipe(this.instructionSystem);
 
@@ -478,7 +484,22 @@ class _WebGpuRenderGroupPipe implements InstructionPipe<_WebGpuRenderGroupInstru
   void upload(_WebGpuRenderGroupInstruction instruction) => instructionSystem._upload(instruction.instructions);
 
   @override
-  void execute(_WebGpuRenderGroupInstruction instruction) => instructionSystem._execute(instruction.instructions);
+  void execute(_WebGpuRenderGroupInstruction instruction) {
+    final renderContext = instructionSystem.renderContext;
+    final savedProjection = _matrixAt(_savedProjections, _depth)..copyFrom(renderContext.activeProjectionMatrix);
+    final groupProjection = _matrixAt(_groupProjections, _depth)
+      ..copyFrom2DAndConcat(instruction.matrix, savedProjection);
+    _depth++;
+    renderContext.activateProjectionMatrix(groupProjection);
+    instructionSystem._execute(instruction.instructions);
+    renderContext.activateProjectionMatrix(savedProjection);
+    _depth--;
+  }
+
+  Matrix3D _matrixAt(List<Matrix3D> matrices, int index) {
+    if (index == matrices.length) matrices.add(Matrix3D.fromIdentity());
+    return matrices[index];
+  }
 
   @override
   void dispose(_WebGpuRenderGroupInstruction instruction) {
@@ -594,29 +615,65 @@ final class _WebGpuSceneRenderable extends RetainedSlot {
   RenderPipeId pipeId;
   int structureVersion;
   int dataVersion;
+  RenderDirtyState? dirtyState;
+  var transformVersion = 0;
+  var colorVersion = 0;
+  var geometryVersion = 0;
+  var textureVersion = 0;
+  var blendVersion = 0;
+  var maskVersion = 0;
+  var filterVersion = 0;
+  var dirtyFlags = RenderDirtyFlags.all;
 
   _WebGpuSceneRenderable(this.renderable)
       : pipeId = renderable.renderPipeId,
         structureVersion = renderable.renderStructureVersion,
-        dataVersion = renderable.renderDataVersion;
+        dataVersion = renderable.renderDataVersion {
+    _captureDirtyState(renderable.renderDirtyState);
+  }
 
   void update() {
+    final nextDirtyState = renderable.renderDirtyState;
+    var changes = RenderDirtyFlags.none;
+    if (nextDirtyState == null || !identical(dirtyState, nextDirtyState)) {
+      changes = dataVersion == renderable.renderDataVersion ? RenderDirtyFlags.none : RenderDirtyFlags.allData;
+    } else {
+      if (transformVersion != nextDirtyState.transformVersion) changes |= RenderDirtyFlags.transform;
+      if (colorVersion != nextDirtyState.colorVersion) changes |= RenderDirtyFlags.color;
+      if (geometryVersion != nextDirtyState.geometryVersion) changes |= RenderDirtyFlags.geometry;
+      if (textureVersion != nextDirtyState.textureVersion) changes |= RenderDirtyFlags.texture;
+      if (blendVersion != nextDirtyState.blendVersion) changes |= RenderDirtyFlags.blend;
+      if (maskVersion != nextDirtyState.maskVersion) changes |= RenderDirtyFlags.mask;
+      if (filterVersion != nextDirtyState.filterVersion) changes |= RenderDirtyFlags.filter;
+    }
+    dirtyFlags = changes;
     pipeId = renderable.renderPipeId;
     structureVersion = renderable.renderStructureVersion;
     dataVersion = renderable.renderDataVersion;
+    _captureDirtyState(nextDirtyState);
+  }
+
+  void _captureDirtyState(RenderDirtyState? state) {
+    dirtyState = state;
+    transformVersion = state?.transformVersion ?? 0;
+    colorVersion = state?.colorVersion ?? 0;
+    geometryVersion = state?.geometryVersion ?? 0;
+    textureVersion = state?.textureVersion ?? 0;
+    blendVersion = state?.blendVersion ?? 0;
+    maskVersion = state?.maskVersion ?? 0;
+    filterVersion = state?.filterVersion ?? 0;
   }
 }
 
-class _WebGpuScenePipe implements InstructionBuilderPipe<_WebGpuSceneRenderable> {
+class _WebGpuScenePipe implements RetainedSlotPipe<_WebGpuSceneRenderable> {
   @override
-  void addRenderable(_WebGpuSceneRenderable renderable, InstructionSet instructionSet) =>
-      instructionSet.addSlot(renderable);
+  void addSlot(_WebGpuSceneRenderable slot, InstructionSet instructionSet) => instructionSet.addSlot(slot);
 
   @override
-  void updateRenderable(_WebGpuSceneRenderable renderable) {}
+  void updateSlot(_WebGpuSceneRenderable slot) {}
 
   @override
-  bool validateRenderable(_WebGpuSceneRenderable renderable) => true;
+  bool validateSlot(_WebGpuSceneRenderable slot) => true;
 }
 
 class _WebGpuBatchInstruction implements RenderInstruction {
@@ -737,7 +794,7 @@ class _WebGpuBatchInstruction implements RenderInstruction {
 }
 
 class _WebGpuBatchPipe
-    implements InstructionBuilderPipe<_WebGpuBatchRenderable>, InstructionPipe<_WebGpuBatchInstruction> {
+    implements RetainedSlotPipe<_WebGpuBatchRenderable>, InstructionPipe<_WebGpuBatchInstruction> {
   static const _floatsPerVertex = 9;
   static const _bytesPerVertex = _floatsPerVertex * 4;
   static const _bytesPerIndex = 4;
@@ -751,14 +808,13 @@ class _WebGpuBatchPipe
   InstructionPipeId<_WebGpuBatchInstruction> get id => _WebGpuBatchInstruction.pipeId;
 
   @override
-  void addRenderable(_WebGpuBatchRenderable renderable, InstructionSet instructionSet) =>
-      instructionSet.addSlot(renderable);
+  void addSlot(_WebGpuBatchRenderable slot, InstructionSet instructionSet) => instructionSet.addSlot(slot);
 
   @override
-  void updateRenderable(_WebGpuBatchRenderable renderable) {}
+  void updateSlot(_WebGpuBatchRenderable slot) {}
 
   @override
-  bool validateRenderable(_WebGpuBatchRenderable renderable) => true;
+  bool validateSlot(_WebGpuBatchRenderable slot) => true;
 
   @override
   void upload(_WebGpuBatchInstruction instruction) {

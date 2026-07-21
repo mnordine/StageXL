@@ -30,6 +30,9 @@ final class RenderBuildContext {
   double get globalColorScaleA => _renderState.globalColorScaleA;
   BlendMode get globalBlendMode => _renderState.globalBlendMode;
 
+  /// Compatibility path for built-ins that have not migrated to semantic operations.
+  void addLegacy(LegacyRenderObject renderable) => renderable.renderLegacy(_renderState);
+
   void addRenderable(RenderObject renderable) => _renderState.renderObject(renderable);
 
   void addTextureQuad(
@@ -75,6 +78,11 @@ final class RenderBuildContext {
   void beginMask(RenderMask mask) => _renderState._renderContext._beginRenderMask(_renderState, mask);
 
   void endMask(RenderMask mask) => _renderState._renderContext._endRenderMask(_renderState, mask);
+
+  void beginCanvasShadow(int color, num blur, num offsetX, num offsetY) =>
+      _renderState._renderContext._beginCanvasShadow(_renderState, color, blur, offsetX, offsetY);
+
+  void endCanvasShadow() => _renderState._renderContext._endCanvasShadow();
 
   void push(Matrix matrix, num alpha, [BlendMode? blendMode]) => _renderState.push(matrix, alpha, blendMode);
 
@@ -162,7 +170,7 @@ final class _DefaultRenderPipe implements RenderPipe<RenderObject> {
 
   @override
   void addRenderable(RenderObject renderable, RenderBuildContext context) =>
-      renderable.renderLegacy(context._renderState);
+      renderable.collectRenderables(context);
 }
 
 /// A retained command that can be uploaded and executed by an [InstructionPipe].
@@ -185,11 +193,11 @@ abstract base class RetainedSlot {
   const RetainedSlot();
 }
 
-/// Adds or updates backend-owned retained instructions.
-abstract interface class InstructionBuilderPipe<T extends RetainedSlot> {
-  void addRenderable(T renderable, InstructionSet instructionSet);
-  void updateRenderable(T renderable);
-  bool validateRenderable(T renderable);
+/// Adds, updates, and validates typed backend-owned retained slots.
+abstract interface class RetainedSlotPipe<T extends RetainedSlot> {
+  void addSlot(T slot, InstructionSet instructionSet);
+  void updateSlot(T slot);
+  bool validateSlot(T slot);
 }
 
 /// Owns backend resources and executes instructions built during traversal.

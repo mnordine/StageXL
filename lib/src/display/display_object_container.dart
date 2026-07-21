@@ -429,6 +429,14 @@ abstract class DisplayObjectContainer extends InteractiveObject
   //----------------------------------------------------------------------------
 
   @override
+  void collectRenderables(RenderBuildContext context) {
+    for (var i = 0; i < _children.length; i++) {
+      final child = _children[i];
+      if (child.visible && child.off == false) context.addRenderable(child);
+    }
+  }
+
+  @override
   void renderLegacy(RenderState renderState) {
     for (var i = 0; i < _children.length; i++) {
       final child = _children[i];

@@ -31,6 +31,10 @@ abstract class RenderContext {
   int? get maxTextureSize;
   Object? getParameter(int parameter);
 
+  Matrix3D? get activeProjectionMatrix => null;
+
+  void activateProjectionMatrix(Matrix3D matrix) {}
+
   void reset();
   void clear(int color);
   void flush();
@@ -53,9 +57,38 @@ abstract class RenderContext {
     }
   }
 
-  void beginRenderObject(RenderObject renderObject) {}
+  void beginRenderObject(RenderState renderState, RenderObject renderObject) {}
 
   void endRenderObject(RenderObject renderObject) {}
+
+  void beginCanvasShadow(RenderState renderState, int color, num blur, num offsetX, num offsetY) {}
+
+  void endCanvasShadow() {}
+
+  void _beginCanvasShadow(RenderState renderState, int color, num blur, num offsetX, num offsetY) {
+    final instructionSystem = _retainedInstructionSystem;
+    if (instructionSystem?.isCollecting ?? false) {
+      instructionSystem!.recordCanvasShadow(
+        renderState,
+        color,
+        blur.toDouble(),
+        offsetX.toDouble(),
+        offsetY.toDouble(),
+        begin: true,
+      );
+    } else {
+      beginCanvasShadow(renderState, color, blur, offsetX, offsetY);
+    }
+  }
+
+  void _endCanvasShadow() {
+    final instructionSystem = _retainedInstructionSystem;
+    if (instructionSystem?.isCollecting ?? false) {
+      instructionSystem!.recordCanvasShadow(null, 0, 0, 0, 0, begin: false);
+    } else {
+      endCanvasShadow();
+    }
+  }
 
   void _beginRenderMask(RenderState renderState, RenderMask mask) {
     final instructionSystem = _retainedInstructionSystem;

@@ -60,6 +60,9 @@ class VideoObject extends InteractiveObject {
   }
 
   @override
+  void collectRenderables(RenderBuildContext context) => context.addTextureQuad(_renderTextureQuad);
+
+  @override
   void renderLegacy(RenderState renderState) {
     renderState.renderTextureQuad(_renderTextureQuad);
   }

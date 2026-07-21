@@ -6,8 +6,10 @@ WebGPU systems. Registries belong to a renderer, not the process. Applications c
 `StageOptions.renderPipes`; self-contained extension objects can implement `RenderPipeProvider` to install their pipe
 lazily into each renderer that encounters them.
 
-StageXL's built-in display objects still use `renderLegacy(RenderState)` behind the default pipe while they are migrated.
-It is an internal compatibility path, not the extension contract.
+Built-in bitmaps, display containers, bitmap containers, meshes, Scale9 bitmaps, viewport masks, Canvas shadow wrappers,
+DOM overlays, and console glyphs use the same semantic collection API. Graphics and text still have an internal
+`renderLegacy(RenderState)` compatibility path while their backend-specific operations are converted to instructions. It
+is not the extension contract.
 
 The frame is split into these phases:
 
@@ -33,6 +35,11 @@ mask/filter boundaries, resource identities, blend modes, and vertex/index count
 scale, tint, vertex values, index values, projection values, and explicit data versions update retained data without
 rebuilding the instruction order.
 
+`RenderDirtyState` keeps independent structure, transform, color, geometry, texture, blend, mask, and filter versions.
+Versions are never globally cleared, so the same display object can be observed safely by multiple renderers or render
+groups. Built-in transform, alpha, mask, filter, blend, bitmap texture, mesh geometry, and Scale9 mutations mark their
+specific categories.
+
 Visibility changes, child reordering, texture replacement, blend-mode changes, geometry resizing, filter topology
 changes, and mask/filter/projection boundary changes rebuild only the affected retained instruction slots and batch run
 plans. The private backing lists retain their capacity and expose only typed, active entries.
@@ -56,5 +63,6 @@ unchanged. Structural changes, buffer replacement, pipeline changes, or bind-gro
 Every independent render root has its own retained `InstructionSet`; the Stage and diagnostic console therefore behave as
 implicit render groups. Set `DisplayObjectContainer.isRenderGroup` to retain a nested subtree independently. A nested
 group is represented by an instruction in its parent's set, so masks, filters, projection changes, and sibling order stay
-in the same execution timeline. Group transforms still update retained vertex data; the existing stable batch
-instructions inside the group may compile to WebGPU render bundles when `StageOptions.renderBundles` is enabled.
+in the same execution timeline. A group's transform is retained on the group instruction and composed with the active
+projection during execution. Moving a group therefore leaves descendant vertex buffers and render bundles unchanged.
+Nested groups compose their local transforms recursively.

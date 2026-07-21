@@ -366,6 +366,7 @@ class RenderContextWebGL extends RenderContext {
   RenderTexture? get activeRenderTexture => _activeRenderTextures[0];
   RenderProgramWebGL<Object?> get activeRenderProgram => _activeRenderProgram;
   RenderFrameBuffer? get activeRenderFrameBuffer => _activeRenderFrameBuffer;
+  @override
   Matrix3D get activeProjectionMatrix => _projectionMatrix;
   BlendMode? get activeBlendMode => _activeBlendMode;
 
@@ -965,6 +966,7 @@ class RenderContextWebGL extends RenderContext {
     _activeRenderTextures[index] = null;
   }
 
+  @override
   void activateProjectionMatrix(Matrix3D matrix) {
     if (_instructions.isCollecting) {
       _instructions.recordProjection(matrix);

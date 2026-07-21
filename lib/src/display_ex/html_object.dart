@@ -76,9 +76,12 @@ class HtmlObject<T extends HTMLElement> extends DisplayObject {
   //-----------------------------------------------------------------------------------------------
 
   @override
-  void renderLegacy(RenderState renderState) {
-    final globalMatrix = renderState.globalMatrix;
-    final globalAlpha = renderState.globalAlpha;
+  void collectRenderables(RenderBuildContext context) => _updateElement(context.globalMatrix, context.globalAlpha);
+
+  @override
+  void renderLegacy(RenderState renderState) => _updateElement(renderState.globalMatrix, renderState.globalAlpha);
+
+  void _updateElement(Matrix globalMatrix, double globalAlpha) {
     final visibility = visible && off == false;
     final stage = this.stage;
     final pixelRatio = stage != null ? stage.pixelRatio : 1.0;

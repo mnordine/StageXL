@@ -53,6 +53,7 @@ class RenderContextWebGPU extends RenderContext {
   int get viewportWidth => _activeRenderTexture?.width ?? _canvasElement.width;
   int get viewportHeight => _activeRenderTexture?.height ?? _canvasElement.height;
   RenderTexture? get activeRenderTexture => _activeRenderTexture;
+  @override
   Matrix3D get activeProjectionMatrix => _projectionMatrix;
   int get sampleCount => _activeRenderTexture == null && deviceSystem.antialias ? 4 : 1;
 
@@ -107,6 +108,7 @@ class RenderContextWebGPU extends RenderContext {
     _clearColor = null;
   }
 
+  @override
   void activateProjectionMatrix(Matrix3D matrix) {
     if (_instructionSystem.isCollecting) {
       _instructionSystem.recordProjection(matrix);
@@ -125,7 +127,8 @@ class RenderContextWebGPU extends RenderContext {
   void executeRenderFrame(RenderState renderState) => _instructionSystem.execute();
 
   @override
-  void beginRenderObject(RenderObject renderObject) => _instructionSystem.beginRenderable(renderObject);
+  void beginRenderObject(RenderState renderState, RenderObject renderObject) =>
+      _instructionSystem.beginRenderable(renderState, renderObject);
 
   @override
   void endRenderObject(RenderObject renderObject) => _instructionSystem.endRenderable(renderObject);

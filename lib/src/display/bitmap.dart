@@ -20,9 +20,17 @@ part of '../display.dart';
 
 class Bitmap extends DisplayObject {
   /// The BitmapData object being referenced.
-  BitmapData? bitmapData;
+  BitmapData? _bitmapData;
 
-  Bitmap([this.bitmapData]);
+  Bitmap([BitmapData? bitmapData]) : _bitmapData = bitmapData;
+
+  BitmapData? get bitmapData => _bitmapData;
+
+  set bitmapData(BitmapData? value) {
+    if (identical(_bitmapData, value)) return;
+    _bitmapData = value;
+    invalidateRenderStructure(RenderDirtyFlags.texture);
+  }
 
   //---------------------------------------------------------------------------
 
@@ -38,6 +46,12 @@ class Bitmap extends DisplayObject {
     if (localX < 0.0 || localX >= bitmapData!.width) return null;
     if (localY < 0.0 || localY >= bitmapData!.height) return null;
     return this;
+  }
+
+  @override
+  void collectRenderables(RenderBuildContext context) {
+    final bitmapData = this.bitmapData;
+    if (bitmapData != null) context.addTextureQuad(bitmapData.renderTextureQuad);
   }
 
   @override

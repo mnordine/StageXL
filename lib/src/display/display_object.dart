@@ -93,6 +93,7 @@ abstract class DisplayObject extends EventDispatcher
   var _transformationMatrixRefresh = true;
   var _renderStructureVersion = 0;
   var _renderDataVersion = 0;
+  final _renderDirtyState = RenderDirtyState();
 
   @override
   RenderPipeId get renderPipeId => RenderObject.defaultRenderPipeId;
@@ -103,12 +104,19 @@ abstract class DisplayObject extends EventDispatcher
   @override
   int get renderDataVersion => _renderDataVersion;
 
-  void invalidateRenderStructure() {
+  @override
+  RenderDirtyState get renderDirtyState => _renderDirtyState;
+
+  void invalidateRenderStructure([RenderDirtyFlags flags = .structure]) {
     _renderStructureVersion++;
     _renderDataVersion++;
+    _renderDirtyState.mark(flags | .structure);
   }
 
-  void invalidateRenderData() => _renderDataVersion++;
+  void invalidateRenderData([RenderDirtyFlags flags = .allData]) {
+    _renderDataVersion++;
+    _renderDirtyState.mark(flags);
+  }
 
   //-------------------------------------------------------------------------------------------------
 
@@ -228,7 +236,7 @@ abstract class DisplayObject extends EventDispatcher
   set x(num value) {
     _x = value;
     _transformationMatrixRefresh = true;
-    invalidateRenderData();
+    invalidateRenderData(.transform);
   }
 
   /// The y-coordinate of this display object relative to the
@@ -245,7 +253,7 @@ abstract class DisplayObject extends EventDispatcher
   set y(num value) {
     _y = value;
     _transformationMatrixRefresh = true;
-    invalidateRenderData();
+    invalidateRenderData(.transform);
   }
 
   /// The x-coordinate of the pivot point of this display object.
@@ -263,7 +271,7 @@ abstract class DisplayObject extends EventDispatcher
   set pivotX(num value) {
     _pivotX = value;
     _transformationMatrixRefresh = true;
-    invalidateRenderData();
+    invalidateRenderData(.transform);
   }
 
   /// The y-coordinate of the pivot point of this display object.
@@ -281,7 +289,7 @@ abstract class DisplayObject extends EventDispatcher
   set pivotY(num value) {
     _pivotY = value;
     _transformationMatrixRefresh = true;
-    invalidateRenderData();
+    invalidateRenderData(.transform);
   }
 
   /// The horizontal scale (percentage) of the object as applied from the
@@ -299,7 +307,7 @@ abstract class DisplayObject extends EventDispatcher
   set scaleX(num value) {
     _scaleX = value;
     _transformationMatrixRefresh = true;
-    invalidateRenderData();
+    invalidateRenderData(.transform);
   }
 
   /// The vertical scale (percentage) of the object as applied from the
@@ -317,7 +325,7 @@ abstract class DisplayObject extends EventDispatcher
   set scaleY(num value) {
     _scaleY = value;
     _transformationMatrixRefresh = true;
-    invalidateRenderData();
+    invalidateRenderData(.transform);
   }
 
   /// The horizontal skew of this object.
@@ -329,7 +337,7 @@ abstract class DisplayObject extends EventDispatcher
   set skewX(num value) {
     _skewX = value;
     _transformationMatrixRefresh = true;
-    invalidateRenderData();
+    invalidateRenderData(.transform);
   }
 
   /// The vertical skew of this object.
@@ -341,7 +349,7 @@ abstract class DisplayObject extends EventDispatcher
   set skewY(num value) {
     _skewY = value;
     _transformationMatrixRefresh = true;
-    invalidateRenderData();
+    invalidateRenderData(.transform);
   }
 
   /// The rotation of this display object, in radians, from its original
@@ -360,7 +368,7 @@ abstract class DisplayObject extends EventDispatcher
   set rotation(num value) {
     _rotation = value;
     _transformationMatrixRefresh = true;
-    invalidateRenderData();
+    invalidateRenderData(.transform);
   }
 
   /// The alpha transparency value of the object specified.
@@ -375,7 +383,7 @@ abstract class DisplayObject extends EventDispatcher
   @override
   set alpha(num value) {
     _alpha = value.clamp(0.0, 1.0);
-    invalidateRenderData();
+    invalidateRenderData(.color);
   }
 
   /// The calling display object is masked by the specified mask object.
@@ -389,7 +397,7 @@ abstract class DisplayObject extends EventDispatcher
 
   set mask(Mask? value) {
     _mask = value;
-    invalidateRenderStructure();
+    invalidateRenderStructure(.mask);
   }
 
   /// The filters currently associated with this display object.
@@ -399,7 +407,7 @@ abstract class DisplayObject extends EventDispatcher
 
   set filters(List<BitmapFilter> value) {
     _filters = value;
-    invalidateRenderStructure();
+    invalidateRenderStructure(.filter);
   }
 
   /// A value from the [BlendMode] class that specifies which blend mode to use.
@@ -415,7 +423,7 @@ abstract class DisplayObject extends EventDispatcher
 
   set blendMode(BlendMode? value) {
     _blendMode = value;
-    invalidateRenderStructure();
+    invalidateRenderStructure(.blend);
   }
 
   /// This getter gives you access to the underlying [RenderTextureQuad] if
@@ -519,7 +527,7 @@ abstract class DisplayObject extends EventDispatcher
     _pivotX = pivotX;
     _pivotY = pivotY;
     _transformationMatrixRefresh = true;
-    invalidateRenderData();
+    invalidateRenderData(.transform);
   }
 
   //----------------------------------------------------------------------------
@@ -992,6 +1000,9 @@ abstract class DisplayObject extends EventDispatcher
   //----------------------------------------------------------------------------
 
   /// Internal rendering hook for StageXL's built-in display-object pipe.
+
+  @override
+  void collectRenderables(RenderBuildContext context) => context.addLegacy(this);
 
   @override
   void renderLegacy(RenderState renderState) {

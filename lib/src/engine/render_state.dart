@@ -166,7 +166,6 @@ class RenderState {
   //---------------------------------------------------------------------------
 
   void renderObject(RenderObject renderObject) {
-    _renderContext.beginRenderObject(renderObject);
     final matrix = renderObject.transformationMatrix;
     final blendMode = renderObject.blendMode;
     final alpha = renderObject.alpha;
@@ -191,27 +190,20 @@ class RenderState {
     cs2.colorScaleB = cs1.colorScaleB;
     cs2.colorScaleA = cs1.colorScaleA;
 
-    if (renderObject is RenderObject3D && renderContext is RenderContextWebGL) {
-      final renderObject3D = renderObject;
-      final renderContextWebGL = renderContext as RenderContextWebGL;
-      cs1.matrix3D.copyFrom(renderContextWebGL.activeProjectionMatrix);
+    final activeProjectionMatrix = renderContext.activeProjectionMatrix;
+    if (renderObject case final RenderObject3D renderObject3D when activeProjectionMatrix != null) {
+      cs1.matrix3D.copyFrom(activeProjectionMatrix);
       cs2.matrix3D.copyFrom2DAndConcat(cs2.matrix, cs1.matrix3D);
       cs2.matrix3D.prepend(renderObject3D.projectionMatrix3D);
       cs2.matrix3D.prependInverse2D(cs2.matrix);
-      renderContextWebGL.activateProjectionMatrix(cs2.matrix3D);
-    } else if (renderObject is RenderObject3D && renderContext is RenderContextWebGPU) {
-      final renderObject3D = renderObject;
-      final renderContextWebGPU = renderContext as RenderContextWebGPU;
-      cs1.matrix3D.copyFrom(renderContextWebGPU.activeProjectionMatrix);
-      cs2.matrix3D.copyFrom2DAndConcat(cs2.matrix, cs1.matrix3D);
-      cs2.matrix3D.prepend(renderObject3D.projectionMatrix3D);
-      cs2.matrix3D.prependInverse2D(cs2.matrix);
-      renderContextWebGPU.activateProjectionMatrix(cs2.matrix3D);
+      renderContext.activateProjectionMatrix(cs2.matrix3D);
     }
 
     _currentContextState = cs2;
 
     //-----------
+
+    _renderContext.beginRenderObject(this, renderObject);
 
     if (maskAfter) renderContext._beginRenderMask(this, mask);
 
@@ -227,18 +219,14 @@ class RenderState {
 
     //-----------
 
+    _renderContext.endRenderObject(renderObject);
     _currentContextState = cs1;
 
-    if (renderObject is RenderObject3D && renderContext is RenderContextWebGL) {
-      final renderContextWebGL = renderContext as RenderContextWebGL;
-      renderContextWebGL.activateProjectionMatrix(cs1.matrix3D);
-    } else if (renderObject is RenderObject3D && renderContext is RenderContextWebGPU) {
-      final renderContextWebGPU = renderContext as RenderContextWebGPU;
-      renderContextWebGPU.activateProjectionMatrix(cs1.matrix3D);
+    if (renderObject is RenderObject3D && activeProjectionMatrix != null) {
+      renderContext.activateProjectionMatrix(cs1.matrix3D);
     }
 
     if (maskBefore) renderContext._endRenderMask(this, mask);
-    _renderContext.endRenderObject(renderObject);
   }
 
   void _addRenderable(RenderObject renderObject) => _renderContext.renderPipes.addRenderable(renderObject, buildContext);

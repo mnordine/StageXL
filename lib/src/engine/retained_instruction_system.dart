@@ -144,6 +144,22 @@ final class _RetainedInstructionSystem {
     _cursor++;
   }
 
+  void recordCanvasShadow(
+    RenderState? state,
+    int color,
+    double blur,
+    double offsetX,
+    double offsetY, {
+    required bool begin,
+  }) {
+    final old = _instructionAtCursor;
+    final reusable = old is _RetainedCanvasShadowCommand && old.begin == begin;
+    final command = reusable ? old : _RetainedCanvasShadowCommand(renderContext, begin);
+    if (!reusable) _replace(command);
+    if (state != null) command.update(state, color, blur, offsetX, offsetY);
+    _cursor++;
+  }
+
   void recordFilteredQuad(RenderState state, RenderTextureQuad quad, List<RenderFilter> filters) {
     final old = _instructionAtCursor;
     final reusable = old is _RetainedFilteredQuadCommand && old.matches(filters);
@@ -392,6 +408,33 @@ final class _RetainedMaskCommand extends _RetainedCommand {
   @override
   void execute(RenderContext renderContext) =>
       begin ? renderContext.beginRenderMask(state, mask) : renderContext.endRenderMask(state, mask);
+}
+
+final class _RetainedCanvasShadowCommand extends _RetainedCommand {
+  final bool begin;
+  var color = 0;
+  var blur = 0.0;
+  var offsetX = 0.0;
+  var offsetY = 0.0;
+
+  _RetainedCanvasShadowCommand(super.renderContext, this.begin);
+
+  void update(RenderState source, int color, double blur, double offsetX, double offsetY) {
+    updateState(source);
+    this.color = color;
+    this.blur = blur;
+    this.offsetX = offsetX;
+    this.offsetY = offsetY;
+  }
+
+  @override
+  void execute(RenderContext renderContext) {
+    if (begin) {
+      renderContext.beginCanvasShadow(state, color, blur, offsetX, offsetY);
+    } else {
+      renderContext.endCanvasShadow();
+    }
+  }
 }
 
 abstract base class _RetainedFilterCommand extends _RetainedCommand {

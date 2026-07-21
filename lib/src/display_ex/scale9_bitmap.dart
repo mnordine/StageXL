@@ -11,6 +11,7 @@ class Scale9Bitmap extends Bitmap {
   num _height = 0.0;
 
   final List<RenderTextureQuad?> _slices = .filled(9, null);
+  final _sliceMatrix = Matrix.fromIdentity();
 
   Scale9Bitmap(BitmapData bitmapData, Rectangle<num> grid)
       : _grid = grid,
@@ -30,7 +31,9 @@ class Scale9Bitmap extends Bitmap {
 
   @override
   set width(num value) {
+    if (_width == value) return;
     _width = value;
+    invalidateRenderData(RenderDirtyFlags.geometry);
   }
 
   /// Gets and sets the height of this Scale9Bitmap. In contrast to other
@@ -41,7 +44,9 @@ class Scale9Bitmap extends Bitmap {
 
   @override
   set height(num value) {
+    if (_height == value) return;
     _height = value;
+    invalidateRenderData(RenderDirtyFlags.geometry);
   }
 
   /// Gets and sets the grid rectangle within the BitmapData to be scaled.
@@ -51,6 +56,7 @@ class Scale9Bitmap extends Bitmap {
   set grid(Rectangle<num> value) {
     _grid = value;
     _updateRenderTextureQuads();
+    invalidateRenderData(RenderDirtyFlags.geometry | RenderDirtyFlags.texture);
   }
 
   /// Gets and sets the BitmapData of this Scale9Bitmap.
@@ -71,6 +77,33 @@ class Scale9Bitmap extends Bitmap {
     if (localX < 0.0 || localX >= _width) return null;
     if (localY < 0.0 || localY >= _height) return null;
     return this;
+  }
+
+  @override
+  void collectRenderables(RenderBuildContext context) {
+    if (_slices.first == null) return;
+
+    final w0 = _slices[0]!.targetWidth;
+    final h0 = _slices[0]!.targetHeight;
+    final w1 = _slices[4]!.targetWidth;
+    final h1 = _slices[4]!.targetHeight;
+    final w2 = _slices[8]!.targetWidth;
+    final h2 = _slices[8]!.targetHeight;
+
+    for (var j = 0; j < 3; j++) {
+      final sh = j == 0 ? h0 : j == 2 ? h2 : h1;
+      final th = j == 0 ? h0 : j == 2 ? h2 : height - h0 - h2;
+      final ty = j == 0 ? 0 : j == 1 ? h0 : height - h2;
+      for (var i = 0; i < 3; i++) {
+        final sw = i == 0 ? w0 : i == 2 ? w2 : w1;
+        final tw = i == 0 ? w0 : i == 2 ? w2 : width - w0 - w2;
+        final tx = i == 0 ? 0 : i == 1 ? w0 : width - w2;
+        _sliceMatrix.setTo(tw / sw, 0, 0, th / sh, tx, ty);
+        context.push(_sliceMatrix, 1.0);
+        context.addTextureQuad(_slices[i + j * 3]!);
+        context.pop();
+      }
+    }
   }
 
   @override

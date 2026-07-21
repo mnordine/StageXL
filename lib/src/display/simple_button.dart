@@ -109,6 +109,12 @@ class SimpleButton extends InteractiveObject {
   }
 
   @override
+  void collectRenderables(RenderBuildContext context) {
+    final displayObject = _getDisplayObject();
+    if (displayObject != null) context.addRenderable(displayObject);
+  }
+
+  @override
   void renderLegacy(RenderState renderState) {
     final displayObject = _getDisplayObject();
     if (displayObject != null) {

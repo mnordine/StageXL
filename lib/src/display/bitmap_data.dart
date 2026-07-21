@@ -259,6 +259,9 @@ class BitmapData implements BitmapDrawable {
   //----------------------------------------------------------------------------
 
   @override
+  void collectRenderables(RenderBuildContext context) => context.addTextureQuad(renderTextureQuad);
+
+  @override
   void renderLegacy(RenderState renderState) {
     renderState.renderTextureQuad(renderTextureQuad);
   }

@@ -41,6 +41,19 @@ class ViewportContainer extends DisplayObjectContainer {
   }
 
   @override
+  void collectRenderables(RenderBuildContext context) {
+    if (_viewportRectangle == null) {
+      super.collectRenderables(context);
+    } else {
+      context.beginMask(_viewportMask!);
+      context.push(_viewportMatrix, 1.0, context.globalBlendMode);
+      super.collectRenderables(context);
+      context.pop();
+      context.endMask(_viewportMask!);
+    }
+  }
+
+  @override
   void renderLegacy(RenderState renderState) {
     if (_viewportRectangle == null) {
       super.renderLegacy(renderState);

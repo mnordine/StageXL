@@ -160,6 +160,7 @@ void main() {
     stage.materialize(16, 16);
     expect(stage.renderContext.renderStatistics.webgpuInstructionBuildCount, 0);
     expect(stage.renderContext.renderStatistics.webgpuInstructionReuseCount, 2);
+    expect(stage.renderContext.renderStatistics.webgpuInstructionUploadCount, 0);
 
     group.addChild(Bitmap(bitmapData)..x = 16);
     stage.materialize(32, 16);

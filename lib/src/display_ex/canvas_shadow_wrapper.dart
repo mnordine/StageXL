@@ -114,6 +114,13 @@ class CanvasShadowWrapper extends DisplayObject {
   //-----------------------------------------------------------------------------------------------
 
   @override
+  void collectRenderables(RenderBuildContext context) {
+    context.beginCanvasShadow(shadowColor, shadowBlur, shadowOffsetX, shadowOffsetY);
+    context.addRenderable(displayObject);
+    context.endCanvasShadow();
+  }
+
+  @override
   void renderLegacy(RenderState renderState) {
     final renderContext = renderState.renderContext;
     if (renderContext is RenderContextCanvas) {

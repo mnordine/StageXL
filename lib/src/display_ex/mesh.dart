@@ -29,7 +29,15 @@ part of '../display_ex.dart';
 /// coordinate system of the BitmapData.
 
 class Mesh extends DisplayObject {
-  BitmapData bitmapData;
+  BitmapData _bitmapData;
+
+  BitmapData get bitmapData => _bitmapData;
+
+  set bitmapData(BitmapData value) {
+    if (identical(_bitmapData, value)) return;
+    _bitmapData = value;
+    invalidateRenderStructure(RenderDirtyFlags.texture);
+  }
 
   final int indexCount;
   final int triangleCount;
@@ -42,8 +50,9 @@ class Mesh extends DisplayObject {
   /// Create a new Mesh with [vertexCount] vertices and [triangleCount]
   /// triangles.
 
-  Mesh(this.bitmapData, this.vertexCount, this.triangleCount)
+  Mesh(BitmapData bitmapData, this.vertexCount, this.triangleCount)
       : indexCount = triangleCount * 3,
+        _bitmapData = bitmapData,
         ixList = Int16List(triangleCount * 3),
         vxList = Float32List(vertexCount * 4);
 
@@ -95,6 +104,7 @@ class Mesh extends DisplayObject {
     vxList[offset + 1] = y.toDouble();
     vxList[offset + 2] = u.toDouble();
     vxList[offset + 3] = v.toDouble();
+    invalidateRenderData(RenderDirtyFlags.geometry);
   }
 
   /// Set the XY values of a vertex.
@@ -106,6 +116,7 @@ class Mesh extends DisplayObject {
     final offset = vertex << 2;
     vxList[offset + 0] = x.toDouble();
     vxList[offset + 1] = y.toDouble();
+    invalidateRenderData(RenderDirtyFlags.geometry);
   }
 
   /// Set the UV values of a vertex.
@@ -117,12 +128,14 @@ class Mesh extends DisplayObject {
     final offset = vertex << 2;
     vxList[offset + 2] = u.toDouble();
     vxList[offset + 3] = v.toDouble();
+    invalidateRenderData(RenderDirtyFlags.geometry);
   }
 
   /// Set the corresponding vertex for an index.
 
   void setIndex(int index, int vertex) {
     ixList[index] = vertex;
+    invalidateRenderData(RenderDirtyFlags.geometry);
   }
 
   /// Set the corresponding vertices for the triangle indices.
@@ -132,6 +145,7 @@ class Mesh extends DisplayObject {
     ixList[offset + 0] = v1;
     ixList[offset + 1] = v2;
     ixList[offset + 2] = v3;
+    invalidateRenderData(RenderDirtyFlags.geometry);
   }
 
   //---------------------------------------------------------------------------
@@ -197,6 +211,30 @@ class Mesh extends DisplayObject {
     }
 
     return null;
+  }
+
+  @override
+  void collectRenderables(RenderBuildContext context) {
+    final renderTextureQuad = bitmapData.renderTextureQuad;
+    final matrix = renderTextureQuad.samplerMatrix;
+    final ma = matrix.a * bitmapData.width;
+    final mb = matrix.b * bitmapData.width;
+    final mc = matrix.c * bitmapData.height;
+    final md = matrix.d * bitmapData.height;
+    final mx = matrix.tx;
+    final my = matrix.tx;
+    final vxListTemp = _vxListTemp ??= Float32List(vxList.length);
+
+    for (var i = 0; i < vxListTemp.length - 3; i += 4) {
+      final x = vxList[i + 2];
+      final y = vxList[i + 3];
+      vxListTemp[i + 0] = vxList[i + 0];
+      vxListTemp[i + 1] = vxList[i + 1];
+      vxListTemp[i + 2] = mx + x * ma + y * mc;
+      vxListTemp[i + 3] = my + x * mb + y * md;
+    }
+
+    context.addTextureMesh(bitmapData.renderTexture, ixList, vxListTemp);
   }
 
   @override

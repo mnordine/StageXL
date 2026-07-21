@@ -147,6 +147,27 @@ void main() {
     expect(sprite.renderStructureVersion, greaterThan(childStructureVersion));
   });
 
+  test('display objects track independent retained dirty categories', () {
+    final sprite = Sprite();
+    final dirty = sprite.renderDirtyState;
+
+    final transformVersion = dirty.transformVersion;
+    final colorVersion = dirty.colorVersion;
+    sprite.x = 10;
+    expect(dirty.transformVersion, greaterThan(transformVersion));
+    expect(dirty.colorVersion, colorVersion);
+
+    final structureVersion = dirty.structureVersion;
+    final maskVersion = dirty.maskVersion;
+    sprite.mask = Mask.rectangle(0, 0, 10, 10);
+    expect(dirty.structureVersion, greaterThan(structureVersion));
+    expect(dirty.maskVersion, greaterThan(maskVersion));
+
+    final blendVersion = dirty.blendVersion;
+    sprite.blendMode = .ADD;
+    expect(dirty.blendVersion, greaterThan(blendVersion));
+  });
+
   test('render pipe IDs are unique registry keys', () {
     final registry = RenderPipeRegistry();
     const id = RenderPipeId<Bitmap>('test.registry-bitmap');
@@ -205,5 +226,32 @@ void main() {
     expect(pixel[1], 128);
     expect(pixel[2], 0);
     expect(pixel[3], 255);
+  });
+
+  test('Canvas2D retains BitmapContainer transforms and shadow boundaries', () {
+    final canvas = HTMLCanvasElement()
+      ..width = 32
+      ..height = 16;
+    final options = StageOptions()
+      ..renderEngine = .Canvas2D
+      ..backgroundColor = Color.Transparent;
+    final bitmaps = BitmapContainer()
+      ..x = 4
+      ..addChild(Bitmap(BitmapData(8, 8, Color.Red))..x = 4);
+    final stage = Stage(canvas, width: 32, height: 16, options: options)
+      ..addChild(CanvasShadowWrapper(bitmaps, Color.Black, 2, 0, 0));
+
+    stage.materialize(0, 16);
+
+    final context = canvas.getContext('2d') as CanvasRenderingContext2D;
+    final inside = context.getImageData(9, 2, 1, 1).data.toDart;
+    final outside = context.getImageData(2, 2, 1, 1).data.toDart;
+    expect(inside[0], 255);
+    expect(inside[3], 255);
+    expect(outside[3], 0);
+    expect(stage.renderContext.renderStatistics.retainedInstructionCount, 3);
+
+    stage.materialize(16, 16);
+    expect(stage.renderContext.renderStatistics.retainedInstructionReuseCount, 1);
   });
 }

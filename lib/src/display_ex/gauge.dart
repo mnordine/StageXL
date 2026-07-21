@@ -56,6 +56,9 @@ class Gauge extends DisplayObject {
   }
 
   @override
+  void collectRenderables(RenderBuildContext context) => context.addTextureQuad(_getRenderTextureQuad());
+
+  @override
   void renderLegacy(RenderState renderState) {
     final renderTextureQuad = _getRenderTextureQuad();
     renderState.renderTextureQuad(renderTextureQuad);

@@ -133,6 +133,18 @@ class BitmapContainer extends DisplayObject
   DisplayObject? hitTestInput(num localX, num localY) => null;
 
   @override
+  void collectRenderables(RenderBuildContext context) {
+    for (var i = 0; i < _children.length; i++) {
+      final bitmap = _children[i];
+      final bitmapData = bitmap.bitmapData;
+      if (!bitmap.visible || bitmapData == null) continue;
+      context.push(bitmap.transformationMatrix, bitmap.alpha, bitmap.blendMode);
+      context.addTextureQuad(bitmapData.renderTextureQuad);
+      context.pop();
+    }
+  }
+
+  @override
   void renderLegacy(RenderState renderState) {
     if (renderState.renderContext is RenderContextWebGL) {
       _renderWebGL(renderState);

@@ -77,6 +77,23 @@ class StageConsole extends DisplayObject {
   }
 
   @override
+  void collectRenderables(RenderBuildContext context) {
+    if (_glyphs.isEmpty) return;
+
+    dispatchEvent(Event('Update'));
+    for (var y = 0; y < _consoleHeight; y++) {
+      for (var x = 0; x < _consoleWidth; x++) {
+        var index = x < _lines[y].length ? _lines[y].codeUnitAt(x) - 32 : 0;
+        if (index < 0 || index >= 64) index = 0;
+        _matrix.setTo(1.0, 0.0, 0.0, 1.0, x * 7, y * 14);
+        context.push(_matrix, 1.0, .NORMAL);
+        context.addTextureQuad(_glyphs[index]);
+        context.pop();
+      }
+    }
+  }
+
+  @override
   void renderLegacy(RenderState renderState) {
     if (_glyphs.isEmpty) return;
 

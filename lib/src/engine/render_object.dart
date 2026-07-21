@@ -1,5 +1,46 @@
 part of '../engine.dart';
 
+extension type const RenderDirtyFlags(int bits) {
+  static const none = RenderDirtyFlags(0);
+  static const structure = RenderDirtyFlags(1 << 0);
+  static const transform = RenderDirtyFlags(1 << 1);
+  static const color = RenderDirtyFlags(1 << 2);
+  static const geometry = RenderDirtyFlags(1 << 3);
+  static const texture = RenderDirtyFlags(1 << 4);
+  static const blend = RenderDirtyFlags(1 << 5);
+  static const mask = RenderDirtyFlags(1 << 6);
+  static const filter = RenderDirtyFlags(1 << 7);
+  static const allData = RenderDirtyFlags(0xFE);
+  static const all = RenderDirtyFlags(0xFF);
+
+  bool contains(RenderDirtyFlags flags) => bits & flags.bits != 0;
+
+  RenderDirtyFlags operator |(RenderDirtyFlags other) => RenderDirtyFlags(bits | other.bits);
+}
+
+/// Per-category versions that can be observed independently by multiple renderers.
+final class RenderDirtyState {
+  var structureVersion = 0;
+  var transformVersion = 0;
+  var colorVersion = 0;
+  var geometryVersion = 0;
+  var textureVersion = 0;
+  var blendVersion = 0;
+  var maskVersion = 0;
+  var filterVersion = 0;
+
+  void mark(RenderDirtyFlags flags) {
+    if (flags.contains(.structure)) structureVersion++;
+    if (flags.contains(.transform)) transformVersion++;
+    if (flags.contains(.color)) colorVersion++;
+    if (flags.contains(.geometry)) geometryVersion++;
+    if (flags.contains(.texture)) textureVersion++;
+    if (flags.contains(.blend)) blendVersion++;
+    if (flags.contains(.mask)) maskVersion++;
+    if (flags.contains(.filter)) filterVersion++;
+  }
+}
+
 /// The abstract [RenderObject] class defines the scene data consumed by a
 /// registered [RenderPipe]. All display objects implement this interface.
 
@@ -24,9 +65,20 @@ abstract class RenderObject {
   /// Changes when this object's retained data needs to be refreshed.
   int get renderDataVersion => 0;
 
-  /// Internal rendering hook used by StageXL's built-in render pipe.
-  void renderLegacy(RenderState renderState);
+  /// Category versions used by retained renderers. Null means only the coarse versions are available.
+  RenderDirtyState? get renderDirtyState => null;
+
+  /// Adds this object's backend-neutral operations to the current render plan.
+  void collectRenderables(RenderBuildContext context);
   void renderFiltered(RenderState renderState);
+}
+
+/// Compatibility contract for built-ins that still need direct [RenderState] access.
+///
+/// New renderables should implement [RenderObject.collectRenderables] or register a
+/// [RenderPipe] instead.
+abstract interface class LegacyRenderObject {
+  void renderLegacy(RenderState renderState);
 }
 
 /// The abstract [RenderObject3D] class adds a 3D projection matrix to
@@ -72,6 +124,9 @@ class _RenderTextureQuadObject implements RenderObject {
   @override
   int get renderDataVersion => 0;
 
+  @override
+  RenderDirtyState? get renderDirtyState => null;
+
   _RenderTextureQuadObject(this.renderTextureQuad, this.filters)
       : mask = null,
         cache = null;
@@ -84,9 +139,7 @@ class _RenderTextureQuadObject implements RenderObject {
   }
 
   @override
-  void renderLegacy(RenderState renderState) {
-    renderState.renderTextureQuad(renderTextureQuad);
-  }
+  void collectRenderables(RenderBuildContext context) => context.addTextureQuad(renderTextureQuad);
 
   @override
   void renderFiltered(RenderState renderState) {

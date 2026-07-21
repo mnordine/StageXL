@@ -204,6 +204,10 @@ class FlipBook extends InteractiveObject implements Animatable {
   }
 
   @override
+  void collectRenderables(RenderBuildContext context) =>
+      context.addTextureQuad(_bitmapDatas[_currentFrame].renderTextureQuad);
+
+  @override
   void renderLegacy(RenderState renderState) {
     final bitmapData = _bitmapDatas[_currentFrame];
     bitmapData.renderLegacy(renderState);

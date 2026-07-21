@@ -31,6 +31,9 @@ class GlassPlate extends InteractiveObject {
   }
 
   @override
+  void collectRenderables(RenderBuildContext context) {}
+
+  @override
   void renderLegacy(RenderState renderState) {
     // A GlassPlate is inherently invisible.
   }
