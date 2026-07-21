@@ -56,7 +56,7 @@ class WebGpuCommandSystem {
         stencilClearValue: 0,
       ),
     ));
-    renderContext.maskSystem.applyScissor(pass);
+    renderContext._maskSystem.applyScissor(pass);
     return pass;
   }
 

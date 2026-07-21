@@ -8,6 +8,9 @@ enum ShaderPrecision {
 /// The options used by the [Stage] constructor to setup the stage.
 
 class StageOptions {
+  /// Scene render pipes installed into each renderer created with these options.
+  final renderPipes = RenderPipeRegistry();
+
   /// The [RenderEngine] used to render the [Stage].
   ///
   /// Setting the render engine to WebGL will automatically fallback
@@ -165,6 +168,7 @@ class StageOptions {
     options.shaderPrecision = shaderPrecision;
     options.powerPreference = powerPreference;
     options.renderBundles = renderBundles;
+    options.renderPipes.copyFrom(renderPipes);
     options.resetColorOnRenderStart = resetColorOnRenderStart;
     options.resetStencilTestOnRenderStart = resetStencilTestOnRenderStart;
     options.resetScissorTestOnRenderStart = resetScissorTestOnRenderStart;

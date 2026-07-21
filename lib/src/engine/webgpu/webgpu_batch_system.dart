@@ -107,7 +107,7 @@ class _WebGpuBundleKey {
   }
 }
 
-class WebGpuBatchSystem {
+class _WebGpuBatchSystem {
   static const _floatsPerVertex = 9;
   static const _bytesPerVertex = _floatsPerVertex * 4;
   static const _bytesPerIndex = 4;
@@ -130,7 +130,7 @@ class WebGpuBatchSystem {
   var _indexPosition = 0;
   var _vertexCount = 0;
 
-  WebGpuBatchSystem(this.renderContext) {
+  _WebGpuBatchSystem(this.renderContext) {
     _vertices = _createCpuVertexData(_floatsPerVertex * 4);
     _indices = _createCpuIndexData(12);
     _vertexBuffer = _createVertexBuffer(_bytesPerVertex * 4);
@@ -147,16 +147,12 @@ class WebGpuBatchSystem {
     num b = 1,
     num a = 1,
   ]) {
-    if (renderContext.maskSystem.isRenderingStencilMask) {
-      renderContext.maskSystem.renderTriangleMesh(
+    if (renderContext._maskSystem.isRenderingStencilMask) {
+      renderContext._maskSystem.renderTriangleMesh(
         renderState,
         renderTextureQuad.hasCustomVertices ? renderTextureQuad.ixList : renderTextureQuad.ixListQuad,
         renderTextureQuad.hasCustomVertices ? renderTextureQuad.vxList : renderTextureQuad.vxListQuad,
       );
-      return;
-    }
-    if (renderContext.instructionSystem.isCollecting) {
-      renderContext.instructionSystem.recordTextureQuad(renderState, renderTextureQuad, r, g, b, a);
       return;
     }
     if (renderTextureQuad.hasCustomVertices) {
@@ -196,12 +192,8 @@ class WebGpuBatchSystem {
     num b = 1,
     num a = 1,
   ]) {
-    if (renderContext.maskSystem.isRenderingStencilMask) {
-      renderContext.maskSystem.renderTriangleMesh(renderState, ixList, vxList);
-      return;
-    }
-    if (renderContext.instructionSystem.isCollecting) {
-      renderContext.instructionSystem.recordTextureMesh(renderState, renderTexture, ixList, vxList, r, g, b, a);
+    if (renderContext._maskSystem.isRenderingStencilMask) {
+      renderContext._maskSystem.renderTriangleMesh(renderState, ixList, vxList);
       return;
     }
     final vertexCount = vxList.length >> 2;
@@ -315,7 +307,7 @@ class WebGpuBatchSystem {
 
     final encodeStopwatch = Stopwatch()..start();
     final pass = renderContext.commandSystem.beginColorPass(clearColor);
-    final stencilValue = renderContext.maskSystem.activeStencilValue;
+    final stencilValue = renderContext._maskSystem.activeStencilValue;
     if (stencilValue > 0) {
       pass.setStencilReference(stencilValue);
     }

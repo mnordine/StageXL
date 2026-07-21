@@ -95,7 +95,7 @@ class BitmapDataUpdateBatch {
   void draw(BitmapDrawable source, [Matrix? matrix]) {
     final renderState = RenderState(_renderContext, _drawMatrix);
     if (matrix != null) renderState.globalMatrix.prepend(matrix);
-    source.render(renderState);
+    source.renderLegacy(renderState);
   }
 
   //---------------------------------------------------------------------------

@@ -114,7 +114,7 @@ class CanvasShadowWrapper extends DisplayObject {
   //-----------------------------------------------------------------------------------------------
 
   @override
-  void render(RenderState renderState) {
+  void renderLegacy(RenderState renderState) {
     final renderContext = renderState.renderContext;
     if (renderContext is RenderContextCanvas) {
       final rawContext = renderContext.rawContext;

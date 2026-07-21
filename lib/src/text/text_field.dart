@@ -222,7 +222,7 @@ class TextField extends InteractiveObject {
   }
 
   @override
-  void render(RenderState renderState) {
+  void renderLegacy(RenderState renderState) {
     _refreshTextLineMetrics();
 
     if (renderState.renderContext is RenderContextWebGL || _cacheAsBitmap) {

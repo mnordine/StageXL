@@ -26,7 +26,7 @@ class Shape extends DisplayObject {
   }
 
   @override
-  void render(RenderState renderState) {
-    graphics.render(renderState);
+  void renderLegacy(RenderState renderState) {
+    graphics.renderLegacy(renderState);
   }
 }

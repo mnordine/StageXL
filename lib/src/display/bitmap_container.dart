@@ -133,7 +133,7 @@ class BitmapContainer extends DisplayObject
   DisplayObject? hitTestInput(num localX, num localY) => null;
 
   @override
-  void render(RenderState renderState) {
+  void renderLegacy(RenderState renderState) {
     if (renderState.renderContext is RenderContextWebGL) {
       _renderWebGL(renderState);
     } else if (renderState.renderContext is RenderContextWebGPU) {

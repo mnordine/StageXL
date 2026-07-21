@@ -1,11 +1,11 @@
 part of '../engine.dart';
 
-/// The abstract [RenderObject] class defines the interface for a class
-/// that can be rendered with the [RenderState.renderObject] method. All
-/// display objects do implement this interface and therefore they can be
-/// rendered by the engine.
+/// The abstract [RenderObject] class defines the scene data consumed by a
+/// registered [RenderPipe]. All display objects implement this interface.
 
 abstract class RenderObject {
+  static const defaultRenderPipeId = RenderPipeId<RenderObject>('stagexl.display-object');
+
   Matrix get transformationMatrix;
   BlendMode? get blendMode;
   num get alpha;
@@ -16,7 +16,16 @@ abstract class RenderObject {
 
   Rectangle<num> get bounds;
 
-  void render(RenderState renderState);
+  RenderPipeId get renderPipeId => defaultRenderPipeId;
+
+  /// Changes when this object emits a different instruction topology.
+  int get renderStructureVersion => 0;
+
+  /// Changes when this object's retained data needs to be refreshed.
+  int get renderDataVersion => 0;
+
+  /// Internal rendering hook used by StageXL's built-in render pipe.
+  void renderLegacy(RenderState renderState);
   void renderFiltered(RenderState renderState);
 }
 
@@ -54,6 +63,15 @@ class _RenderTextureQuadObject implements RenderObject {
   @override
   final num alpha = 1.0;
 
+  @override
+  RenderPipeId get renderPipeId => RenderObject.defaultRenderPipeId;
+
+  @override
+  int get renderStructureVersion => 0;
+
+  @override
+  int get renderDataVersion => 0;
+
   _RenderTextureQuadObject(this.renderTextureQuad, this.filters)
       : mask = null,
         cache = null;
@@ -66,7 +84,7 @@ class _RenderTextureQuadObject implements RenderObject {
   }
 
   @override
-  void render(RenderState renderState) {
+  void renderLegacy(RenderState renderState) {
     renderState.renderTextureQuad(renderTextureQuad);
   }
 

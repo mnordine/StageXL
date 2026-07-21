@@ -106,7 +106,36 @@ void main() {
     expect(stage.renderContext.renderStatistics.webgpuInstructionBuildCount, 1);
   });
 
-  test('WebGPU captures direct batch-system draws in display-list order when available', () async {
+  test('WebGPU captures custom render-pipe draws in display-list order when available', () async {
+    final options = StageOptions()
+      ..renderEngine = .WebGPU
+      ..backgroundColor = Color.Transparent
+      ..stageRenderMode = .AUTO;
+    options.renderPipes.register(_TintedPipeBitmap.pipeId, const _TintedBitmapPipe());
+    final canvas = HTMLCanvasElement()
+      ..width = 64
+      ..height = 64;
+    final stage = await Stage.create(canvas, width: 64, height: 64, options: options);
+
+    if (stage.renderEngine != .WebGPU) return;
+
+    final bitmapData = BitmapData(16, 16, Color.Red);
+    stage
+      ..addChild(Bitmap(bitmapData))
+      ..addChild(_TintedPipeBitmap(bitmapData)..x = 16)
+      ..addChild(Bitmap(bitmapData)..x = 32);
+
+    stage.materialize(0, 16);
+
+    final renderContext = stage.renderContext as RenderContextWebGPU;
+    expect(renderContext.renderStatistics.drawCount, 1);
+    expect(renderContext.renderStatistics.webgpuInstructionBuildCount, 1);
+
+    stage.materialize(16, 16);
+    expect(renderContext.renderStatistics.webgpuInstructionReuseCount, 1);
+  });
+
+  test('WebGPU retains nested render groups independently when available', () async {
     final options = StageOptions()
       ..renderEngine = .WebGPU
       ..backgroundColor = Color.Transparent
@@ -119,20 +148,23 @@ void main() {
     if (stage.renderEngine != .WebGPU) return;
 
     final bitmapData = BitmapData(16, 16, Color.Red);
-    stage
-      ..addChild(Bitmap(bitmapData))
-      ..addChild(_DirectWebGpuBatchBitmap(bitmapData)..x = 16)
-      ..addChild(Bitmap(bitmapData)..x = 32);
+    final group = Sprite()
+      ..isRenderGroup = true
+      ..addChild(Bitmap(bitmapData));
+    stage.addChild(group);
 
     stage.materialize(0, 16);
+    expect(stage.renderContext.renderStatistics.webgpuInstructionBuildCount, 2);
 
-    final renderContext = stage.renderContext as RenderContextWebGPU;
-    expect(renderContext.batchSystem.isEmpty, isTrue);
-    expect(renderContext.renderStatistics.drawCount, 1);
-    expect(renderContext.renderStatistics.webgpuInstructionBuildCount, 1);
-
+    group.x = 8;
     stage.materialize(16, 16);
-    expect(renderContext.renderStatistics.webgpuInstructionReuseCount, 1);
+    expect(stage.renderContext.renderStatistics.webgpuInstructionBuildCount, 0);
+    expect(stage.renderContext.renderStatistics.webgpuInstructionReuseCount, 2);
+
+    group.addChild(Bitmap(bitmapData)..x = 16);
+    stage.materialize(32, 16);
+    expect(stage.renderContext.renderStatistics.webgpuInstructionBuildCount, 1);
+    expect(stage.renderContext.renderStatistics.webgpuInstructionReuseCount, 1);
   });
 
   test('WebGPU restores nested stencil masks when available', () async {
@@ -520,25 +552,27 @@ void main() {
 
 typedef _TintParameters = ({double red, double green, double blue, double alpha});
 
-class _DirectWebGpuBatchBitmap extends Bitmap {
-  _DirectWebGpuBatchBitmap(super.bitmapData);
+class _TintedPipeBitmap extends Bitmap {
+  static const pipeId = RenderPipeId<_TintedPipeBitmap>('test.tinted-bitmap');
+
+  _TintedPipeBitmap(super.bitmapData);
 
   @override
-  void render(RenderState renderState) {
-    final renderContext = renderState.renderContext;
-    if (renderContext is! RenderContextWebGPU) {
-      super.render(renderState);
-      return;
-    }
+  RenderPipeId get renderPipeId => pipeId;
+}
 
-    final quad = bitmapData!.renderTextureQuad;
-    renderContext.batchSystem.renderTextureMesh(
-      renderState,
+class _TintedBitmapPipe implements RenderPipe<_TintedPipeBitmap> {
+  const _TintedBitmapPipe();
+
+  @override
+  void addRenderable(_TintedPipeBitmap renderable, RenderBuildContext context) {
+    final quad = renderable.bitmapData!.renderTextureQuad;
+    context.addTextureMesh(
       quad.renderTexture,
       quad.ixList,
       quad.vxList,
-      0.75,
-      0.5,
+      red: 0.75,
+      green: 0.5,
     );
   }
 }

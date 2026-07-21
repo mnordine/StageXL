@@ -41,8 +41,8 @@ class Bitmap extends DisplayObject {
   }
 
   @override
-  void render(RenderState renderState) {
-    if (bitmapData != null) bitmapData!.render(renderState);
+  void renderLegacy(RenderState renderState) {
+    if (bitmapData != null) bitmapData!.renderLegacy(renderState);
   }
 
   @override

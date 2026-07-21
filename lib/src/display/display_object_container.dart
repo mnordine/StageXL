@@ -11,8 +11,23 @@ part of '../display.dart';
 /// so on.
 
 abstract class DisplayObjectContainer extends InteractiveObject
-    implements DisplayObjectParent<DisplayObject> {
+    implements DisplayObjectParent<DisplayObject>, RenderGroupRenderable {
   final _children = <DisplayObject>[];
+  var _isRenderGroup = false;
+
+  /// Retains this subtree in an independent instruction set on WebGPU.
+  ///
+  /// Render groups are useful for scene regions whose child structure changes
+  /// independently, such as a game world and a HUD. The Stage is always an
+  /// implicit render group.
+  @override
+  bool get isRenderGroup => _isRenderGroup;
+
+  set isRenderGroup(bool value) {
+    if (_isRenderGroup == value) return;
+    _isRenderGroup = value;
+    invalidateRenderStructure();
+  }
 
   /// Determines whether or not the children of the object are mouse, or user
   /// input device, enabled.
@@ -74,6 +89,7 @@ abstract class DisplayObjectContainer extends InteractiveObject
       _children.add(child);
       _setChildParent(child);
     }
+    invalidateRenderStructure();
   }
 
   /// Adds a child [DisplayObject] to this [DisplayObjectContainer] at the
@@ -100,6 +116,7 @@ abstract class DisplayObjectContainer extends InteractiveObject
       _children.insert(index, child);
       _setChildParent(child);
     }
+    invalidateRenderStructure();
   }
 
   //----------------------------------------------------------------------------
@@ -121,6 +138,7 @@ abstract class DisplayObjectContainer extends InteractiveObject
       final index = _children.indexOf(child);
       _clearChildParent(child);
       _children.removeAt(index);
+      invalidateRenderStructure();
     }
   }
 
@@ -140,6 +158,7 @@ abstract class DisplayObjectContainer extends InteractiveObject
       final child = _children[index];
       _clearChildParent(child);
       _children.removeAt(index);
+      invalidateRenderStructure();
     }
   }
 
@@ -190,6 +209,7 @@ abstract class DisplayObjectContainer extends InteractiveObject
       _clearChildParent(_children[index]);
       _children[index] = child;
       _setChildParent(child);
+      invalidateRenderStructure();
     }
   }
 
@@ -252,6 +272,7 @@ abstract class DisplayObjectContainer extends InteractiveObject
           'The supplied DisplayObject must be a child of the caller.');
     } else {
       _addLocalChildAt(child, index);
+      invalidateRenderStructure();
     }
   }
 
@@ -282,6 +303,7 @@ abstract class DisplayObjectContainer extends InteractiveObject
     final child2 = getChildAt(index2);
     _children[index1] = child2;
     _children[index2] = child1;
+    invalidateRenderStructure();
   }
 
   //----------------------------------------------------------------------------
@@ -291,6 +313,7 @@ abstract class DisplayObjectContainer extends InteractiveObject
 
   void sortChildren(int Function(DisplayObject a, DisplayObject b) compare) {
     _children.sort(compare);
+    invalidateRenderStructure();
   }
 
   /// Determines whether the specified [DisplayObject] is a child of this
@@ -406,7 +429,7 @@ abstract class DisplayObjectContainer extends InteractiveObject
   //----------------------------------------------------------------------------
 
   @override
-  void render(RenderState renderState) {
+  void renderLegacy(RenderState renderState) {
     for (var i = 0; i < _children.length; i++) {
       final child = _children[i];
       if (child.visible && child.off == false) {

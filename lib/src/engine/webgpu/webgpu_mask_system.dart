@@ -1,6 +1,6 @@
 part of '../../engine.dart';
 
-class WebGpuMaskSystem {
+class _WebGpuMaskSystem {
   static const _floatsPerStencilVertex = 4;
   static const _bytesPerStencilVertex = _floatsPerStencilVertex * 4;
   static const _bytesPerStencilIndex = 4;
@@ -16,7 +16,7 @@ class WebGpuMaskSystem {
   var _indexCapacity = 0;
   var _renderingStencilMask = false;
 
-  WebGpuMaskSystem(this.renderContext) {
+  _WebGpuMaskSystem(this.renderContext) {
     _vertexBuffer = _createVertexBuffer(_bytesPerStencilVertex * 4);
     _indexBuffer = _createIndexBuffer(12 * _bytesPerStencilIndex);
   }

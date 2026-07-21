@@ -77,7 +77,7 @@ class StageConsole extends DisplayObject {
   }
 
   @override
-  void render(RenderState renderState) {
+  void renderLegacy(RenderState renderState) {
     if (_glyphs.isEmpty) return;
 
     dispatchEvent(Event('Update'));

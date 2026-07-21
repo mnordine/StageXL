@@ -300,7 +300,7 @@ class ColorMatrixFilter extends BitmapFilter {
   static void _renderWebGPU(RenderFilterContext context, ColorMatrixFilter filter) {
       final renderContext = context.renderContext as RenderContextWebGPU;
       if (filter._isWebGpuBatchColorScale) {
-        renderContext.batchSystem.renderTextureQuad(
+        renderContext.renderTextureQuadTinted(
           context.renderState,
           context.renderTextureQuad,
           filter._colorMatrixList[0],

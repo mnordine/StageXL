@@ -1,14 +1,20 @@
 part of '../../engine.dart';
 
-class WebGpuInstructionSystem {
+class _WebGpuInstructionSystem {
   final RenderContextWebGPU renderContext;
   final _renderGroups = Expando<InstructionSet>('StageXL WebGPU render groups');
+  final _collectionStates = <_WebGpuCollectionState>[];
+  final _groupStack = <RenderObject>[];
+  var _collectionDepth = 0;
   late InstructionSet instructionSet;
+  late RenderObject _rootRenderObject;
   late final _scenePipe = _WebGpuScenePipe();
-  late final _batchPipe = _WebGpuBatchPipe(renderContext);
-  late final _maskPipe = _WebGpuMaskPipe(renderContext);
-  late final _filterPipe = _WebGpuFilterPipe(renderContext);
-  late final _projectionPipe = _WebGpuProjectionPipe(renderContext);
+  late final _batchPipe = _WebGpuBatchPipe(renderContext, _takeClearColor);
+  late final _maskPipe = _WebGpuMaskPipe(renderContext, _ensureClear);
+  late final _filterPipe = _WebGpuFilterPipe(renderContext, _ensureClear);
+  late final _projectionPipe = _WebGpuProjectionPipe(renderContext, _ensureClear);
+  late final _renderGroupPipe = _WebGpuRenderGroupPipe(this);
+  final _instructionPipes = InstructionPipeRegistry();
   var _mappedVertices = Float32List(16);
   final _solidIndices = Int16List.fromList([0, 1, 2]);
   final _solidVertices = Float32List(12);
@@ -21,57 +27,49 @@ class WebGpuInstructionSystem {
   _WebGpuBatchInstruction? _activeBatch;
   List<num>? _pendingClearColor;
 
-  WebGpuInstructionSystem(this.renderContext);
+  _WebGpuInstructionSystem(this.renderContext) {
+    _instructionPipes
+      ..register(_batchPipe)
+      ..register(_maskPipe)
+      ..register(_filterPipe)
+      ..register(_projectionPipe)
+      ..register(_renderGroupPipe);
+  }
 
   bool get isCollecting => _isCollecting;
 
   void collect(RenderState renderState, RenderObject renderObject) {
+    _rootRenderObject = renderObject;
     instructionSet = _renderGroups[renderObject] ??= InstructionSet();
     _beginCollect();
     renderState.renderObject(renderObject);
     _endCollect();
 
-    final statistics = renderContext.renderStatistics;
-    statistics.webgpuRenderableCount += instructionSet.renderableSize;
-    if (_structureChanged) {
-      instructionSet.buildCount++;
-      statistics.webgpuInstructionBuildCount++;
-    } else {
-      instructionSet.reuseCount++;
-      statistics.webgpuInstructionReuseCount++;
-    }
-
+    _recordCollectionStatistics(instructionSet, _structureChanged);
   }
 
   void execute() {
-    _batchPipe.upload(instructionSet);
-    _maskPipe.upload(instructionSet);
-    _filterPipe.upload(instructionSet);
-    _projectionPipe.upload(instructionSet);
+    _upload(instructionSet);
     _pendingClearColor = renderContext.consumeClearColor();
-
-    for (var i = 0; i < instructionSet.instructionSize; i++) {
-      final instruction = instructionSet.instructions[i]!;
-      switch (instruction) {
-        case _WebGpuBatchInstruction():
-          _batchPipe.executeWithClear(instruction, _takeClearColor());
-        case _WebGpuMaskInstruction():
-          _ensureClear();
-          _maskPipe.execute(instruction);
-        case _WebGpuFilterInstruction():
-          _ensureClear();
-          _filterPipe.execute(instruction);
-        case _WebGpuProjectionInstruction():
-          _ensureClear();
-          _projectionPipe.execute(instruction);
-      }
-    }
+    _execute(instructionSet);
     _ensureClear();
   }
 
+  void _upload(InstructionSet instructions) {
+    for (var i = 0; i < instructions.instructionCount; i++) {
+      _instructionPipes.upload(instructions.instructionAt(i));
+    }
+  }
+
+  void _execute(InstructionSet instructions) {
+    for (var i = 0; i < instructions.instructionCount; i++) {
+      _instructionPipes.execute(instructions.instructionAt(i));
+    }
+  }
+
   void _beginCollect() {
-    _oldInstructionSize = instructionSet.instructionSize;
-    _oldRenderableSize = instructionSet.renderableSize;
+    _oldInstructionSize = instructionSet.instructionCount;
+    _oldRenderableSize = instructionSet.slotCount;
     _instructionCursor = 0;
     _renderableCursor = 0;
     _structureChanged = _oldInstructionSize == 0;
@@ -86,27 +84,91 @@ class WebGpuInstructionSystem {
       _structureChanged = true;
     }
     for (var i = _instructionCursor; i < _oldInstructionSize; i++) {
-      _disposeInstruction(instructionSet.instructions[i]);
-      instructionSet.instructions[i] = null;
+      _disposeInstruction(instructionSet._instructions[i]);
+      instructionSet._instructions[i] = null;
     }
-    instructionSet.instructionSize = _instructionCursor;
-    instructionSet.renderableSize = _renderableCursor;
+    instructionSet._instructionCount = _instructionCursor;
+    instructionSet._slotCount = _renderableCursor;
   }
 
   void beginRenderable(RenderObject renderable) {
     if (!_isCollecting) return;
-    final reusable = _renderableCursor < _oldRenderableSize &&
-        identical(instructionSet.renderables[_renderableCursor], renderable) &&
-        _scenePipe.validateRenderable(renderable);
+    if (!identical(renderable, _rootRenderObject) &&
+        renderable is RenderGroupRenderable &&
+        (renderable as RenderGroupRenderable).isRenderGroup) {
+      _beginRenderGroup(renderable);
+    }
+    final old = _renderableCursor < _oldRenderableSize ? instructionSet._slots[_renderableCursor] : null;
+    final reusable = old is _WebGpuSceneRenderable &&
+        identical(old.renderable, renderable) &&
+        old.pipeId == renderable.renderPipeId &&
+        old.structureVersion == renderable.renderStructureVersion &&
+        _scenePipe.validateRenderable(old);
     if (reusable) {
-      _scenePipe.updateRenderable(renderable);
+      old.update();
+      _scenePipe.updateRenderable(old);
       _renderableCursor++;
     } else {
-      _addRenderable(renderable, _scenePipe);
+      _addRenderable(_WebGpuSceneRenderable(renderable), _scenePipe);
     }
   }
 
-  void endRenderable(RenderObject renderable) {}
+  void endRenderable(RenderObject renderable) {
+    if (_groupStack.isNotEmpty && identical(_groupStack.last, renderable)) _endRenderGroup();
+  }
+
+  void _beginRenderGroup(RenderObject renderable) {
+    flushBatch();
+    final old = _instructionAtCursor;
+    final groupInstructions = _renderGroups[renderable] ??= InstructionSet();
+    final reusable = old is _WebGpuRenderGroupInstruction && identical(old.renderable, renderable);
+    final instruction = reusable ? old : _WebGpuRenderGroupInstruction(renderable, groupInstructions);
+    if (!reusable) _replaceInstruction(instruction);
+    _instructionCursor++;
+
+    _pushCollectionState();
+    _groupStack.add(renderable);
+    instructionSet = groupInstructions;
+    _beginCollect();
+  }
+
+  void _endRenderGroup() {
+    _endCollect();
+    _recordCollectionStatistics(instructionSet, _structureChanged);
+    _restoreCollectionState(_collectionStates[--_collectionDepth]);
+    _groupStack.removeLast();
+    _isCollecting = true;
+  }
+
+  void _pushCollectionState() {
+    final state = _collectionDepth == _collectionStates.length
+        ? (_WebGpuCollectionState()..capture(this))
+        : (_collectionStates[_collectionDepth]..capture(this));
+    if (_collectionDepth == _collectionStates.length) _collectionStates.add(state);
+    _collectionDepth++;
+  }
+
+  void _restoreCollectionState(_WebGpuCollectionState state) {
+    instructionSet = state.instructionSet;
+    _instructionCursor = state.instructionCursor;
+    _renderableCursor = state.renderableCursor;
+    _oldInstructionSize = state.oldInstructionSize;
+    _oldRenderableSize = state.oldRenderableSize;
+    _structureChanged = state.structureChanged;
+    _activeBatch = state.activeBatch;
+  }
+
+  void _recordCollectionStatistics(InstructionSet instructions, bool structureChanged) {
+    final statistics = renderContext.renderStatistics;
+    statistics.webgpuRenderableCount += instructions.slotCount;
+    if (structureChanged) {
+      instructions._buildCount++;
+      statistics.webgpuInstructionBuildCount++;
+    } else {
+      instructions._reuseCount++;
+      statistics.webgpuInstructionReuseCount++;
+    }
+  }
 
   void flushBatch() {
     final batch = _activeBatch;
@@ -151,7 +213,7 @@ class WebGpuInstructionSystem {
         batch.addRenderable(state, texture, indices, vertices, red, green, blue, alpha);
     final reusable = !rebuilt &&
         _renderableCursor < _oldRenderableSize &&
-        identical(instructionSet.renderables[_renderableCursor], renderable) &&
+        identical(instructionSet._slots[_renderableCursor], renderable) &&
         _batchPipe.validateRenderable(renderable);
     if (reusable) {
       _batchPipe.updateRenderable(renderable);
@@ -288,7 +350,7 @@ class WebGpuInstructionSystem {
     final colorScale = renderContext.filterSystem.tryGetBatchColorScale(filters);
     if (colorScale != null) {
       state.pushColorScale(colorScale);
-      renderObject.render(state);
+      state._addRenderable(renderObject);
       state.pop();
       return;
     }
@@ -322,26 +384,35 @@ class WebGpuInstructionSystem {
   }
 
   RenderInstruction? get _instructionAtCursor =>
-      _instructionCursor < _oldInstructionSize ? instructionSet.instructions[_instructionCursor] : null;
+      _instructionCursor < _oldInstructionSize ? instructionSet._instructions[_instructionCursor] : null;
 
   void _replaceInstruction(RenderInstruction instruction) {
-    if (_instructionCursor == instructionSet.instructions.length) {
-      instructionSet.instructions.add(instruction);
+    if (_instructionCursor == instructionSet._instructions.length) {
+      instructionSet._instructions.add(instruction);
     } else {
-      _disposeInstruction(instructionSet.instructions[_instructionCursor]);
-      instructionSet.instructions[_instructionCursor] = instruction;
+      _disposeInstruction(instructionSet._instructions[_instructionCursor]);
+      instructionSet._instructions[_instructionCursor] = instruction;
     }
     _structureChanged = true;
   }
 
   void _disposeInstruction(RenderInstruction? instruction) {
-    if (instruction is _WebGpuBatchInstruction) instruction.dispose();
+    if (instruction != null) _instructionPipes.dispose(instruction);
   }
 
-  void _addRenderable<TRenderable>(TRenderable renderable, RenderPipe<TRenderable> pipe) {
-    instructionSet.renderableSize = _renderableCursor;
+  void _disposeInstructionSet(InstructionSet instructions) {
+    for (var i = 0; i < instructions.instructionCount; i++) {
+      _disposeInstruction(instructions.instructionAt(i));
+    }
+  }
+
+  void _addRenderable<TRenderable extends RetainedSlot>(
+    TRenderable renderable,
+    InstructionBuilderPipe<TRenderable> pipe,
+  ) {
+    instructionSet._slotCount = _renderableCursor;
     pipe.addRenderable(renderable, instructionSet);
-    _renderableCursor = instructionSet.renderableSize;
+    _renderableCursor = instructionSet.slotCount;
     _structureChanged = true;
   }
 
@@ -359,11 +430,64 @@ class WebGpuInstructionSystem {
   void _ensureClear() {
     final color = _takeClearColor();
     if (color == null) return;
-    renderContext.batchSystem.flush(color);
+    renderContext._batchSystem.flush(color);
   }
 }
 
-class _WebGpuBatchRenderable {
+class _WebGpuCollectionState {
+  late InstructionSet instructionSet;
+  late int instructionCursor;
+  late int renderableCursor;
+  late int oldInstructionSize;
+  late int oldRenderableSize;
+  late bool structureChanged;
+  _WebGpuBatchInstruction? activeBatch;
+
+  void capture(_WebGpuInstructionSystem system) {
+    instructionSet = system.instructionSet;
+    instructionCursor = system._instructionCursor;
+    renderableCursor = system._renderableCursor;
+    oldInstructionSize = system._oldInstructionSize;
+    oldRenderableSize = system._oldRenderableSize;
+    structureChanged = system._structureChanged;
+    activeBatch = system._activeBatch;
+  }
+}
+
+class _WebGpuRenderGroupInstruction implements RenderInstruction {
+  static const pipeId = InstructionPipeId<_WebGpuRenderGroupInstruction>('webgpu.render-group');
+
+  final RenderObject renderable;
+  final InstructionSet instructions;
+
+  _WebGpuRenderGroupInstruction(this.renderable, this.instructions);
+
+  @override
+  InstructionPipeId<_WebGpuRenderGroupInstruction> get instructionPipeId => pipeId;
+}
+
+class _WebGpuRenderGroupPipe implements InstructionPipe<_WebGpuRenderGroupInstruction> {
+  final _WebGpuInstructionSystem instructionSystem;
+
+  _WebGpuRenderGroupPipe(this.instructionSystem);
+
+  @override
+  InstructionPipeId<_WebGpuRenderGroupInstruction> get id => _WebGpuRenderGroupInstruction.pipeId;
+
+  @override
+  void upload(_WebGpuRenderGroupInstruction instruction) => instructionSystem._upload(instruction.instructions);
+
+  @override
+  void execute(_WebGpuRenderGroupInstruction instruction) => instructionSystem._execute(instruction.instructions);
+
+  @override
+  void dispose(_WebGpuRenderGroupInstruction instruction) {
+    instructionSystem._disposeInstructionSet(instruction.instructions);
+    instructionSystem._renderGroups[instruction.renderable] = null;
+  }
+}
+
+final class _WebGpuBatchRenderable extends RetainedSlot {
   RenderTexture texture;
   BlendMode blendMode;
   late Int16List indices;
@@ -379,6 +503,9 @@ class _WebGpuBatchRenderable {
   var blue = 1.0;
   var alpha = 1.0;
   var textureIndex = 0;
+  var vertexFloatOffset = 0;
+  var indexOffset = 0;
+  var baseVertex = 0;
   var vertexDirty = true;
   var indexDirty = true;
 
@@ -462,19 +589,39 @@ class _WebGpuBatchRenderable {
   int get vertexCount => vertices.length >> 2;
 }
 
-class _WebGpuScenePipe implements RenderPipe<RenderObject> {
+final class _WebGpuSceneRenderable extends RetainedSlot {
+  final RenderObject renderable;
+  RenderPipeId pipeId;
+  int structureVersion;
+  int dataVersion;
+
+  _WebGpuSceneRenderable(this.renderable)
+      : pipeId = renderable.renderPipeId,
+        structureVersion = renderable.renderStructureVersion,
+        dataVersion = renderable.renderDataVersion;
+
+  void update() {
+    pipeId = renderable.renderPipeId;
+    structureVersion = renderable.renderStructureVersion;
+    dataVersion = renderable.renderDataVersion;
+  }
+}
+
+class _WebGpuScenePipe implements InstructionBuilderPipe<_WebGpuSceneRenderable> {
   @override
-  void addRenderable(RenderObject renderable, InstructionSet instructionSet) =>
-      instructionSet.addRenderable(renderable);
+  void addRenderable(_WebGpuSceneRenderable renderable, InstructionSet instructionSet) =>
+      instructionSet.addSlot(renderable);
 
   @override
-  void updateRenderable(RenderObject renderable) {}
+  void updateRenderable(_WebGpuSceneRenderable renderable) {}
 
   @override
-  bool validateRenderable(RenderObject renderable) => true;
+  bool validateRenderable(_WebGpuSceneRenderable renderable) => true;
 }
 
 class _WebGpuBatchInstruction implements RenderInstruction {
+  static const pipeId = InstructionPipeId<_WebGpuBatchInstruction>('webgpu.batch');
+
   final RenderContextWebGPU renderContext;
   final renderables = <_WebGpuBatchRenderable>[];
   final runs = <_WebGpuRun>[];
@@ -499,10 +646,7 @@ class _WebGpuBatchInstruction implements RenderInstruction {
   _WebGpuBatchInstruction(this.renderContext);
 
   @override
-  String get renderPipeId => 'batch';
-
-  @override
-  bool get canBundle => true;
+  InstructionPipeId<_WebGpuBatchInstruction> get instructionPipeId => pipeId;
 
   void beginUpdate() => renderableSize = 0;
 
@@ -557,6 +701,9 @@ class _WebGpuBatchInstruction implements RenderInstruction {
         textureIndex = 0;
       }
       renderable.textureIndex = textureIndex;
+      renderable.vertexFloatOffset = vertexCount * _WebGpuBatchPipe._floatsPerVertex;
+      renderable.indexOffset = indexCount;
+      renderable.baseVertex = vertexCount;
       run
         ..vertexCount += renderable.vertexCount
         ..indexCount += renderable.indices.length;
@@ -590,18 +737,22 @@ class _WebGpuBatchInstruction implements RenderInstruction {
 }
 
 class _WebGpuBatchPipe
-    implements RenderPipe<_WebGpuBatchRenderable>, InstructionPipe<_WebGpuBatchInstruction> {
+    implements InstructionBuilderPipe<_WebGpuBatchRenderable>, InstructionPipe<_WebGpuBatchInstruction> {
   static const _floatsPerVertex = 9;
   static const _bytesPerVertex = _floatsPerVertex * 4;
   static const _bytesPerIndex = 4;
 
   final RenderContextWebGPU renderContext;
+  final List<num>? Function() takeClearColor;
 
-  _WebGpuBatchPipe(this.renderContext);
+  _WebGpuBatchPipe(this.renderContext, this.takeClearColor);
+
+  @override
+  InstructionPipeId<_WebGpuBatchInstruction> get id => _WebGpuBatchInstruction.pipeId;
 
   @override
   void addRenderable(_WebGpuBatchRenderable renderable, InstructionSet instructionSet) =>
-      instructionSet.addRenderable(renderable);
+      instructionSet.addSlot(renderable);
 
   @override
   void updateRenderable(_WebGpuBatchRenderable renderable) {}
@@ -610,38 +761,29 @@ class _WebGpuBatchPipe
   bool validateRenderable(_WebGpuBatchRenderable renderable) => true;
 
   @override
-  void upload(InstructionSet instructionSet) {
-    for (var i = 0; i < instructionSet.instructionSize; i++) {
-      final instruction = instructionSet.instructions[i];
-      if (instruction is _WebGpuBatchInstruction) _uploadInstruction(instruction);
-    }
-  }
-
-  void _uploadInstruction(_WebGpuBatchInstruction instruction) {
-    var uploadVertices = instruction.vertexData == null;
-    var uploadIndices = instruction.indexData == null;
-    for (final renderable in instruction.renderables) {
-      uploadVertices = uploadVertices || renderable.vertexDirty;
-      uploadIndices = uploadIndices || renderable.indexDirty;
-    }
-
+  void upload(_WebGpuBatchInstruction instruction) {
     final vertexLength = instruction.vertexCount * _floatsPerVertex;
     final indexLength = instruction.indexCount;
+    var uploadAllVertices = instruction.vertexData == null;
+    var uploadAllIndices = instruction.indexData == null;
     if (instruction.vertexData == null || instruction.vertexData!.length < vertexLength) {
       instruction.vertexData = JSFloat32Array.withLength(math.max(vertexLength, 4)).toDart;
-      uploadVertices = true;
+      uploadAllVertices = true;
     }
     if (instruction.indexData == null || instruction.indexData!.length < indexLength) {
       instruction.indexData = JSUint32Array.withLength(math.max(indexLength, 4)).toDart;
-      uploadIndices = true;
+      uploadAllIndices = true;
     }
 
-    if (uploadVertices) _bakeVertices(instruction);
-    if (uploadIndices) _bakeIndices(instruction);
-    _ensureGpuBuffers(instruction, vertexLength * 4, indexLength * _bytesPerIndex);
+    final (vertexBufferRebuilt, indexBufferRebuilt) =
+        _ensureGpuBuffers(instruction, vertexLength * 4, indexLength * _bytesPerIndex);
+    uploadAllVertices = uploadAllVertices || vertexBufferRebuilt;
+    uploadAllIndices = uploadAllIndices || indexBufferRebuilt;
 
     final stopwatch = Stopwatch()..start();
-    if (uploadVertices && vertexLength > 0) {
+    var uploaded = false;
+    if (uploadAllVertices && vertexLength > 0) {
+      _bakeVertices(instruction);
       renderContext.device.queue.writeBuffer(
         instruction.vertexBuffer!,
         0,
@@ -650,8 +792,12 @@ class _WebGpuBatchPipe
         vertexLength,
       );
       renderContext.renderStatistics.webgpuInstructionUploadCount++;
+      uploaded = true;
+    } else {
+      uploaded = _uploadDirtyVertexRanges(instruction) || uploaded;
     }
-    if (uploadIndices && indexLength > 0) {
+    if (uploadAllIndices && indexLength > 0) {
+      _bakeIndices(instruction);
       renderContext.device.queue.writeBuffer(
         instruction.indexBuffer!,
         0,
@@ -660,8 +806,11 @@ class _WebGpuBatchPipe
         indexLength,
       );
       renderContext.renderStatistics.webgpuInstructionUploadCount++;
+      uploaded = true;
+    } else {
+      uploaded = _uploadDirtyIndexRanges(instruction) || uploaded;
     }
-    if (uploadVertices || uploadIndices) {
+    if (uploaded) {
       renderContext.renderStatistics.webgpuBufferUploadMicroseconds += stopwatch.elapsedMicroseconds;
     }
 
@@ -679,43 +828,109 @@ class _WebGpuBatchPipe
 
   void _bakeVertices(_WebGpuBatchInstruction instruction) {
     final target = instruction.vertexData!;
-    final textureSystem = renderContext.textureSystem;
-    var writeIndex = 0;
     for (final renderable in instruction.renderables) {
-      final source = renderable.vertices;
-      final textureScaleX = textureSystem._textureCoordinateScaleX(renderable.texture);
-      final textureScaleY = textureSystem._textureCoordinateScaleY(renderable.texture);
-      for (var sourceIndex = 0; sourceIndex < source.length; sourceIndex += 4) {
-        final x = source[sourceIndex + 0];
-        final y = source[sourceIndex + 1];
-        target[writeIndex++] = renderable.matrixTx + renderable.matrixA * x + renderable.matrixC * y;
-        target[writeIndex++] = renderable.matrixTy + renderable.matrixB * x + renderable.matrixD * y;
-        target[writeIndex++] = renderable.red;
-        target[writeIndex++] = renderable.green;
-        target[writeIndex++] = renderable.blue;
-        target[writeIndex++] = renderable.alpha;
-        target[writeIndex++] = source[sourceIndex + 2] * textureScaleX;
-        target[writeIndex++] = source[sourceIndex + 3] * textureScaleY;
-        target[writeIndex++] = renderable.textureIndex.toDouble();
-      }
-      renderable.vertexDirty = false;
+      _bakeRenderableVertices(renderable, target);
     }
+  }
+
+  void _bakeRenderableVertices(_WebGpuBatchRenderable renderable, Float32List target) {
+    final source = renderable.vertices;
+    final textureSystem = renderContext.textureSystem;
+    final textureScaleX = textureSystem._textureCoordinateScaleX(renderable.texture);
+    final textureScaleY = textureSystem._textureCoordinateScaleY(renderable.texture);
+    var writeIndex = renderable.vertexFloatOffset;
+    for (var sourceIndex = 0; sourceIndex < source.length; sourceIndex += 4) {
+      final x = source[sourceIndex + 0];
+      final y = source[sourceIndex + 1];
+      target[writeIndex++] = renderable.matrixTx + renderable.matrixA * x + renderable.matrixC * y;
+      target[writeIndex++] = renderable.matrixTy + renderable.matrixB * x + renderable.matrixD * y;
+      target[writeIndex++] = renderable.red;
+      target[writeIndex++] = renderable.green;
+      target[writeIndex++] = renderable.blue;
+      target[writeIndex++] = renderable.alpha;
+      target[writeIndex++] = source[sourceIndex + 2] * textureScaleX;
+      target[writeIndex++] = source[sourceIndex + 3] * textureScaleY;
+      target[writeIndex++] = renderable.textureIndex.toDouble();
+    }
+    renderable.vertexDirty = false;
   }
 
   void _bakeIndices(_WebGpuBatchInstruction instruction) {
     final target = instruction.indexData!;
-    var writeIndex = 0;
-    var baseVertex = 0;
     for (final renderable in instruction.renderables) {
-      for (final index in renderable.indices) {
-        target[writeIndex++] = baseVertex + index;
-      }
-      baseVertex += renderable.vertexCount;
-      renderable.indexDirty = false;
+      _bakeRenderableIndices(renderable, target);
     }
   }
 
-  void _ensureGpuBuffers(_WebGpuBatchInstruction instruction, int vertexBytes, int indexBytes) {
+  void _bakeRenderableIndices(_WebGpuBatchRenderable renderable, Uint32List target) {
+    var writeIndex = renderable.indexOffset;
+    for (final index in renderable.indices) {
+      target[writeIndex++] = renderable.baseVertex + index;
+    }
+    renderable.indexDirty = false;
+  }
+
+  bool _uploadDirtyVertexRanges(_WebGpuBatchInstruction instruction) {
+    var uploaded = false;
+    var index = 0;
+    while (index < instruction.renderables.length) {
+      while (index < instruction.renderables.length && !instruction.renderables[index].vertexDirty) {
+        index++;
+      }
+      if (index == instruction.renderables.length) break;
+      final first = instruction.renderables[index];
+      final start = first.vertexFloatOffset;
+      var end = start;
+      while (index < instruction.renderables.length && instruction.renderables[index].vertexDirty) {
+        final renderable = instruction.renderables[index++];
+        _bakeRenderableVertices(renderable, instruction.vertexData!);
+        end = renderable.vertexFloatOffset + renderable.vertexCount * _floatsPerVertex;
+      }
+      renderContext.device.queue.writeBuffer(
+        instruction.vertexBuffer!,
+        start * 4,
+        instruction.vertexData!.toJS,
+        start,
+        end - start,
+      );
+      renderContext.renderStatistics.webgpuInstructionUploadCount++;
+      uploaded = true;
+    }
+    return uploaded;
+  }
+
+  bool _uploadDirtyIndexRanges(_WebGpuBatchInstruction instruction) {
+    var uploaded = false;
+    var index = 0;
+    while (index < instruction.renderables.length) {
+      while (index < instruction.renderables.length && !instruction.renderables[index].indexDirty) {
+        index++;
+      }
+      if (index == instruction.renderables.length) break;
+      final first = instruction.renderables[index];
+      final start = first.indexOffset;
+      var end = start;
+      while (index < instruction.renderables.length && instruction.renderables[index].indexDirty) {
+        final renderable = instruction.renderables[index++];
+        _bakeRenderableIndices(renderable, instruction.indexData!);
+        end = renderable.indexOffset + renderable.indices.length;
+      }
+      renderContext.device.queue.writeBuffer(
+        instruction.indexBuffer!,
+        start * _bytesPerIndex,
+        instruction.indexData!.toJS,
+        start,
+        end - start,
+      );
+      renderContext.renderStatistics.webgpuInstructionUploadCount++;
+      uploaded = true;
+    }
+    return uploaded;
+  }
+
+  (bool, bool) _ensureGpuBuffers(_WebGpuBatchInstruction instruction, int vertexBytes, int indexBytes) {
+    var vertexBufferRebuilt = false;
+    var indexBufferRebuilt = false;
     if (instruction.vertexBuffer == null || instruction.vertexCapacity < vertexBytes) {
       instruction.vertexBuffer?.destroy();
       instruction.invalidateBundle();
@@ -724,6 +939,7 @@ class _WebGpuBatchPipe
         size: instruction.vertexCapacity,
         usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.VERTEX,
       ));
+      vertexBufferRebuilt = true;
     }
     if (instruction.indexBuffer == null || instruction.indexCapacity < indexBytes) {
       instruction.indexBuffer?.destroy();
@@ -733,22 +949,27 @@ class _WebGpuBatchPipe
         size: instruction.indexCapacity,
         usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.INDEX,
       ));
+      indexBufferRebuilt = true;
     }
+    return (vertexBufferRebuilt, indexBufferRebuilt);
   }
 
   @override
-  void execute(_WebGpuBatchInstruction instruction) => executeWithClear(instruction, null);
+  void execute(_WebGpuBatchInstruction instruction) => executeWithClear(instruction, takeClearColor());
+
+  @override
+  void dispose(_WebGpuBatchInstruction instruction) => instruction.dispose();
 
   void executeWithClear(_WebGpuBatchInstruction instruction, List<num>? clearColor) {
     if (instruction.vertexCount == 0) {
-      if (clearColor != null) renderContext.batchSystem.flush(clearColor);
+      if (clearColor != null) renderContext._batchSystem.flush(clearColor);
       return;
     }
 
     renderContext.pipelineSystem.uploadProjectionMatrix(renderContext.activeProjectionMatrix);
     final encodeStopwatch = Stopwatch()..start();
     final pass = renderContext.commandSystem.beginColorPass(clearColor);
-    final stencilValue = renderContext.maskSystem.activeStencilValue;
+    final stencilValue = renderContext._maskSystem.activeStencilValue;
     if (stencilValue > 0) pass.setStencilReference(stencilValue);
     pass
       ..setVertexBuffer(0, instruction.vertexBuffer, 0, instruction.vertexCount * _bytesPerVertex)
@@ -867,6 +1088,8 @@ class _WebGpuBatchPipe
 }
 
 class _WebGpuMaskInstruction implements RenderInstruction {
+  static const pipeId = InstructionPipeId<_WebGpuMaskInstruction>('webgpu.mask');
+
   final RenderMask mask;
   final bool begin;
   final RenderState state;
@@ -877,10 +1100,7 @@ class _WebGpuMaskInstruction implements RenderInstruction {
       : state = RenderState(renderContext);
 
   @override
-  String get renderPipeId => 'mask';
-
-  @override
-  bool get canBundle => false;
+  InstructionPipeId<_WebGpuMaskInstruction> get instructionPipeId => pipeId;
 
   void captureMask() {
     if (mask is ScissorRenderMask) {
@@ -890,23 +1110,28 @@ class _WebGpuMaskInstruction implements RenderInstruction {
       capturedScissor = null;
       capturedVertices
         ..clear()
-        ..addAll((state.renderContext as RenderContextWebGPU).maskSystem.captureMask(state, mask));
+        ..addAll((state.renderContext as RenderContextWebGPU)._maskSystem.captureMask(state, mask));
     }
   }
 }
 
 class _WebGpuMaskPipe implements InstructionPipe<_WebGpuMaskInstruction> {
   final RenderContextWebGPU renderContext;
+  final void Function() ensureClear;
 
-  _WebGpuMaskPipe(this.renderContext);
+  _WebGpuMaskPipe(this.renderContext, this.ensureClear);
 
   @override
-  void upload(InstructionSet instructionSet) {}
+  InstructionPipeId<_WebGpuMaskInstruction> get id => _WebGpuMaskInstruction.pipeId;
+
+  @override
+  void upload(_WebGpuMaskInstruction instruction) {}
 
   @override
   void execute(_WebGpuMaskInstruction instruction) {
+    ensureClear();
     if (instruction.begin) {
-      renderContext.maskSystem.beginMask(
+      renderContext._maskSystem.beginMask(
         instruction.state,
         instruction.mask,
         useCapturedData: true,
@@ -914,12 +1139,17 @@ class _WebGpuMaskPipe implements InstructionPipe<_WebGpuMaskInstruction> {
         capturedVertices: instruction.capturedVertices,
       );
     } else {
-      renderContext.maskSystem.endMask(instruction.state, instruction.mask);
+      renderContext._maskSystem.endMask(instruction.state, instruction.mask);
     }
   }
+
+  @override
+  void dispose(_WebGpuMaskInstruction instruction) {}
 }
 
 class _WebGpuFilterInstruction implements RenderInstruction {
+  static const pipeId = InstructionPipeId<_WebGpuFilterInstruction>('webgpu.filter');
+
   final RenderContextWebGPU renderContext;
   final RenderState state;
   RenderTextureQuad? quad;
@@ -943,10 +1173,7 @@ class _WebGpuFilterInstruction implements RenderInstruction {
   }
 
   @override
-  String get renderPipeId => 'filter';
-
-  @override
-  bool get canBundle => false;
+  InstructionPipeId<_WebGpuFilterInstruction> get instructionPipeId => pipeId;
 
   bool matchesQuad(RenderTextureQuad nextQuad, List<RenderFilter> nextFilters) =>
       renderObject == null &&
@@ -989,14 +1216,19 @@ class _WebGpuFilterInstruction implements RenderInstruction {
 
 class _WebGpuFilterPipe implements InstructionPipe<_WebGpuFilterInstruction> {
   final RenderContextWebGPU renderContext;
+  final void Function() ensureClear;
 
-  _WebGpuFilterPipe(this.renderContext);
+  _WebGpuFilterPipe(this.renderContext, this.ensureClear);
 
   @override
-  void upload(InstructionSet instructionSet) {}
+  InstructionPipeId<_WebGpuFilterInstruction> get id => _WebGpuFilterInstruction.pipeId;
+
+  @override
+  void upload(_WebGpuFilterInstruction instruction) {}
 
   @override
   void execute(_WebGpuFilterInstruction instruction) {
+    ensureClear();
     final quad = instruction.quad;
     if (quad != null) {
       renderContext.filterSystem.renderTextureQuadFiltered(instruction.state, quad, instruction.filters);
@@ -1004,30 +1236,41 @@ class _WebGpuFilterPipe implements InstructionPipe<_WebGpuFilterInstruction> {
       renderContext.filterSystem.renderObjectFiltered(instruction.state, instruction.renderObject!);
     }
   }
+
+  @override
+  void dispose(_WebGpuFilterInstruction instruction) {}
 }
 
 class _WebGpuProjectionInstruction implements RenderInstruction {
+  static const pipeId = InstructionPipeId<_WebGpuProjectionInstruction>('webgpu.projection');
+
   final RenderContextWebGPU renderContext;
   final matrix = Matrix3D.fromIdentity();
 
   _WebGpuProjectionInstruction(this.renderContext);
 
   @override
-  String get renderPipeId => 'projection';
-
-  @override
-  bool get canBundle => false;
+  InstructionPipeId<_WebGpuProjectionInstruction> get instructionPipeId => pipeId;
 }
 
 class _WebGpuProjectionPipe implements InstructionPipe<_WebGpuProjectionInstruction> {
   final RenderContextWebGPU renderContext;
+  final void Function() ensureClear;
 
-  _WebGpuProjectionPipe(this.renderContext);
-
-  @override
-  void upload(InstructionSet instructionSet) {}
+  _WebGpuProjectionPipe(this.renderContext, this.ensureClear);
 
   @override
-  void execute(_WebGpuProjectionInstruction instruction) =>
-      renderContext.activateProjectionMatrix(instruction.matrix);
+  InstructionPipeId<_WebGpuProjectionInstruction> get id => _WebGpuProjectionInstruction.pipeId;
+
+  @override
+  void upload(_WebGpuProjectionInstruction instruction) {}
+
+  @override
+  void execute(_WebGpuProjectionInstruction instruction) {
+    ensureClear();
+    renderContext.activateProjectionMatrix(instruction.matrix);
+  }
+
+  @override
+  void dispose(_WebGpuProjectionInstruction instruction) {}
 }

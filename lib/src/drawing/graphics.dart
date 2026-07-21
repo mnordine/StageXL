@@ -267,7 +267,7 @@ class Graphics {
     }
   }
 
-  void render(RenderState renderState) {
+  void renderLegacy(RenderState renderState) {
     if (renderState.renderContext is RenderContextCanvas) {
       final commands = _getCommands(false);
       final context = _GraphicsContextCanvas(renderState);

@@ -14,6 +14,7 @@ class RenderContextEvent {}
 
 abstract class RenderContext {
   final renderStatistics = RenderStatistics();
+  final renderPipes = RenderPipeRegistry();
 
   final _contextLostEvent = StreamController<RenderContextEvent>.broadcast();
   final _contextRestoredEvent =
@@ -25,6 +26,8 @@ abstract class RenderContext {
 
   RenderEngine get renderEngine;
 
+  _RetainedInstructionSystem? get _retainedInstructionSystem => null;
+
   int? get maxTextureSize;
   Object? getParameter(int parameter);
 
@@ -32,14 +35,45 @@ abstract class RenderContext {
   void clear(int color);
   void flush();
 
-  void buildRenderFrame(RenderState renderState, RenderObject renderObject) =>
+  void buildRenderFrame(RenderState renderState, RenderObject renderObject) {
+    final instructionSystem = _retainedInstructionSystem;
+    if (instructionSystem == null) {
       renderState.renderObject(renderObject);
+    } else {
+      instructionSystem.collect(renderState, renderObject);
+    }
+  }
 
-  void executeRenderFrame(RenderState renderState) => renderState.flush();
+  void executeRenderFrame(RenderState renderState) {
+    final instructionSystem = _retainedInstructionSystem;
+    if (instructionSystem == null) {
+      renderState.flush();
+    } else {
+      instructionSystem.execute();
+    }
+  }
 
   void beginRenderObject(RenderObject renderObject) {}
 
   void endRenderObject(RenderObject renderObject) {}
+
+  void _beginRenderMask(RenderState renderState, RenderMask mask) {
+    final instructionSystem = _retainedInstructionSystem;
+    if (instructionSystem?.isCollecting ?? false) {
+      instructionSystem!.recordMask(renderState, mask, begin: true);
+    } else {
+      beginRenderMask(renderState, mask);
+    }
+  }
+
+  void _endRenderMask(RenderState renderState, RenderMask mask) {
+    final instructionSystem = _retainedInstructionSystem;
+    if (instructionSystem?.isCollecting ?? false) {
+      instructionSystem!.recordMask(renderState, mask, begin: false);
+    } else {
+      endRenderMask(renderState, mask);
+    }
+  }
 
   void beginRenderMask(RenderState renderState, RenderMask mask);
   void endRenderMask(RenderState renderState, RenderMask mask);
@@ -49,8 +83,28 @@ abstract class RenderContext {
   void renderTextureQuad(
       RenderState renderState, RenderTextureQuad renderTextureQuad);
 
+  void renderTextureQuadTinted(
+    RenderState renderState,
+    RenderTextureQuad renderTextureQuad,
+    num red,
+    num green,
+    num blue,
+    num alpha,
+  );
+
   void renderTextureMesh(RenderState renderState, RenderTexture renderTexture,
       Int16List ixList, Float32List vxList);
+
+  void renderTextureMeshTinted(
+    RenderState renderState,
+    RenderTexture renderTexture,
+    Int16List ixList,
+    Float32List vxList,
+    num red,
+    num green,
+    num blue,
+    num alpha,
+  );
 
   void renderTextureMapping(
       RenderState renderState,
@@ -69,4 +123,121 @@ abstract class RenderContext {
       RenderTextureQuad renderTextureQuad, List<RenderFilter> renderFilters);
 
   void renderObjectFiltered(RenderState renderState, RenderObject renderObject);
+
+  void _renderTextureQuad(RenderState renderState, RenderTextureQuad quad) {
+    final instructionSystem = _retainedInstructionSystem;
+    if (instructionSystem?.isCollecting ?? false) {
+      instructionSystem!.recordTextureQuad(renderState, quad);
+    } else {
+      renderTextureQuad(renderState, quad);
+    }
+  }
+
+  void _renderTextureQuadTinted(
+    RenderState renderState,
+    RenderTextureQuad quad,
+    num red,
+    num green,
+    num blue,
+    num alpha,
+  ) {
+    final instructionSystem = _retainedInstructionSystem;
+    if (instructionSystem?.isCollecting ?? false) {
+      instructionSystem!.recordTextureQuad(renderState, quad, red, green, blue, alpha);
+    } else {
+      renderTextureQuadTinted(renderState, quad, red, green, blue, alpha);
+    }
+  }
+
+  void _renderTextureMesh(
+    RenderState renderState,
+    RenderTexture texture,
+    Int16List indices,
+    Float32List vertices,
+  ) {
+    final instructionSystem = _retainedInstructionSystem;
+    if (instructionSystem?.isCollecting ?? false) {
+      instructionSystem!.recordTextureMesh(renderState, texture, indices, vertices);
+    } else {
+      renderTextureMesh(renderState, texture, indices, vertices);
+    }
+  }
+
+  void _renderTextureMeshTinted(
+    RenderState renderState,
+    RenderTexture texture,
+    Int16List indices,
+    Float32List vertices,
+    num red,
+    num green,
+    num blue,
+    num alpha,
+  ) {
+    final instructionSystem = _retainedInstructionSystem;
+    if (instructionSystem?.isCollecting ?? false) {
+      instructionSystem!.recordTextureMesh(renderState, texture, indices, vertices, red, green, blue, alpha);
+    } else {
+      renderTextureMeshTinted(renderState, texture, indices, vertices, red, green, blue, alpha);
+    }
+  }
+
+  void _renderTextureMapping(
+    RenderState renderState,
+    RenderTexture texture,
+    Matrix mappingMatrix,
+    Int16List indices,
+    Float32List vertices,
+  ) {
+    final instructionSystem = _retainedInstructionSystem;
+    if (instructionSystem?.isCollecting ?? false) {
+      instructionSystem!.recordTextureMapping(renderState, texture, mappingMatrix, indices, vertices);
+    } else {
+      renderTextureMapping(renderState, texture, mappingMatrix, indices, vertices);
+    }
+  }
+
+  void _renderTriangle(
+    RenderState renderState,
+    num x1,
+    num y1,
+    num x2,
+    num y2,
+    num x3,
+    num y3,
+    int color,
+  ) {
+    final instructionSystem = _retainedInstructionSystem;
+    if (instructionSystem?.isCollecting ?? false) {
+      instructionSystem!.recordTriangle(renderState, x1, y1, x2, y2, x3, y3, color);
+    } else {
+      renderTriangle(renderState, x1, y1, x2, y2, x3, y3, color);
+    }
+  }
+
+  void _renderTriangleMesh(RenderState renderState, Int16List indices, Float32List vertices, int color) {
+    final instructionSystem = _retainedInstructionSystem;
+    if (instructionSystem?.isCollecting ?? false) {
+      instructionSystem!.recordTriangleMesh(renderState, indices, vertices, color);
+    } else {
+      renderTriangleMesh(renderState, indices, vertices, color);
+    }
+  }
+
+  void _renderTextureQuadFiltered(RenderState renderState, RenderTextureQuad quad, List<RenderFilter> filters) {
+    final instructionSystem = _retainedInstructionSystem;
+    if (instructionSystem?.isCollecting ?? false) {
+      instructionSystem!.recordFilteredQuad(renderState, quad, filters);
+    } else {
+      renderTextureQuadFiltered(renderState, quad, filters);
+    }
+  }
+
+  void _renderObjectFiltered(RenderState renderState, RenderObject renderObject) {
+    final instructionSystem = _retainedInstructionSystem;
+    if (instructionSystem?.isCollecting ?? false) {
+      instructionSystem!.recordFilteredObject(renderState, renderObject);
+    } else {
+      renderObjectFiltered(renderState, renderObject);
+    }
+  }
 }

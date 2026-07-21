@@ -52,7 +52,7 @@ class _DisplayObjectCache {
     final renderState = RenderState(renderContext, matrix);
 
     renderContext.clear(Color.Transparent);
-    displayObject.render(renderState);
+    displayObject.renderLegacy(renderState);
 
     // apply filters
 

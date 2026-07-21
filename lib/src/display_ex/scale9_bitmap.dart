@@ -74,7 +74,7 @@ class Scale9Bitmap extends Bitmap {
   }
 
   @override
-  void render(RenderState renderState) {
+  void renderLegacy(RenderState renderState) {
     // We could use renderState.renderTextureMesh, it would work great with
     // the WebGL renderer but not so good with the Canvas2D renderer.
 

@@ -216,6 +216,7 @@ class Stage extends DisplayObjectContainer {
     _sourceHeight = height;
     _pixelRatio = min(options.maxPixelRatio, host.devicePixelRatio);
     _renderContext = renderContext;
+    _renderContext.renderPipes.copyFrom(options.renderPipes);
     _renderState = RenderState(_renderContext);
 
     _renderContext.onContextLost.listen((_) {

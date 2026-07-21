@@ -200,7 +200,7 @@ class Mesh extends DisplayObject {
   }
 
   @override
-  void render(RenderState renderState) {
+  void renderLegacy(RenderState renderState) {
     final renderContext = renderState.renderContext;
     final renderTextureQuad = bitmapData.renderTextureQuad;
     final renderTexture = bitmapData.renderTexture;

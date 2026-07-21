@@ -238,7 +238,7 @@ class WebGpuFilterSystem {
     if (renderFilters.isEmpty) return;
     if (_canRenderInWebGpuBatch(renderFilters)) {
       final colorScale = _webGpuBatchColorScale(renderFilters);
-      renderContext.batchSystem.renderTextureQuad(
+      renderContext._batchSystem.renderTextureQuad(
         renderState,
         renderTextureQuad,
         colorScale[0],
@@ -276,7 +276,7 @@ class WebGpuFilterSystem {
 
     if (_canRenderInWebGpuBatch(filters)) {
       renderState.pushColorScale(_webGpuBatchColorScale(filters));
-      renderObject.render(renderState);
+      renderState._addRenderable(renderObject);
       renderState.pop();
       return;
     }
@@ -306,11 +306,11 @@ class WebGpuFilterSystem {
     final boundsHeight = boundsBottom - boundsTop;
     if (boundsWidth <= 0 || boundsHeight <= 0) return;
 
-    if (!renderContext.batchSystem.isEmpty) renderContext.flush();
+    if (!renderContext._batchSystem.isEmpty) renderContext.flush();
 
     final initialRenderTexture = renderContext.activeRenderTexture;
     final initialProjectionMatrix = renderContext.activeProjectionMatrix.clone();
-    final maskSnapshot = renderContext.maskSystem._detach();
+    final maskSnapshot = renderContext._maskSystem._detach();
     final renderTextures = <int, RenderTexture>{};
     final disposableRenderTextures = <RenderTexture>{};
     final renderTexture = RenderTexture.rawWebGL(boundsWidth, boundsHeight);
@@ -329,9 +329,9 @@ class WebGpuFilterSystem {
       renderContext.activateRenderTexture(renderTexture);
       renderContext.activateProjectionMatrix(filterProjectionMatrix);
       renderContext.clearActiveRenderTexture(0);
-      renderObject.render(filterRenderState);
+      filterRenderState._addRenderable(renderObject);
       renderContext.flush();
-      renderContext.maskSystem.resetFrame();
+      renderContext._maskSystem.resetFrame();
 
       for (var i = 0; i < filters.length; i++) {
         _renderFilterPasses(
@@ -355,7 +355,7 @@ class WebGpuFilterSystem {
     } finally {
       renderContext.activateRenderTexture(initialRenderTexture);
       renderContext.activateProjectionMatrix(initialProjectionMatrix);
-      renderContext.maskSystem._restore(maskSnapshot);
+      renderContext._maskSystem._restore(maskSnapshot);
       for (final renderTexture in disposableRenderTextures) {
         _disposeRenderTextureAfterSubmittedWork(renderTexture);
       }
@@ -429,7 +429,7 @@ class WebGpuFilterSystem {
         passRenderState = finalRenderState;
         renderContext.activateRenderTexture(initialRenderTexture);
         renderContext.activateProjectionMatrix(initialProjectionMatrix);
-        renderContext.maskSystem._restore(maskSnapshot);
+        renderContext._maskSystem._restore(maskSnapshot);
       } else {
         passRenderState = filterRenderState;
         final targetExists = renderTextures.containsKey(targetId);
@@ -727,7 +727,7 @@ class WebGpuFilterSystem {
       uniformByteSize: 80,
     );
 
-    final stencilValue = renderContext.maskSystem.activeStencilValue;
+    final stencilValue = renderContext._maskSystem.activeStencilValue;
     final pass = renderContext.commandSystem.beginColorPass(renderContext.consumeClearColor());
     pass
       ..setPipeline(_getNormalMapPipeline(renderState.globalBlendMode, stencilValue > 0))
@@ -823,7 +823,7 @@ class WebGpuFilterSystem {
       uniformByteSize: _WebGpuDisplacementMapFilterProgram.uniformByteSize,
     );
 
-    final stencilValue = renderContext.maskSystem.activeStencilValue;
+    final stencilValue = renderContext._maskSystem.activeStencilValue;
     final pass = renderContext.commandSystem.beginColorPass(renderContext.consumeClearColor());
     pass
       ..setPipeline(_getDisplacementMapPipeline(renderState.globalBlendMode, stencilValue > 0))
@@ -928,7 +928,7 @@ class WebGpuFilterSystem {
       uniformByteSize: 32,
     );
 
-    final stencilValue = renderContext.maskSystem.activeStencilValue;
+    final stencilValue = renderContext._maskSystem.activeStencilValue;
     final pass = renderContext.commandSystem.beginColorPass(renderContext.consumeClearColor());
     pass
       ..setPipeline(_getAlphaMaskPipeline(renderState.globalBlendMode, stencilValue > 0))
@@ -1074,7 +1074,7 @@ class WebGpuFilterSystem {
       ..writeBuffer(resources.uniformBuffer, 0, resources.uniformData.toJS, 0, resources.uniformData.length);
 
     final bindGroup = _getSingleTextureBindGroup(renderTexture, resources.uniformBuffer, program.uniformByteSize);
-    final stencilValue = renderContext.maskSystem.activeStencilValue;
+    final stencilValue = renderContext._maskSystem.activeStencilValue;
     final pass = renderContext.commandSystem.beginColorPass(renderContext.consumeClearColor());
     pass
       ..setPipeline(resources.getPipeline(renderState.globalBlendMode, stencilValue > 0))
@@ -1188,7 +1188,7 @@ class WebGpuFilterSystem {
 
     final bindGroup = getBindGroup(texture, uniformBuffer, uniformByteSize);
 
-    final stencilValue = renderContext.maskSystem.activeStencilValue;
+    final stencilValue = renderContext._maskSystem.activeStencilValue;
     final pass = renderContext.commandSystem.beginColorPass(renderContext.consumeClearColor());
     pass
       ..setPipeline(getPipeline(renderState.globalBlendMode, stencilValue > 0))

@@ -22,9 +22,8 @@ class _ContextState {
 /// The [RenderState] class is used to render objects to a give render surface
 /// defined by the renderContext parameter.
 ///
-/// Most users won't ever use this class directly because it's only used
-/// internally to render the display list. However, more advanced users
-/// may use it to create custom display objects.
+/// This class is internal to display-list traversal. Custom display objects
+/// use [RenderPipe] and [RenderBuildContext].
 ///
 /// The [renderObject] method keeps track of the state for hierarchical objects
 /// from the display list and therefore can be called recursively.
@@ -37,6 +36,8 @@ class RenderState {
 
   final RenderContext _renderContext;
   final _ContextState _firstContextState;
+  final _identityMatrix = Matrix.fromIdentity();
+  late final buildContext = RenderBuildContext._(this);
 
   _ContextState? _currentContextState;
 
@@ -99,37 +100,67 @@ class RenderState {
   }
 
   void renderTextureQuad(RenderTextureQuad renderTextureQuad) {
-    _renderContext.renderTextureQuad(this, renderTextureQuad);
+    _renderContext._renderTextureQuad(this, renderTextureQuad);
+  }
+
+  void renderTextureQuadTinted(
+    RenderTextureQuad renderTextureQuad,
+    num red,
+    num green,
+    num blue,
+    num alpha, {
+    BlendMode? blendMode,
+  }) {
+    final pushed = blendMode != null;
+    if (pushed) push(_identityMatrix, 1, blendMode);
+    _renderContext._renderTextureQuadTinted(this, renderTextureQuad, red, green, blue, alpha);
+    if (pushed) pop();
   }
 
   void renderTextureMapping(RenderTexture renderTexture, Matrix mappingMatrix,
       Int16List ixList, Float32List vxList) {
-    _renderContext.renderTextureMapping(
+    _renderContext._renderTextureMapping(
         this, renderTexture, mappingMatrix, ixList, vxList);
   }
 
   void renderTextureMesh(
       RenderTexture renderTexture, Int16List ixList, Float32List vxList) {
-    _renderContext.renderTextureMesh(this, renderTexture, ixList, vxList);
+    _renderContext._renderTextureMesh(this, renderTexture, ixList, vxList);
+  }
+
+  void renderTextureMeshTinted(
+    RenderTexture renderTexture,
+    Int16List ixList,
+    Float32List vxList,
+    num red,
+    num green,
+    num blue,
+    num alpha, {
+    BlendMode? blendMode,
+  }) {
+    final pushed = blendMode != null;
+    if (pushed) push(_identityMatrix, 1, blendMode);
+    _renderContext._renderTextureMeshTinted(this, renderTexture, ixList, vxList, red, green, blue, alpha);
+    if (pushed) pop();
   }
 
   void renderTriangle(
       num x1, num y1, num x2, num y2, num x3, num y3, int color) {
-    _renderContext.renderTriangle(this, x1, y1, x2, y2, x3, y3, color);
+    _renderContext._renderTriangle(this, x1, y1, x2, y2, x3, y3, color);
   }
 
   void renderTriangleMesh(Int16List ixList, Float32List vxList, int color) {
-    _renderContext.renderTriangleMesh(this, ixList, vxList, color);
+    _renderContext._renderTriangleMesh(this, ixList, vxList, color);
   }
 
   void renderTextureQuadFiltered(
       RenderTextureQuad renderTextureQuad, List<RenderFilter> renderFilters) {
-    _renderContext.renderTextureQuadFiltered(
+    _renderContext._renderTextureQuadFiltered(
         this, renderTextureQuad, renderFilters);
   }
 
   void renderObjectFiltered(RenderObject renderObject) {
-    _renderContext.renderObjectFiltered(this, renderObject);
+    _renderContext._renderObjectFiltered(this, renderObject);
   }
 
   //---------------------------------------------------------------------------
@@ -150,7 +181,7 @@ class RenderState {
 
     //-----------
 
-    if (maskBefore) renderContext.beginRenderMask(this, mask);
+    if (maskBefore) renderContext._beginRenderMask(this, mask);
 
     cs2.matrix.copyFromAndConcat(matrix, cs1.matrix);
     cs2.blendMode = (blendMode is BlendMode) ? blendMode : cs1.blendMode;
@@ -182,17 +213,17 @@ class RenderState {
 
     //-----------
 
-    if (maskAfter) renderContext.beginRenderMask(this, mask);
+    if (maskAfter) renderContext._beginRenderMask(this, mask);
 
     if (cache != null) {
       renderTextureQuad(cache);
     } else if (filters.isNotEmpty) {
       renderObject.renderFiltered(this);
     } else {
-      renderObject.render(this);
+      _addRenderable(renderObject);
     }
 
-    if (maskAfter) renderContext.endRenderMask(this, mask);
+    if (maskAfter) renderContext._endRenderMask(this, mask);
 
     //-----------
 
@@ -206,9 +237,11 @@ class RenderState {
       renderContextWebGPU.activateProjectionMatrix(cs1.matrix3D);
     }
 
-    if (maskBefore) renderContext.endRenderMask(this, mask);
+    if (maskBefore) renderContext._endRenderMask(this, mask);
     _renderContext.endRenderObject(renderObject);
   }
+
+  void _addRenderable(RenderObject renderObject) => _renderContext.renderPipes.addRenderable(renderObject, buildContext);
 
   //---------------------------------------------------------------------------
 

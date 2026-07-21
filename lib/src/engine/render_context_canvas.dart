@@ -7,6 +7,7 @@ class RenderContextCanvas extends RenderContext {
   final _identityMatrix = Matrix.fromIdentity();
   BlendMode _activeBlendMode = .NORMAL;
   double _activeAlpha = 1;
+  late final _instructions = _RetainedInstructionSystem(this);
 
   RenderContextCanvas(this._canvasElement)
       : _renderingContext = _canvasElement.getContext('2d') as CanvasRenderingContext2D {
@@ -19,6 +20,9 @@ class RenderContextCanvas extends RenderContext {
 
   @override
   RenderEngine get renderEngine => .Canvas2D;
+
+  @override
+  _RetainedInstructionSystem get _retainedInstructionSystem => _instructions;
 
   //---------------------------------------------------------------------------
   @override
@@ -178,6 +182,20 @@ class RenderContextCanvas extends RenderContext {
     }
   }
 
+  @override
+  void renderTextureQuadTinted(
+    RenderState renderState,
+    RenderTextureQuad renderTextureQuad,
+    num red,
+    num green,
+    num blue,
+    num alpha,
+  ) {
+    renderState.push(_identityMatrix, alpha);
+    this.renderTextureQuad(renderState, renderTextureQuad);
+    renderState.pop();
+  }
+
   //---------------------------------------------------------------------------
 
   @override
@@ -253,6 +271,22 @@ class RenderContextCanvas extends RenderContext {
       context.drawImage(source, 0, 0);
       context.restore();
     }
+  }
+
+  @override
+  void renderTextureMeshTinted(
+    RenderState renderState,
+    RenderTexture renderTexture,
+    Int16List ixList,
+    Float32List vxList,
+    num red,
+    num green,
+    num blue,
+    num alpha,
+  ) {
+    renderState.push(_identityMatrix, alpha);
+    renderTextureMesh(renderState, renderTexture, ixList, vxList);
+    renderState.pop();
   }
 
   //---------------------------------------------------------------------------
@@ -359,7 +393,7 @@ class RenderContextCanvas extends RenderContext {
       RenderState renderState, RenderObject renderObject) {
     // It would be to slow to render filters in real time using the
     // Canvas2D context. This is only feasible with the WebGL context.
-    renderObject.render(renderState);
+    renderState._addRenderable(renderObject);
   }
 
   //---------------------------------------------------------------------------

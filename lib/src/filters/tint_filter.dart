@@ -99,7 +99,7 @@ class TintFilter extends BitmapFilter {
 
   static void _renderWebGPU(RenderFilterContext context, TintFilter filter) {
     final renderContext = context.renderContext as RenderContextWebGPU;
-    renderContext.batchSystem.renderTextureQuad(
+    renderContext.renderTextureQuadTinted(
       context.renderState,
       context.renderTextureQuad,
       filter.factorR,

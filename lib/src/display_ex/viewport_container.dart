@@ -41,13 +41,13 @@ class ViewportContainer extends DisplayObjectContainer {
   }
 
   @override
-  void render(RenderState renderState) {
+  void renderLegacy(RenderState renderState) {
     if (_viewportRectangle == null) {
-      super.render(renderState);
+      super.renderLegacy(renderState);
     } else {
       renderState.renderContext.beginRenderMask(renderState, _viewportMask!);
       renderState.push(_viewportMatrix, 1.0, renderState.globalBlendMode);
-      super.render(renderState);
+      super.renderLegacy(renderState);
       renderState.pop();
       renderState.renderContext.endRenderMask(renderState, _viewportMask!);
     }

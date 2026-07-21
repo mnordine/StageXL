@@ -17,8 +17,12 @@ class RenderContextWebGL extends RenderContext {
   var _contextValid = true;
   var _contextIdentifier = 0;
   late final bool _isWebGL2;
+  late final _instructions = _RetainedInstructionSystem(this);
 
   bool get isWebGL2 => _isWebGL2;
+
+  @override
+  _RetainedInstructionSystem get _retainedInstructionSystem => _instructions;
 
   OES_vertex_array_object? _vaoExtension;
 
@@ -591,11 +595,49 @@ class RenderContextWebGL extends RenderContext {
   }
 
   @override
+  void renderTextureQuadTinted(
+    RenderState renderState,
+    RenderTextureQuad renderTextureQuad,
+    num red,
+    num green,
+    num blue,
+    num alpha,
+  ) {
+    activateRenderProgram(renderProgramBatch);
+    renderProgramBatch.renderTextureQuad(renderState, this, renderTextureQuad, red, green, blue, alpha);
+  }
+
+  @override
   void renderTextureMesh(RenderState renderState, RenderTexture renderTexture,
       Int16List ixList, Float32List vxList) {
     activateRenderProgram(renderProgramBatch);
     renderProgramBatch.renderTextureMesh(
       renderState, this, renderTexture, ixList, vxList, 1, 1, 1, 1);
+  }
+
+  @override
+  void renderTextureMeshTinted(
+    RenderState renderState,
+    RenderTexture renderTexture,
+    Int16List ixList,
+    Float32List vxList,
+    num red,
+    num green,
+    num blue,
+    num alpha,
+  ) {
+    activateRenderProgram(renderProgramBatch);
+    renderProgramBatch.renderTextureMesh(
+      renderState,
+      this,
+      renderTexture,
+      ixList,
+      vxList,
+      red,
+      green,
+      blue,
+      alpha,
+    );
   }
 
   @override
@@ -718,7 +760,7 @@ class RenderContextWebGL extends RenderContext {
           filterRenderState, renderTextureQuad, [filters[0]]);
       filters = filters.sublist(1);
     } else {
-      renderObject.render(filterRenderState);
+      filterRenderState._addRenderable(renderObject);
     }
 
     //----------------------------------------------
@@ -924,6 +966,11 @@ class RenderContextWebGL extends RenderContext {
   }
 
   void activateProjectionMatrix(Matrix3D matrix) {
+    if (_instructions.isCollecting) {
+      _instructions.recordProjection(matrix);
+      _projectionMatrix.copyFrom(matrix);
+      return;
+    }
     _projectionMatrix.copyFrom(matrix);
     _activeRenderProgram.flush();
     _activeRenderProgram.projectionMatrix = _projectionMatrix;

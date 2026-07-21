@@ -76,7 +76,7 @@ class HtmlObject<T extends HTMLElement> extends DisplayObject {
   //-----------------------------------------------------------------------------------------------
 
   @override
-  void render(RenderState renderState) {
+  void renderLegacy(RenderState renderState) {
     final globalMatrix = renderState.globalMatrix;
     final globalAlpha = renderState.globalAlpha;
     final visibility = visible && off == false;

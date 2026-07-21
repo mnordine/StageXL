@@ -149,8 +149,8 @@ class Sprite extends DisplayObjectContainer {
   //----------------------------------------------------------------------------
 
   @override
-  void render(RenderState renderState) {
-    _graphics?.render(renderState);
-    super.render(renderState);
+  void renderLegacy(RenderState renderState) {
+    _graphics?.renderLegacy(renderState);
+    super.renderLegacy(renderState);
   }
 }

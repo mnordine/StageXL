@@ -49,7 +49,15 @@ abstract class DisplayObject extends EventDispatcher
   ///
   /// Display objects that are not visible are disabled. For example, if
   /// visible=false for an [InteractiveObject] instance, it cannot be clicked.
-  var visible = true;
+  var _visible = true;
+
+  bool get visible => _visible;
+
+  set visible(bool value) {
+    if (_visible == value) return;
+    _visible = value;
+    invalidateRenderStructure();
+  }
 
   /// The availability and visibility of the display object.
   ///
@@ -58,7 +66,15 @@ abstract class DisplayObject extends EventDispatcher
   /// StageXL_Toolkit to disable a DisplayObject without changing the [visible]
   /// state or removing it from the container. It's recommended that users
   /// do not use [off] but [visible] instead.
-  var off = false;
+  var _off = false;
+
+  bool get off => _off;
+
+  set off(bool value) {
+    if (_off == value) return;
+    _off = value;
+    invalidateRenderStructure();
+  }
 
   Mask? _mask;
   BlendMode? _blendMode;
@@ -75,6 +91,24 @@ abstract class DisplayObject extends EventDispatcher
 
   final _transformationMatrix = Matrix.fromIdentity();
   var _transformationMatrixRefresh = true;
+  var _renderStructureVersion = 0;
+  var _renderDataVersion = 0;
+
+  @override
+  RenderPipeId get renderPipeId => RenderObject.defaultRenderPipeId;
+
+  @override
+  int get renderStructureVersion => _renderStructureVersion;
+
+  @override
+  int get renderDataVersion => _renderDataVersion;
+
+  void invalidateRenderStructure() {
+    _renderStructureVersion++;
+    _renderDataVersion++;
+  }
+
+  void invalidateRenderData() => _renderDataVersion++;
 
   //-------------------------------------------------------------------------------------------------
 
@@ -194,6 +228,7 @@ abstract class DisplayObject extends EventDispatcher
   set x(num value) {
     _x = value;
     _transformationMatrixRefresh = true;
+    invalidateRenderData();
   }
 
   /// The y-coordinate of this display object relative to the
@@ -210,6 +245,7 @@ abstract class DisplayObject extends EventDispatcher
   set y(num value) {
     _y = value;
     _transformationMatrixRefresh = true;
+    invalidateRenderData();
   }
 
   /// The x-coordinate of the pivot point of this display object.
@@ -227,6 +263,7 @@ abstract class DisplayObject extends EventDispatcher
   set pivotX(num value) {
     _pivotX = value;
     _transformationMatrixRefresh = true;
+    invalidateRenderData();
   }
 
   /// The y-coordinate of the pivot point of this display object.
@@ -244,6 +281,7 @@ abstract class DisplayObject extends EventDispatcher
   set pivotY(num value) {
     _pivotY = value;
     _transformationMatrixRefresh = true;
+    invalidateRenderData();
   }
 
   /// The horizontal scale (percentage) of the object as applied from the
@@ -261,6 +299,7 @@ abstract class DisplayObject extends EventDispatcher
   set scaleX(num value) {
     _scaleX = value;
     _transformationMatrixRefresh = true;
+    invalidateRenderData();
   }
 
   /// The vertical scale (percentage) of the object as applied from the
@@ -278,6 +317,7 @@ abstract class DisplayObject extends EventDispatcher
   set scaleY(num value) {
     _scaleY = value;
     _transformationMatrixRefresh = true;
+    invalidateRenderData();
   }
 
   /// The horizontal skew of this object.
@@ -289,6 +329,7 @@ abstract class DisplayObject extends EventDispatcher
   set skewX(num value) {
     _skewX = value;
     _transformationMatrixRefresh = true;
+    invalidateRenderData();
   }
 
   /// The vertical skew of this object.
@@ -300,6 +341,7 @@ abstract class DisplayObject extends EventDispatcher
   set skewY(num value) {
     _skewY = value;
     _transformationMatrixRefresh = true;
+    invalidateRenderData();
   }
 
   /// The rotation of this display object, in radians, from its original
@@ -318,6 +360,7 @@ abstract class DisplayObject extends EventDispatcher
   set rotation(num value) {
     _rotation = value;
     _transformationMatrixRefresh = true;
+    invalidateRenderData();
   }
 
   /// The alpha transparency value of the object specified.
@@ -332,6 +375,7 @@ abstract class DisplayObject extends EventDispatcher
   @override
   set alpha(num value) {
     _alpha = value.clamp(0.0, 1.0);
+    invalidateRenderData();
   }
 
   /// The calling display object is masked by the specified mask object.
@@ -345,6 +389,7 @@ abstract class DisplayObject extends EventDispatcher
 
   set mask(Mask? value) {
     _mask = value;
+    invalidateRenderStructure();
   }
 
   /// The filters currently associated with this display object.
@@ -354,6 +399,7 @@ abstract class DisplayObject extends EventDispatcher
 
   set filters(List<BitmapFilter> value) {
     _filters = value;
+    invalidateRenderStructure();
   }
 
   /// A value from the [BlendMode] class that specifies which blend mode to use.
@@ -369,6 +415,7 @@ abstract class DisplayObject extends EventDispatcher
 
   set blendMode(BlendMode? value) {
     _blendMode = value;
+    invalidateRenderStructure();
   }
 
   /// This getter gives you access to the underlying [RenderTextureQuad] if
@@ -472,6 +519,7 @@ abstract class DisplayObject extends EventDispatcher
     _pivotX = pivotX;
     _pivotY = pivotY;
     _transformationMatrixRefresh = true;
+    invalidateRenderData();
   }
 
   //----------------------------------------------------------------------------
@@ -893,11 +941,13 @@ abstract class DisplayObject extends EventDispatcher
 
   void applyCache(num x, num y, num width, num height,
       {bool debugBorder = false, num pixelRatio = 1.0}) {
+    final hadCache = _cache != null;
     final cache = _cache ??= _DisplayObjectCache(this);
     cache.debugBorder = debugBorder;
     cache.pixelRatio = pixelRatio;
     cache.bounds = Rectangle<num>(x, y, width, height);
     cache.update();
+    if (!hadCache) invalidateRenderStructure();
   }
 
   /// Refreshes the cached area of this display object.
@@ -909,7 +959,9 @@ abstract class DisplayObject extends EventDispatcher
   /// Removes the previously cached area of this display object.
 
   void removeCache() {
+    if (_cache == null) return;
     _cache?.dispose();
+    invalidateRenderStructure();
   }
 
   //----------------------------------------------------------------------------
@@ -939,11 +991,10 @@ abstract class DisplayObject extends EventDispatcher
 
   //----------------------------------------------------------------------------
 
-  /// Renders this display object with the given [renderState].
-  /// The display object is rendered without its filters.
+  /// Internal rendering hook for StageXL's built-in display-object pipe.
 
   @override
-  void render(RenderState renderState) {
+  void renderLegacy(RenderState renderState) {
     // implement in derived class.
   }
 
@@ -951,7 +1002,7 @@ abstract class DisplayObject extends EventDispatcher
   /// The display object is rendered with its filters.
   ///
   /// Note: You do not need to override this method in a derived
-  /// class since the [render] method will be used by default.
+  /// class since the built-in render pipe will be used by default.
   /// Only implement this method for performance optimizations.
 
   @override

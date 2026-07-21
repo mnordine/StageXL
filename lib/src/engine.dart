@@ -46,6 +46,7 @@ part 'engine/render_loop_base.dart';
 part 'engine/render_mask.dart';
 part 'engine/render_object.dart';
 part 'engine/render_pipeline.dart';
+part 'engine/retained_instruction_system.dart';
 part 'engine/render_program.dart';
 part 'engine/render_program_batch.dart';
 part 'engine/render_program_simple.dart';
