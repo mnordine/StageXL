@@ -431,6 +431,16 @@ class Stage extends DisplayObjectContainer {
     _invalid = true;
   }
 
+  /// Releases renderer-owned retained plans for this Stage and its console.
+  ///
+  /// Scene objects and textures are not disposed. The plans are recreated if
+  /// [materialize] is called again.
+  void releaseRenderPlan() {
+    _renderContext.releaseRenderPlan(this);
+    final console = _console;
+    if (console != null) _renderContext.releaseRenderPlan(console);
+  }
+
   //----------------------------------------------------------------------------
 
   /// This method is called by the [RenderLoop] where this Stage is added to.

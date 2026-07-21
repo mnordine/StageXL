@@ -69,3 +69,10 @@ group is represented by an instruction in its parent's set, so masks, filters, p
 in the same execution timeline. A group's transform is retained on the group instruction and composed with the active
 projection during execution. Moving a group therefore leaves descendant vertex buffers and render bundles unchanged.
 Nested groups compose their local transforms recursively.
+
+## Lifecycle
+
+Removing or replacing a nested render group disposes its retained instructions recursively, including WebGPU batch
+buffers and render bundles. Independent roots are retained weakly and can also be released deterministically with
+`RenderContext.releaseRenderPlan`. `Stage.releaseRenderPlan` releases both the Stage and optional console plans without
+disposing scene objects or textures; rendering the Stage again rebuilds those plans.

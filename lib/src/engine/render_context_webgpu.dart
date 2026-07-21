@@ -127,6 +127,9 @@ class RenderContextWebGPU extends RenderContext {
   void executeRenderFrame(RenderState renderState) => _instructionSystem.execute();
 
   @override
+  void releaseRenderPlan(RenderObject renderObject) => _instructionSystem.release(renderObject);
+
+  @override
   void beginRenderObject(RenderState renderState, RenderObject renderObject) =>
       _instructionSystem.beginRenderable(renderState, renderObject);
 

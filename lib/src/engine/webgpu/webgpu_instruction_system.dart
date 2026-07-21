@@ -6,8 +6,8 @@ class _WebGpuInstructionSystem {
   final _collectionStates = <_WebGpuCollectionState>[];
   final _groupStack = <RenderObject>[];
   var _collectionDepth = 0;
-  late InstructionSet instructionSet;
-  late RenderObject _rootRenderObject;
+  var instructionSet = InstructionSet();
+  RenderObject? _rootRenderObject;
   late final _scenePipe = _WebGpuScenePipe();
   late final _batchPipe = _WebGpuBatchPipe(renderContext, _takeClearColor);
   late final _maskPipe = _WebGpuMaskPipe(renderContext, _ensureClear);
@@ -55,6 +55,17 @@ class _WebGpuInstructionSystem {
     _pendingClearColor = renderContext.consumeClearColor();
     _execute(instructionSet);
     _ensureClear();
+  }
+
+  void release(RenderObject renderObject) {
+    if (_isCollecting) throw StateError('Cannot release a retained render plan during collection.');
+    final instructions = _renderGroups[renderObject];
+    if (instructions == null) return;
+    _disposeInstructionSet(instructions);
+    _clearInstructionSet(instructions);
+    _renderGroups[renderObject] = null;
+    if (identical(instructionSet, instructions)) instructionSet = InstructionSet();
+    if (identical(_rootRenderObject, renderObject)) _rootRenderObject = null;
   }
 
   void _upload(InstructionSet instructions) {
@@ -423,6 +434,18 @@ class _WebGpuInstructionSystem {
     }
   }
 
+  void _clearInstructionSet(InstructionSet instructions) {
+    for (var i = 0; i < instructions.instructionCount; i++) {
+      instructions._instructions[i] = null;
+    }
+    for (var i = 0; i < instructions.slotCount; i++) {
+      instructions._slots[i] = null;
+    }
+    instructions
+      .._instructionCount = 0
+      .._slotCount = 0;
+  }
+
   void _addSlot<TSlot extends RetainedSlot>(
     TSlot slot,
     RetainedSlotPipe<TSlot> pipe,
@@ -519,6 +542,7 @@ class _WebGpuRenderGroupPipe implements InstructionPipe<_WebGpuRenderGroupInstru
   @override
   void dispose(_WebGpuRenderGroupInstruction instruction) {
     instructionSystem._disposeInstructionSet(instruction.instructions);
+    instructionSystem._clearInstructionSet(instruction.instructions);
     instructionSystem._renderGroups[instruction.renderable] = null;
   }
 }

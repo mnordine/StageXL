@@ -313,4 +313,22 @@ void main() {
     expect(stage.renderContext.renderStatistics.retainedInstructionBuildCount, 0);
     expect(stage.renderContext.renderStatistics.retainedInstructionReuseCount, 1);
   });
+
+  test('Stage releases and recreates retained render plans', () {
+    final canvas = HTMLCanvasElement()
+      ..width = 16
+      ..height = 16;
+    final options = StageOptions()..renderEngine = .Canvas2D;
+    final stage = Stage(canvas, width: 16, height: 16, options: options)
+      ..addChild(Bitmap(BitmapData(16, 16, Color.Red)));
+
+    stage.materialize(0, 16);
+    expect(stage.renderContext.renderStatistics.retainedInstructionBuildCount, 1);
+
+    stage.releaseRenderPlan();
+    stage.materialize(16, 16);
+
+    expect(stage.renderContext.renderStatistics.retainedInstructionBuildCount, 1);
+    expect(stage.renderContext.renderStatistics.retainedInstructionReuseCount, 0);
+  });
 }

@@ -168,6 +168,33 @@ void main() {
     expect(stage.renderContext.renderStatistics.webgpuInstructionReuseCount, 1);
   });
 
+  test('WebGPU releases retained root and group resources when available', () async {
+    final options = StageOptions()
+      ..renderEngine = .WebGPU
+      ..backgroundColor = Color.Transparent
+      ..stageRenderMode = .AUTO;
+    final canvas = HTMLCanvasElement()
+      ..width = 64
+      ..height = 64;
+    final stage = await Stage.create(canvas, width: 64, height: 64, options: options);
+
+    if (stage.renderEngine != .WebGPU) return;
+
+    final group = Sprite()
+      ..isRenderGroup = true
+      ..addChild(Bitmap(BitmapData(16, 16, Color.Red)));
+    stage.addChild(group);
+
+    stage.materialize(0, 16);
+    expect(stage.renderContext.renderStatistics.webgpuInstructionBuildCount, 2);
+
+    stage.releaseRenderPlan();
+    stage.materialize(16, 16);
+
+    expect(stage.renderContext.renderStatistics.webgpuInstructionBuildCount, 2);
+    expect(stage.renderContext.renderStatistics.webgpuInstructionReuseCount, 0);
+  });
+
   test('WebGPU restores nested stencil masks when available', () async {
     final options = StageOptions()
       ..renderEngine = .WebGPU

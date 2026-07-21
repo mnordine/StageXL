@@ -57,6 +57,12 @@ abstract class RenderContext {
     }
   }
 
+  /// Releases the retained instruction plan owned by [renderObject].
+  ///
+  /// Call this outside frame collection and execution when an independent
+  /// render root will no longer be rendered. A later build recreates the plan.
+  void releaseRenderPlan(RenderObject renderObject) => _retainedInstructionSystem?.release(renderObject);
+
   void beginRenderObject(RenderState renderState, RenderObject renderObject) {}
 
   void endRenderObject(RenderObject renderObject) {}

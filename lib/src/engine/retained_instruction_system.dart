@@ -9,7 +9,7 @@ final class _RetainedInstructionSystem {
   final _instructionSets = Expando<InstructionSet>('StageXL retained render plans');
   final _instructionPipes = InstructionPipeRegistry();
   late final _commandPipe = _RetainedCommandPipe(renderContext);
-  late InstructionSet _instructionSet;
+  var _instructionSet = InstructionSet();
   var _cursor = 0;
   var _oldInstructionCount = 0;
   var _structureChanged = true;
@@ -57,6 +57,25 @@ final class _RetainedInstructionSystem {
       _instructionPipes.execute(_instructionSet.instructionAt(i));
     }
     renderContext.flush();
+  }
+
+  void release(RenderObject renderObject) {
+    if (_isCollecting) throw StateError('Cannot release a retained render plan during collection.');
+    final instructionSet = _instructionSets[renderObject];
+    if (instructionSet == null) return;
+    for (var i = 0; i < instructionSet.instructionCount; i++) {
+      final instruction = instructionSet._instructions[i];
+      if (instruction != null) _instructionPipes.dispose(instruction);
+      instructionSet._instructions[i] = null;
+    }
+    for (var i = 0; i < instructionSet.slotCount; i++) {
+      instructionSet._slots[i] = null;
+    }
+    instructionSet
+      .._instructionCount = 0
+      .._slotCount = 0;
+    _instructionSets[renderObject] = null;
+    if (identical(_instructionSet, instructionSet)) _instructionSet = InstructionSet();
   }
 
   void recordTextureQuad(
