@@ -323,6 +323,14 @@ void main() {
     _expectWebGlRetainedUploads(.WebGL2);
   });
 
+  test('WebGL1 immediate uploads do not overwrite retained buffers', () {
+    _expectWebGlImmediateUploadsDoNotOverwriteRetainedBuffers(.WebGL);
+  });
+
+  test('WebGL2 immediate uploads do not overwrite retained buffers', () {
+    _expectWebGlImmediateUploadsDoNotOverwriteRetainedBuffers(.WebGL2);
+  });
+
   test('Stage releases and recreates retained render plans', () {
     final canvas = HTMLCanvasElement()
       ..width = 16
@@ -408,5 +416,42 @@ void _expectWebGlRetainedUploads(RenderEngine engine) {
   expect(stage.renderContext.renderStatistics.retainedInstructionUploadCount, 2);
   gl.readPixels(6, 12, 1, 1, WebGL.RGBA, WebGL.UNSIGNED_BYTE, pixel.toJS);
   expect(pixel, [255, 255, 0, 255]);
+  stage.dispose();
+}
+
+void _expectWebGlImmediateUploadsDoNotOverwriteRetainedBuffers(RenderEngine engine) {
+  final canvas = HTMLCanvasElement()
+    ..width = 16
+    ..height = 16;
+  final options = StageOptions()
+    ..renderEngine = engine
+    ..backgroundColor = Color.Transparent;
+  final stage = Stage(canvas, width: 16, height: 16, options: options)
+    ..addChild(Bitmap(BitmapData(16, 16, Color.Red)));
+  if (stage.renderEngine != engine) {
+    stage.dispose();
+    return;
+  }
+
+  final context = stage.renderContext as RenderContextWebGL;
+  final immediateState = RenderState(context);
+
+  void uploadImmediateTriangle() {
+    immediateState.renderTriangle(100, 100, 101, 100, 100, 101, Color.Blue);
+    immediateState.flush();
+  }
+
+  stage.materialize(0, 16);
+  uploadImmediateTriangle(); // Initialize the immediate program and its shared buffers.
+  stage.materialize(16, 16); // Retained execution leaves its private buffers bound.
+  expect(context.renderStatistics.retainedInstructionUploadCount, 0);
+
+  uploadImmediateTriangle();
+  stage.materialize(32, 16);
+  expect(context.renderStatistics.retainedInstructionUploadCount, 0);
+
+  final pixel = Uint8List(4);
+  context.rawContext.readPixels(8, 8, 1, 1, WebGL.RGBA, WebGL.UNSIGNED_BYTE, pixel.toJS);
+  expect(pixel, [255, 0, 0, 255]);
   stage.dispose();
 }

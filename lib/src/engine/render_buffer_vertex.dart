@@ -48,6 +48,7 @@ class RenderBufferVertex {
     if (position == 0) return;
 
     final update = Float32List.view(data.buffer, 0, position);
+    _renderingContext!.bindBuffer(WebGL.ARRAY_BUFFER, _buffer);
     _renderingContext!.bufferSubData(WebGL.ARRAY_BUFFER, 0, update.toJS);
     _renderStatistics.vertexCount += count;
   }
