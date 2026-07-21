@@ -13,7 +13,7 @@ part of '../drawing.dart';
 /// **Note:** Stroke and fill operations act on the *preceding* vector
 /// drawing operations.
 
-class Graphics {
+class Graphics implements RenderVectorGraphics {
   final _originalCommands = <GraphicsCommand>[];
   final _compiledCommands = <GraphicsCommand>[];
 
@@ -267,7 +267,15 @@ class Graphics {
     }
   }
 
-  void renderLegacy(RenderState renderState) {
+  @override
+  void collectVectorGraphics(RenderBuildContext context) {
+    final commands = _getCommands(true);
+    final graphicsContext = _GraphicsContextBuild(context);
+    _updateContext(graphicsContext, commands);
+  }
+
+  @override
+  void executeDraw(RenderState renderState) {
     if (renderState.renderContext is RenderContextCanvas) {
       final commands = _getCommands(false);
       final context = _GraphicsContextCanvas(renderState);
@@ -278,6 +286,9 @@ class Graphics {
       _updateContext(context, commands);
     }
   }
+
+  @Deprecated('Use RenderBuildContext.addVectorGraphics during collection.')
+  void renderLegacy(RenderState renderState) => executeDraw(renderState);
 
   void renderMask(RenderState renderState) {
     if (renderState.renderContext is RenderContextCanvas) {

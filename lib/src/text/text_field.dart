@@ -2,7 +2,7 @@
 
 part of '../text.dart';
 
-class TextField extends InteractiveObject {
+class TextField extends InteractiveObject implements RenderText {
   var _text = '';
   late TextFormat _defaultTextFormat;
 
@@ -222,46 +222,73 @@ class TextField extends InteractiveObject {
   }
 
   @override
+  void collectRenderables(RenderBuildContext context) {
+    _refreshTextLineMetrics();
+
+    if (_cacheAsBitmap) {
+      context.addTextureQuad(prepareTextTexture(context.globalMatrix));
+    } else {
+      context.addText(this);
+    }
+
+    _caretTime += context.deltaTime;
+    if (!_isCaretVisible) return;
+
+    final x1 = _caretX;
+    final y1 = _caretY;
+    final x3 = _caretX + _caretWidth;
+    final y3 = _caretY + _caretHeight;
+    final color = _defaultTextFormat.color;
+    context.addTriangle(x1, y1, x3, y1, x3, y3, color);
+    context.addTriangle(x1, y1, x3, y3, x1, y3, color);
+  }
+
+  @override
+  RenderTextureQuad prepareTextTexture(Matrix globalMatrix) {
+    _refreshTextLineMetrics();
+    _refreshCache(globalMatrix);
+    return _renderTextureQuad!;
+  }
+
+  @override
+  void renderCanvasText(RenderState renderState) {
+    _refreshTextLineMetrics();
+    final renderContext = renderState.renderContext as RenderContextCanvas;
+    renderContext.setTransform(renderState.globalMatrix);
+    renderContext.setAlpha(renderState.globalAlpha);
+    _renderText(renderContext.rawContext);
+  }
+
+  @override
   void renderLegacy(RenderState renderState) {
     _refreshTextLineMetrics();
 
-    if (renderState.renderContext is RenderContextWebGL || _cacheAsBitmap) {
-      _refreshCache(renderState.globalMatrix);
-      renderState.renderTextureQuad(_renderTextureQuad!);
-    } else if (renderState.renderContext is RenderContextCanvas) {
-      final renderContextCanvas =
-          renderState.renderContext as RenderContextCanvas;
-      renderContextCanvas.setTransform(renderState.globalMatrix);
-      renderContextCanvas.setAlpha(renderState.globalAlpha);
-      _renderText(renderContextCanvas.rawContext);
+    if (_cacheAsBitmap) {
+      renderState.renderTextureQuad(prepareTextTexture(renderState.globalMatrix));
+    } else {
+      renderState.renderText(this);
     }
-
-    // draw cursor for INPUT text fields
 
     _caretTime += renderState.deltaTime;
+    if (!_isCaretVisible) return;
 
-    if (_type == TextFieldType.INPUT) {
-      final stage = this.stage;
-      if (stage != null &&
-          stage.focus == this &&
-          _caretTime.remainder(0.8) < 0.4) {
-        final x1 = _caretX;
-        final y1 = _caretY;
-        final x3 = _caretX + _caretWidth;
-        final y3 = _caretY + _caretHeight;
-        final color = _defaultTextFormat.color;
-        renderState.renderTriangle(x1, y1, x3, y1, x3, y3, color);
-        renderState.renderTriangle(x1, y1, x3, y3, x1, y3, color);
-      }
-    }
+    final x1 = _caretX;
+    final y1 = _caretY;
+    final x3 = _caretX + _caretWidth;
+    final y3 = _caretY + _caretHeight;
+    final color = _defaultTextFormat.color;
+    renderState.renderTriangle(x1, y1, x3, y1, x3, y3, color);
+    renderState.renderTriangle(x1, y1, x3, y3, x1, y3, color);
   }
+
+  bool get _isCaretVisible =>
+      _type == TextFieldType.INPUT && stage?.focus == this && _caretTime.remainder(0.8) < 0.4;
 
   @override
   void renderFiltered(RenderState renderState) {
     if (_type == TextFieldType.INPUT) {
       super.renderFiltered(renderState);
-    } else if (renderState.renderContext is RenderContextWebGL ||
-        _cacheAsBitmap) {
+    } else if (renderState.renderContext is! RenderContextCanvas || _cacheAsBitmap) {
       _refreshTextLineMetrics();
       _refreshCache(renderState.globalMatrix);
       renderState.renderTextureQuadFiltered(_renderTextureQuad!, filters);

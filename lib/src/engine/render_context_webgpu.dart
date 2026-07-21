@@ -323,6 +323,15 @@ class RenderContextWebGPU extends RenderContext {
   }
 
   @override
+  void _renderDrawOperation(RenderState renderState, RenderDrawOperation operation) {
+    if (_instructionSystem.isCollecting) {
+      _instructionSystem.recordDrawOperation(renderState, operation);
+      return;
+    }
+    operation.executeDraw(renderState);
+  }
+
+  @override
   void renderTextureQuadFiltered(
       RenderState renderState, RenderTextureQuad renderTextureQuad, List<RenderFilter> renderFilters) {
     if (_instructionSystem.isCollecting) {

@@ -194,6 +194,24 @@ class _GraphicsPath extends _GraphicsMesh<_GraphicsPathSegment> {
   //---------------------------------------------------------------------------
 
   @override
+  void collectColor(RenderBuildContext context, int color) {
+    // not implemented: non-zero winding rule
+    for (final segment in segments) {
+      if (segment.indexCount == 0) segment.calculateIndices();
+      segment.collectColor(context, color);
+    }
+  }
+
+  @override
+  void collectPattern(RenderBuildContext context, GraphicsPattern pattern) {
+    // not implemented: non-zero winding rule
+    for (final segment in segments) {
+      if (segment.indexCount == 0) segment.calculateIndices();
+      segment.collectPattern(context, pattern);
+    }
+  }
+
+  @override
   void fillColor(RenderState renderState, int color) {
     // not implemented: non-zero winding rule
     for (final segment in segments) {

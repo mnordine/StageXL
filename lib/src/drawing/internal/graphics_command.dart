@@ -14,7 +14,7 @@ class _GraphicsCommandMeshColor extends GraphicsCommand {
   }
 }
 
-class _GraphicsCommandMeshGradient extends GraphicsCommand {
+class _GraphicsCommandMeshGradient extends GraphicsCommand implements RenderDrawOperation {
   final _GraphicsMesh mesh;
   final GraphicsGradient gradient;
 
@@ -26,6 +26,9 @@ class _GraphicsCommandMeshGradient extends GraphicsCommand {
       context.meshGradient(this);
     }
   }
+
+  @override
+  void executeDraw(RenderState renderState) => mesh.fillGradient(renderState, gradient);
 }
 
 class _GraphicsCommandMeshPattern extends GraphicsCommand {

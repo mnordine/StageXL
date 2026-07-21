@@ -135,6 +135,24 @@ final class _RetainedInstructionSystem {
     _cursor++;
   }
 
+  void recordDrawOperation(RenderState state, RenderDrawOperation operation) {
+    final old = _instructionAtCursor;
+    final reusable = old is _RetainedDrawCommand && identical(old.operation, operation);
+    final command = reusable ? old : _RetainedDrawCommand(renderContext, operation);
+    if (!reusable) _replace(command);
+    command.updateState(state);
+    _cursor++;
+  }
+
+  void recordCanvasText(RenderState state, RenderText text) {
+    final old = _instructionAtCursor;
+    final reusable = old is _RetainedCanvasTextCommand && identical(old.text, text);
+    final command = reusable ? old : _RetainedCanvasTextCommand(renderContext, text);
+    if (!reusable) _replace(command);
+    command.updateState(state);
+    _cursor++;
+  }
+
   void recordMask(RenderState state, RenderMask mask, {required bool begin}) {
     final old = _instructionAtCursor;
     final reusable = old is _RetainedMaskCommand && old.begin == begin && identical(old.mask, mask);
@@ -397,6 +415,27 @@ final class _RetainedTriangleMeshCommand extends _RetainedCommand {
 
   @override
   void execute(RenderContext renderContext) => renderContext.renderTriangleMesh(state, indices, vertices, color);
+}
+
+final class _RetainedDrawCommand extends _RetainedCommand {
+  final RenderDrawOperation operation;
+
+  _RetainedDrawCommand(super.renderContext, this.operation);
+
+  @override
+  void execute(RenderContext renderContext) {
+    operation.executeDraw(state);
+    renderContext.flush();
+  }
+}
+
+final class _RetainedCanvasTextCommand extends _RetainedCommand {
+  final RenderText text;
+
+  _RetainedCanvasTextCommand(super.renderContext, this.text);
+
+  @override
+  void execute(RenderContext renderContext) => text.renderCanvasText(state);
 }
 
 final class _RetainedMaskCommand extends _RetainedCommand {

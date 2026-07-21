@@ -45,6 +45,7 @@ part 'drawing/graphics_pattern.dart';
 part 'drawing/internal/graphics_command.dart';
 part 'drawing/internal/graphics_context_base.dart';
 part 'drawing/internal/graphics_context_bounds.dart';
+part 'drawing/internal/graphics_context_build.dart';
 part 'drawing/internal/graphics_context_canvas.dart';
 part 'drawing/internal/graphics_context_compiler.dart';
 part 'drawing/internal/graphics_context_hittest.dart';

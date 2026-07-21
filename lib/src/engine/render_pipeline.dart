@@ -33,6 +33,12 @@ final class RenderBuildContext {
   /// Compatibility path for built-ins that have not migrated to semantic operations.
   void addLegacy(LegacyRenderObject renderable) => renderable.renderLegacy(_renderState);
 
+  void addVectorGraphics(RenderVectorGraphics graphics) => _renderState.renderVectorGraphics(graphics);
+
+  void addText(RenderText text) => _renderState.renderText(text);
+
+  void addDrawOperation(RenderDrawOperation operation) => _renderState.renderDrawOperation(operation);
+
   void addRenderable(RenderObject renderable) => _renderState.renderObject(renderable);
 
   void addTextureQuad(
@@ -92,6 +98,31 @@ final class RenderBuildContext {
 /// Converts a scene renderable into backend-neutral render operations.
 abstract interface class RenderPipe<T extends RenderObject> {
   void addRenderable(T renderable, RenderBuildContext context);
+}
+
+/// An execution-only draw operation for work that cannot use a semantic mesh,
+/// texture, mask, or filter instruction.
+///
+/// The renderer retains the operation during display-tree traversal and only
+/// asks it to encode backend commands from an instruction pipe. Prefer the
+/// more specific [RenderBuildContext] methods whenever possible because they
+/// can participate in batching and resource uploads.
+abstract interface class RenderDrawOperation {
+  void executeDraw(RenderState renderState);
+}
+
+/// Vector content that Canvas2D retains natively and GPU renderers expand into
+/// semantic mesh operations.
+abstract interface class RenderVectorGraphics implements RenderDrawOperation {
+  void collectVectorGraphics(RenderBuildContext context);
+}
+
+/// Text content that can be drawn natively by Canvas2D or materialized as a
+/// texture for GPU renderers.
+abstract interface class RenderText {
+  RenderTextureQuad prepareTextTexture(Matrix globalMatrix);
+
+  void renderCanvasText(RenderState renderState);
 }
 
 /// Lets an extension install its pipe lazily into the renderer that encounters it.

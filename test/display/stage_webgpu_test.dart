@@ -233,6 +233,62 @@ void main() {
     expect(stage.renderContext.renderStatistics.webgpuRenderPassCount, greaterThanOrEqualTo(3));
   });
 
+  test('WebGPU batches solid graphics with adjacent texture quads when available', () async {
+    final options = StageOptions()
+      ..renderEngine = .WebGPU
+      ..backgroundColor = Color.Transparent
+      ..stageRenderMode = .AUTO;
+    final canvas = HTMLCanvasElement()
+      ..width = 64
+      ..height = 32;
+    final stage = await Stage.create(canvas, width: 64, height: 32, options: options);
+
+    if (stage.renderEngine != .WebGPU) return;
+
+    final shape = Shape();
+    shape.graphics
+      ..rect(0, 0, 16, 16)
+      ..fillColor(Color.Red);
+    stage
+      ..addChild(shape)
+      ..addChild(Bitmap(BitmapData(16, 16, Color.Blue))..x = 24);
+
+    stage.materialize(0, 16);
+    expect(stage.renderContext.renderStatistics.drawCount, 1);
+    expect(stage.renderContext.renderStatistics.webgpuBatchFlushCount, 1);
+
+    shape.x = 4;
+    stage.materialize(16, 16);
+    expect(stage.renderContext.renderStatistics.webgpuInstructionBuildCount, 0);
+    expect(stage.renderContext.renderStatistics.webgpuInstructionReuseCount, 1);
+  });
+
+  test('WebGPU materializes uncached text into retained batches when available', () async {
+    final options = StageOptions()
+      ..renderEngine = .WebGPU
+      ..backgroundColor = Color.Transparent
+      ..stageRenderMode = .AUTO;
+    final canvas = HTMLCanvasElement()
+      ..width = 96
+      ..height = 32;
+    final stage = await Stage.create(canvas, width: 96, height: 32, options: options);
+
+    if (stage.renderEngine != .WebGPU) return;
+
+    final text = TextField('retained', TextFormat('Arial', 12, Color.White))
+      ..cacheAsBitmap = false;
+    stage.addChild(text);
+
+    expect(() => stage.materialize(0, 16), returnsNormally);
+    expect(stage.renderContext.renderStatistics.drawCount, 1);
+    expect(stage.renderContext.renderStatistics.webgpuInstructionBuildCount, 1);
+
+    text.x = 4;
+    stage.materialize(16, 16);
+    expect(stage.renderContext.renderStatistics.webgpuInstructionBuildCount, 0);
+    expect(stage.renderContext.renderStatistics.webgpuInstructionReuseCount, 1);
+  });
+
   test('WebGPU renders ColorMatrixFilter bitmap quads when available', () async {
     final options = StageOptions()
       ..renderEngine = .WebGPU

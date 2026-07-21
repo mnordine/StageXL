@@ -26,6 +26,20 @@ class RenderContextCanvas extends RenderContext {
   @override
   _RetainedInstructionSystem get _retainedInstructionSystem => _instructions;
 
+  @override
+  void _renderText(RenderState renderState, RenderText text) {
+    if (_instructions.isCollecting) {
+      _instructions.recordCanvasText(renderState, text);
+    } else {
+      text.renderCanvasText(renderState);
+    }
+  }
+
+  @override
+  void _renderVectorGraphics(RenderState renderState, RenderVectorGraphics graphics) {
+    _renderDrawOperation(renderState, graphics);
+  }
+
   //---------------------------------------------------------------------------
   @override
   int? get maxTextureSize => null;

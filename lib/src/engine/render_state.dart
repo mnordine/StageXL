@@ -153,6 +153,18 @@ class RenderState {
     _renderContext._renderTriangleMesh(this, ixList, vxList, color);
   }
 
+  void renderVectorGraphics(RenderVectorGraphics graphics) {
+    _renderContext._renderVectorGraphics(this, graphics);
+  }
+
+  void renderDrawOperation(RenderDrawOperation operation) {
+    _renderContext._renderDrawOperation(this, operation);
+  }
+
+  void renderText(RenderText text) {
+    _renderContext._renderText(this, text);
+  }
+
   void renderTextureQuadFiltered(
       RenderTextureQuad renderTextureQuad, List<RenderFilter> renderFilters) {
     _renderContext._renderTextureQuadFiltered(

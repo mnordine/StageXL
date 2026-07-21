@@ -7,9 +7,11 @@ WebGPU systems. Registries belong to a renderer, not the process. Applications c
 lazily into each renderer that encounters them.
 
 Built-in bitmaps, display containers, bitmap containers, meshes, Scale9 bitmaps, viewport masks, Canvas shadow wrappers,
-DOM overlays, and console glyphs use the same semantic collection API. Graphics and text still have an internal
-`renderLegacy(RenderState)` compatibility path while their backend-specific operations are converted to instructions. It
-is not the extension contract.
+DOM overlays, console glyphs, vector graphics, and text use the same semantic collection API. Canvas2D retains a
+`Graphics` instance as one native vector instruction. WebGL and WebGPU expand its compiled solid and pattern meshes into
+their normal retained batches; gradient-program meshes remain typed draw instructions at their exact positions relative
+to container children and sibling draws. Native Canvas text is retained as a typed instruction, while WebGL and WebGPU
+materialize text as a texture quad during collection so it can use their normal batching and upload paths.
 
 The frame is split into these phases:
 
@@ -22,7 +24,8 @@ The frame is split into these phases:
 
 Canvas2D and WebGL1/2 share a retained semantic command plan. Canvas2D's upload phase is intentionally empty. WebGL
 replays the retained plan through its existing batch programs; moving its buffer writes completely into the upload phase
-is still in progress. WebGPU uses specialized batch, mask, filter, projection, and render-group instruction pipes.
+is still in progress. WebGPU uses specialized batch, mask, filter, projection, custom-draw, and render-group instruction
+pipes.
 
 WebGPU batch, mask, and instruction systems are private backend details. StageXL_Spine now uses one render pipe for all
 renderers, so its tinted meshes and clipping boundaries enter the instruction set in display-list order without a direct

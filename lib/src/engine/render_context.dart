@@ -256,6 +256,24 @@ abstract class RenderContext {
     }
   }
 
+  void _renderVectorGraphics(RenderState renderState, RenderVectorGraphics graphics) {
+    graphics.collectVectorGraphics(renderState.buildContext);
+  }
+
+  void _renderDrawOperation(RenderState renderState, RenderDrawOperation operation) {
+    final instructionSystem = _retainedInstructionSystem;
+    if (instructionSystem?.isCollecting ?? false) {
+      instructionSystem!.recordDrawOperation(renderState, operation);
+    } else {
+      operation.executeDraw(renderState);
+    }
+  }
+
+  void _renderText(RenderState renderState, RenderText text) {
+    final quad = text.prepareTextTexture(renderState.globalMatrix);
+    _renderTextureQuad(renderState, quad);
+  }
+
   void _renderTextureQuadFiltered(RenderState renderState, RenderTextureQuad quad, List<RenderFilter> filters) {
     final instructionSystem = _retainedInstructionSystem;
     if (instructionSystem?.isCollecting ?? false) {

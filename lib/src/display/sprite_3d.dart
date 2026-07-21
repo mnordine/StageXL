@@ -148,11 +148,15 @@ class Sprite3D extends DisplayObjectContainer3D implements Sprite {
   //----------------------------------------------------------------------------
 
   @override
-  void collectRenderables(RenderBuildContext context) => context.addLegacy(this);
+  void collectRenderables(RenderBuildContext context) {
+    final graphics = _graphics;
+    if (graphics != null) context.addVectorGraphics(graphics);
+    super.collectRenderables(context);
+  }
 
   @override
   void renderLegacy(RenderState renderState) {
-    _graphics?.renderLegacy(renderState);
+    _graphics?.executeDraw(renderState);
     super.renderLegacy(renderState);
   }
 }

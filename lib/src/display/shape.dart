@@ -26,7 +26,8 @@ class Shape extends DisplayObject {
   }
 
   @override
-  void renderLegacy(RenderState renderState) {
-    graphics.renderLegacy(renderState);
-  }
+  void collectRenderables(RenderBuildContext context) => context.addVectorGraphics(graphics);
+
+  @override
+  void renderLegacy(RenderState renderState) => graphics.executeDraw(renderState);
 }

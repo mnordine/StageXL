@@ -3,6 +3,8 @@ part of '../../drawing.dart';
 abstract class _GraphicsMeshSegment {
   Float32List _vertexBuffer;
   Int16List _indexBuffer;
+  Float32List? _vertexView;
+  Int16List? _indexView;
 
   var _vertexCount = 0;
   var _indexCount = 0;
@@ -60,6 +62,7 @@ abstract class _GraphicsMeshSegment {
   //---------------------------------------------------------------------------
 
   int addVertex(double x, double y) {
+    _vertexView = null;
     final offset = _vertexCount * 2;
     final length = _vertexBuffer.length;
     final buffer = _vertexBuffer;
@@ -85,6 +88,7 @@ abstract class _GraphicsMeshSegment {
   //---------------------------------------------------------------------------
 
   void addIndices(int index1, int index2, int index3) {
+    _indexView = null;
     final offset = _indexCount;
     final length = _indexBuffer.length;
     final buffer = _indexBuffer;
@@ -106,16 +110,18 @@ abstract class _GraphicsMeshSegment {
   //---------------------------------------------------------------------------
 
   void fillColor(RenderState renderState, int color) {
-    final ixList = Int16List.view(_indexBuffer.buffer, 0, _indexCount);
-    final vxList = Float32List.view(_vertexBuffer.buffer, 0, _vertexCount * 2);
-    renderState.renderTriangleMesh(ixList, vxList, color);
+    renderState.renderTriangleMesh(_indices, _vertices, color);
+  }
+
+  void collectColor(RenderBuildContext context, int color) {
+    context.addTriangleMesh(_indices, _vertices, color);
   }
 
   //---------------------------------------------------------------------------
 
   void fillGradient(RenderState renderState, GraphicsGradient gradient) {
-    final ixList = Int16List.view(_indexBuffer.buffer, 0, _indexCount);
-    final vxList = Float32List.view(_vertexBuffer.buffer, 0, _vertexCount * 2);
+    final ixList = _indices;
+    final vxList = _vertices;
     final renderTexture = gradient.getRenderTexture();
     final renderContext = renderState.renderContext;
 
@@ -173,8 +179,29 @@ abstract class _GraphicsMeshSegment {
       matrix.setTo(invWidth, 0.0, 0.0, invHeight, 0.0, 0.0);
     }
 
-    final ixList = Int16List.view(_indexBuffer.buffer, 0, _indexCount);
-    final vxList = Float32List.view(_vertexBuffer.buffer, 0, _vertexCount * 2);
-    renderState.renderTextureMapping(texture, matrix, ixList, vxList);
+    renderState.renderTextureMapping(texture, matrix, _indices, _vertices);
   }
+
+  void collectPattern(RenderBuildContext context, GraphicsPattern pattern) {
+    final matrix = _tmpMatrix;
+    final texture = pattern.patternTexture;
+    final invWidth = 1.0 / texture.width;
+    final invHeight = 1.0 / texture.height;
+
+    texture.wrappingX = pattern.type.wrappingX;
+    texture.wrappingY = pattern.type.wrappingY;
+
+    if (pattern.matrix != null) {
+      matrix.copyFromAndInvert(pattern.matrix!);
+      matrix.scale(invWidth, invHeight);
+    } else {
+      matrix.setTo(invWidth, 0.0, 0.0, invHeight, 0.0, 0.0);
+    }
+
+    context.addTextureMapping(texture, matrix, _indices, _vertices);
+  }
+
+  Int16List get _indices => _indexView ??= Int16List.view(_indexBuffer.buffer, 0, _indexCount);
+
+  Float32List get _vertices => _vertexView ??= Float32List.view(_vertexBuffer.buffer, 0, _vertexCount * 2);
 }

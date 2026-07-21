@@ -254,4 +254,63 @@ void main() {
     stage.materialize(16, 16);
     expect(stage.renderContext.renderStatistics.retainedInstructionReuseCount, 1);
   });
+
+  test('Canvas2D retains Sprite graphics before child instructions', () {
+    final canvas = HTMLCanvasElement()
+      ..width = 24
+      ..height = 16;
+    final options = StageOptions()
+      ..renderEngine = .Canvas2D
+      ..backgroundColor = Color.Transparent;
+    final sprite = Sprite();
+    sprite.graphics
+      ..rect(0, 0, 16, 16)
+      ..fillColor(Color.Red);
+    sprite.addChild(Bitmap(BitmapData(8, 8, Color.Blue))
+      ..x = 4
+      ..y = 4);
+    final stage = Stage(canvas, width: 24, height: 16, options: options)..addChild(sprite);
+
+    stage.materialize(0, 16);
+
+    final context = canvas.getContext('2d') as CanvasRenderingContext2D;
+    final background = context.getImageData(2, 2, 1, 1).data.toDart;
+    final foreground = context.getImageData(6, 6, 1, 1).data.toDart;
+    expect(background.sublist(0, 4), [255, 0, 0, 255]);
+    expect(foreground.sublist(0, 4), [0, 0, 255, 255]);
+    expect(stage.renderContext.renderStatistics.retainedInstructionCount, 2);
+
+    sprite.x = 8;
+    stage.materialize(16, 16);
+
+    expect(stage.renderContext.renderStatistics.retainedInstructionBuildCount, 0);
+    expect(stage.renderContext.renderStatistics.retainedInstructionReuseCount, 1);
+    final movedBackground = context.getImageData(10, 2, 1, 1).data.toDart;
+    final movedForeground = context.getImageData(14, 6, 1, 1).data.toDart;
+    expect(movedBackground.sublist(0, 4), [255, 0, 0, 255]);
+    expect(movedForeground.sublist(0, 4), [0, 0, 255, 255]);
+  });
+
+  test('Canvas2D retains native text without rebuilding for transforms', () {
+    final canvas = HTMLCanvasElement()
+      ..width = 64
+      ..height = 24;
+    final options = StageOptions()
+      ..renderEngine = .Canvas2D
+      ..backgroundColor = Color.Transparent;
+    final text = TextField('retained', TextFormat('Arial', 12, Color.Red))
+      ..cacheAsBitmap = false;
+    final stage = Stage(canvas, width: 64, height: 24, options: options)..addChild(text);
+
+    stage.materialize(0, 16);
+
+    expect(stage.renderContext.renderStatistics.retainedInstructionCount, 1);
+    expect(stage.renderContext.renderStatistics.retainedInstructionBuildCount, 1);
+
+    text.x = 4;
+    stage.materialize(16, 16);
+
+    expect(stage.renderContext.renderStatistics.retainedInstructionBuildCount, 0);
+    expect(stage.renderContext.renderStatistics.retainedInstructionReuseCount, 1);
+  });
 }

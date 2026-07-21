@@ -15,6 +15,20 @@ class _GraphicsStroke extends _GraphicsMesh<_GraphicsStrokeSegment> {
   //---------------------------------------------------------------------------
 
   @override
+  void collectColor(RenderBuildContext context, int color) {
+    for (final segment in segments) {
+      segment.collectColor(context, color);
+    }
+  }
+
+  @override
+  void collectPattern(RenderBuildContext context, GraphicsPattern pattern) {
+    for (final segment in segments) {
+      segment.collectPattern(context, pattern);
+    }
+  }
+
+  @override
   void fillColor(RenderState renderState, int color) {
     for (final segment in segments) {
       segment.fillColor(renderState, color);

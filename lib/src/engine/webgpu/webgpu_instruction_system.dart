@@ -13,6 +13,7 @@ class _WebGpuInstructionSystem {
   late final _maskPipe = _WebGpuMaskPipe(renderContext, _ensureClear);
   late final _filterPipe = _WebGpuFilterPipe(renderContext, _ensureClear);
   late final _projectionPipe = _WebGpuProjectionPipe(renderContext, _ensureClear);
+  late final _drawPipe = _WebGpuDrawPipe(renderContext, _ensureClear);
   late final _renderGroupPipe = _WebGpuRenderGroupPipe(this);
   final _instructionPipes = InstructionPipeRegistry();
   var _mappedVertices = Float32List(16);
@@ -33,6 +34,7 @@ class _WebGpuInstructionSystem {
       ..register(_maskPipe)
       ..register(_filterPipe)
       ..register(_projectionPipe)
+      ..register(_drawPipe)
       ..register(_renderGroupPipe);
   }
 
@@ -301,6 +303,19 @@ class _WebGpuInstructionSystem {
       colorGetB(color) * inv255,
       colorGetA(color) * inv255,
     );
+  }
+
+  void recordDrawOperation(RenderState state, RenderDrawOperation operation) {
+    flushBatch();
+    final old = _instructionAtCursor;
+    final reusable = old is _WebGpuDrawInstruction && identical(old.operation, operation);
+    final instruction = reusable ? old : _WebGpuDrawInstruction(renderContext, operation);
+    if (!reusable) _replaceInstruction(instruction);
+    instruction.state
+      ..copyFrom(state)
+      ..currentTime = state.currentTime
+      ..deltaTime = state.deltaTime;
+    _instructionCursor++;
   }
 
   void recordMask(RenderState state, RenderMask mask, {required bool begin}) {
@@ -1141,6 +1156,41 @@ class _WebGpuBatchPipe
     }
     return false;
   }
+}
+
+class _WebGpuDrawInstruction implements RenderInstruction {
+  static const pipeId = InstructionPipeId<_WebGpuDrawInstruction>('webgpu.draw');
+
+  final RenderDrawOperation operation;
+  final RenderState state;
+
+  _WebGpuDrawInstruction(RenderContextWebGPU renderContext, this.operation) : state = RenderState(renderContext);
+
+  @override
+  InstructionPipeId<_WebGpuDrawInstruction> get instructionPipeId => pipeId;
+}
+
+class _WebGpuDrawPipe implements InstructionPipe<_WebGpuDrawInstruction> {
+  final RenderContextWebGPU renderContext;
+  final void Function() ensureClear;
+
+  _WebGpuDrawPipe(this.renderContext, this.ensureClear);
+
+  @override
+  InstructionPipeId<_WebGpuDrawInstruction> get id => _WebGpuDrawInstruction.pipeId;
+
+  @override
+  void upload(_WebGpuDrawInstruction instruction) {}
+
+  @override
+  void execute(_WebGpuDrawInstruction instruction) {
+    ensureClear();
+    instruction.operation.executeDraw(instruction.state);
+    renderContext.flush();
+  }
+
+  @override
+  void dispose(_WebGpuDrawInstruction instruction) {}
 }
 
 class _WebGpuMaskInstruction implements RenderInstruction {
