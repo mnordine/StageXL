@@ -388,13 +388,23 @@ final class _RetainedWebGLUpload {
   void _buildSlice(int start, int end) {
     final slice = _sliceAt(_sliceCount++)..reset(_vertexLength, _indexLength);
     var sliceVertexCount = 0;
+    final opaqueTarget = renderContext._activeRenderTargetIsOpaque;
+    final dualSourceBlending = renderContext.dualSourceBlending &&
+        (!opaqueTarget ||
+            _sequence
+                .getRange(start, end)
+                .any((command) => _requiresDualSourceBatchBlendMode(command.state.globalBlendMode)));
 
     for (var commandIndex = start; commandIndex < end; commandIndex++) {
       final command = _sequence[commandIndex];
       final texture = command.webGlTexture;
       final blendMode = command.state.globalBlendMode;
-      final opaqueTarget = renderContext._activeRenderTargetIsOpaque;
-      final batchBlendMode = _batchBlendMode(blendMode, opaqueTarget: opaqueTarget);
+      final batchBlendMode = _batchBlendMode(
+        blendMode,
+        opaqueTarget: opaqueTarget,
+        dualSourceBlending: dualSourceBlending,
+        promoteOpaqueNormalAdd: dualSourceBlending,
+      );
       var run = slice.lastRun;
       var textureIndex = run?.textureIndex(texture);
       if (run == null || !_sameBlendMode(run.blendMode, batchBlendMode) || textureIndex == null) {
@@ -417,6 +427,8 @@ final class _RetainedWebGLUpload {
           blendMode,
           RenderProgramBatchWebGL._maxTextures,
           opaqueTarget: opaqueTarget,
+          dualSourceBlending: dualSourceBlending,
+          promoteOpaqueNormalAdd: dualSourceBlending,
         ),
       );
       _bakeIndices(indices, sliceVertexCount);

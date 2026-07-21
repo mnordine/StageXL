@@ -24,6 +24,11 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
 
   static var _maxTextures = 8; // Default value, will be updated at runtime
   static JSUint32Array? _samplerIndices;
+  final bool _dualSourceShader;
+
+  RenderProgramBatchWebGL() : _dualSourceShader = false;
+
+  RenderProgramBatchWebGL.dualSource() : _dualSourceShader = true;
 
   static int initializeMaxTextures(WebGL renderingContext, {required bool isWebGL2}) {
     _maxTextures = (renderingContext.getParameter(WebGL.MAX_TEXTURE_IMAGE_UNITS) as JSNumber?)?.toDartInt ?? 8;
@@ -47,7 +52,35 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
   var _executingBatch = false;
 
   @override
-  String get vertexShaderSource => isWebGL2 ? '''
+  String get vertexShaderSource {
+    final blendOutput = _dualSourceShader
+        ? isWebGL2
+            ? 'flat out int vBlendMode;'
+            : 'varying float vBlendMode;'
+        : isWebGL2
+            ? 'flat out float vAlphaMultiplier;'
+            : 'varying float vAlphaMultiplier;';
+    final blendDecode = _dualSourceShader
+        ? isWebGL2
+            ? '''
+      int blendMode = encodedTextureIndex / $_maxTextures;
+      vTexIndex = encodedTextureIndex - blendMode * $_maxTextures;
+      vBlendMode = blendMode;'''
+            : '''
+      float blendMode = floor(aVertexTexIndex / ${_maxTextures.toDouble()} + 0.1);
+      vTexIndex = aVertexTexIndex - blendMode * ${_maxTextures.toDouble()};
+      vBlendMode = blendMode;'''
+        : isWebGL2
+            ? '''
+      int additive = encodedTextureIndex / $_maxTextures;
+      vTexIndex = encodedTextureIndex - additive * $_maxTextures;
+      vAlphaMultiplier = 1.0 - float(additive);'''
+            : '''
+      float additive = step(${_maxTextures - 0.5}, aVertexTexIndex);
+      vTexIndex = aVertexTexIndex - additive * ${_maxTextures.toDouble()};
+      vAlphaMultiplier = 1.0 - additive;''';
+
+    return isWebGL2 ? '''
     #version 300 es
 
     uniform mat4 uProjectionMatrix;
@@ -60,15 +93,13 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
     out vec2 vTextCoord;
     out vec4 vColor;
     flat out int vTexIndex;
-    flat out float vAlphaMultiplier;
+    $blendOutput
 
     void main() {
       vTextCoord = aVertexTextCoord;
       vColor = aVertexColor;
       int encodedTextureIndex = int(aVertexTexIndex + 0.5);
-      int additive = encodedTextureIndex / $_maxTextures;
-      vTexIndex = encodedTextureIndex - additive * $_maxTextures;
-      vAlphaMultiplier = 1.0 - float(additive);
+      $blendDecode
       gl_Position = vec4(aVertexPosition, 0.0, 1.0) * uProjectionMatrix;
     }
     ''' : '''
@@ -81,21 +112,21 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
     varying vec2 vTextCoord;
     varying vec4 vColor;
     varying float vTexIndex;
-    varying float vAlphaMultiplier;
+    $blendOutput
 
     void main() {
       vTextCoord = aVertexTextCoord;
       vColor = aVertexColor;
-      float additive = step(${_maxTextures - 0.5}, aVertexTexIndex);
-      vTexIndex = aVertexTexIndex - additive * ${_maxTextures.toDouble()};
-      vAlphaMultiplier = 1.0 - additive;
+      $blendDecode
       gl_Position = vec4(aVertexPosition, 0.0, 1.0) * uProjectionMatrix;
     }
     ''';
+  }
 
   @override
   String get fragmentShaderSource {
     final sb = StringBuffer();
+    final sampleTarget = _dualSourceShader ? 'color' : isWebGL2 ? 'fragColor' : 'gl_FragColor';
 
     if (isWebGL2) {
       // WebGL 2: Use sampler array declaration but with branching for lookup
@@ -106,17 +137,41 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
         // Use branching to access the sampler array element
         sb.write('''
         if (textureIndex == $i) {
-          fragColor = texture(uSamplers[$i], vTextCoord) * vColor;
+          $sampleTarget = texture(uSamplers[$i], vTextCoord) * vColor;
         }''');
       }
       // Fallback (Magenta for debugging)
       sb.write('''
         else {
-          fragColor = vec4(1.0, 0.0, 1.0, 1.0);
+          $sampleTarget = vec4(1.0, 0.0, 1.0, 1.0);
         }''');
+
+      final extension = _dualSourceShader ? '#extension GL_EXT_blend_func_extended : require' : '';
+      final blendInput = _dualSourceShader ? 'flat in int vBlendMode;' : 'flat in float vAlphaMultiplier;';
+      final outputs = _dualSourceShader
+          ? '''
+      layout(location = 0, index = 0) out vec4 fragColor;
+      layout(location = 0, index = 1) out vec4 secondaryColor;'''
+          : 'out vec4 fragColor;';
+      final blendResult = _dualSourceShader
+          ? '''
+        fragColor = color;
+        if (vBlendMode == 1) {
+          secondaryColor = vec4(1.0);
+        } else if (vBlendMode == 2) {
+          secondaryColor = vec4(vec3(1.0) - color.rgb, 1.0 - color.a);
+        } else if (vBlendMode == 3) {
+          fragColor = vec4(0.0);
+          secondaryColor = vec4(color.rgb + vec3(1.0 - color.a), 1.0);
+        } else {
+          secondaryColor = vec4(1.0 - color.a);
+        }'''
+          : 'fragColor.a *= vAlphaMultiplier;';
+      final colorVariable = _dualSourceShader ? 'vec4 color;' : '';
 
       return '''
       #version 300 es
+      $extension
 
       precision ${RenderProgramWebGL.fragmentPrecision} float;
 
@@ -125,14 +180,15 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
       in vec2 vTextCoord;
       in vec4 vColor;
       flat in int vTexIndex;
-      flat in float vAlphaMultiplier;
+      $blendInput
 
-      out vec4 fragColor;
+      $outputs
 
       void main() {
+        $colorVariable
         int textureIndex = vTexIndex;
         $sb
-        fragColor.a *= vAlphaMultiplier;
+        $blendResult
       }
       ''';
     } else {
@@ -144,16 +200,35 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
         if (i > 0) sb.write('else ');
         sb.write('''
         if (vTexIndex >= ${iFloat - 0.1} && vTexIndex <= ${iFloat + 0.1}) {
-          gl_FragColor = texture2D(uSampler$i, vTextCoord) * vColor;
+          $sampleTarget = texture2D(uSampler$i, vTextCoord) * vColor;
         }''');
       }
       // Fallback (Magenta for debugging)
       sb.write('''
         else {
-          gl_FragColor = vec4(1.0, 0.0, 1.0, 1.0);
+          $sampleTarget = vec4(1.0, 0.0, 1.0, 1.0);
         }''');
 
+      final extension = _dualSourceShader ? '#extension GL_EXT_blend_func_extended : require' : '';
+      final blendInput = _dualSourceShader ? 'varying float vBlendMode;' : 'varying float vAlphaMultiplier;';
+      final blendResult = _dualSourceShader
+          ? '''
+        gl_FragColor = color;
+        if (vBlendMode >= 0.5 && vBlendMode < 1.5) {
+          gl_SecondaryFragColorEXT = vec4(1.0);
+        } else if (vBlendMode >= 1.5 && vBlendMode < 2.5) {
+          gl_SecondaryFragColorEXT = vec4(vec3(1.0) - color.rgb, 1.0 - color.a);
+        } else if (vBlendMode >= 2.5) {
+          gl_FragColor = vec4(0.0);
+          gl_SecondaryFragColorEXT = vec4(color.rgb + vec3(1.0 - color.a), 1.0);
+        } else {
+          gl_SecondaryFragColorEXT = vec4(1.0 - color.a);
+        }'''
+          : 'gl_FragColor.a *= vAlphaMultiplier;';
+      final colorVariable = _dualSourceShader ? 'vec4 color;' : '';
+
       return '''
+      $extension
       precision ${RenderProgramWebGL.fragmentPrecision} float;
 
       $samplerDeclarations // Use individual samplers
@@ -161,11 +236,12 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
       varying vec2 vTextCoord;
       varying vec4 vColor;
       varying float vTexIndex;
-      varying float vAlphaMultiplier;
+      $blendInput
 
       void main() {
+        $colorVariable
         $sb
-        gl_FragColor.a *= vAlphaMultiplier;
+        $blendResult
       }
       ''';
     }
@@ -250,6 +326,25 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
 
   var _lastBlendMode = BlendMode.NORMAL;
 
+  void _resetCachedBlendMode() => _lastBlendMode = BlendMode.NORMAL;
+
+  void _activateBatchBlendMode(WebGL gl, BlendMode blendMode) {
+    if (identical(blendMode, BlendMode._DUAL_SOURCE)) {
+      gl.blendFuncSeparate(WebGL.ONE, _src1ColorWebGL, WebGL.ONE, _src1AlphaWebGL);
+    } else {
+      gl.blendFunc(blendMode.srcFactor, blendMode.dstFactor);
+    }
+    _lastBlendMode = blendMode;
+  }
+
+  RenderProgramBatchWebGL _shaderForBlendMode(RenderContextWebGL renderContext, BlendMode blendMode) =>
+      identical(blendMode, BlendMode._DUAL_SOURCE) ? renderContext._renderProgramBatchDualSource : this;
+
+  void _activateBatchShader(RenderContextWebGL renderContext, RenderProgramBatchWebGL shader) {
+    shader.activate(renderContext);
+    shader.projectionMatrix = renderContext.activeProjectionMatrix;
+  }
+
   void _executeBatchedCommands() {
     if (_drawCommands.isEmpty) return;
     _executingBatch = true;
@@ -265,6 +360,7 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
     renderBufferIndex.update();
 
     final gl = renderContext.rawContext;
+    var activeShader = this;
     var cmdIndex = 0;
     while (cmdIndex < _drawCommands.length) {
       final first = _drawCommands[cmdIndex];
@@ -302,11 +398,16 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
 
       // --- Set state and draw the group ---
 
+      final shader = _shaderForBlendMode(renderContext, groupBlend);
+      if (!identical(shader, activeShader)) {
+        _activateBatchShader(renderContext, shader);
+        activeShader = shader;
+      }
+
       // 1. Activate blend mode for the group (if it changed).
       if (_lastBlendMode.srcFactor != groupBlend.srcFactor ||
           _lastBlendMode.dstFactor != groupBlend.dstFactor) {
-        gl.blendFunc(groupBlend.srcFactor, groupBlend.dstFactor);
-        _lastBlendMode = groupBlend;
+        _activateBatchBlendMode(gl, groupBlend);
       }
 
       // 2. Bind all unique textures required by this group.
@@ -321,6 +422,8 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
       // Advance to the next command after the group.
       cmdIndex = lookahead;
     }
+
+    if (!identical(activeShader, this)) _activateBatchShader(renderContext, this);
 
     // Reset buffer positions for the next batch.
     renderBufferVertex.position = 0;
@@ -341,23 +444,28 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
     _renderContextWebGL = renderContext;
     _executingBatch = true;
     final gl = renderContext.rawContext;
-    _bindVAO();
-    gl
-      ..bindBuffer(WebGL.ARRAY_BUFFER, vertexBuffer)
-      ..bindBuffer(WebGL.ELEMENT_ARRAY_BUFFER, indexBuffer);
     final vertexByteOffset = slice.vertexFloatOffset * 4;
-    _bindRetainedAttribute('aVertexPosition', 2, vertexByteOffset + 0);
-    _bindRetainedAttribute('aVertexTextCoord', 2, vertexByteOffset + 8);
-    _bindRetainedAttribute('aVertexColor', 4, vertexByteOffset + 16);
-    _bindRetainedAttribute('aVertexTexIndex', 1, vertexByteOffset + 32);
+    RenderProgramBatchWebGL? activeShader;
 
     for (var runIndex = 0; runIndex < slice.runCount; runIndex++) {
       final run = slice.runs[runIndex];
       if (run.indexCount == 0) continue;
+      final shader = _shaderForBlendMode(renderContext, run.blendMode);
+      if (!identical(shader, activeShader)) {
+        _activateBatchShader(renderContext, shader);
+        gl
+          ..bindBuffer(WebGL.ARRAY_BUFFER, vertexBuffer)
+          ..bindBuffer(WebGL.ELEMENT_ARRAY_BUFFER, indexBuffer);
+        shader
+          .._bindRetainedAttribute('aVertexPosition', 2, vertexByteOffset + 0)
+          .._bindRetainedAttribute('aVertexTextCoord', 2, vertexByteOffset + 8)
+          .._bindRetainedAttribute('aVertexColor', 4, vertexByteOffset + 16)
+          .._bindRetainedAttribute('aVertexTexIndex', 1, vertexByteOffset + 32);
+        activeShader = shader;
+      }
       if (_lastBlendMode.srcFactor != run.blendMode.srcFactor ||
           _lastBlendMode.dstFactor != run.blendMode.dstFactor) {
-        gl.blendFunc(run.blendMode.srcFactor, run.blendMode.dstFactor);
-        _lastBlendMode = run.blendMode;
+        _activateBatchBlendMode(gl, run.blendMode);
       }
       for (var i = 0; i < run.textures.length; i++) {
         renderContext.activateRenderTextureAt(run.textures[i], i, flush: false);
@@ -367,6 +475,7 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
       renderStatistics.vertexCount += run.vertexCount;
       renderStatistics.indexCount += run.indexCount;
     }
+    if (!identical(activeShader, this)) _activateBatchShader(renderContext, this);
     _executingBatch = false;
   }
 
@@ -435,7 +544,11 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
     final alpha = renderState.globalAlpha;
     final blendMode = renderState.globalBlendMode;
     final opaqueTarget = renderContext._activeRenderTargetIsOpaque;
-    final batchBlendMode = _batchBlendMode(blendMode, opaqueTarget: opaqueTarget);
+    final batchBlendMode = _batchBlendMode(
+      blendMode,
+      opaqueTarget: opaqueTarget,
+      dualSourceBlending: renderContext.dualSourceBlending,
+    );
     final matrix = renderState.globalMatrix;
     final vxList = renderTextureQuad.vxListQuad;
     const ixListCount = 6;
@@ -499,6 +612,7 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
       blendMode,
       _maxTextures,
       opaqueTarget: opaqueTarget,
+      dualSourceBlending: renderContext.dualSourceBlending,
     ).toDouble();
     vxData[vPos++] = ma1 + mc1;
     vxData[vPos++] = mb1 + md1;
@@ -591,7 +705,11 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
 
     blendMode ??= renderState.globalBlendMode;
     final opaqueTarget = renderContext._activeRenderTargetIsOpaque;
-    final batchBlendMode = _batchBlendMode(blendMode, opaqueTarget: opaqueTarget);
+    final batchBlendMode = _batchBlendMode(
+      blendMode,
+      opaqueTarget: opaqueTarget,
+      dualSourceBlending: renderContext.dualSourceBlending,
+    );
 
     // Check if we need to flush due to buffer size limits
     if (!needsFlush && renderBufferIndex.position + ixListCount >= renderBufferIndex.data.length) {
@@ -641,6 +759,7 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
       blendMode,
       _maxTextures,
       opaqueTarget: opaqueTarget,
+      dualSourceBlending: renderContext.dualSourceBlending,
     ).toDouble();
 
     for (var i = 0, o = 0; i < vxListCount; i++, o += 4) {

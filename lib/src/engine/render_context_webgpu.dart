@@ -4,6 +4,8 @@ class RenderContextWebGPU extends RenderContext {
   final RenderSurface _canvasElement;
   final WebGpuDeviceSystem deviceSystem;
   final bool renderBundles;
+  final bool dualSourceBlendingRequested;
+  final bool dualSourceBlending;
   late final WebGpuCommandSystem commandSystem;
   late final WebGpuTextureSystem textureSystem;
   late final WebGpuPipelineSystem pipelineSystem;
@@ -24,6 +26,8 @@ class RenderContextWebGPU extends RenderContext {
     this._canvasElement,
     this.deviceSystem, {
     required this.renderBundles,
+    required this.dualSourceBlendingRequested,
+    required this.dualSourceBlending,
     required this._primaryRenderTargetIsOpaque,
   }) {
     commandSystem = WebGpuCommandSystem(this);
@@ -33,6 +37,9 @@ class RenderContextWebGPU extends RenderContext {
     _instructionSystem = _WebGpuInstructionSystem(this);
     _maskSystem = _WebGpuMaskSystem(this);
     filterSystem = WebGpuFilterSystem(this);
+    renderStatistics
+      ..dualSourceBlendingRequested = dualSourceBlendingRequested
+      ..dualSourceBlendingEnabled = dualSourceBlending;
     _updateStageProjection();
     unawaited(device.lost.toDart.then(_onDeviceLost));
     _contextRestoredEvent.add(const RenderContextEvent());
@@ -44,18 +51,22 @@ class RenderContextWebGPU extends RenderContext {
     bool alpha = false,
     bool antialias = false,
     bool renderBundles = false,
+    bool dualSourceBlending = false,
   }) async {
     final deviceSystem = await WebGpuDeviceSystem.create(
       canvas,
       alpha: alpha,
       antialias: antialias,
       powerPreference: powerPreference,
+      dualSourceBlending: dualSourceBlending,
     );
     if (deviceSystem == null) return null;
     return RenderContextWebGPU._(
       canvas,
       deviceSystem,
       renderBundles: renderBundles,
+      dualSourceBlendingRequested: dualSourceBlending,
+      dualSourceBlending: dualSourceBlending && deviceSystem.enabledFeatures.contains('dual-source-blending'),
       primaryRenderTargetIsOpaque: !alpha,
     );
   }

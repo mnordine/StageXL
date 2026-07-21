@@ -125,6 +125,13 @@ class StageOptions {
   /// Enable WebGPU render bundle caching for stable batches.
   var renderBundles = false;
 
+  /// Allow supported GPU renderers to batch NORMAL, ADD, SCREEN, and MULTIPLY draws together.
+  ///
+  /// This uses optional dual-source blending support. Unsupported renderers keep their normal
+  /// blend-mode batching behavior. Opaque batches containing only NORMAL/ADD keep their cheaper
+  /// single-source fast path. Leave this disabled unless blend-mode breaks are a measured bottleneck.
+  var dualSourceBlending = false;
+
   var _shaderPrecision = 'mediump';
 
   ShaderPrecision get shaderPrecision => switch (_shaderPrecision) {
@@ -168,6 +175,7 @@ class StageOptions {
     options.shaderPrecision = shaderPrecision;
     options.powerPreference = powerPreference;
     options.renderBundles = renderBundles;
+    options.dualSourceBlending = dualSourceBlending;
     options.renderPipes.copyFrom(renderPipes);
     options.resetColorOnRenderStart = resetColorOnRenderStart;
     options.resetStencilTestOnRenderStart = resetStencilTestOnRenderStart;

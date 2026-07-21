@@ -804,8 +804,15 @@ class _WebGpuBatchInstruction implements RenderInstruction {
     indexCount = 0;
     final maxTextures = renderContext.pipelineSystem.maxBatchTextures;
     final opaqueTarget = renderContext._activeRenderTargetIsOpaque;
+    final dualSourceBlending = renderContext.dualSourceBlending &&
+        (!opaqueTarget || renderables.any((renderable) => _requiresDualSourceBatchBlendMode(renderable.blendMode)));
     for (final renderable in renderables) {
-      final batchBlendMode = _batchBlendMode(renderable.blendMode, opaqueTarget: opaqueTarget);
+      final batchBlendMode = _batchBlendMode(
+        renderable.blendMode,
+        opaqueTarget: opaqueTarget,
+        dualSourceBlending: dualSourceBlending,
+        promoteOpaqueNormalAdd: dualSourceBlending,
+      );
       var run = runs.isEmpty ? null : runs.last;
       var textureIndex = run?.textureIndex(renderable.texture);
       if (run == null || !identical(run.blendMode, batchBlendMode) || textureIndex == null) {
@@ -819,6 +826,8 @@ class _WebGpuBatchInstruction implements RenderInstruction {
         renderable.blendMode,
         maxTextures,
         opaqueTarget: opaqueTarget,
+        dualSourceBlending: dualSourceBlending,
+        promoteOpaqueNormalAdd: dualSourceBlending,
       );
       renderable.vertexFloatOffset = vertexCount * _WebGpuBatchPipe._floatsPerVertex;
       renderable.indexOffset = indexCount;

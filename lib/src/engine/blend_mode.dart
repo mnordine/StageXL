@@ -72,14 +72,78 @@ class BlendMode {
   /// pixels and therefore the GPU does not read the color from the destination
   /// pixels.
   static final NONE = BlendMode(WebGL.ONE, WebGL.ZERO, 'source-over');
+
+  static final _DUAL_SOURCE = BlendMode(WebGL.ONE, _src1ColorWebGL, 'source-over');
 }
 
-// On opaque targets ADD can use NORMAL hardware blending when the shader zeros
-// source alpha. The upper texture-index range carries that per-vertex flag.
-BlendMode _batchBlendMode(BlendMode blendMode, {required bool opaqueTarget}) =>
-    opaqueTarget && (identical(blendMode, BlendMode.NORMAL) || identical(blendMode, BlendMode.ADD))
+const _src1ColorWebGL = 0x88F9;
+const _src1AlphaWebGL = 0x8589;
+const _maxDualSourceDrawBuffersWebGL = 0x88FC;
+
+bool _isDualSourceBatchBlendMode(BlendMode blendMode) =>
+    identical(blendMode, BlendMode.NORMAL) ||
+    identical(blendMode, BlendMode.ADD) ||
+    identical(blendMode, BlendMode.SCREEN) ||
+    identical(blendMode, BlendMode.MULTIPLY);
+
+bool _requiresDualSourceBatchBlendMode(BlendMode blendMode) =>
+    identical(blendMode, BlendMode.SCREEN) || identical(blendMode, BlendMode.MULTIPLY);
+
+bool _usesOpaqueNormalAddFastPath(BlendMode blendMode, bool opaqueTarget) =>
+    opaqueTarget && (identical(blendMode, BlendMode.NORMAL) || identical(blendMode, BlendMode.ADD));
+
+bool _usesDualSourceBatchBlendMode(
+  BlendMode blendMode,
+  bool opaqueTarget,
+  bool dualSourceBlending, {
+  required bool promoteOpaqueNormalAdd,
+}) =>
+    dualSourceBlending &&
+    _isDualSourceBatchBlendMode(blendMode) &&
+    (promoteOpaqueNormalAdd || !_usesOpaqueNormalAddFastPath(blendMode, opaqueTarget));
+
+// On opaque targets ADD can use NORMAL hardware blending when the shader zeros source alpha.
+// Retained batches keep that cheaper path unless SCREEN/MULTIPLY makes promoting the complete
+// compatible sequence to one dual-source run worthwhile.
+BlendMode _batchBlendMode(
+  BlendMode blendMode, {
+  required bool opaqueTarget,
+  required bool dualSourceBlending,
+  bool promoteOpaqueNormalAdd = false,
+}) =>
+    _usesDualSourceBatchBlendMode(
+      blendMode,
+      opaqueTarget,
+      dualSourceBlending,
+      promoteOpaqueNormalAdd: promoteOpaqueNormalAdd,
+    )
+        ? BlendMode._DUAL_SOURCE
+        : _usesOpaqueNormalAddFastPath(blendMode, opaqueTarget)
         ? BlendMode.NORMAL
         : blendMode;
 
-int _batchTextureIndex(int textureIndex, BlendMode blendMode, int maxTextures, {required bool opaqueTarget}) =>
-    opaqueTarget && identical(blendMode, BlendMode.ADD) ? textureIndex + maxTextures : textureIndex;
+int _batchTextureIndex(
+  int textureIndex,
+  BlendMode blendMode,
+  int maxTextures, {
+  required bool opaqueTarget,
+  required bool dualSourceBlending,
+  bool promoteOpaqueNormalAdd = false,
+}) {
+  if (_usesDualSourceBatchBlendMode(
+    blendMode,
+    opaqueTarget,
+    dualSourceBlending,
+    promoteOpaqueNormalAdd: promoteOpaqueNormalAdd,
+  )) {
+    final blendIndex = identical(blendMode, BlendMode.ADD)
+        ? 1
+        : identical(blendMode, BlendMode.SCREEN)
+        ? 2
+        : identical(blendMode, BlendMode.MULTIPLY)
+        ? 3
+        : 0;
+    return textureIndex + blendIndex * maxTextures;
+  }
+  return opaqueTarget && identical(blendMode, BlendMode.ADD) ? textureIndex + maxTextures : textureIndex;
+}

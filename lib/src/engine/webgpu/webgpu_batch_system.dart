@@ -212,7 +212,11 @@ class _WebGpuBatchSystem {
     _ensureCpuVertexCapacity(_vertexPosition + vertexCount * _floatsPerVertex);
     _ensureCpuIndexCapacity(_indexPosition + indexCount + 1);
     final opaqueTarget = renderContext._activeRenderTargetIsOpaque;
-    final batchBlendMode = _batchBlendMode(blendMode, opaqueTarget: opaqueTarget);
+    final batchBlendMode = _batchBlendMode(
+      blendMode,
+      opaqueTarget: opaqueTarget,
+      dualSourceBlending: renderContext.dualSourceBlending,
+    );
 
     var run = _runs.isEmpty ? null : _runs.last;
     int? textureIndex;
@@ -244,6 +248,7 @@ class _WebGpuBatchSystem {
       blendMode,
       renderContext.pipelineSystem.maxBatchTextures,
       opaqueTarget: opaqueTarget,
+      dualSourceBlending: renderContext.dualSourceBlending,
     );
   }
 

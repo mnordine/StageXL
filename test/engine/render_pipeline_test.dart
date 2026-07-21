@@ -339,6 +339,14 @@ void main() {
     _expectWebGlTransparentNormalAddRuns(.WebGL2);
   });
 
+  test('WebGL1 promotes mixed retained blend modes into one dual-source batch', () {
+    _expectWebGlDualSourceBlendFusion(.WebGL);
+  });
+
+  test('WebGL2 promotes mixed retained blend modes into one dual-source batch', () {
+    _expectWebGlDualSourceBlendFusion(.WebGL2);
+  });
+
   test('WebGL1 immediate uploads do not overwrite retained buffers', () {
     _expectWebGlImmediateUploadsDoNotOverwriteRetainedBuffers(.WebGL);
   });
@@ -478,7 +486,8 @@ void _expectWebGlOpaqueNormalAddFusion(RenderEngine engine) {
     ..height = 16;
   final options = StageOptions()
     ..renderEngine = engine
-    ..backgroundColor = Color.Black;
+    ..backgroundColor = Color.Black
+    ..dualSourceBlending = true;
   final stage = Stage(canvas, width: 16, height: 16, options: options)
     ..addChild(Bitmap(BitmapData(16, 16, Color.Blue)))
     ..addChild(Bitmap(BitmapData(16, 16, Color.Red))
@@ -527,4 +536,55 @@ void _expectWebGlTransparentNormalAddRuns(RenderEngine engine) {
 
   expect(stage.renderContext.renderStatistics.drawCount, 3);
   stage.dispose();
+}
+
+void _expectWebGlDualSourceBlendFusion(RenderEngine engine) {
+  Stage createStage(bool dualSourceBlending) {
+    final canvas = HTMLCanvasElement()
+      ..width = 16
+      ..height = 16;
+    final options = StageOptions()
+      ..renderEngine = engine
+      ..backgroundColor = Color.Black
+      ..dualSourceBlending = dualSourceBlending;
+    return Stage(canvas, width: 16, height: 16, options: options)
+      ..addChild(Bitmap(BitmapData(16, 16, Color.Red))..alpha = 0.4)
+      ..addChild(Bitmap(BitmapData(16, 16, Color.Green))
+        ..alpha = 0.3
+        ..blendMode = .ADD)
+      ..addChild(Bitmap(BitmapData(16, 16, Color.Blue))
+        ..alpha = 0.25
+        ..blendMode = .SCREEN)
+      ..addChild(Bitmap(BitmapData(16, 16, 0xFF808080))
+        ..alpha = 0.5
+        ..blendMode = .MULTIPLY)
+      ..addChild(Bitmap(BitmapData(16, 16, Color.Yellow))..alpha = 0.2);
+  }
+
+  final reference = createStage(false);
+  final optimized = createStage(true);
+  if (reference.renderEngine != engine || optimized.renderEngine != engine) {
+    reference.dispose();
+    optimized.dispose();
+    return;
+  }
+
+  reference.materialize(0, 16);
+  optimized.materialize(0, 16);
+
+  final optimizedContext = optimized.renderContext as RenderContextWebGL;
+  expect(reference.renderContext.renderStatistics.drawCount, 4);
+  expect(optimized.renderContext.renderStatistics.drawCount, optimizedContext.dualSourceBlending ? 1 : 4);
+
+  final referencePixel = Uint8List(4);
+  final optimizedPixel = Uint8List(4);
+  (reference.renderContext as RenderContextWebGL)
+      .rawContext
+      .readPixels(8, 8, 1, 1, WebGL.RGBA, WebGL.UNSIGNED_BYTE, referencePixel.toJS);
+  optimizedContext.rawContext.readPixels(8, 8, 1, 1, WebGL.RGBA, WebGL.UNSIGNED_BYTE, optimizedPixel.toJS);
+  for (var i = 0; i < 4; i++) {
+    expect(optimizedPixel[i], closeTo(referencePixel[i], 2));
+  }
+  reference.dispose();
+  optimized.dispose();
 }

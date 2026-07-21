@@ -25,9 +25,12 @@ void main() {
   });
 
   test('StageOptions clone preserves WebGPU render engine', () {
-    final options = StageOptions()..renderEngine = .WebGPU;
+    final options = StageOptions()
+      ..renderEngine = .WebGPU
+      ..dualSourceBlending = true;
 
     expect(options.clone().renderEngine, RenderEngine.WebGPU);
+    expect(options.clone().dualSourceBlending, isTrue);
   });
 
   test('WebGPU renders non-scissor masks through stencil pass when available', () async {
@@ -139,6 +142,7 @@ void main() {
     final options = StageOptions()
       ..renderEngine = .WebGPU
       ..backgroundColor = Color.Black
+      ..dualSourceBlending = true
       ..stageRenderMode = .ONCE;
     final canvas = HTMLCanvasElement()
       ..width = 32
@@ -188,6 +192,41 @@ void main() {
     expect(stage.renderContext.renderStatistics.drawCount, 3);
     expect(stage.renderContext.renderStatistics.webgpuBatchRunCount, 3);
     expect(stage.renderContext.renderStatistics.webgpuBatchBlendBreakCount, 2);
+  });
+
+  test('WebGPU promotes mixed retained blend modes into one dual-source batch when available', () async {
+    final options = StageOptions()
+      ..renderEngine = .WebGPU
+      ..backgroundColor = Color.Black
+      ..dualSourceBlending = true
+      ..stageRenderMode = .ONCE;
+    final canvas = HTMLCanvasElement()
+      ..width = 32
+      ..height = 32;
+    final stage = await Stage.create(canvas, width: 32, height: 32, options: options);
+
+    if (stage.renderEngine != .WebGPU) return;
+
+    final bitmapData = BitmapData(32, 32);
+    stage
+      ..addChild(Bitmap(bitmapData)..alpha = 0.25)
+      ..addChild(Bitmap(bitmapData)
+        ..alpha = 0.25
+        ..blendMode = .ADD)
+      ..addChild(Bitmap(bitmapData)
+        ..alpha = 0.25
+        ..blendMode = .SCREEN)
+      ..addChild(Bitmap(bitmapData)
+        ..alpha = 0.25
+        ..blendMode = .MULTIPLY)
+      ..addChild(Bitmap(bitmapData)..alpha = 0.25);
+
+    stage.materialize(0, 16);
+
+    final context = stage.renderContext as RenderContextWebGPU;
+    expect(context.renderStatistics.drawCount, context.dualSourceBlending ? 1 : 4);
+    expect(context.renderStatistics.webgpuBatchRunCount, context.dualSourceBlending ? 1 : 4);
+    expect(context.renderStatistics.webgpuBatchBlendBreakCount, context.dualSourceBlending ? 0 : 3);
   });
 
   test('WebGPU retains nested render groups independently when available', () async {

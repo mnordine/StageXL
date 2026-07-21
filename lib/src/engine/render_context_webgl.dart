@@ -50,6 +50,7 @@ class RenderContextWebGL extends RenderContext {
   final renderProgramTinted = RenderProgramTintedWebGL();
   final renderProgramTriangle = RenderProgramTriangleWebGL();
   final renderProgramBatch = RenderProgramBatchWebGL();
+  final _renderProgramBatchDualSource = RenderProgramBatchWebGL.dualSource();
 
   final renderBufferIndex = RenderBufferIndex(16384 * 2);
   final renderBufferVertex = RenderBufferVertex(32768 * 2);
@@ -64,6 +65,8 @@ class RenderContextWebGL extends RenderContext {
   final bool _resetStencilTest;
   final bool _resetColor;
   final bool _primaryRenderTargetIsOpaque;
+  final bool _dualSourceBlendingRequested;
+  var dualSourceBlending = false;
 
   //---------------------------------------------------------------------------
 
@@ -76,7 +79,10 @@ class RenderContextWebGL extends RenderContext {
     this._resetScissorTest = true,
     this._resetStencilTest = true,
     this._resetColor = true,
-  }) : _primaryRenderTargetIsOpaque = !alpha {
+    bool dualSourceBlending = false,
+  }) : _primaryRenderTargetIsOpaque = !alpha,
+       _dualSourceBlendingRequested = dualSourceBlending {
+    renderStatistics.dualSourceBlendingRequested = dualSourceBlending;
     _contextLostListener = _onContextLost.toJS;
     _contextRestoredListener = _onContextRestored.toJS;
     _canvasElement.addEventListener('webglcontextlost', _contextLostListener);
@@ -128,6 +134,10 @@ class RenderContextWebGL extends RenderContext {
     _renderProgramResources.clear();
     _configureRenderingContext();
     _invalidateCachedState();
+    dualSourceBlending = _dualSourceBlendingRequested &&
+        _renderingContext.getExtension('WEBGL_blend_func_extended') != null &&
+        ((_renderingContext.getParameter(_maxDualSourceDrawBuffersWebGL) as JSNumber?)?.toDartInt ?? 0) > 0;
+    renderStatistics.dualSourceBlendingEnabled = dualSourceBlending;
 
     if (!isWebGL2) {
       _vaoExtension = _renderingContext.getExtension('OES_vertex_array_object') as OES_vertex_array_object?;
@@ -166,6 +176,7 @@ class RenderContextWebGL extends RenderContext {
     renderBufferVertex.count = 0;
 
     renderProgramBatch._clearBatchData();
+    renderProgramBatch._resetCachedBlendMode();
 
     _maskStates.clear();
     for (final renderFrameBuffer in _renderFrameBufferPool) {

@@ -64,6 +64,7 @@ export 'src/ui.dart';
 ///     StageXL.stageOptions.preventDefaultOnMouse = true;
 ///     StageXL.stageOptions.preventDefaultOnWheel = false;
 ///     StageXL.stageOptions.preventDefaultOnKeyboard = false;
+///     StageXL.stageOptions.dualSourceBlending = false;
 ///
 /// The default [BitmapDataLoadOptions] used by [BitmapData.load]:
 ///

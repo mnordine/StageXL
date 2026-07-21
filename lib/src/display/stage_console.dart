@@ -43,6 +43,9 @@ class StageConsole extends DisplayObject {
     print('BATCH FLUSH${stats.webgpuBatchFlushCount.toString().padLeft(5)}');
     print('BATCH RUNS${stats.webgpuBatchRunCount.toString().padLeft(6)}');
     print('BLEND BREAK${stats.webgpuBatchBlendBreakCount.toString().padLeft(5)}');
+    if (stats.dualSourceBlendingRequested) {
+      print('DUAL SRC ${stats.dualSourceBlendingEnabled ? 'ON' : 'UNSUPPORTED'}');
+    }
     print('TEX BREAK${stats.webgpuBatchTextureBreakCount.toString().padLeft(7)}');
     print('BINDGROUPS${stats.webgpuBindGroupCreateCount.toString().padLeft(6)}');
     print('PIPELINES${stats.webgpuPipelineCreateCount.toString().padLeft(7)}');

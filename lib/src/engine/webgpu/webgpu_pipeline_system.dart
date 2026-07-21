@@ -38,8 +38,12 @@ class WebGpuPipelineSystem {
       renderContext.device.createPipelineLayout(GPUPipelineLayoutDescriptor(
     bindGroupLayouts: <GPUBindGroupLayout>[].toJS,
   ));
-  late final GPUShaderModule shaderModule =
-      renderContext.device.createShaderModule(GPUShaderModuleDescriptor(code: _batchShaderSource(maxBatchTextures)));
+  late final GPUShaderModule shaderModule = renderContext.device.createShaderModule(GPUShaderModuleDescriptor(
+    code: _batchShaderSource(maxBatchTextures, dualSourceBlending: false),
+  ));
+  late final GPUShaderModule _dualSourceShaderModule = renderContext.device.createShaderModule(
+    GPUShaderModuleDescriptor(code: _batchShaderSource(maxBatchTextures, dualSourceBlending: true)),
+  );
   late final GPUShaderModule stencilShaderModule =
       renderContext.device.createShaderModule(GPUShaderModuleDescriptor(code: _stencilShaderSource));
   GPUBuffer? _projectionBuffer;
@@ -83,11 +87,12 @@ class WebGpuPipelineSystem {
   GPURenderPipeline _createPipeline(BlendMode blendMode, {required int stencilMode, required int sampleCount}) {
     renderContext.renderStatistics.webgpuPipelineCreateCount++;
     final blend = _blendFor(blendMode);
+    final batchShaderModule = identical(blendMode, BlendMode._DUAL_SOURCE) ? _dualSourceShaderModule : shaderModule;
     return renderContext.device.createRenderPipeline(GPURenderPipelineDescriptor(
       label: 'StageXL batch pipeline',
       layout: pipelineLayout,
       vertex: GPUVertexState(
-        module: shaderModule,
+        module: batchShaderModule,
         entryPoint: 'vs_main',
         buffers: [
           GPUVertexBufferLayout(
@@ -102,7 +107,7 @@ class WebGpuPipelineSystem {
         ].toJS,
       ),
       fragment: GPUFragmentState(
-        module: shaderModule,
+        module: batchShaderModule,
         entryPoint: 'fs_main',
         targets: [
           GPUColorTargetState(
@@ -169,6 +174,13 @@ class WebGpuPipelineSystem {
   }
 
   GPUBlendState _blendFor(BlendMode blendMode) {
+    if (identical(blendMode, BlendMode._DUAL_SOURCE)) {
+      return GPUBlendState(
+        color: GPUBlendComponent(operation: 'add', srcFactor: 'one', dstFactor: 'src1'),
+        alpha: GPUBlendComponent(operation: 'add', srcFactor: 'one', dstFactor: 'src1-alpha'),
+      );
+    }
+
     var colorSrc = 'one';
     var colorDst = 'one-minus-src-alpha';
     const alphaSrc = 'one';
@@ -193,7 +205,7 @@ class WebGpuPipelineSystem {
     );
   }
 
-  static String _batchShaderSource(int textureCount) {
+  static String _batchShaderSource(int textureCount, {required bool dualSourceBlending}) {
     final bindings = StringBuffer();
     final samplers = StringBuffer();
 
@@ -209,7 +221,53 @@ class WebGpuPipelineSystem {
 ''');
     }
 
+    final extension = dualSourceBlending ? 'enable dual_source_blending;' : '';
+    final blendOutput = dualSourceBlending
+        ? '@location(3) @interpolate(flat) blendMode: u32,'
+        : '@location(3) @interpolate(flat) alphaMultiplier: f32,';
+    final blendDecode = dualSourceBlending
+        ? 'output.blendMode = encodedTextureIndex / ${textureCount}u;'
+        : '''
+      let additive = encodedTextureIndex / ${textureCount}u;
+      output.alphaMultiplier = 1.0 - f32(additive);''';
+    final textureDecode = dualSourceBlending
+        ? 'output.textureIndex = encodedTextureIndex - output.blendMode * ${textureCount}u;'
+        : 'output.textureIndex = encodedTextureIndex - additive * ${textureCount}u;';
+    final fragmentOutput = dualSourceBlending
+        ? '''
+    struct FragmentOutput {
+      @location(0) @blend_src(0) primary: vec4<f32>,
+      @location(0) @blend_src(1) secondary: vec4<f32>,
+    };
+
+    @fragment
+    fn fs_main(input: VertexOutput) -> FragmentOutput {
+      let color = sampleStageTexture(input.textureIndex, input.uv) * input.color;
+      var output: FragmentOutput;
+      output.primary = color;
+
+      if (input.blendMode == 1u) {
+        output.secondary = vec4<f32>(1.0);
+      } else if (input.blendMode == 2u) {
+        output.secondary = vec4<f32>(vec3<f32>(1.0) - color.rgb, 1.0 - color.a);
+      } else if (input.blendMode == 3u) {
+        output.primary = vec4<f32>(vec3<f32>(0.0), color.a);
+        output.secondary = vec4<f32>(color.rgb + vec3<f32>(1.0 - color.a), 1.0 - color.a);
+      } else {
+        output.secondary = vec4<f32>(1.0 - color.a);
+      }
+      return output;
+    }'''
+        : '''
+    @fragment
+    fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
+      var color = sampleStageTexture(input.textureIndex, input.uv) * input.color;
+      color.a *= input.alphaMultiplier;
+      return color;
+    }''';
+
     return '''
+    $extension
     $bindings
     @group(1) @binding(0) var<uniform> projectionMatrix: mat4x4<f32>;
 
@@ -225,7 +283,7 @@ class WebGpuPipelineSystem {
       @location(0) color: vec4<f32>,
       @location(1) uv: vec2<f32>,
       @location(2) @interpolate(flat) textureIndex: u32,
-      @location(3) @interpolate(flat) alphaMultiplier: f32,
+      $blendOutput
     };
 
     @vertex
@@ -236,9 +294,8 @@ class WebGpuPipelineSystem {
       output.color = input.color;
       output.uv = input.uv;
       let encodedTextureIndex = u32(input.textureIndex + 0.5);
-      let additive = encodedTextureIndex / ${textureCount}u;
-      output.textureIndex = encodedTextureIndex - additive * ${textureCount}u;
-      output.alphaMultiplier = 1.0 - f32(additive);
+      $blendDecode
+      $textureDecode
       return output;
     }
 
@@ -247,12 +304,7 @@ class WebGpuPipelineSystem {
       return vec4<f32>(1.0, 0.0, 1.0, 1.0);
     }
 
-    @fragment
-    fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
-      var color = sampleStageTexture(input.textureIndex, input.uv) * input.color;
-      color.a *= input.alphaMultiplier;
-      return color;
-    }
+    $fragmentOutput
   ''';
   }
 

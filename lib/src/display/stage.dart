@@ -545,6 +545,7 @@ class Stage extends DisplayObjectContainer {
         antialias: options.antialias,
         powerPreference: options.powerPreference,
         renderBundles: options.renderBundles,
+        dualSourceBlending: options.dualSourceBlending,
       );
       if (webgpuContext != null) return webgpuContext;
     }
@@ -570,6 +571,7 @@ class Stage extends DisplayObjectContainer {
             resetScissorTest: options.resetScissorTestOnRenderStart,
             resetStencilTest: options.resetScissorTestOnRenderStart,
             resetColor: options.resetColorOnRenderStart,
+            dualSourceBlending: options.dualSourceBlending,
           );
         } on StateError catch (e) { // ignore: avoid_catching_errors
           if (e.message == 'Failed to get WebGL context.') {

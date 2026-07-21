@@ -32,6 +32,7 @@ class WebGpuDeviceSystem {
     required PowerPreference powerPreference,
     required bool alpha,
     required bool antialias,
+    required bool dualSourceBlending,
   }) async {
     final navigator = _globalScope.getProperty<JSObject>('navigator'.toJS);
     final gpu = _StageXLNavigator(navigator).gpu;
@@ -50,10 +51,11 @@ class WebGpuDeviceSystem {
     final requestedFeatures = <String>[];
     final enabledFeatures = <String>{};
     final supportedFeatures = adapter.features as _StageXLGpuSupportedFeatures;
-    for (final feature in const [
+    for (final feature in [
       'texture-compression-astc',
       'texture-compression-bc',
       'texture-compression-etc2',
+      if (dualSourceBlending) 'dual-source-blending',
     ]) {
       if (supportedFeatures.has(feature)) {
         requestedFeatures.add(feature);
