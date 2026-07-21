@@ -135,6 +135,61 @@ void main() {
     expect(renderContext.renderStatistics.webgpuInstructionReuseCount, 1);
   });
 
+  test('WebGPU fuses ordered normal and additive draws on opaque stages when available', () async {
+    final options = StageOptions()
+      ..renderEngine = .WebGPU
+      ..backgroundColor = Color.Black
+      ..stageRenderMode = .ONCE;
+    final canvas = HTMLCanvasElement()
+      ..width = 32
+      ..height = 32;
+    final stage = await Stage.create(canvas, width: 32, height: 32, options: options);
+
+    if (stage.renderEngine != .WebGPU) return;
+
+    final bitmapData = BitmapData(32, 32);
+    stage
+      ..addChild(Bitmap(bitmapData)..alpha = 0.25)
+      ..addChild(Bitmap(bitmapData)
+        ..alpha = 0.25
+        ..blendMode = .ADD)
+      ..addChild(Bitmap(bitmapData)..alpha = 0.25);
+
+    stage.materialize(0, 16);
+
+    expect(stage.renderContext.renderStatistics.drawCount, 1);
+    expect(stage.renderContext.renderStatistics.webgpuBatchRunCount, 1);
+    expect(stage.renderContext.renderStatistics.webgpuBatchBlendBreakCount, 0);
+  });
+
+  test('WebGPU preserves normal and additive runs on transparent stages when available', () async {
+    final options = StageOptions()
+      ..renderEngine = .WebGPU
+      ..transparent = true
+      ..backgroundColor = Color.Transparent
+      ..stageRenderMode = .ONCE;
+    final canvas = HTMLCanvasElement()
+      ..width = 32
+      ..height = 32;
+    final stage = await Stage.create(canvas, width: 32, height: 32, options: options);
+
+    if (stage.renderEngine != .WebGPU) return;
+
+    final bitmapData = BitmapData(32, 32);
+    stage
+      ..addChild(Bitmap(bitmapData)..alpha = 0.25)
+      ..addChild(Bitmap(bitmapData)
+        ..alpha = 0.25
+        ..blendMode = .ADD)
+      ..addChild(Bitmap(bitmapData)..alpha = 0.25);
+
+    stage.materialize(0, 16);
+
+    expect(stage.renderContext.renderStatistics.drawCount, 3);
+    expect(stage.renderContext.renderStatistics.webgpuBatchRunCount, 3);
+    expect(stage.renderContext.renderStatistics.webgpuBatchBlendBreakCount, 2);
+  });
+
   test('WebGPU retains nested render groups independently when available', () async {
     final options = StageOptions()
       ..renderEngine = .WebGPU

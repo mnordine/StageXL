@@ -59,12 +59,16 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
 
     out vec2 vTextCoord;
     out vec4 vColor;
-    flat out float vTexIndex;
+    flat out int vTexIndex;
+    flat out float vAlphaMultiplier;
 
     void main() {
       vTextCoord = aVertexTextCoord;
       vColor = aVertexColor;
-      vTexIndex = aVertexTexIndex;
+      int encodedTextureIndex = int(aVertexTexIndex + 0.5);
+      int additive = encodedTextureIndex / $_maxTextures;
+      vTexIndex = encodedTextureIndex - additive * $_maxTextures;
+      vAlphaMultiplier = 1.0 - float(additive);
       gl_Position = vec4(aVertexPosition, 0.0, 1.0) * uProjectionMatrix;
     }
     ''' : '''
@@ -77,11 +81,14 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
     varying vec2 vTextCoord;
     varying vec4 vColor;
     varying float vTexIndex;
+    varying float vAlphaMultiplier;
 
     void main() {
       vTextCoord = aVertexTextCoord;
       vColor = aVertexColor;
-      vTexIndex = aVertexTexIndex;
+      float additive = step(${_maxTextures - 0.5}, aVertexTexIndex);
+      vTexIndex = aVertexTexIndex - additive * ${_maxTextures.toDouble()};
+      vAlphaMultiplier = 1.0 - additive;
       gl_Position = vec4(aVertexPosition, 0.0, 1.0) * uProjectionMatrix;
     }
     ''';
@@ -117,13 +124,15 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
 
       in vec2 vTextCoord;
       in vec4 vColor;
-      flat in float vTexIndex;
+      flat in int vTexIndex;
+      flat in float vAlphaMultiplier;
 
       out vec4 fragColor;
 
       void main() {
-        int textureIndex = int(vTexIndex);
+        int textureIndex = vTexIndex;
         $sb
+        fragColor.a *= vAlphaMultiplier;
       }
       ''';
     } else {
@@ -152,9 +161,11 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
       varying vec2 vTextCoord;
       varying vec4 vColor;
       varying float vTexIndex;
+      varying float vAlphaMultiplier;
 
       void main() {
         $sb
+        gl_FragColor.a *= vAlphaMultiplier;
       }
       ''';
     }
@@ -422,6 +433,9 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
     }
 
     final alpha = renderState.globalAlpha;
+    final blendMode = renderState.globalBlendMode;
+    final opaqueTarget = renderContext._activeRenderTargetIsOpaque;
+    final batchBlendMode = _batchBlendMode(blendMode, opaqueTarget: opaqueTarget);
     final matrix = renderState.globalMatrix;
     final vxList = renderTextureQuad.vxListQuad;
     const ixListCount = 6;
@@ -480,7 +494,12 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
     // Add vertices directly to buffer
     var vPos = vxPosition;
 
-    final tIdx = textureIndex.toDouble();
+    final tIdx = _batchTextureIndex(
+      textureIndex,
+      blendMode,
+      _maxTextures,
+      opaqueTarget: opaqueTarget,
+    ).toDouble();
     vxData[vPos++] = ma1 + mc1;
     vxData[vPos++] = mb1 + md1;
     vxData[vPos++] = vxList[2]; 
@@ -525,7 +544,7 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
     final drawCommand = _DrawCommand(
       indexCount: ixListCount,
       indexOffset: ixPosition,
-      blendMode: renderState.globalBlendMode,
+      blendMode: batchBlendMode,
       texture: texture,
       textureIndex: textureIndex,
     );
@@ -571,6 +590,8 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
     const vertexFloatCount = 9; // Output vertex has 9 floats
 
     blendMode ??= renderState.globalBlendMode;
+    final opaqueTarget = renderContext._activeRenderTargetIsOpaque;
+    final batchBlendMode = _batchBlendMode(blendMode, opaqueTarget: opaqueTarget);
 
     // Check if we need to flush due to buffer size limits
     if (!needsFlush && renderBufferIndex.position + ixListCount >= renderBufferIndex.data.length) {
@@ -615,6 +636,12 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
     final colorR = r * colorA;
     final colorG = g * colorA;
     final colorB = b * colorA;
+    final encodedTextureIndex = _batchTextureIndex(
+      textureIndex,
+      blendMode,
+      _maxTextures,
+      opaqueTarget: opaqueTarget,
+    ).toDouble();
 
     for (var i = 0, o = 0; i < vxListCount; i++, o += 4) {
       final x = vxList[o + 0];
@@ -627,14 +654,14 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
       vxData[vxPosition++] = colorG;               // g
       vxData[vxPosition++] = colorB;               // b
       vxData[vxPosition++] = colorA;               // a
-      vxData[vxPosition++] = textureIndex.toDouble();
+      vxData[vxPosition++] = encodedTextureIndex;
     }
 
     // Create draw command
     final drawCommand = _DrawCommand(
       indexCount: ixListCount,
       indexOffset: ixPosition,
-      blendMode: blendMode,
+      blendMode: batchBlendMode,
       texture: texture,
       textureIndex: textureIndex,
     );

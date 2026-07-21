@@ -393,10 +393,12 @@ final class _RetainedWebGLUpload {
       final command = _sequence[commandIndex];
       final texture = command.webGlTexture;
       final blendMode = command.state.globalBlendMode;
+      final opaqueTarget = renderContext._activeRenderTargetIsOpaque;
+      final batchBlendMode = _batchBlendMode(blendMode, opaqueTarget: opaqueTarget);
       var run = slice.lastRun;
       var textureIndex = run?.textureIndex(texture);
-      if (run == null || !_sameBlendMode(run.blendMode, blendMode) || textureIndex == null) {
-        run = slice.addRun(blendMode, _indexLength, texture);
+      if (run == null || !_sameBlendMode(run.blendMode, batchBlendMode) || textureIndex == null) {
+        run = slice.addRun(batchBlendMode, _indexLength, texture);
         textureIndex = 0;
       }
 
@@ -407,7 +409,16 @@ final class _RetainedWebGLUpload {
         _vertexLength + commandVertexCount * _floatsPerVertex,
         _indexLength + indices.length,
       );
-      _bakeVertices(command, vertices, textureIndex);
+      _bakeVertices(
+        command,
+        vertices,
+        _batchTextureIndex(
+          textureIndex,
+          blendMode,
+          RenderProgramBatchWebGL._maxTextures,
+          opaqueTarget: opaqueTarget,
+        ),
+      );
       _bakeIndices(indices, sliceVertexCount);
       run
         ..vertexCount += commandVertexCount

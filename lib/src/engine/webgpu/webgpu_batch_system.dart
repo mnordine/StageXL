@@ -211,6 +211,8 @@ class _WebGpuBatchSystem {
   int _prepareForDraw(RenderTexture texture, BlendMode blendMode, int vertexCount, int indexCount) {
     _ensureCpuVertexCapacity(_vertexPosition + vertexCount * _floatsPerVertex);
     _ensureCpuIndexCapacity(_indexPosition + indexCount + 1);
+    final opaqueTarget = renderContext._activeRenderTargetIsOpaque;
+    final batchBlendMode = _batchBlendMode(blendMode, opaqueTarget: opaqueTarget);
 
     var run = _runs.isEmpty ? null : _runs.last;
     int? textureIndex;
@@ -218,7 +220,7 @@ class _WebGpuBatchSystem {
     var textureBreak = false;
     if (run == null) {
       textureIndex = null;
-    } else if (!identical(run.blendMode, blendMode)) {
+    } else if (!identical(run.blendMode, batchBlendMode)) {
       blendBreak = true;
       textureIndex = null;
     } else {
@@ -230,14 +232,19 @@ class _WebGpuBatchSystem {
       final statistics = renderContext.renderStatistics;
       if (blendBreak) statistics.webgpuBatchBlendBreakCount++;
       if (textureBreak) statistics.webgpuBatchTextureBreakCount++;
-      run = _WebGpuRun(texture, blendMode, renderContext.pipelineSystem.maxBatchTextures)
+      run = _WebGpuRun(texture, batchBlendMode, renderContext.pipelineSystem.maxBatchTextures)
         ..firstIndex = _indexPosition;
       _runs.add(run);
       textureIndex = 0;
     }
     run!.vertexCount += vertexCount;
     _vertexCount += vertexCount;
-    return textureIndex;
+    return _batchTextureIndex(
+      textureIndex,
+      blendMode,
+      renderContext.pipelineSystem.maxBatchTextures,
+      opaqueTarget: opaqueTarget,
+    );
   }
 
   void _bakeVertices(

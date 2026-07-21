@@ -803,16 +803,23 @@ class _WebGpuBatchInstruction implements RenderInstruction {
     vertexCount = 0;
     indexCount = 0;
     final maxTextures = renderContext.pipelineSystem.maxBatchTextures;
+    final opaqueTarget = renderContext._activeRenderTargetIsOpaque;
     for (final renderable in renderables) {
+      final batchBlendMode = _batchBlendMode(renderable.blendMode, opaqueTarget: opaqueTarget);
       var run = runs.isEmpty ? null : runs.last;
       var textureIndex = run?.textureIndex(renderable.texture);
-      if (run == null || !identical(run.blendMode, renderable.blendMode) || textureIndex == null) {
-        run = _WebGpuRun(renderable.texture, renderable.blendMode, maxTextures)
+      if (run == null || !identical(run.blendMode, batchBlendMode) || textureIndex == null) {
+        run = _WebGpuRun(renderable.texture, batchBlendMode, maxTextures)
           ..firstIndex = indexCount;
         runs.add(run);
         textureIndex = 0;
       }
-      renderable.textureIndex = textureIndex;
+      renderable.textureIndex = _batchTextureIndex(
+        textureIndex,
+        renderable.blendMode,
+        maxTextures,
+        opaqueTarget: opaqueTarget,
+      );
       renderable.vertexFloatOffset = vertexCount * _WebGpuBatchPipe._floatsPerVertex;
       renderable.indexOffset = indexCount;
       renderable.baseVertex = vertexCount;

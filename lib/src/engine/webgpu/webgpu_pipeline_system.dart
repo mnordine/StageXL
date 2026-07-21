@@ -225,6 +225,7 @@ class WebGpuPipelineSystem {
       @location(0) color: vec4<f32>,
       @location(1) uv: vec2<f32>,
       @location(2) @interpolate(flat) textureIndex: u32,
+      @location(3) @interpolate(flat) alphaMultiplier: f32,
     };
 
     @vertex
@@ -234,7 +235,10 @@ class WebGpuPipelineSystem {
       output.position.z = output.position.z * 0.5 + output.position.w * 0.5;
       output.color = input.color;
       output.uv = input.uv;
-      output.textureIndex = u32(input.textureIndex + 0.5);
+      let encodedTextureIndex = u32(input.textureIndex + 0.5);
+      let additive = encodedTextureIndex / ${textureCount}u;
+      output.textureIndex = encodedTextureIndex - additive * ${textureCount}u;
+      output.alphaMultiplier = 1.0 - f32(additive);
       return output;
     }
 
@@ -245,7 +249,9 @@ class WebGpuPipelineSystem {
 
     @fragment
     fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
-      return sampleStageTexture(input.textureIndex, input.uv) * input.color;
+      var color = sampleStageTexture(input.textureIndex, input.uv) * input.color;
+      color.a *= input.alphaMultiplier;
+      return color;
     }
   ''';
   }

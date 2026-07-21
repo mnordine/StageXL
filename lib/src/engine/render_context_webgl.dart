@@ -63,6 +63,7 @@ class RenderContextWebGL extends RenderContext {
   final bool _resetScissorTest;
   final bool _resetStencilTest;
   final bool _resetColor;
+  final bool _primaryRenderTargetIsOpaque;
 
   //---------------------------------------------------------------------------
 
@@ -75,7 +76,7 @@ class RenderContextWebGL extends RenderContext {
     this._resetScissorTest = true,
     this._resetStencilTest = true,
     this._resetColor = true,
-  }) {
+  }) : _primaryRenderTargetIsOpaque = !alpha {
     _contextLostListener = _onContextLost.toJS;
     _contextRestoredListener = _onContextRestored.toJS;
     _canvasElement.addEventListener('webglcontextlost', _contextLostListener);
@@ -601,6 +602,8 @@ class RenderContextWebGL extends RenderContext {
     activateRenderProgram(renderProgramBatch);
     renderProgramBatch.renderTextureQuad(renderState, this, renderTextureQuad);
   }
+
+  bool get _activeRenderTargetIsOpaque => _primaryRenderTargetIsOpaque && _activeRenderFrameBuffer == null;
 
   @override
   void renderTextureQuadTinted(

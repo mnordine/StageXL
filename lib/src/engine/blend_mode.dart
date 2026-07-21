@@ -73,3 +73,13 @@ class BlendMode {
   /// pixels.
   static final NONE = BlendMode(WebGL.ONE, WebGL.ZERO, 'source-over');
 }
+
+// On opaque targets ADD can use NORMAL hardware blending when the shader zeros
+// source alpha. The upper texture-index range carries that per-vertex flag.
+BlendMode _batchBlendMode(BlendMode blendMode, {required bool opaqueTarget}) =>
+    opaqueTarget && (identical(blendMode, BlendMode.NORMAL) || identical(blendMode, BlendMode.ADD))
+        ? BlendMode.NORMAL
+        : blendMode;
+
+int _batchTextureIndex(int textureIndex, BlendMode blendMode, int maxTextures, {required bool opaqueTarget}) =>
+    opaqueTarget && identical(blendMode, BlendMode.ADD) ? textureIndex + maxTextures : textureIndex;

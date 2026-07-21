@@ -323,6 +323,22 @@ void main() {
     _expectWebGlRetainedUploads(.WebGL2);
   });
 
+  test('WebGL1 fuses ordered normal and additive draws on opaque stages', () {
+    _expectWebGlOpaqueNormalAddFusion(.WebGL);
+  });
+
+  test('WebGL2 fuses ordered normal and additive draws on opaque stages', () {
+    _expectWebGlOpaqueNormalAddFusion(.WebGL2);
+  });
+
+  test('WebGL1 preserves normal and additive runs on transparent stages', () {
+    _expectWebGlTransparentNormalAddRuns(.WebGL);
+  });
+
+  test('WebGL2 preserves normal and additive runs on transparent stages', () {
+    _expectWebGlTransparentNormalAddRuns(.WebGL2);
+  });
+
   test('WebGL1 immediate uploads do not overwrite retained buffers', () {
     _expectWebGlImmediateUploadsDoNotOverwriteRetainedBuffers(.WebGL);
   });
@@ -453,5 +469,62 @@ void _expectWebGlImmediateUploadsDoNotOverwriteRetainedBuffers(RenderEngine engi
   final pixel = Uint8List(4);
   context.rawContext.readPixels(8, 8, 1, 1, WebGL.RGBA, WebGL.UNSIGNED_BYTE, pixel.toJS);
   expect(pixel, [255, 0, 0, 255]);
+  stage.dispose();
+}
+
+void _expectWebGlOpaqueNormalAddFusion(RenderEngine engine) {
+  final canvas = HTMLCanvasElement()
+    ..width = 16
+    ..height = 16;
+  final options = StageOptions()
+    ..renderEngine = engine
+    ..backgroundColor = Color.Black;
+  final stage = Stage(canvas, width: 16, height: 16, options: options)
+    ..addChild(Bitmap(BitmapData(16, 16, Color.Blue)))
+    ..addChild(Bitmap(BitmapData(16, 16, Color.Red))
+      ..alpha = 0.5
+      ..blendMode = .ADD)
+    ..addChild(Bitmap(BitmapData(16, 16, Color.Green))..alpha = 0.5);
+  if (stage.renderEngine != engine) {
+    stage.dispose();
+    return;
+  }
+
+  stage.materialize(0, 16);
+
+  expect(stage.renderContext.renderStatistics.drawCount, 1);
+  final context = stage.renderContext as RenderContextWebGL;
+  final pixel = Uint8List(4);
+  context.rawContext.readPixels(8, 8, 1, 1, WebGL.RGBA, WebGL.UNSIGNED_BYTE, pixel.toJS);
+  expect(pixel[0], closeTo(64, 2));
+  expect(pixel[1], closeTo(128, 2));
+  expect(pixel[2], closeTo(128, 2));
+  expect(pixel[3], 255);
+  stage.dispose();
+}
+
+void _expectWebGlTransparentNormalAddRuns(RenderEngine engine) {
+  final canvas = HTMLCanvasElement()
+    ..width = 16
+    ..height = 16;
+  final options = StageOptions()
+    ..renderEngine = engine
+    ..transparent = true
+    ..backgroundColor = Color.Transparent;
+  final bitmapData = BitmapData(16, 16);
+  final stage = Stage(canvas, width: 16, height: 16, options: options)
+    ..addChild(Bitmap(bitmapData)..alpha = 0.25)
+    ..addChild(Bitmap(bitmapData)
+      ..alpha = 0.25
+      ..blendMode = .ADD)
+    ..addChild(Bitmap(bitmapData)..alpha = 0.25);
+  if (stage.renderEngine != engine) {
+    stage.dispose();
+    return;
+  }
+
+  stage.materialize(0, 16);
+
+  expect(stage.renderContext.renderStatistics.drawCount, 3);
   stage.dispose();
 }

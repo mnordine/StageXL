@@ -18,8 +18,14 @@ class RenderContextWebGPU extends RenderContext {
   RenderTexture? _activeRenderTexture;
   List<num>? _clearColor;
   GPUDeviceLostInfo? _deviceLostInfo;
+  final bool _primaryRenderTargetIsOpaque;
 
-  RenderContextWebGPU._(this._canvasElement, this.deviceSystem, {required this.renderBundles}) {
+  RenderContextWebGPU._(
+    this._canvasElement,
+    this.deviceSystem, {
+    required this.renderBundles,
+    required this._primaryRenderTargetIsOpaque,
+  }) {
     commandSystem = WebGpuCommandSystem(this);
     textureSystem = WebGpuTextureSystem(this);
     pipelineSystem = WebGpuPipelineSystem(this);
@@ -46,7 +52,12 @@ class RenderContextWebGPU extends RenderContext {
       powerPreference: powerPreference,
     );
     if (deviceSystem == null) return null;
-    return RenderContextWebGPU._(canvas, deviceSystem, renderBundles: renderBundles);
+    return RenderContextWebGPU._(
+      canvas,
+      deviceSystem,
+      renderBundles: renderBundles,
+      primaryRenderTargetIsOpaque: !alpha,
+    );
   }
 
   GPUDevice get device => deviceSystem.device;
@@ -56,6 +67,7 @@ class RenderContextWebGPU extends RenderContext {
   int get viewportWidth => _activeRenderTexture?.width ?? _canvasElement.width;
   int get viewportHeight => _activeRenderTexture?.height ?? _canvasElement.height;
   RenderTexture? get activeRenderTexture => _activeRenderTexture;
+  bool get _activeRenderTargetIsOpaque => _primaryRenderTargetIsOpaque && _activeRenderTexture == null;
   @override
   Matrix3D get activeProjectionMatrix => _projectionMatrix;
   int get sampleCount => _activeRenderTexture == null && deviceSystem.antialias ? 4 : 1;
