@@ -29,6 +29,7 @@ class RenderStatistics {
   var webgpuTextureUploadCount = 0;
   var webgpuInstructionBuildCount = 0;
   var webgpuInstructionReuseCount = 0;
+  var webgpuInstructionUploadBytes = 0;
   var webgpuInstructionUploadCount = 0;
   var webgpuRenderableCount = 0;
   final webgpuFallbackCauses = <String>[];
@@ -65,6 +66,7 @@ class RenderStatistics {
     webgpuTextureUploadCount = 0;
     webgpuInstructionBuildCount = 0;
     webgpuInstructionReuseCount = 0;
+    webgpuInstructionUploadBytes = 0;
     webgpuInstructionUploadCount = 0;
     webgpuRenderableCount = 0;
     webgpuFallbackCauses.clear();

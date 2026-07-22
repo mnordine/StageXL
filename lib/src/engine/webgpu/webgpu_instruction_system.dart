@@ -578,11 +578,16 @@ final class _WebGpuBatchRenderable extends RetainedSlot {
   var green = 1.0;
   var blue = 1.0;
   var alpha = 1.0;
+  var textureScaleX = double.nan;
+  var textureScaleY = double.nan;
   var textureIndex = 0;
+  var renderableIndex = 0;
   var vertexFloatOffset = 0;
+  var metadataFloatOffset = 0;
   var indexOffset = 0;
   var baseVertex = 0;
-  var vertexDirty = true;
+  var geometryDirty = true;
+  var metadataDirty = true;
   var indexDirty = true;
 
   _WebGpuBatchRenderable(
@@ -645,14 +650,14 @@ final class _WebGpuBatchRenderable extends RetainedSlot {
       green = nextGreen;
       blue = nextBlue;
       alpha = nextAlpha;
-      vertexDirty = true;
+      metadataDirty = true;
     }
 
     for (var i = 0; i < sourceVertices.length; i++) {
       final value = sourceVertices[i];
       if (vertices[i] == value) continue;
       vertices[i] = value;
-      vertexDirty = true;
+      geometryDirty = true;
     }
     for (var i = 0; i < sourceIndices.length; i++) {
       final value = sourceIndices[i];
@@ -660,6 +665,19 @@ final class _WebGpuBatchRenderable extends RetainedSlot {
       indices[i] = value;
       indexDirty = true;
     }
+  }
+
+  void updateTextureScale(double scaleX, double scaleY) {
+    if (textureScaleX == scaleX && textureScaleY == scaleY) return;
+    textureScaleX = scaleX;
+    textureScaleY = scaleY;
+    geometryDirty = true;
+  }
+
+  void updateTextureIndex(int index) {
+    if (textureIndex == index) return;
+    textureIndex = index;
+    metadataDirty = true;
   }
 
   int get vertexCount => vertices.length >> 2;
@@ -739,13 +757,17 @@ class _WebGpuBatchInstruction implements RenderInstruction {
   final runs = <_WebGpuRun>[];
   final bindGroups = <GPUBindGroup>[];
   Float32List? vertexData;
+  Float32List? metadataData;
   Uint32List? indexData;
   GPUBuffer? vertexBuffer;
+  GPUBuffer? metadataBuffer;
   GPUBuffer? indexBuffer;
+  GPUBindGroup? metadataBindGroup;
   var renderableSize = 0;
   var vertexCount = 0;
   var indexCount = 0;
   var vertexCapacity = 0;
+  var metadataCapacity = 0;
   var indexCapacity = 0;
   var structuralDirty = true;
   GPURenderBundle? renderBundle;
@@ -806,7 +828,8 @@ class _WebGpuBatchInstruction implements RenderInstruction {
     final opaqueTarget = renderContext._activeRenderTargetIsOpaque;
     final dualSourceBlending = renderContext.dualSourceBlending &&
         (!opaqueTarget || renderables.any((renderable) => _requiresDualSourceBatchBlendMode(renderable.blendMode)));
-    for (final renderable in renderables) {
+    for (var renderableIndex = 0; renderableIndex < renderables.length; renderableIndex++) {
+      final renderable = renderables[renderableIndex];
       final batchBlendMode = _batchBlendMode(
         renderable.blendMode,
         opaqueTarget: opaqueTarget,
@@ -821,15 +844,17 @@ class _WebGpuBatchInstruction implements RenderInstruction {
         runs.add(run);
         textureIndex = 0;
       }
-      renderable.textureIndex = _batchTextureIndex(
+      renderable.updateTextureIndex(_batchTextureIndex(
         textureIndex,
         renderable.blendMode,
         maxTextures,
         opaqueTarget: opaqueTarget,
         dualSourceBlending: dualSourceBlending,
         promoteOpaqueNormalAdd: dualSourceBlending,
-      );
+      ));
+      renderable.renderableIndex = renderableIndex;
       renderable.vertexFloatOffset = vertexCount * _WebGpuBatchPipe._floatsPerVertex;
+      renderable.metadataFloatOffset = renderable.renderableIndex * _WebGpuBatchPipe._floatsPerRenderable;
       renderable.indexOffset = indexCount;
       renderable.baseVertex = vertexCount;
       run
@@ -838,7 +863,8 @@ class _WebGpuBatchInstruction implements RenderInstruction {
       vertexCount += renderable.vertexCount;
       indexCount += renderable.indices.length;
       renderable
-        ..vertexDirty = true
+        ..geometryDirty = true
+        ..metadataDirty = true
         ..indexDirty = true;
     }
     bindGroups.length = 0;
@@ -855,10 +881,14 @@ class _WebGpuBatchInstruction implements RenderInstruction {
 
   void dispose() {
     vertexBuffer?.destroy();
+    metadataBuffer?.destroy();
     indexBuffer?.destroy();
     vertexBuffer = null;
+    metadataBuffer = null;
     indexBuffer = null;
+    metadataBindGroup = null;
     vertexCapacity = 0;
+    metadataCapacity = 0;
     indexCapacity = 0;
     invalidateBundle();
   }
@@ -866,8 +896,10 @@ class _WebGpuBatchInstruction implements RenderInstruction {
 
 class _WebGpuBatchPipe
     implements RetainedSlotPipe<_WebGpuBatchRenderable>, InstructionPipe<_WebGpuBatchInstruction> {
-  static const _floatsPerVertex = 9;
+  static const _floatsPerVertex = 5;
+  static const _floatsPerRenderable = 12;
   static const _bytesPerVertex = _floatsPerVertex * 4;
+  static const _bytesPerRenderable = _floatsPerRenderable * 4;
   static const _bytesPerIndex = 4;
 
   final RenderContextWebGPU renderContext;
@@ -890,25 +922,43 @@ class _WebGpuBatchPipe
   @override
   void upload(_WebGpuBatchInstruction instruction) {
     final vertexLength = instruction.vertexCount * _floatsPerVertex;
+    final metadataLength = instruction.renderables.length * _floatsPerRenderable;
     final indexLength = instruction.indexCount;
     var uploadAllVertices = instruction.vertexData == null;
+    var uploadAllMetadata = instruction.metadataData == null;
     var uploadAllIndices = instruction.indexData == null;
     if (instruction.vertexData == null || instruction.vertexData!.length < vertexLength) {
       instruction.vertexData = JSFloat32Array.withLength(math.max(vertexLength, 4)).toDart;
       uploadAllVertices = true;
+    }
+    if (instruction.metadataData == null || instruction.metadataData!.length < metadataLength) {
+      instruction.metadataData =
+          JSFloat32Array.withLength(math.max(metadataLength, _floatsPerRenderable)).toDart;
+      uploadAllMetadata = true;
     }
     if (instruction.indexData == null || instruction.indexData!.length < indexLength) {
       instruction.indexData = JSUint32Array.withLength(math.max(indexLength, 4)).toDart;
       uploadAllIndices = true;
     }
 
-    final (vertexBufferRebuilt, indexBufferRebuilt) =
-        _ensureGpuBuffers(instruction, vertexLength * 4, indexLength * _bytesPerIndex);
+    final (vertexBufferRebuilt, metadataBufferRebuilt, indexBufferRebuilt) = _ensureGpuBuffers(
+      instruction,
+      vertexLength * 4,
+      metadataLength * 4,
+      indexLength * _bytesPerIndex,
+    );
     uploadAllVertices = uploadAllVertices || vertexBufferRebuilt;
+    uploadAllMetadata = uploadAllMetadata || metadataBufferRebuilt;
     uploadAllIndices = uploadAllIndices || indexBufferRebuilt;
 
     final stopwatch = Stopwatch()..start();
     var uploaded = false;
+    for (final renderable in instruction.renderables) {
+      renderable.updateTextureScale(
+        renderContext.textureSystem._textureCoordinateScaleX(renderable.texture),
+        renderContext.textureSystem._textureCoordinateScaleY(renderable.texture),
+      );
+    }
     if (uploadAllVertices && vertexLength > 0) {
       _bakeVertices(instruction);
       renderContext.device.queue.writeBuffer(
@@ -918,10 +968,24 @@ class _WebGpuBatchPipe
         0,
         vertexLength,
       );
-      renderContext.renderStatistics.webgpuInstructionUploadCount++;
+      _recordUpload(vertexLength * 4);
       uploaded = true;
     } else {
       uploaded = _uploadDirtyVertexRanges(instruction) || uploaded;
+    }
+    if (uploadAllMetadata && metadataLength > 0) {
+      _bakeMetadata(instruction);
+      renderContext.device.queue.writeBuffer(
+        instruction.metadataBuffer!,
+        0,
+        instruction.metadataData!.toJS,
+        0,
+        metadataLength,
+      );
+      _recordUpload(metadataLength * 4);
+      uploaded = true;
+    } else {
+      uploaded = _uploadDirtyMetadataRanges(instruction) || uploaded;
     }
     if (uploadAllIndices && indexLength > 0) {
       _bakeIndices(instruction);
@@ -932,7 +996,7 @@ class _WebGpuBatchPipe
         0,
         indexLength,
       );
-      renderContext.renderStatistics.webgpuInstructionUploadCount++;
+      _recordUpload(indexLength * _bytesPerIndex);
       uploaded = true;
     } else {
       uploaded = _uploadDirtyIndexRanges(instruction) || uploaded;
@@ -962,24 +1026,39 @@ class _WebGpuBatchPipe
 
   void _bakeRenderableVertices(_WebGpuBatchRenderable renderable, Float32List target) {
     final source = renderable.vertices;
-    final textureSystem = renderContext.textureSystem;
-    final textureScaleX = textureSystem._textureCoordinateScaleX(renderable.texture);
-    final textureScaleY = textureSystem._textureCoordinateScaleY(renderable.texture);
     var writeIndex = renderable.vertexFloatOffset;
     for (var sourceIndex = 0; sourceIndex < source.length; sourceIndex += 4) {
-      final x = source[sourceIndex + 0];
-      final y = source[sourceIndex + 1];
-      target[writeIndex++] = renderable.matrixTx + renderable.matrixA * x + renderable.matrixC * y;
-      target[writeIndex++] = renderable.matrixTy + renderable.matrixB * x + renderable.matrixD * y;
-      target[writeIndex++] = renderable.red;
-      target[writeIndex++] = renderable.green;
-      target[writeIndex++] = renderable.blue;
-      target[writeIndex++] = renderable.alpha;
-      target[writeIndex++] = source[sourceIndex + 2] * textureScaleX;
-      target[writeIndex++] = source[sourceIndex + 3] * textureScaleY;
-      target[writeIndex++] = renderable.textureIndex.toDouble();
+      target[writeIndex++] = source[sourceIndex + 0];
+      target[writeIndex++] = source[sourceIndex + 1];
+      target[writeIndex++] = source[sourceIndex + 2] * renderable.textureScaleX;
+      target[writeIndex++] = source[sourceIndex + 3] * renderable.textureScaleY;
+      target[writeIndex++] = renderable.renderableIndex.toDouble();
     }
-    renderable.vertexDirty = false;
+    renderable.geometryDirty = false;
+  }
+
+  void _bakeMetadata(_WebGpuBatchInstruction instruction) {
+    final target = instruction.metadataData!;
+    for (final renderable in instruction.renderables) {
+      _bakeRenderableMetadata(renderable, target);
+    }
+  }
+
+  void _bakeRenderableMetadata(_WebGpuBatchRenderable renderable, Float32List target) {
+    var writeIndex = renderable.metadataFloatOffset;
+    target[writeIndex++] = renderable.matrixA;
+    target[writeIndex++] = renderable.matrixB;
+    target[writeIndex++] = renderable.matrixC;
+    target[writeIndex++] = renderable.matrixD;
+    target[writeIndex++] = renderable.matrixTx;
+    target[writeIndex++] = renderable.matrixTy;
+    target[writeIndex++] = renderable.red;
+    target[writeIndex++] = renderable.green;
+    target[writeIndex++] = renderable.blue;
+    target[writeIndex++] = renderable.alpha;
+    target[writeIndex++] = renderable.textureIndex.toDouble();
+    target[writeIndex] = 0;
+    renderable.metadataDirty = false;
   }
 
   void _bakeIndices(_WebGpuBatchInstruction instruction) {
@@ -1001,14 +1080,14 @@ class _WebGpuBatchPipe
     var uploaded = false;
     var index = 0;
     while (index < instruction.renderables.length) {
-      while (index < instruction.renderables.length && !instruction.renderables[index].vertexDirty) {
+      while (index < instruction.renderables.length && !instruction.renderables[index].geometryDirty) {
         index++;
       }
       if (index == instruction.renderables.length) break;
       final first = instruction.renderables[index];
       final start = first.vertexFloatOffset;
       var end = start;
-      while (index < instruction.renderables.length && instruction.renderables[index].vertexDirty) {
+      while (index < instruction.renderables.length && instruction.renderables[index].geometryDirty) {
         final renderable = instruction.renderables[index++];
         _bakeRenderableVertices(renderable, instruction.vertexData!);
         end = renderable.vertexFloatOffset + renderable.vertexCount * _floatsPerVertex;
@@ -1020,7 +1099,36 @@ class _WebGpuBatchPipe
         start,
         end - start,
       );
-      renderContext.renderStatistics.webgpuInstructionUploadCount++;
+      _recordUpload((end - start) * 4);
+      uploaded = true;
+    }
+    return uploaded;
+  }
+
+  bool _uploadDirtyMetadataRanges(_WebGpuBatchInstruction instruction) {
+    var uploaded = false;
+    var index = 0;
+    while (index < instruction.renderables.length) {
+      while (index < instruction.renderables.length && !instruction.renderables[index].metadataDirty) {
+        index++;
+      }
+      if (index == instruction.renderables.length) break;
+      final first = instruction.renderables[index];
+      final start = first.metadataFloatOffset;
+      var end = start;
+      while (index < instruction.renderables.length && instruction.renderables[index].metadataDirty) {
+        final renderable = instruction.renderables[index++];
+        _bakeRenderableMetadata(renderable, instruction.metadataData!);
+        end = renderable.metadataFloatOffset + _floatsPerRenderable;
+      }
+      renderContext.device.queue.writeBuffer(
+        instruction.metadataBuffer!,
+        start * 4,
+        instruction.metadataData!.toJS,
+        start,
+        end - start,
+      );
+      _recordUpload((end - start) * 4);
       uploaded = true;
     }
     return uploaded;
@@ -1049,14 +1157,20 @@ class _WebGpuBatchPipe
         start,
         end - start,
       );
-      renderContext.renderStatistics.webgpuInstructionUploadCount++;
+      _recordUpload((end - start) * _bytesPerIndex);
       uploaded = true;
     }
     return uploaded;
   }
 
-  (bool, bool) _ensureGpuBuffers(_WebGpuBatchInstruction instruction, int vertexBytes, int indexBytes) {
+  (bool, bool, bool) _ensureGpuBuffers(
+    _WebGpuBatchInstruction instruction,
+    int vertexBytes,
+    int metadataBytes,
+    int indexBytes,
+  ) {
     var vertexBufferRebuilt = false;
+    var metadataBufferRebuilt = false;
     var indexBufferRebuilt = false;
     if (instruction.vertexBuffer == null || instruction.vertexCapacity < vertexBytes) {
       instruction.vertexBuffer?.destroy();
@@ -1068,6 +1182,23 @@ class _WebGpuBatchPipe
       ));
       vertexBufferRebuilt = true;
     }
+    if (instruction.metadataBuffer == null || instruction.metadataCapacity < metadataBytes) {
+      instruction.metadataBuffer?.destroy();
+      instruction.invalidateBundle();
+      instruction.metadataCapacity = math.max(metadataBytes * 2, _bytesPerRenderable);
+      instruction.metadataBuffer = renderContext.device.createBuffer(GPUBufferDescriptor(
+        size: instruction.metadataCapacity,
+        usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.STORAGE,
+      ));
+      instruction.metadataBindGroup = renderContext.device.createBindGroup(GPUBindGroupDescriptor(
+        layout: renderContext.pipelineSystem.retainedMetadataBindGroupLayout,
+        entries: [
+          GPUBindGroupEntry(binding: 0, resource: GPUBufferBinding(buffer: instruction.metadataBuffer!)),
+        ].toJS,
+      ));
+      renderContext.renderStatistics.webgpuBindGroupCreateCount++;
+      metadataBufferRebuilt = true;
+    }
     if (instruction.indexBuffer == null || instruction.indexCapacity < indexBytes) {
       instruction.indexBuffer?.destroy();
       instruction.invalidateBundle();
@@ -1078,7 +1209,13 @@ class _WebGpuBatchPipe
       ));
       indexBufferRebuilt = true;
     }
-    return (vertexBufferRebuilt, indexBufferRebuilt);
+    return (vertexBufferRebuilt, metadataBufferRebuilt, indexBufferRebuilt);
+  }
+
+  void _recordUpload(int bytes) {
+    final statistics = renderContext.renderStatistics;
+    statistics.webgpuInstructionUploadCount++;
+    statistics.webgpuInstructionUploadBytes += bytes;
   }
 
   @override
@@ -1101,7 +1238,8 @@ class _WebGpuBatchPipe
     pass
       ..setVertexBuffer(0, instruction.vertexBuffer, 0, instruction.vertexCount * _bytesPerVertex)
       ..setIndexBuffer(instruction.indexBuffer!, 'uint32', 0, instruction.indexCount * _bytesPerIndex)
-      ..setBindGroup(1, renderContext.pipelineSystem.projectionBindGroup);
+      ..setBindGroup(1, renderContext.pipelineSystem.projectionBindGroup)
+      ..setBindGroup(2, instruction.metadataBindGroup);
 
     final bundle = _getRenderBundle(instruction, stencilValue > 0);
     if (bundle != null) {
@@ -1110,7 +1248,10 @@ class _WebGpuBatchPipe
       GPURenderPipeline? activePipeline;
       for (var i = 0; i < instruction.runs.length; i++) {
         final run = instruction.runs[i];
-        final pipeline = renderContext.pipelineSystem.getPipeline(run.blendMode, stencilTest: stencilValue > 0);
+        final pipeline = renderContext.pipelineSystem.getRetainedPipeline(
+          run.blendMode,
+          stencilTest: stencilValue > 0,
+        );
         if (!identical(pipeline, activePipeline)) {
           pass.setPipeline(pipeline);
           activePipeline = pipeline;
@@ -1150,7 +1291,7 @@ class _WebGpuBatchPipe
         instruction.bundlePipelines.length == instruction.runs.length &&
         instruction.bundleBindGroups.length == instruction.runs.length;
     for (var i = 0; matches && i < instruction.runs.length; i++) {
-      final pipeline = renderContext.pipelineSystem.getPipeline(
+      final pipeline = renderContext.pipelineSystem.getRetainedPipeline(
         instruction.runs[i].blendMode,
         stencilTest: stencilTest,
       );
@@ -1163,7 +1304,10 @@ class _WebGpuBatchPipe
       instruction.bundleStencilTest = stencilTest;
       for (var i = 0; i < instruction.runs.length; i++) {
         instruction.bundlePipelines.add(
-          renderContext.pipelineSystem.getPipeline(instruction.runs[i].blendMode, stencilTest: stencilTest),
+          renderContext.pipelineSystem.getRetainedPipeline(
+            instruction.runs[i].blendMode,
+            stencilTest: stencilTest,
+          ),
         );
         instruction.bundleBindGroups.add(instruction.bindGroups[i]);
       }
@@ -1185,12 +1329,13 @@ class _WebGpuBatchPipe
     encoder
       ..setVertexBuffer(0, instruction.vertexBuffer, 0, instruction.vertexCount * _bytesPerVertex)
       ..setIndexBuffer(instruction.indexBuffer!, 'uint32', 0, instruction.indexCount * _bytesPerIndex)
-      ..setBindGroup(1, renderContext.pipelineSystem.projectionBindGroup);
+      ..setBindGroup(1, renderContext.pipelineSystem.projectionBindGroup)
+      ..setBindGroup(2, instruction.metadataBindGroup);
 
     GPURenderPipeline? activePipeline;
     for (var i = 0; i < instruction.runs.length; i++) {
       final run = instruction.runs[i];
-      final pipeline = renderContext.pipelineSystem.getPipeline(run.blendMode, stencilTest: stencilTest);
+      final pipeline = renderContext.pipelineSystem.getRetainedPipeline(run.blendMode, stencilTest: stencilTest);
       if (!identical(pipeline, activePipeline)) {
         encoder.setPipeline(pipeline);
         activePipeline = pipeline;

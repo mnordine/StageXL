@@ -91,18 +91,21 @@ void main() {
 
     stage.materialize(0, 16);
     expect(stage.renderContext.renderStatistics.webgpuInstructionBuildCount, 1);
-    expect(stage.renderContext.renderStatistics.webgpuInstructionUploadCount, 2);
+    expect(stage.renderContext.renderStatistics.webgpuInstructionUploadCount, 3);
+    expect(stage.renderContext.renderStatistics.webgpuInstructionUploadBytes, 152);
 
     stage.materialize(16, 16);
     expect(stage.renderContext.renderStatistics.webgpuInstructionBuildCount, 0);
     expect(stage.renderContext.renderStatistics.webgpuInstructionReuseCount, 1);
     expect(stage.renderContext.renderStatistics.webgpuInstructionUploadCount, 0);
+    expect(stage.renderContext.renderStatistics.webgpuInstructionUploadBytes, 0);
 
     bitmap.x = 8;
     stage.materialize(32, 16);
     expect(stage.renderContext.renderStatistics.webgpuInstructionBuildCount, 0);
     expect(stage.renderContext.renderStatistics.webgpuInstructionReuseCount, 1);
     expect(stage.renderContext.renderStatistics.webgpuInstructionUploadCount, 1);
+    expect(stage.renderContext.renderStatistics.webgpuInstructionUploadBytes, 48);
 
     stage.addChild(Bitmap(bitmapData)..x = 32);
     stage.materialize(48, 16);

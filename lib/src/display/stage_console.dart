@@ -53,6 +53,7 @@ class StageConsole extends DisplayObject {
     print('INSTR BUILD${stats.webgpuInstructionBuildCount.toString().padLeft(4)}');
     print('INSTR REUSE${stats.webgpuInstructionReuseCount.toString().padLeft(4)}');
     print('INSTR UPLOAD${stats.webgpuInstructionUploadCount.toString().padLeft(3)}');
+    print('UPLOAD BYTES${stats.webgpuInstructionUploadBytes.toString().padLeft(4)}');
     print('RENDERABLES${stats.webgpuRenderableCount.toString().padLeft(5)}');
     print('PASSES${stats.webgpuRenderPassCount.toString().padLeft(10)}');
     print('BUNDLE BUILD${stats.webgpuRenderBundleBuildCount.toString().padLeft(4)}');

@@ -2,6 +2,7 @@ part of '../../engine.dart';
 
 class WebGpuPipelineSystem {
   static const _batchVertexStride = 36;
+  static const _retainedBatchVertexStride = 20;
   static const _stencilVertexStride = 16;
 
   final RenderContextWebGPU renderContext;
@@ -29,10 +30,24 @@ class WebGpuPipelineSystem {
       buffer: GPUBufferBindingLayout(type: 'uniform'),
     ),
   ].toJS));
+  late final GPUBindGroupLayout retainedMetadataBindGroupLayout =
+      renderContext.device.createBindGroupLayout(GPUBindGroupLayoutDescriptor(entries: [
+    GPUBindGroupLayoutEntry(
+      binding: 0,
+      visibility: $GPUShaderStage.VERTEX,
+      buffer: GPUBufferBindingLayout(type: 'read-only-storage'),
+    ),
+  ].toJS));
   late final GPUPipelineLayout pipelineLayout =
       renderContext.device.createPipelineLayout(GPUPipelineLayoutDescriptor(bindGroupLayouts: [
     textureBindGroupLayout,
     projectionBindGroupLayout,
+  ].toJS));
+  late final GPUPipelineLayout retainedPipelineLayout =
+      renderContext.device.createPipelineLayout(GPUPipelineLayoutDescriptor(bindGroupLayouts: [
+    textureBindGroupLayout,
+    projectionBindGroupLayout,
+    retainedMetadataBindGroupLayout,
   ].toJS));
   late final GPUPipelineLayout stencilPipelineLayout =
       renderContext.device.createPipelineLayout(GPUPipelineLayoutDescriptor(
@@ -43,6 +58,16 @@ class WebGpuPipelineSystem {
   ));
   late final GPUShaderModule _dualSourceShaderModule = renderContext.device.createShaderModule(
     GPUShaderModuleDescriptor(code: _batchShaderSource(maxBatchTextures, dualSourceBlending: true)),
+  );
+  late final GPUShaderModule _retainedShaderModule = renderContext.device.createShaderModule(
+    GPUShaderModuleDescriptor(
+      code: _batchShaderSource(maxBatchTextures, dualSourceBlending: false, retainedMetadata: true),
+    ),
+  );
+  late final GPUShaderModule _retainedDualSourceShaderModule = renderContext.device.createShaderModule(
+    GPUShaderModuleDescriptor(
+      code: _batchShaderSource(maxBatchTextures, dualSourceBlending: true, retainedMetadata: true),
+    ),
   );
   late final GPUShaderModule stencilShaderModule =
       renderContext.device.createShaderModule(GPUShaderModuleDescriptor(code: _stencilShaderSource));
@@ -59,6 +84,7 @@ class WebGpuPipelineSystem {
   ));
   final _projectionData = JSFloat32Array.withLength(16).toDart;
   final _pipelineCache = <BlendMode, Map<int, GPURenderPipeline>>{};
+  final _retainedPipelineCache = <BlendMode, Map<int, GPURenderPipeline>>{};
   final _stencilWritePipelines = <int, GPURenderPipeline>{};
 
   WebGpuPipelineSystem(this.renderContext);
@@ -75,7 +101,18 @@ class WebGpuPipelineSystem {
     final blendPipelines = _pipelineCache.putIfAbsent(blendMode, () => <int, GPURenderPipeline>{});
     return blendPipelines.putIfAbsent(
       pipelineKey,
-      () => _createPipeline(blendMode, stencilMode: stencilMode, sampleCount: sampleCount),
+      () => _createPipeline(blendMode, stencilMode: stencilMode, sampleCount: sampleCount, retainedMetadata: false),
+    );
+  }
+
+  GPURenderPipeline getRetainedPipeline(BlendMode blendMode, {required bool stencilTest}) {
+    final stencilMode = stencilTest ? 1 : 0;
+    final sampleCount = renderContext.sampleCount;
+    final pipelineKey = stencilMode | (sampleCount << 2);
+    final blendPipelines = _retainedPipelineCache.putIfAbsent(blendMode, () => <int, GPURenderPipeline>{});
+    return blendPipelines.putIfAbsent(
+      pipelineKey,
+      () => _createPipeline(blendMode, stencilMode: stencilMode, sampleCount: sampleCount, retainedMetadata: true),
     );
   }
 
@@ -84,18 +121,32 @@ class WebGpuPipelineSystem {
 
   GPUBlendState getBlendState(BlendMode blendMode) => _blendFor(blendMode);
 
-  GPURenderPipeline _createPipeline(BlendMode blendMode, {required int stencilMode, required int sampleCount}) {
+  GPURenderPipeline _createPipeline(
+    BlendMode blendMode, {
+    required int stencilMode,
+    required int sampleCount,
+    required bool retainedMetadata,
+  }) {
     renderContext.renderStatistics.webgpuPipelineCreateCount++;
     final blend = _blendFor(blendMode);
-    final batchShaderModule = identical(blendMode, BlendMode._DUAL_SOURCE) ? _dualSourceShaderModule : shaderModule;
-    return renderContext.device.createRenderPipeline(GPURenderPipelineDescriptor(
-      label: 'StageXL batch pipeline',
-      layout: pipelineLayout,
-      vertex: GPUVertexState(
-        module: batchShaderModule,
-        entryPoint: 'vs_main',
-        buffers: [
-          GPUVertexBufferLayout(
+    final dualSourceBlending = identical(blendMode, BlendMode._DUAL_SOURCE);
+    final batchShaderModule = retainedMetadata
+        ? dualSourceBlending
+            ? _retainedDualSourceShaderModule
+            : _retainedShaderModule
+        : dualSourceBlending
+            ? _dualSourceShaderModule
+            : shaderModule;
+    final vertexBufferLayout = retainedMetadata
+        ? GPUVertexBufferLayout(
+            arrayStride: _retainedBatchVertexStride,
+            attributes: [
+              GPUVertexAttribute(format: 'float32x2', offset: 0, shaderLocation: 0),
+              GPUVertexAttribute(format: 'float32x2', offset: 8, shaderLocation: 1),
+              GPUVertexAttribute(format: 'float32', offset: 16, shaderLocation: 2),
+            ].toJS,
+          )
+        : GPUVertexBufferLayout(
             arrayStride: _batchVertexStride,
             attributes: [
               GPUVertexAttribute(format: 'float32x2', offset: 0, shaderLocation: 0),
@@ -103,8 +154,14 @@ class WebGpuPipelineSystem {
               GPUVertexAttribute(format: 'float32x2', offset: 24, shaderLocation: 2),
               GPUVertexAttribute(format: 'float32', offset: 32, shaderLocation: 3),
             ].toJS,
-          ),
-        ].toJS,
+          );
+    return renderContext.device.createRenderPipeline(GPURenderPipelineDescriptor(
+      label: 'StageXL batch pipeline',
+      layout: retainedMetadata ? retainedPipelineLayout : pipelineLayout,
+      vertex: GPUVertexState(
+        module: batchShaderModule,
+        entryPoint: 'vs_main',
+        buffers: [vertexBufferLayout].toJS,
       ),
       fragment: GPUFragmentState(
         module: batchShaderModule,
@@ -205,7 +262,11 @@ class WebGpuPipelineSystem {
     );
   }
 
-  static String _batchShaderSource(int textureCount, {required bool dualSourceBlending}) {
+  static String _batchShaderSource(
+    int textureCount, {
+    required bool dualSourceBlending,
+    bool retainedMetadata = false,
+  }) {
     final bindings = StringBuffer();
     final samplers = StringBuffer();
 
@@ -222,6 +283,54 @@ class WebGpuPipelineSystem {
     }
 
     final extension = dualSourceBlending ? 'enable dual_source_blending;' : '';
+    final metadataBinding = retainedMetadata
+        ? '''
+    struct RenderableData {
+      transform: vec4<f32>,
+      translationColor: vec4<f32>,
+      colorTexture: vec4<f32>,
+    };
+
+    @group(2) @binding(0) var<storage, read> renderables: array<RenderableData>;
+'''
+        : '';
+    final vertexInput = retainedMetadata
+        ? '''
+    struct VertexInput {
+      @location(0) position: vec2<f32>,
+      @location(1) uv: vec2<f32>,
+      @location(2) renderableIndex: f32,
+    };'''
+        : '''
+    struct VertexInput {
+      @location(0) position: vec2<f32>,
+      @location(1) color: vec4<f32>,
+      @location(2) uv: vec2<f32>,
+      @location(3) textureIndex: f32,
+    };''';
+    final vertexSetup = retainedMetadata
+        ? '''
+      let renderable = renderables[u32(input.renderableIndex + 0.5)];
+      let worldPosition = vec2<f32>(
+        renderable.translationColor.x + renderable.transform.x * input.position.x +
+            renderable.transform.z * input.position.y,
+        renderable.translationColor.y + renderable.transform.y * input.position.x +
+            renderable.transform.w * input.position.y,
+      );
+      output.position = vec4<f32>(worldPosition, 0.0, 1.0) * projectionMatrix;
+      output.color = vec4<f32>(
+        renderable.translationColor.z,
+        renderable.translationColor.w,
+        renderable.colorTexture.x,
+        renderable.colorTexture.y,
+      );
+      output.uv = input.uv;
+      let encodedTextureIndex = u32(renderable.colorTexture.z + 0.5);'''
+        : '''
+      output.position = vec4<f32>(input.position, 0.0, 1.0) * projectionMatrix;
+      output.color = input.color;
+      output.uv = input.uv;
+      let encodedTextureIndex = u32(input.textureIndex + 0.5);''';
     final blendOutput = dualSourceBlending
         ? '@location(3) @interpolate(flat) blendMode: u32,'
         : '@location(3) @interpolate(flat) alphaMultiplier: f32,';
@@ -270,13 +379,9 @@ class WebGpuPipelineSystem {
     $extension
     $bindings
     @group(1) @binding(0) var<uniform> projectionMatrix: mat4x4<f32>;
+    $metadataBinding
 
-    struct VertexInput {
-      @location(0) position: vec2<f32>,
-      @location(1) color: vec4<f32>,
-      @location(2) uv: vec2<f32>,
-      @location(3) textureIndex: f32,
-    };
+    $vertexInput
 
     struct VertexOutput {
       @builtin(position) position: vec4<f32>,
@@ -289,11 +394,8 @@ class WebGpuPipelineSystem {
     @vertex
     fn vs_main(input: VertexInput) -> VertexOutput {
       var output: VertexOutput;
-      output.position = vec4<f32>(input.position, 0.0, 1.0) * projectionMatrix;
+      $vertexSetup
       output.position.z = output.position.z * 0.5 + output.position.w * 0.5;
-      output.color = input.color;
-      output.uv = input.uv;
-      let encodedTextureIndex = u32(input.textureIndex + 0.5);
       $blendDecode
       $textureDecode
       return output;
@@ -328,6 +430,7 @@ class WebGpuPipelineSystem {
     _projectionBuffer?.destroy();
     _projectionBuffer = null;
     _pipelineCache.clear();
+    _retainedPipelineCache.clear();
     _stencilWritePipelines.clear();
   }
 }

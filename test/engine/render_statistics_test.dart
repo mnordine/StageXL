@@ -21,6 +21,7 @@ void main() {
       ..webgpuSubmitMicroseconds = 60
       ..webgpuInstructionBuildCount = 8
       ..webgpuInstructionReuseCount = 9
+      ..webgpuInstructionUploadBytes = 1024
       ..webgpuInstructionUploadCount = 10
       ..webgpuRenderableCount = 11
       ..addWebGpuFallbackCause('compressed texture')
@@ -45,6 +46,7 @@ void main() {
     expect(statistics.webgpuSubmitMicroseconds, 0);
     expect(statistics.webgpuInstructionBuildCount, 0);
     expect(statistics.webgpuInstructionReuseCount, 0);
+    expect(statistics.webgpuInstructionUploadBytes, 0);
     expect(statistics.webgpuInstructionUploadCount, 0);
     expect(statistics.webgpuRenderableCount, 0);
     expect(statistics.webgpuFallbackCount, 0);
