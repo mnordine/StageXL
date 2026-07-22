@@ -728,6 +728,89 @@ void main() {
     expect(stage.renderContext.renderStatistics.webgpuRenderPassCount, greaterThanOrEqualTo(4));
   });
 
+  test('WebGPU keeps scissor-separated retained batches in one render pass when available', () async {
+    final options = StageOptions()
+      ..renderEngine = .WebGPU
+      ..backgroundColor = Color.Transparent
+      ..stageRenderMode = .ONCE;
+    final canvas = HTMLCanvasElement()
+      ..width = 64
+      ..height = 32;
+    final stage = await Stage.create(canvas, width: 64, height: 32, options: options);
+
+    if (stage.renderEngine != .WebGPU) return;
+
+    final texture = BitmapData(32, 32, Color.Red);
+    stage
+      ..addChild(Bitmap(texture)..mask = .rectangle(0, 0, 24, 32))
+      ..addChild(Bitmap(texture)
+        ..x = 32
+        ..mask = .rectangle(8, 0, 24, 32));
+
+    stage.materialize(0, 16);
+
+    expect(stage.renderContext.renderStatistics.drawCount, 2);
+    expect(stage.renderContext.renderStatistics.webgpuRenderPassCount, 1);
+  });
+
+  test('WebGPU batches retained axis-aligned scissor masks in the shader when available', () async {
+    final options = StageOptions()
+      ..renderEngine = .WebGPU
+      ..backgroundColor = Color.Transparent
+      ..stageRenderMode = .ONCE;
+    final canvas = HTMLCanvasElement()
+      ..width = 64
+      ..height = 32;
+    final stage = await Stage.create(canvas, width: 64, height: 32, options: options);
+
+    if (stage.renderEngine != .WebGPU) return;
+
+    final texture = BitmapData(32, 32, Color.Red);
+    stage
+      ..addChild(Bitmap(texture)..mask = .shaderRect(0, 0, 24, 32))
+      ..addChild(Bitmap(texture)
+        ..x = 32
+        ..mask = .shaderRect(8, 0, 24, 32));
+
+    stage.materialize(0, 16);
+
+    expect(stage.renderContext.renderStatistics.drawCount, 1);
+    expect(stage.renderContext.renderStatistics.webgpuBatchFlushCount, 1);
+    expect(stage.renderContext.renderStatistics.webgpuBatchRunCount, 1);
+    expect(stage.renderContext.renderStatistics.webgpuRenderPassCount, 1);
+  });
+
+  test('WebGPU switches between normal and shader-scissored retained batches when available', () async {
+    final options = StageOptions()
+      ..renderEngine = .WebGPU
+      ..backgroundColor = Color.Transparent
+      ..stageRenderMode = .ONCE;
+    final canvas = HTMLCanvasElement()
+      ..width = 64
+      ..height = 16;
+    final stage = await Stage.create(canvas, width: 64, height: 16, options: options);
+
+    if (stage.renderEngine != .WebGPU) return;
+
+    final texture = BitmapData(16, 16, Color.Red);
+    stage
+      ..addChild(Bitmap(texture))
+      ..addChild(Bitmap(texture)
+        ..x = 16
+        ..mask = .shaderRect(0, 0, 16, 16))
+      ..addChild(Bitmap(texture)
+        ..x = 32
+        ..mask = .shaderRect(0, 0, 16, 16))
+      ..addChild(Bitmap(texture)..x = 48);
+
+    stage.materialize(0, 16);
+
+    expect(stage.renderContext.renderStatistics.drawCount, 3);
+    expect(stage.renderContext.renderStatistics.webgpuBatchFlushCount, 3);
+    expect(stage.renderContext.renderStatistics.webgpuBatchRunCount, 3);
+    expect(stage.renderContext.renderStatistics.webgpuRenderPassCount, 1);
+  });
+
   test('WebGPU reuses stable batch render bundles when available', () async {
     final options = StageOptions()
       ..renderEngine = .WebGPU

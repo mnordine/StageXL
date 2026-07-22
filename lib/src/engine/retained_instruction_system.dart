@@ -9,11 +9,13 @@ final class _RetainedInstructionSystem {
   final _instructionSets = Expando<InstructionSet>('StageXL retained render plans');
   final _instructionPipes = InstructionPipeRegistry();
   late final _commandPipe = _RetainedCommandPipe(renderContext);
+  final _shaderMaskStack = <({RenderMask mask, Rectangle<num>? previousScissor, bool batched})>[];
   var _instructionSet = InstructionSet();
   var _cursor = 0;
   var _oldInstructionCount = 0;
   var _structureChanged = true;
   var _isCollecting = false;
+  Rectangle<num>? _activeShaderScissor;
 
   _RetainedInstructionSystem(this.renderContext) {
     _instructionPipes.register(_commandPipe);
@@ -23,6 +25,8 @@ final class _RetainedInstructionSystem {
 
   void collect(RenderState renderState, RenderObject renderObject) {
     _instructionSet = _instructionSets[renderObject] ??= InstructionSet();
+    _shaderMaskStack.clear();
+    _activeShaderScissor = null;
     _oldInstructionCount = _instructionSet.instructionCount;
     _cursor = 0;
     _structureChanged = _oldInstructionCount == 0;
@@ -96,6 +100,7 @@ final class _RetainedInstructionSystem {
         : _RetainedTextureQuadCommand(renderContext);
     if (!identical(old, command)) _replace(command);
     command.update(state, quad, red, green, blue, alpha);
+    _updateWebGlShaderScissor(command);
     _cursor++;
   }
 
@@ -114,6 +119,7 @@ final class _RetainedInstructionSystem {
     final command = reusable ? old : _RetainedTextureMeshCommand(renderContext, texture, indices, vertices);
     if (!reusable) _replace(command);
     command.update(state, texture, indices, vertices, red, green, blue, alpha);
+    _updateWebGlShaderScissor(command);
     _cursor++;
   }
 
@@ -129,6 +135,7 @@ final class _RetainedInstructionSystem {
     final command = reusable ? old : _RetainedTextureMappingCommand(renderContext, texture, indices, vertices);
     if (!reusable) _replace(command);
     command.update(state, texture, mappingMatrix, indices, vertices);
+    _updateWebGlShaderScissor(command);
     _cursor++;
   }
 
@@ -146,6 +153,7 @@ final class _RetainedInstructionSystem {
     final command = old is _RetainedTriangleCommand ? old : _RetainedTriangleCommand(renderContext);
     if (!identical(old, command)) _replace(command);
     command.update(state, x1, y1, x2, y2, x3, y3, color);
+    _updateWebGlShaderScissor(command);
     _cursor++;
   }
 
@@ -155,6 +163,7 @@ final class _RetainedInstructionSystem {
     final command = reusable ? old : _RetainedTriangleMeshCommand(renderContext, indices, vertices);
     if (!reusable) _replace(command);
     command.update(state, indices, vertices, color);
+    _updateWebGlShaderScissor(command);
     _cursor++;
   }
 
@@ -177,6 +186,26 @@ final class _RetainedInstructionSystem {
   }
 
   void recordMask(RenderState state, RenderMask mask, {required bool begin}) {
+    if (_supportsShaderScissor) {
+      if (begin) {
+        final previousScissor = _activeShaderScissor;
+        final scissor = mask is ShaderScissorRenderMask ? mask.getScissorRectangle(state) : null;
+        final batched = scissor != null;
+        _shaderMaskStack.add((mask: mask, previousScissor: previousScissor, batched: batched));
+        if (batched) {
+          _activeShaderScissor = previousScissor == null ? scissor : previousScissor.intersection(scissor);
+          return;
+        }
+      } else {
+        final entry = _shaderMaskStack.removeLast();
+        if (!identical(entry.mask, mask)) throw StateError('Retained mask collection order is invalid.');
+        if (entry.batched) {
+          _activeShaderScissor = entry.previousScissor;
+          return;
+        }
+      }
+    }
+
     final old = _instructionAtCursor;
     final reusable = old is _RetainedMaskCommand && old.begin == begin && identical(old.mask, mask);
     final command = reusable ? old : _RetainedMaskCommand(renderContext, mask, begin);
@@ -184,6 +213,14 @@ final class _RetainedInstructionSystem {
     command.updateState(state);
     _cursor++;
   }
+
+  bool get _supportsShaderScissor {
+    final context = renderContext;
+    return context is RenderContextWebGL && context.isWebGL2;
+  }
+
+  void _updateWebGlShaderScissor(_RetainedWebGLBatchCommand command) =>
+      command.webGlShaderScissor = _activeShaderScissor;
 
   void recordCanvasShadow(
     RenderState? state,
@@ -299,6 +336,7 @@ final class _RetainedCommandPipe implements InstructionPipe<_RetainedCommand> {
 
 final class _RetainedWebGLUpload {
   static const _floatsPerVertex = 9;
+  static const _clippedFloatsPerVertex = 13;
   static const _bytesPerVertex = _floatsPerVertex * 4;
   static const _bytesPerIndex = 2;
   static const _maxSliceVertices = 65535;
@@ -359,9 +397,11 @@ final class _RetainedWebGLUpload {
     if (_sequence.isEmpty) return;
     var start = 0;
     while (start < _sequence.length) {
+      final shaderScissor = _sequence[start].webGlShaderScissor != null;
       var end = start;
       var vertexCount = 0;
       while (end < _sequence.length) {
+        if ((_sequence[end].webGlShaderScissor != null) != shaderScissor) break;
         final nextVertexCount = _sequence[end].webGlVertices.length ~/ _sequence[end].webGlVertexStride;
         if (nextVertexCount > _maxSliceVertices) {
           if (end == start) end++;
@@ -378,15 +418,16 @@ final class _RetainedWebGLUpload {
           ..webGlBatchSlice = null
           ..isWebGlBatchLeader = false;
       } else {
-        _buildSlice(start, end);
+        _buildSlice(start, end, shaderScissor: shaderScissor);
       }
       start = end;
     }
     _sequence.clear();
   }
 
-  void _buildSlice(int start, int end) {
-    final slice = _sliceAt(_sliceCount++)..reset(_vertexLength, _indexLength);
+  void _buildSlice(int start, int end, {required bool shaderScissor}) {
+    final slice = _sliceAt(_sliceCount++)
+      ..reset(_vertexLength, _indexLength, shaderScissor: shaderScissor);
     var sliceVertexCount = 0;
     final opaqueTarget = renderContext._activeRenderTargetIsOpaque;
     final dualSourceBlending = renderContext.dualSourceBlending &&
@@ -416,7 +457,7 @@ final class _RetainedWebGLUpload {
       final indices = command.webGlIndices;
       final commandVertexCount = vertices.length ~/ command.webGlVertexStride;
       _ensureCpuCapacity(
-        _vertexLength + commandVertexCount * _floatsPerVertex,
+        _vertexLength + commandVertexCount * slice.vertexFloatStride,
         _indexLength + indices.length,
       );
       _bakeVertices(
@@ -479,6 +520,21 @@ final class _RetainedWebGLUpload {
       _writeVertex(blue);
       _writeVertex(alpha);
       _writeVertex(textureIndex.toDouble());
+      final scissor = command.webGlShaderScissor;
+      if (scissor != null) {
+        _writeVertex(scissor.left.toDouble());
+        if (renderContext._activeRenderFrameBuffer == null) {
+          _writeVertex(renderContext._canvasElement.height - scissor.bottom.toDouble());
+        } else {
+          _writeVertex(scissor.top.toDouble());
+        }
+        _writeVertex(scissor.right.toDouble());
+        if (renderContext._activeRenderFrameBuffer == null) {
+          _writeVertex(renderContext._canvasElement.height - scissor.top.toDouble());
+        } else {
+          _writeVertex(scissor.bottom.toDouble());
+        }
+      }
     }
   }
 
@@ -649,15 +705,21 @@ final class _RetainedWebGLBatchSlice {
   var vertexCount = 0;
   var indexCount = 0;
   var runCount = 0;
+  var shaderScissor = false;
 
   _RetainedWebGLBatchSlice(this.upload);
 
   _RetainedWebGLRun? get lastRun => runCount == 0 ? null : runs[runCount - 1];
 
-  void reset(int vertexFloatOffset, int indexOffset) {
+  int get vertexFloatStride => shaderScissor
+      ? _RetainedWebGLUpload._clippedFloatsPerVertex
+      : _RetainedWebGLUpload._floatsPerVertex;
+
+  void reset(int vertexFloatOffset, int indexOffset, {required bool shaderScissor}) {
     clearAssignments();
     this.vertexFloatOffset = vertexFloatOffset;
     this.indexOffset = indexOffset;
+    this.shaderScissor = shaderScissor;
     vertexCount = 0;
     indexCount = 0;
     runCount = 0;
@@ -731,6 +793,7 @@ final class _RetainedWebGLRun {
 
 abstract base class _RetainedWebGLBatchCommand extends _RetainedCommand {
   _RetainedWebGLBatchSlice? webGlBatchSlice;
+  Rectangle<num>? webGlShaderScissor;
   var isWebGlBatchLeader = false;
 
   _RetainedWebGLBatchCommand(super.renderContext);

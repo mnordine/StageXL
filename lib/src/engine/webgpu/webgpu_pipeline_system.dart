@@ -61,12 +61,40 @@ class WebGpuPipelineSystem {
   );
   late final GPUShaderModule _retainedShaderModule = renderContext.device.createShaderModule(
     GPUShaderModuleDescriptor(
-      code: _batchShaderSource(maxBatchTextures, dualSourceBlending: false, retainedMetadata: true),
+      code: _batchShaderSource(
+        maxBatchTextures,
+        dualSourceBlending: false,
+        retainedMetadata: true,
+      ),
     ),
   );
   late final GPUShaderModule _retainedDualSourceShaderModule = renderContext.device.createShaderModule(
     GPUShaderModuleDescriptor(
-      code: _batchShaderSource(maxBatchTextures, dualSourceBlending: true, retainedMetadata: true),
+      code: _batchShaderSource(
+        maxBatchTextures,
+        dualSourceBlending: true,
+        retainedMetadata: true,
+      ),
+    ),
+  );
+  late final GPUShaderModule _retainedClippedShaderModule = renderContext.device.createShaderModule(
+    GPUShaderModuleDescriptor(
+      code: _batchShaderSource(
+        maxBatchTextures,
+        dualSourceBlending: false,
+        retainedMetadata: true,
+        shaderScissor: true,
+      ),
+    ),
+  );
+  late final GPUShaderModule _retainedClippedDualSourceShaderModule = renderContext.device.createShaderModule(
+    GPUShaderModuleDescriptor(
+      code: _batchShaderSource(
+        maxBatchTextures,
+        dualSourceBlending: true,
+        retainedMetadata: true,
+        shaderScissor: true,
+      ),
     ),
   );
   late final GPUShaderModule stencilShaderModule =
@@ -105,14 +133,24 @@ class WebGpuPipelineSystem {
     );
   }
 
-  GPURenderPipeline getRetainedPipeline(BlendMode blendMode, {required bool stencilTest}) {
+  GPURenderPipeline getRetainedPipeline(
+    BlendMode blendMode, {
+    required bool stencilTest,
+    required bool shaderScissor,
+  }) {
     final stencilMode = stencilTest ? 1 : 0;
     final sampleCount = renderContext.sampleCount;
-    final pipelineKey = stencilMode | (sampleCount << 2);
+    final pipelineKey = stencilMode | (shaderScissor ? 2 : 0) | (sampleCount << 2);
     final blendPipelines = _retainedPipelineCache.putIfAbsent(blendMode, () => <int, GPURenderPipeline>{});
     return blendPipelines.putIfAbsent(
       pipelineKey,
-      () => _createPipeline(blendMode, stencilMode: stencilMode, sampleCount: sampleCount, retainedMetadata: true),
+      () => _createPipeline(
+        blendMode,
+        stencilMode: stencilMode,
+        sampleCount: sampleCount,
+        retainedMetadata: true,
+        shaderScissor: shaderScissor,
+      ),
     );
   }
 
@@ -126,14 +164,19 @@ class WebGpuPipelineSystem {
     required int stencilMode,
     required int sampleCount,
     required bool retainedMetadata,
+    bool shaderScissor = false,
   }) {
     renderContext.renderStatistics.webgpuPipelineCreateCount++;
     final blend = _blendFor(blendMode);
     final dualSourceBlending = identical(blendMode, BlendMode._DUAL_SOURCE);
     final batchShaderModule = retainedMetadata
-        ? dualSourceBlending
-            ? _retainedDualSourceShaderModule
-            : _retainedShaderModule
+        ? shaderScissor
+            ? dualSourceBlending
+                ? _retainedClippedDualSourceShaderModule
+                : _retainedClippedShaderModule
+            : dualSourceBlending
+                ? _retainedDualSourceShaderModule
+                : _retainedShaderModule
         : dualSourceBlending
             ? _dualSourceShaderModule
             : shaderModule;
@@ -266,6 +309,7 @@ class WebGpuPipelineSystem {
     int textureCount, {
     required bool dualSourceBlending,
     bool retainedMetadata = false,
+    bool shaderScissor = false,
   }) {
     final bindings = StringBuffer();
     final samplers = StringBuffer();
@@ -283,12 +327,14 @@ class WebGpuPipelineSystem {
     }
 
     final extension = dualSourceBlending ? 'enable dual_source_blending;' : '';
+    final clipMetadata = shaderScissor ? 'clipRect: vec4<f32>,' : '';
     final metadataBinding = retainedMetadata
         ? '''
     struct RenderableData {
       transform: vec4<f32>,
       translationColor: vec4<f32>,
       colorTexture: vec4<f32>,
+      $clipMetadata
     };
 
     @group(2) @binding(0) var<storage, read> renderables: array<RenderableData>;
@@ -325,12 +371,24 @@ class WebGpuPipelineSystem {
         renderable.colorTexture.y,
       );
       output.uv = input.uv;
+      ${shaderScissor ? 'output.clipRect = renderable.clipRect;' : ''}
       let encodedTextureIndex = u32(renderable.colorTexture.z + 0.5);'''
         : '''
       output.position = vec4<f32>(input.position, 0.0, 1.0) * projectionMatrix;
       output.color = input.color;
       output.uv = input.uv;
       let encodedTextureIndex = u32(input.textureIndex + 0.5);''';
+    final clipOutput = shaderScissor
+        ? '@location(4) @interpolate(flat) clipRect: vec4<f32>,'
+        : '';
+    final clipDiscard = shaderScissor
+        ? '''
+      if (input.clipRect.z >= input.clipRect.x &&
+          (input.position.x < input.clipRect.x || input.position.y < input.clipRect.y ||
+              input.position.x >= input.clipRect.z || input.position.y >= input.clipRect.w)) {
+        discard;
+      }'''
+        : '';
     final blendOutput = dualSourceBlending
         ? '@location(3) @interpolate(flat) blendMode: u32,'
         : '@location(3) @interpolate(flat) alphaMultiplier: f32,';
@@ -351,6 +409,7 @@ class WebGpuPipelineSystem {
 
     @fragment
     fn fs_main(input: VertexOutput) -> FragmentOutput {
+      $clipDiscard
       let color = sampleStageTexture(input.textureIndex, input.uv) * input.color;
       var output: FragmentOutput;
       output.primary = color;
@@ -370,6 +429,7 @@ class WebGpuPipelineSystem {
         : '''
     @fragment
     fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
+      $clipDiscard
       var color = sampleStageTexture(input.textureIndex, input.uv) * input.color;
       color.a *= input.alphaMultiplier;
       return color;
@@ -389,6 +449,7 @@ class WebGpuPipelineSystem {
       @location(1) uv: vec2<f32>,
       @location(2) @interpolate(flat) textureIndex: u32,
       $blendOutput
+      $clipOutput
     };
 
     @vertex

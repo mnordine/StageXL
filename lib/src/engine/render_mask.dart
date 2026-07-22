@@ -22,6 +22,13 @@ abstract class ScissorRenderMask implements RenderMask {
 }
 
 //------------------------------------------------------------------------------
+
+/// A rectangular mask that opts retained renderers into per-renderable shader clipping.
+///
+/// Renderers without a shader-clipped batch path treat this as a normal scissor mask.
+abstract class ShaderScissorRenderMask implements ScissorRenderMask {}
+
+//------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
 class _MaskState {

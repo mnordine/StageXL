@@ -52,6 +52,14 @@ abstract class Mask implements RenderMask {
     return _RectangleMask(rectangle);
   }
 
+  /// Create a rectangular mask that can be applied per renderable in a clipped shader batch.
+  ///
+  /// Canvas2D and renderers without a clipped batch path treat this as [Mask.rectangle].
+  factory Mask.shaderRect(num x, num y, num width, num height) {
+    final rectangle = Rectangle<num>(x, y, width, height);
+    return _ShaderRectangleMask(rectangle);
+  }
+
   /// Create a circular mask.
 
   factory Mask.circle(num x, num y, num radius) {
@@ -144,6 +152,12 @@ class _RectangleMask extends _TransformedMask implements ScissorRenderMask {
       renderState.renderTriangle(l, t, r, b, l, b, Color.Magenta);
     }
   }
+}
+
+//-----------------------------------------------------------------------------
+
+class _ShaderRectangleMask extends _RectangleMask implements ShaderScissorRenderMask {
+  _ShaderRectangleMask(super.rectangle);
 }
 
 //-----------------------------------------------------------------------------

@@ -51,6 +51,8 @@ class RenderContextWebGL extends RenderContext {
   final renderProgramTriangle = RenderProgramTriangleWebGL();
   final renderProgramBatch = RenderProgramBatchWebGL();
   final _renderProgramBatchDualSource = RenderProgramBatchWebGL.dualSource();
+  final _renderProgramBatchShaderScissor = RenderProgramBatchWebGL.shaderScissor();
+  final _renderProgramBatchDualSourceShaderScissor = RenderProgramBatchWebGL.dualSourceShaderScissor();
 
   final renderBufferIndex = RenderBufferIndex(16384 * 2);
   final renderBufferVertex = RenderBufferVertex(32768 * 2);

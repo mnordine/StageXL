@@ -17,6 +17,10 @@ Future<void> main() async {
   final useBitmapContainer = query['container'] == 'bitmap';
   final antialias = query['antialias'] == 'true';
   final renderBundles = query['bundles'] == 'true';
+  final scissorMasks = query['scissors'] == 'true';
+  final shaderScissors = query['shader_scissors'] == 'true';
+  final dualSourceBlending = query['dual_source'] == 'true';
+  final mixedBlendModes = query['blend_modes'] == 'true';
 
   final options = StageOptions()
     ..stageAlign = .TOP_LEFT
@@ -24,6 +28,7 @@ Future<void> main() async {
     ..backgroundColor = 0xFF111720
     ..antialias = antialias
     ..renderBundles = renderBundles
+    ..dualSourceBlending = dualSourceBlending
     ..renderEngine = engine;
 
   final canvas = document.querySelector('#stage') as HTMLCanvasElement;
@@ -44,11 +49,25 @@ Future<void> main() async {
     addSprite = stage.addChild;
   }
   final sprites = _createSprites(addSprite, textures, spriteCount);
+  if (mixedBlendModes) {
+    final blendModes = [BlendMode.NORMAL, BlendMode.ADD, BlendMode.SCREEN, BlendMode.MULTIPLY];
+    for (var i = 0; i < sprites.length; i++) {
+      sprites[i].blendMode = blendModes[i % blendModes.length];
+    }
+  }
+  if (scissorMasks) {
+    for (final sprite in sprites) {
+      sprite.mask = shaderScissors
+          ? .shaderRect(4, 4, _spriteSize - 8, _spriteSize - 8)
+          : .rectangle(4, 4, _spriteSize - 8, _spriteSize - 8);
+    }
+  }
   _addLabel(stage, 'StageXL Batch Benchmark', 20, 20, 24, 0xFFFFFFFF);
   _addLabel(
     stage,
     'Use ?engine=webgpu or ?engine=webgl2, ?sprites=2048, ?textures=16, '
-    '?moving=false, ?container=bitmap, ?bundles=true',
+    '?moving=false, ?container=bitmap, ?bundles=true, ?scissors=true, ?shader_scissors=true, '
+    '?dual_source=true, ?blend_modes=true',
     20,
     50,
     13,
@@ -143,6 +162,10 @@ Future<void> main() async {
       'container: ${useBitmapContainer ? 'bitmap' : 'stage'}',
       'antialias: $antialias',
       'render bundles: $renderBundles',
+      'scissor masks: $scissorMasks',
+      'shader scissors: $shaderScissors',
+      'dual-source blending: ${stage.renderContext.renderStatistics.dualSourceBlendingEnabled}',
+      'mixed blend modes: $mixedBlendModes',
       'moving: $moving',
       'avg stage materialize: ${avgFrameMs.toStringAsFixed(2)} ms',
       'avg render object: ${avgRenderObjectMs.toStringAsFixed(2)} ms',

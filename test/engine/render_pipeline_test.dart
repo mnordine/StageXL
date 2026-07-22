@@ -323,6 +323,8 @@ void main() {
     _expectWebGlRetainedUploads(.WebGL2);
   });
 
+  test('WebGL2 switches between normal and shader-scissored retained batches', _expectWebGlShaderScissorBatches);
+
   test('WebGL1 fuses ordered normal and additive draws on opaque stages', () {
     _expectWebGlOpaqueNormalAddFusion(.WebGL);
   });
@@ -476,6 +478,45 @@ void _expectWebGlImmediateUploadsDoNotOverwriteRetainedBuffers(RenderEngine engi
 
   final pixel = Uint8List(4);
   context.rawContext.readPixels(8, 8, 1, 1, WebGL.RGBA, WebGL.UNSIGNED_BYTE, pixel.toJS);
+  expect(pixel, [255, 0, 0, 255]);
+  stage.dispose();
+}
+
+void _expectWebGlShaderScissorBatches() {
+  final canvas = HTMLCanvasElement()
+    ..width = 32
+    ..height = 16;
+  final options = StageOptions()
+    ..renderEngine = .WebGL2
+    ..transparent = true
+    ..backgroundColor = Color.Transparent;
+  final bitmapData = BitmapData(8, 16, Color.Red);
+  final stage = Stage(canvas, width: 32, height: 16, options: options)
+    ..addChild(Bitmap(bitmapData))
+    ..addChild(Bitmap(bitmapData)
+      ..x = 8
+      ..mask = .shaderRect(2, 0, 4, 16))
+    ..addChild(Bitmap(bitmapData)
+      ..x = 16
+      ..mask = .shaderRect(2, 0, 4, 16))
+    ..addChild(Bitmap(bitmapData)..x = 24);
+  if (stage.renderEngine != .WebGL2) {
+    stage.dispose();
+    return;
+  }
+
+  stage.materialize(0, 16);
+
+  expect(stage.renderContext.renderStatistics.drawCount, 3);
+  final context = stage.renderContext as RenderContextWebGL;
+  final pixel = Uint8List(4);
+  context.rawContext.readPixels(8, 8, 1, 1, WebGL.RGBA, WebGL.UNSIGNED_BYTE, pixel.toJS);
+  expect(pixel, [0, 0, 0, 0]);
+  context.rawContext.readPixels(10, 8, 1, 1, WebGL.RGBA, WebGL.UNSIGNED_BYTE, pixel.toJS);
+  expect(pixel, [255, 0, 0, 255]);
+  context.rawContext.readPixels(16, 8, 1, 1, WebGL.RGBA, WebGL.UNSIGNED_BYTE, pixel.toJS);
+  expect(pixel, [0, 0, 0, 0]);
+  context.rawContext.readPixels(18, 8, 1, 1, WebGL.RGBA, WebGL.UNSIGNED_BYTE, pixel.toJS);
   expect(pixel, [255, 0, 0, 255]);
   stage.dispose();
 }

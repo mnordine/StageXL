@@ -10,6 +10,8 @@ class _WebGpuMaskSystem {
   final _maskStates = <_WebGpuMaskState>[];
   final _maskVertices = <double>[];
   Rectangle<num>? _activeScissor;
+  GPURenderPassEncoder? _scissorPass;
+  ({int left, int top, int width, int height})? _appliedScissor;
   late GPUBuffer _vertexBuffer;
   late GPUBuffer _indexBuffer;
   var _vertexCapacity = 0;
@@ -128,14 +130,34 @@ class _WebGpuMaskSystem {
   }
 
   void applyScissor(GPURenderPassEncoder pass) {
+    if (!identical(pass, _scissorPass)) {
+      _scissorPass = pass;
+      _appliedScissor = null;
+    }
+
     final scissor = _activeScissor;
-    if (scissor == null) return;
+    if (scissor == null) {
+      if (_appliedScissor == null) return;
+      pass.setScissorRect(0, 0, renderContext.viewportWidth, renderContext.viewportHeight);
+      _appliedScissor = null;
+      return;
+    }
 
     final left = scissor.left.round().clamp(0, renderContext.viewportWidth);
     final top = scissor.top.round().clamp(0, renderContext.viewportHeight);
     final right = scissor.right.round().clamp(left, renderContext.viewportWidth);
     final bottom = scissor.bottom.round().clamp(top, renderContext.viewportHeight);
-    pass.setScissorRect(left, top, right - left, bottom - top);
+    final next = (left: left, top: top, width: right - left, height: bottom - top);
+    if (next == _appliedScissor) return;
+    if (_appliedScissor == null &&
+        next.left == 0 &&
+        next.top == 0 &&
+        next.width == renderContext.viewportWidth &&
+        next.height == renderContext.viewportHeight) {
+      return;
+    }
+    pass.setScissorRect(next.left, next.top, next.width, next.height);
+    _appliedScissor = next;
   }
 
   Float32List _bakeStencilVertices(List<double> maskVertices) {

@@ -25,10 +25,23 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
   static var _maxTextures = 8; // Default value, will be updated at runtime
   static JSUint32Array? _samplerIndices;
   final bool _dualSourceShader;
+  final bool _shaderScissor;
 
-  RenderProgramBatchWebGL() : _dualSourceShader = false;
+  RenderProgramBatchWebGL()
+      : _dualSourceShader = false,
+        _shaderScissor = false;
 
-  RenderProgramBatchWebGL.dualSource() : _dualSourceShader = true;
+  RenderProgramBatchWebGL.dualSource()
+      : _dualSourceShader = true,
+        _shaderScissor = false;
+
+  RenderProgramBatchWebGL.shaderScissor()
+      : _dualSourceShader = false,
+        _shaderScissor = true;
+
+  RenderProgramBatchWebGL.dualSourceShaderScissor()
+      : _dualSourceShader = true,
+        _shaderScissor = true;
 
   static int initializeMaxTextures(WebGL renderingContext, {required bool isWebGL2}) {
     _maxTextures = (renderingContext.getParameter(WebGL.MAX_TEXTURE_IMAGE_UNITS) as JSNumber?)?.toDartInt ?? 8;
@@ -53,6 +66,9 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
 
   @override
   String get vertexShaderSource {
+    final clipAttribute = _shaderScissor && isWebGL2 ? 'in vec4 aVertexClipRect;' : '';
+    final clipOutput = _shaderScissor && isWebGL2 ? 'flat out vec4 vClipRect;' : '';
+    final clipAssignment = _shaderScissor && isWebGL2 ? 'vClipRect = aVertexClipRect;' : '';
     final blendOutput = _dualSourceShader
         ? isWebGL2
             ? 'flat out int vBlendMode;'
@@ -89,17 +105,20 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
     in vec2 aVertexTextCoord;
     in vec4 aVertexColor;
     in float aVertexTexIndex;
+    $clipAttribute
 
     out vec2 vTextCoord;
     out vec4 vColor;
     flat out int vTexIndex;
     $blendOutput
+    $clipOutput
 
     void main() {
       vTextCoord = aVertexTextCoord;
       vColor = aVertexColor;
       int encodedTextureIndex = int(aVertexTexIndex + 0.5);
       $blendDecode
+      $clipAssignment
       gl_Position = vec4(aVertexPosition, 0.0, 1.0) * uProjectionMatrix;
     }
     ''' : '''
@@ -127,6 +146,14 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
   String get fragmentShaderSource {
     final sb = StringBuffer();
     final sampleTarget = _dualSourceShader ? 'color' : isWebGL2 ? 'fragColor' : 'gl_FragColor';
+    final clipInput = _shaderScissor && isWebGL2 ? 'flat in vec4 vClipRect;' : '';
+    final clipDiscard = _shaderScissor && isWebGL2
+        ? '''
+        if (gl_FragCoord.x < vClipRect.x || gl_FragCoord.y < vClipRect.y ||
+            gl_FragCoord.x >= vClipRect.z || gl_FragCoord.y >= vClipRect.w) {
+          discard;
+        }'''
+        : '';
 
     if (isWebGL2) {
       // WebGL 2: Use sampler array declaration but with branching for lookup
@@ -181,10 +208,12 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
       in vec4 vColor;
       flat in int vTexIndex;
       $blendInput
+      $clipInput
 
       $outputs
 
       void main() {
+        $clipDiscard
         $colorVariable
         int textureIndex = vTexIndex;
         $sb
@@ -337,8 +366,18 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
     _lastBlendMode = blendMode;
   }
 
-  RenderProgramBatchWebGL _shaderForBlendMode(RenderContextWebGL renderContext, BlendMode blendMode) =>
-      identical(blendMode, BlendMode._DUAL_SOURCE) ? renderContext._renderProgramBatchDualSource : this;
+  RenderProgramBatchWebGL _shaderForBlendMode(
+    RenderContextWebGL renderContext,
+    BlendMode blendMode, {
+    bool shaderScissor = false,
+  }) {
+    if (shaderScissor) {
+      return identical(blendMode, BlendMode._DUAL_SOURCE)
+          ? renderContext._renderProgramBatchDualSourceShaderScissor
+          : renderContext._renderProgramBatchShaderScissor;
+    }
+    return identical(blendMode, BlendMode._DUAL_SOURCE) ? renderContext._renderProgramBatchDualSource : this;
+  }
 
   void _activateBatchShader(RenderContextWebGL renderContext, RenderProgramBatchWebGL shader) {
     shader.activate(renderContext);
@@ -450,17 +489,22 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
     for (var runIndex = 0; runIndex < slice.runCount; runIndex++) {
       final run = slice.runs[runIndex];
       if (run.indexCount == 0) continue;
-      final shader = _shaderForBlendMode(renderContext, run.blendMode);
+      final shader = _shaderForBlendMode(
+        renderContext,
+        run.blendMode,
+        shaderScissor: slice.shaderScissor,
+      );
       if (!identical(shader, activeShader)) {
         _activateBatchShader(renderContext, shader);
         gl
           ..bindBuffer(WebGL.ARRAY_BUFFER, vertexBuffer)
           ..bindBuffer(WebGL.ELEMENT_ARRAY_BUFFER, indexBuffer);
         shader
-          .._bindRetainedAttribute('aVertexPosition', 2, vertexByteOffset + 0)
-          .._bindRetainedAttribute('aVertexTextCoord', 2, vertexByteOffset + 8)
-          .._bindRetainedAttribute('aVertexColor', 4, vertexByteOffset + 16)
-          .._bindRetainedAttribute('aVertexTexIndex', 1, vertexByteOffset + 32);
+          .._bindRetainedAttribute('aVertexPosition', 2, slice.vertexFloatStride, vertexByteOffset + 0)
+          .._bindRetainedAttribute('aVertexTextCoord', 2, slice.vertexFloatStride, vertexByteOffset + 8)
+          .._bindRetainedAttribute('aVertexColor', 4, slice.vertexFloatStride, vertexByteOffset + 16)
+          .._bindRetainedAttribute('aVertexTexIndex', 1, slice.vertexFloatStride, vertexByteOffset + 32)
+          .._bindRetainedAttribute('aVertexClipRect', 4, slice.vertexFloatStride, vertexByteOffset + 36);
         activeShader = shader;
       }
       if (_lastBlendMode.srcFactor != run.blendMode.srcFactor ||
@@ -479,12 +523,12 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
     _executingBatch = false;
   }
 
-  void _bindRetainedAttribute(String name, int size, int offset) {
+  void _bindRetainedAttribute(String name, int size, int stride, int offset) {
     final index = attributes[name];
     if (index == null) return;
     renderingContext
       ..enableVertexAttribArray(index)
-      ..vertexAttribPointer(index, size, WebGL.FLOAT, false, 36, offset);
+      ..vertexAttribPointer(index, size, WebGL.FLOAT, false, stride * 4, offset);
   }
 
   //---------------------------------------------------------------------------

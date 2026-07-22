@@ -5,6 +5,8 @@ class _WebGpuInstructionSystem {
   final _renderGroups = Expando<InstructionSet>('StageXL WebGPU render groups');
   final _collectionStates = <_WebGpuCollectionState>[];
   final _groupStack = <RenderObject>[];
+  final _shaderMaskStack = <({RenderMask mask, Rectangle<num>? previousScissor, bool batched})>[];
+  final _shaderScissorTransform = Matrix.fromIdentity();
   var _collectionDepth = 0;
   var instructionSet = InstructionSet();
   RenderObject? _rootRenderObject;
@@ -26,6 +28,7 @@ class _WebGpuInstructionSystem {
   var _structureChanged = true;
   var _isCollecting = false;
   _WebGpuBatchInstruction? _activeBatch;
+  Rectangle<num>? _activeShaderScissor;
   List<num>? _pendingClearColor;
 
   _WebGpuInstructionSystem(this.renderContext) {
@@ -43,6 +46,9 @@ class _WebGpuInstructionSystem {
   void collect(RenderState renderState, RenderObject renderObject) {
     _rootRenderObject = renderObject;
     instructionSet = _renderGroups[renderObject] ??= InstructionSet();
+    _shaderMaskStack.clear();
+    _shaderScissorTransform.identity();
+    _activeShaderScissor = null;
     _beginCollect();
     renderState.renderObject(renderObject);
     _endCollect();
@@ -80,7 +86,9 @@ class _WebGpuInstructionSystem {
     }
     _collectionStates.clear();
     _groupStack.clear();
+    _shaderMaskStack.clear();
     _activeBatch = null;
+    _activeShaderScissor = null;
     _pendingClearColor = null;
   }
 
@@ -92,8 +100,13 @@ class _WebGpuInstructionSystem {
 
   void _execute(InstructionSet instructions) {
     for (var i = 0; i < instructions.instructionCount; i++) {
-      _instructionPipes.execute(instructions.instructionAt(i));
+      final instruction = instructions.instructionAt(i);
+      final sharesColorPass = instruction is _WebGpuBatchInstruction ||
+          instruction is _WebGpuMaskInstruction && instruction.mask is ScissorRenderMask;
+      if (!sharesColorPass) _batchPipe.endPass();
+      _instructionPipes.execute(instruction);
     }
+    _batchPipe.endPass();
   }
 
   void _beginCollect() {
@@ -158,6 +171,10 @@ class _WebGpuInstructionSystem {
     _instructionCursor++;
 
     _pushCollectionState();
+    _shaderScissorTransform.copyFromAndConcat(
+      groupMatrix,
+      _collectionStates[_collectionDepth - 1].shaderScissorTransform,
+    );
     _groupStack.add(renderable);
     instructionSet = groupInstructions;
     _beginCollect();
@@ -187,6 +204,7 @@ class _WebGpuInstructionSystem {
     _oldRenderableSize = state.oldRenderableSize;
     _structureChanged = state.structureChanged;
     _activeBatch = state.activeBatch;
+    _shaderScissorTransform.copyFrom(state.shaderScissorTransform);
   }
 
   void _recordCollectionStatistics(InstructionSet instructions, bool structureChanged) {
@@ -239,9 +257,19 @@ class _WebGpuInstructionSystem {
     num blue = 1,
     num alpha = 1,
   ]) {
-    final batch = _getBatch();
-    final (renderable, rebuilt) =
-        batch.addRenderable(state, texture, indices, vertices, red, green, blue, alpha);
+    final shaderScissor = _normalizedShaderScissor;
+    final batch = _getBatch(shaderScissor != null);
+    final (renderable, rebuilt) = batch.addRenderable(
+      state,
+      texture,
+      indices,
+      vertices,
+      red,
+      green,
+      blue,
+      alpha,
+      shaderScissor,
+    );
     final reusable = !rebuilt &&
         _renderableCursor < _oldRenderableSize &&
         identical(instructionSet._slots[_renderableCursor], renderable) &&
@@ -346,6 +374,28 @@ class _WebGpuInstructionSystem {
   }
 
   void recordMask(RenderState state, RenderMask mask, {required bool begin}) {
+    if (begin) {
+      final previousScissor = _activeShaderScissor;
+      final scissor = _captureShaderScissor(state, mask);
+      final batched = scissor != null;
+      _shaderMaskStack.add((mask: mask, previousScissor: previousScissor, batched: batched));
+      if (batched) {
+        _activeShaderScissor = previousScissor == null ? scissor : previousScissor.intersection(scissor);
+        return;
+      }
+    } else {
+      final entry = _shaderMaskStack.removeLast();
+      if (!identical(entry.mask, mask)) throw StateError('WebGPU mask collection order is invalid.');
+      if (entry.batched) {
+        _activeShaderScissor = entry.previousScissor;
+        return;
+      }
+    }
+
+    _recordMaskInstruction(state, mask, begin: begin);
+  }
+
+  void _recordMaskInstruction(RenderState state, RenderMask mask, {required bool begin}) {
     flushBatch();
     final old = _instructionAtCursor;
     final instruction = old is _WebGpuMaskInstruction && old.begin == begin && identical(old.mask, mask)
@@ -358,6 +408,25 @@ class _WebGpuInstructionSystem {
       ..deltaTime = state.deltaTime;
     if (begin) instruction.captureMask();
     _instructionCursor++;
+  }
+
+  Rectangle<num>? _captureShaderScissor(RenderState state, RenderMask mask) {
+    if (mask is! ShaderScissorRenderMask) return null;
+    final scissor = mask.getScissorRectangle(state);
+    if (scissor == null) return null;
+    final transform = _shaderScissorTransform;
+    if (!similar(transform.b, 0.0) || !similar(transform.c, 0.0)) return null;
+    return transform.transformRectangle(scissor);
+  }
+
+  Rectangle<num>? get _normalizedShaderScissor {
+    final scissor = _activeShaderScissor;
+    if (scissor == null) return null;
+    final left = scissor.left.round().clamp(0, renderContext.viewportWidth);
+    final top = scissor.top.round().clamp(0, renderContext.viewportHeight);
+    final right = scissor.right.round().clamp(left, renderContext.viewportWidth);
+    final bottom = scissor.bottom.round().clamp(top, renderContext.viewportHeight);
+    return Rectangle<num>(left, top, right - left, bottom - top);
   }
 
   void recordFilteredQuad(
@@ -417,11 +486,13 @@ class _WebGpuInstructionSystem {
     _instructionCursor++;
   }
 
-  _WebGpuBatchInstruction _getBatch() {
+  _WebGpuBatchInstruction _getBatch(bool shaderScissor) {
     final active = _activeBatch;
-    if (active != null) return active;
+    if (active != null && active.shaderScissor == shaderScissor) return active;
+    if (active != null) flushBatch();
     final old = _instructionAtCursor;
-    final batch = old is _WebGpuBatchInstruction ? old : _WebGpuBatchInstruction(renderContext);
+    final reusable = old is _WebGpuBatchInstruction && old.shaderScissor == shaderScissor;
+    final batch = reusable ? old : _WebGpuBatchInstruction(renderContext, shaderScissor: shaderScissor);
     if (!identical(old, batch)) _replaceInstruction(batch);
     batch.beginUpdate();
     return _activeBatch = batch;
@@ -492,6 +563,7 @@ class _WebGpuInstructionSystem {
 
 class _WebGpuCollectionState {
   late InstructionSet instructionSet;
+  final shaderScissorTransform = Matrix.fromIdentity();
   late int instructionCursor;
   late int renderableCursor;
   late int oldInstructionSize;
@@ -507,6 +579,7 @@ class _WebGpuCollectionState {
     oldRenderableSize = system._oldRenderableSize;
     structureChanged = system._structureChanged;
     activeBatch = system._activeBatch;
+    shaderScissorTransform.copyFrom(system._shaderScissorTransform);
   }
 }
 
@@ -581,6 +654,10 @@ final class _WebGpuBatchRenderable extends RetainedSlot {
   var textureScaleX = double.nan;
   var textureScaleY = double.nan;
   var textureIndex = 0;
+  var clipLeft = 0.0;
+  var clipTop = 0.0;
+  var clipRight = -1.0;
+  var clipBottom = -1.0;
   var renderableIndex = 0;
   var vertexFloatOffset = 0;
   var metadataFloatOffset = 0;
@@ -599,10 +676,11 @@ final class _WebGpuBatchRenderable extends RetainedSlot {
     num green,
     num blue,
     num alpha,
+    Rectangle<num>? shaderScissor,
   ) : blendMode = state.globalBlendMode {
     indices = Int16List(sourceIndices.length);
     vertices = Float32List(sourceVertices.length);
-    update(state, sourceIndices, sourceVertices, red, green, blue, alpha);
+    update(state, sourceIndices, sourceVertices, red, green, blue, alpha, shaderScissor);
   }
 
   bool matchesStructure(
@@ -624,6 +702,7 @@ final class _WebGpuBatchRenderable extends RetainedSlot {
     num tintGreen,
     num tintBlue,
     num tintAlpha,
+    Rectangle<num>? shaderScissor,
   ) {
     final matrix = state.globalMatrix;
     final nextAlpha = state.globalAlpha * state.globalColorScaleA * tintAlpha;
@@ -652,6 +731,7 @@ final class _WebGpuBatchRenderable extends RetainedSlot {
       alpha = nextAlpha;
       metadataDirty = true;
     }
+    _updateShaderScissor(shaderScissor);
 
     for (var i = 0; i < sourceVertices.length; i++) {
       final value = sourceVertices[i];
@@ -665,6 +745,19 @@ final class _WebGpuBatchRenderable extends RetainedSlot {
       indices[i] = value;
       indexDirty = true;
     }
+  }
+
+  void _updateShaderScissor(Rectangle<num>? scissor) {
+    final nextLeft = scissor?.left.toDouble() ?? 0.0;
+    final nextTop = scissor?.top.toDouble() ?? 0.0;
+    final nextRight = scissor?.right.toDouble() ?? -1.0;
+    final nextBottom = scissor?.bottom.toDouble() ?? -1.0;
+    if (clipLeft == nextLeft && clipTop == nextTop && clipRight == nextRight && clipBottom == nextBottom) return;
+    clipLeft = nextLeft;
+    clipTop = nextTop;
+    clipRight = nextRight;
+    clipBottom = nextBottom;
+    metadataDirty = true;
   }
 
   void updateTextureScale(double scaleX, double scaleY) {
@@ -753,6 +846,7 @@ class _WebGpuBatchInstruction implements RenderInstruction {
   static const pipeId = InstructionPipeId<_WebGpuBatchInstruction>('webgpu.batch');
 
   final RenderContextWebGPU renderContext;
+  final bool shaderScissor;
   final renderables = <_WebGpuBatchRenderable>[];
   final runs = <_WebGpuRun>[];
   final bindGroups = <GPUBindGroup>[];
@@ -777,7 +871,9 @@ class _WebGpuBatchInstruction implements RenderInstruction {
   var bundleSampleCount = 0;
   var bundleStencilTest = false;
 
-  _WebGpuBatchInstruction(this.renderContext);
+  _WebGpuBatchInstruction(this.renderContext, {required this.shaderScissor});
+
+  int get metadataFloatsPerRenderable => shaderScissor ? 16 : 12;
 
   @override
   InstructionPipeId<_WebGpuBatchInstruction> get instructionPipeId => pipeId;
@@ -793,13 +889,14 @@ class _WebGpuBatchInstruction implements RenderInstruction {
     num green,
     num blue,
     num alpha,
+    Rectangle<num>? shaderScissor,
   ) {
     final old = renderableSize < renderables.length ? renderables[renderableSize] : null;
     final reusable = old != null && old.matchesStructure(state, texture, indices, vertices);
     final renderable = reusable
         ? old
-        : _WebGpuBatchRenderable(state, texture, indices, vertices, red, green, blue, alpha);
-    if (reusable) renderable.update(state, indices, vertices, red, green, blue, alpha);
+        : _WebGpuBatchRenderable(state, texture, indices, vertices, red, green, blue, alpha, shaderScissor);
+    if (reusable) renderable.update(state, indices, vertices, red, green, blue, alpha, shaderScissor);
     if (renderableSize == renderables.length) {
       renderables.add(renderable);
     } else {
@@ -825,6 +922,7 @@ class _WebGpuBatchInstruction implements RenderInstruction {
     vertexCount = 0;
     indexCount = 0;
     final maxTextures = renderContext.pipelineSystem.maxBatchTextures;
+    final floatsPerRenderable = metadataFloatsPerRenderable;
     final opaqueTarget = renderContext._activeRenderTargetIsOpaque;
     final dualSourceBlending = renderContext.dualSourceBlending &&
         (!opaqueTarget || renderables.any((renderable) => _requiresDualSourceBatchBlendMode(renderable.blendMode)));
@@ -854,7 +952,7 @@ class _WebGpuBatchInstruction implements RenderInstruction {
       ));
       renderable.renderableIndex = renderableIndex;
       renderable.vertexFloatOffset = vertexCount * _WebGpuBatchPipe._floatsPerVertex;
-      renderable.metadataFloatOffset = renderable.renderableIndex * _WebGpuBatchPipe._floatsPerRenderable;
+      renderable.metadataFloatOffset = renderable.renderableIndex * floatsPerRenderable;
       renderable.indexOffset = indexCount;
       renderable.baseVertex = vertexCount;
       run
@@ -897,13 +995,13 @@ class _WebGpuBatchInstruction implements RenderInstruction {
 class _WebGpuBatchPipe
     implements RetainedSlotPipe<_WebGpuBatchRenderable>, InstructionPipe<_WebGpuBatchInstruction> {
   static const _floatsPerVertex = 5;
-  static const _floatsPerRenderable = 12;
   static const _bytesPerVertex = _floatsPerVertex * 4;
-  static const _bytesPerRenderable = _floatsPerRenderable * 4;
   static const _bytesPerIndex = 4;
 
   final RenderContextWebGPU renderContext;
   final List<num>? Function() takeClearColor;
+  GPURenderPassEncoder? _activePass;
+  var _activeStencilValue = 0;
 
   _WebGpuBatchPipe(this.renderContext, this.takeClearColor);
 
@@ -922,7 +1020,8 @@ class _WebGpuBatchPipe
   @override
   void upload(_WebGpuBatchInstruction instruction) {
     final vertexLength = instruction.vertexCount * _floatsPerVertex;
-    final metadataLength = instruction.renderables.length * _floatsPerRenderable;
+    final floatsPerRenderable = instruction.metadataFloatsPerRenderable;
+    final metadataLength = instruction.renderables.length * floatsPerRenderable;
     final indexLength = instruction.indexCount;
     var uploadAllVertices = instruction.vertexData == null;
     var uploadAllMetadata = instruction.metadataData == null;
@@ -933,7 +1032,7 @@ class _WebGpuBatchPipe
     }
     if (instruction.metadataData == null || instruction.metadataData!.length < metadataLength) {
       instruction.metadataData =
-          JSFloat32Array.withLength(math.max(metadataLength, _floatsPerRenderable)).toDart;
+          JSFloat32Array.withLength(math.max(metadataLength, floatsPerRenderable)).toDart;
       uploadAllMetadata = true;
     }
     if (instruction.indexData == null || instruction.indexData!.length < indexLength) {
@@ -1040,11 +1139,11 @@ class _WebGpuBatchPipe
   void _bakeMetadata(_WebGpuBatchInstruction instruction) {
     final target = instruction.metadataData!;
     for (final renderable in instruction.renderables) {
-      _bakeRenderableMetadata(renderable, target);
+      _bakeRenderableMetadata(renderable, target, instruction.shaderScissor);
     }
   }
 
-  void _bakeRenderableMetadata(_WebGpuBatchRenderable renderable, Float32List target) {
+  void _bakeRenderableMetadata(_WebGpuBatchRenderable renderable, Float32List target, bool shaderScissor) {
     var writeIndex = renderable.metadataFloatOffset;
     target[writeIndex++] = renderable.matrixA;
     target[writeIndex++] = renderable.matrixB;
@@ -1057,7 +1156,13 @@ class _WebGpuBatchPipe
     target[writeIndex++] = renderable.blue;
     target[writeIndex++] = renderable.alpha;
     target[writeIndex++] = renderable.textureIndex.toDouble();
-    target[writeIndex] = 0;
+    target[writeIndex++] = 0;
+    if (shaderScissor) {
+      target[writeIndex++] = renderable.clipLeft;
+      target[writeIndex++] = renderable.clipTop;
+      target[writeIndex++] = renderable.clipRight;
+      target[writeIndex] = renderable.clipBottom;
+    }
     renderable.metadataDirty = false;
   }
 
@@ -1106,6 +1211,7 @@ class _WebGpuBatchPipe
   }
 
   bool _uploadDirtyMetadataRanges(_WebGpuBatchInstruction instruction) {
+    final floatsPerRenderable = instruction.metadataFloatsPerRenderable;
     var uploaded = false;
     var index = 0;
     while (index < instruction.renderables.length) {
@@ -1118,8 +1224,8 @@ class _WebGpuBatchPipe
       var end = start;
       while (index < instruction.renderables.length && instruction.renderables[index].metadataDirty) {
         final renderable = instruction.renderables[index++];
-        _bakeRenderableMetadata(renderable, instruction.metadataData!);
-        end = renderable.metadataFloatOffset + _floatsPerRenderable;
+        _bakeRenderableMetadata(renderable, instruction.metadataData!, instruction.shaderScissor);
+        end = renderable.metadataFloatOffset + floatsPerRenderable;
       }
       renderContext.device.queue.writeBuffer(
         instruction.metadataBuffer!,
@@ -1185,7 +1291,7 @@ class _WebGpuBatchPipe
     if (instruction.metadataBuffer == null || instruction.metadataCapacity < metadataBytes) {
       instruction.metadataBuffer?.destroy();
       instruction.invalidateBundle();
-      instruction.metadataCapacity = math.max(metadataBytes * 2, _bytesPerRenderable);
+      instruction.metadataCapacity = math.max(metadataBytes * 2, instruction.metadataFloatsPerRenderable * 4);
       instruction.metadataBuffer = renderContext.device.createBuffer(GPUBufferDescriptor(
         size: instruction.metadataCapacity,
         usage: $GPUBufferUsage.COPY_DST | $GPUBufferUsage.STORAGE,
@@ -1226,31 +1332,35 @@ class _WebGpuBatchPipe
 
   void executeWithClear(_WebGpuBatchInstruction instruction, List<num>? clearColor) {
     if (instruction.vertexCount == 0) {
-      if (clearColor != null) renderContext._batchSystem.flush(clearColor);
+      if (clearColor != null) {
+        endPass();
+        renderContext._batchSystem.flush(clearColor);
+      }
       return;
     }
 
-    renderContext.pipelineSystem.uploadProjectionMatrix(renderContext.activeProjectionMatrix);
     final encodeStopwatch = Stopwatch()..start();
-    final pass = renderContext.commandSystem.beginColorPass(clearColor);
     final stencilValue = renderContext._maskSystem.activeStencilValue;
-    if (stencilValue > 0) pass.setStencilReference(stencilValue);
-    pass
-      ..setVertexBuffer(0, instruction.vertexBuffer, 0, instruction.vertexCount * _bytesPerVertex)
-      ..setIndexBuffer(instruction.indexBuffer!, 'uint32', 0, instruction.indexCount * _bytesPerIndex)
-      ..setBindGroup(1, renderContext.pipelineSystem.projectionBindGroup)
-      ..setBindGroup(2, instruction.metadataBindGroup);
+    if (_activePass != null && _activeStencilValue != stencilValue) endPass();
+    final pass = _activePass ?? _beginPass(clearColor, stencilValue);
+    renderContext._maskSystem.applyScissor(pass);
 
     final bundle = _getRenderBundle(instruction, stencilValue > 0);
     if (bundle != null) {
       pass.executeBundles([bundle].toJS);
     } else {
+      pass
+        ..setVertexBuffer(0, instruction.vertexBuffer, 0, instruction.vertexCount * _bytesPerVertex)
+        ..setIndexBuffer(instruction.indexBuffer!, 'uint32', 0, instruction.indexCount * _bytesPerIndex)
+        ..setBindGroup(1, renderContext.pipelineSystem.projectionBindGroup)
+        ..setBindGroup(2, instruction.metadataBindGroup);
       GPURenderPipeline? activePipeline;
       for (var i = 0; i < instruction.runs.length; i++) {
         final run = instruction.runs[i];
         final pipeline = renderContext.pipelineSystem.getRetainedPipeline(
           run.blendMode,
           stencilTest: stencilValue > 0,
+          shaderScissor: instruction.shaderScissor,
         );
         if (!identical(pipeline, activePipeline)) {
           pass.setPipeline(pipeline);
@@ -1261,8 +1371,6 @@ class _WebGpuBatchPipe
           ..drawIndexed(run.indexCount, 1, run.firstIndex, 0, 0);
       }
     }
-    pass.end();
-
     final statistics = renderContext.renderStatistics;
     statistics.webgpuBatchFlushCount++;
     statistics.webgpuBatchRunCount += instruction.runs.length;
@@ -1279,6 +1387,22 @@ class _WebGpuBatchPipe
       statistics.vertexCount += run.vertexCount;
       statistics.indexCount += run.indexCount;
     }
+  }
+
+  GPURenderPassEncoder _beginPass(List<num>? clearColor, int stencilValue) {
+    renderContext.pipelineSystem.uploadProjectionMatrix(renderContext.activeProjectionMatrix);
+    final pass = renderContext.commandSystem.beginColorPass(clearColor);
+    if (stencilValue > 0) pass.setStencilReference(stencilValue);
+    _activeStencilValue = stencilValue;
+    return _activePass = pass;
+  }
+
+  void endPass() {
+    final pass = _activePass;
+    if (pass == null) return;
+    pass.end();
+    _activePass = null;
+    _activeStencilValue = 0;
     renderContext.commandSystem.submit();
   }
 
@@ -1294,6 +1418,7 @@ class _WebGpuBatchPipe
       final pipeline = renderContext.pipelineSystem.getRetainedPipeline(
         instruction.runs[i].blendMode,
         stencilTest: stencilTest,
+        shaderScissor: instruction.shaderScissor,
       );
       matches = identical(instruction.bundlePipelines[i], pipeline) &&
           identical(instruction.bundleBindGroups[i], instruction.bindGroups[i]);
@@ -1307,6 +1432,7 @@ class _WebGpuBatchPipe
           renderContext.pipelineSystem.getRetainedPipeline(
             instruction.runs[i].blendMode,
             stencilTest: stencilTest,
+            shaderScissor: instruction.shaderScissor,
           ),
         );
         instruction.bundleBindGroups.add(instruction.bindGroups[i]);
@@ -1335,7 +1461,11 @@ class _WebGpuBatchPipe
     GPURenderPipeline? activePipeline;
     for (var i = 0; i < instruction.runs.length; i++) {
       final run = instruction.runs[i];
-      final pipeline = renderContext.pipelineSystem.getRetainedPipeline(run.blendMode, stencilTest: stencilTest);
+      final pipeline = renderContext.pipelineSystem.getRetainedPipeline(
+        run.blendMode,
+        stencilTest: stencilTest,
+        shaderScissor: instruction.shaderScissor,
+      );
       if (!identical(pipeline, activePipeline)) {
         encoder.setPipeline(pipeline);
         activePipeline = pipeline;
@@ -1436,7 +1566,7 @@ class _WebGpuMaskPipe implements InstructionPipe<_WebGpuMaskInstruction> {
 
   @override
   void execute(_WebGpuMaskInstruction instruction) {
-    ensureClear();
+    if (instruction.mask is! ScissorRenderMask) ensureClear();
     if (instruction.begin) {
       renderContext._maskSystem.beginMask(
         instruction.state,
