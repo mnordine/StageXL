@@ -66,9 +66,17 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
 
   @override
   String get vertexShaderSource {
-    final clipAttribute = _shaderScissor && isWebGL2 ? 'in vec4 aVertexClipRect;' : '';
-    final clipOutput = _shaderScissor && isWebGL2 ? 'flat out vec4 vClipRect;' : '';
-    final clipAssignment = _shaderScissor && isWebGL2 ? 'vClipRect = aVertexClipRect;' : '';
+    final clipAttribute = _shaderScissor
+        ? isWebGL2
+            ? 'in vec4 aVertexClipRect;'
+            : 'attribute vec4 aVertexClipRect;'
+        : '';
+    final clipOutput = _shaderScissor
+        ? isWebGL2
+            ? 'flat out vec4 vClipRect;'
+            : 'varying vec4 vClipRect;'
+        : '';
+    final clipAssignment = _shaderScissor ? 'vClipRect = aVertexClipRect;' : '';
     final blendOutput = _dualSourceShader
         ? isWebGL2
             ? 'flat out int vBlendMode;'
@@ -128,15 +136,18 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
     attribute vec2 aVertexTextCoord;
     attribute vec4 aVertexColor;
     attribute float aVertexTexIndex;
+    $clipAttribute
     varying vec2 vTextCoord;
     varying vec4 vColor;
     varying float vTexIndex;
     $blendOutput
+    $clipOutput
 
     void main() {
       vTextCoord = aVertexTextCoord;
       vColor = aVertexColor;
       $blendDecode
+      $clipAssignment
       gl_Position = vec4(aVertexPosition, 0.0, 1.0) * uProjectionMatrix;
     }
     ''';
@@ -146,8 +157,12 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
   String get fragmentShaderSource {
     final sb = StringBuffer();
     final sampleTarget = _dualSourceShader ? 'color' : isWebGL2 ? 'fragColor' : 'gl_FragColor';
-    final clipInput = _shaderScissor && isWebGL2 ? 'flat in vec4 vClipRect;' : '';
-    final clipDiscard = _shaderScissor && isWebGL2
+    final clipInput = _shaderScissor
+        ? isWebGL2
+            ? 'flat in vec4 vClipRect;'
+            : 'varying vec4 vClipRect;'
+        : '';
+    final clipDiscard = _shaderScissor
         ? '''
         if (gl_FragCoord.x < vClipRect.x || gl_FragCoord.y < vClipRect.y ||
             gl_FragCoord.x >= vClipRect.z || gl_FragCoord.y >= vClipRect.w) {
@@ -266,8 +281,10 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
       varying vec4 vColor;
       varying float vTexIndex;
       $blendInput
+      $clipInput
 
       void main() {
+        $clipDiscard
         $colorVariable
         $sb
         $blendResult

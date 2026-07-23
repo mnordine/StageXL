@@ -214,10 +214,7 @@ final class _RetainedInstructionSystem {
     _cursor++;
   }
 
-  bool get _supportsShaderScissor {
-    final context = renderContext;
-    return context is RenderContextWebGL && context.isWebGL2;
-  }
+  bool get _supportsShaderScissor => renderContext is RenderContextWebGL;
 
   void _updateWebGlShaderScissor(_RetainedWebGLBatchCommand command) =>
       command.webGlShaderScissor = _activeShaderScissor;

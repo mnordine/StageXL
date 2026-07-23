@@ -323,7 +323,13 @@ void main() {
     _expectWebGlRetainedUploads(.WebGL2);
   });
 
-  test('WebGL2 switches between normal and shader-scissored retained batches', _expectWebGlShaderScissorBatches);
+  test('WebGL1 switches between normal and shader-scissored retained batches', () {
+    _expectWebGlShaderScissorBatches(.WebGL);
+  });
+
+  test('WebGL2 switches between normal and shader-scissored retained batches', () {
+    _expectWebGlShaderScissorBatches(.WebGL2);
+  });
 
   test('WebGL1 fuses ordered normal and additive draws on opaque stages', () {
     _expectWebGlOpaqueNormalAddFusion(.WebGL);
@@ -482,12 +488,12 @@ void _expectWebGlImmediateUploadsDoNotOverwriteRetainedBuffers(RenderEngine engi
   stage.dispose();
 }
 
-void _expectWebGlShaderScissorBatches() {
+void _expectWebGlShaderScissorBatches(RenderEngine engine) {
   final canvas = HTMLCanvasElement()
     ..width = 32
     ..height = 16;
   final options = StageOptions()
-    ..renderEngine = .WebGL2
+    ..renderEngine = engine
     ..transparent = true
     ..backgroundColor = Color.Transparent;
   final bitmapData = BitmapData(8, 16, Color.Red);
@@ -500,7 +506,7 @@ void _expectWebGlShaderScissorBatches() {
       ..x = 16
       ..mask = .shaderRect(2, 0, 4, 16))
     ..addChild(Bitmap(bitmapData)..x = 24);
-  if (stage.renderEngine != .WebGL2) {
+  if (stage.renderEngine != engine) {
     stage.dispose();
     return;
   }

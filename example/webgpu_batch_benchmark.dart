@@ -220,6 +220,8 @@ Future<void> main() async {
 
 RenderEngine _engine(String? value) => switch (value?.toLowerCase()) {
       'webgpu' => RenderEngine.WebGPU,
+      'webgl' || 'webgl1' => RenderEngine.WebGL,
+      'webgl2' => RenderEngine.WebGL2,
       'canvas' || 'canvas2d' => RenderEngine.Canvas2D,
       _ => RenderEngine.WebGL2,
     };
