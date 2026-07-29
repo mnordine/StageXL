@@ -8,6 +8,10 @@ abstract class RenderFilter {
   List<int> get renderPassSources;
   List<int> get renderPassTargets;
 
+  List<int> renderPassSourcesFor(RenderEngine renderEngine) => renderPassSources;
+
+  List<int> renderPassTargetsFor(RenderEngine renderEngine) => renderPassTargets;
+
   bool get isSimple {
     final overlap = this.overlap;
     final rps = renderPassSources;
