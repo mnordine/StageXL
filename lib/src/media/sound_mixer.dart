@@ -6,6 +6,7 @@ class SoundMixer {
   static SoundEngine? _engineDetected;
   static SoundEngine? _engineOverride;
   static var _soundTransform = SoundTransform();
+  static final _audioContextStateChanges = StreamController<SoundMixerAudioContextState>.broadcast();
 
   static WebAudioApiMixer? _webAudioApiMixer;
   static AudioElementMixer? _audioElementMixer;
@@ -42,28 +43,69 @@ class SoundMixer {
 
   //---------------------------------------------------------------------------
 
+  /// The current Web Audio context state and clock, or `null` when Web Audio is
+  /// not the active sound engine.
+
+  static SoundMixerAudioContextState? get audioContextState {
+    _initEngine();
+    return _getAudioContextState();
+  }
+
+  /// Emits whenever the browser reports a Web Audio context state change.
+
+  static Stream<SoundMixerAudioContextState> get onAudioContextStateChange {
+    _initEngine();
+    return _audioContextStateChanges.stream;
+  }
+
+  //---------------------------------------------------------------------------
+
   /// A helper method to unlock audio on mobile devices.
   ///
   /// Some mobile devices (like iOS) do not allow audio playback by default.
-  /// Call this method in the first onTouchBegin event to unlock the website
-  /// for audio playback.
+  /// Call this method from a click or touch-end event to unlock the website for
+  /// audio playback.
   ///
-  ///     stage.onTouchBegin.first.then((e) {
+  ///     stage.onMouseClick.first.then((e) {
   ///       SoundMixer.unlockMobileAudio();
   ///     });
 
-  static void unlockMobileAudio() {
-    if (engine == .WebAudioApi) {
-      try {
-        final context = WebAudioApiMixer.audioContext;
-        final source = context.createBufferSource();
-        source.buffer = context.createBuffer(1, 1, 22050);
-        source.connect(context.destination);
-        source.start(0);
-      } catch (e) {
-        // There is nothing we can do :(
-      }
-    }
+  static void unlockMobileAudio() => unlockMobileAudioAsync().ignore();
+
+  /// Unlocks Web Audio during a user interaction and reports the resulting
+  /// context state.
+  ///
+  /// Unlike [unlockMobileAudio], errors are returned to the caller.
+
+  static Future<SoundMixerAudioContextState?> unlockMobileAudioAsync() async {
+    if (engine != .WebAudioApi) return null;
+
+    final context = WebAudioApiMixer.audioContext;
+    final resumeFuture = context.resume().toDart;
+    final source = context.createBufferSource();
+    source.buffer = context.createBuffer(1, 1, 22050);
+    source.connect(context.destination);
+    source.start(0);
+    await resumeFuture;
+    return _getAudioContextState();
+  }
+
+  /// Suspends the Web Audio context and reports the resulting state.
+
+  static Future<SoundMixerAudioContextState?> suspendAudioContext() async {
+    if (engine != .WebAudioApi) return null;
+
+    await WebAudioApiMixer.audioContext.suspend().toDart;
+    return _getAudioContextState();
+  }
+
+  /// Resumes the Web Audio context and reports the resulting state.
+
+  static Future<SoundMixerAudioContextState?> resumeAudioContext() async {
+    if (engine != .WebAudioApi) return null;
+
+    await WebAudioApiMixer.audioContext.resume().toDart;
+    return _getAudioContextState();
   }
 
   //---------------------------------------------------------------------------
@@ -78,6 +120,10 @@ class SoundMixer {
     if (_isAudioContextSupported()) {
       _engineDetected = .WebAudioApi;
       _webAudioApiMixer = WebAudioApiMixer();
+      WebAudioApiMixer.audioContext.addEventListener('statechange', ((html.Event _) {
+        final state = _getAudioContextState();
+        if (state != null) _audioContextStateChanges.add(state);
+      }).toJS);
     }
 
     final ua = html.window.navigator.userAgent;
@@ -100,4 +146,21 @@ class SoundMixer {
 
     print('StageXL sound engine  : ${engine.name}');
   }
+
+  static SoundMixerAudioContextState? _getAudioContextState() {
+    if ((_engineOverride ?? _engineDetected) != .WebAudioApi) return null;
+
+    final context = WebAudioApiMixer.audioContext;
+    return SoundMixerAudioContextState(context.state, context.currentTime);
+  }
+}
+
+final class SoundMixerAudioContextState {
+  final String state;
+  final num currentTime;
+
+  const SoundMixerAudioContextState(this.state, this.currentTime);
+
+  @override
+  String toString() => '$state at ${currentTime.toStringAsFixed(3)}s';
 }
