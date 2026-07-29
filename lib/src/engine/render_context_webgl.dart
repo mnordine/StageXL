@@ -800,8 +800,8 @@ class RenderContextWebGL extends RenderContext {
       RenderTextureQuad sourceRenderTextureQuad;
       final filter = filters[i];
 
-      final renderPassSources = filter.renderPassSources;
-      final renderPassTargets = filter.renderPassTargets;
+      final renderPassSources = filter.renderPassSourcesFor(renderEngine);
+      final renderPassTargets = filter.renderPassTargetsFor(renderEngine);
 
       for (var pass = 0; pass < renderPassSources.length; pass++) {
         final renderPassSource = renderPassSources[pass];

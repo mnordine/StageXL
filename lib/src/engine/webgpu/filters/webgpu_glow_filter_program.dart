@@ -14,7 +14,8 @@ class _WebGpuGlowFilterProgram {
 
     struct GlowUniforms {
       radius: vec2<f32>,
-      padding0: vec2<f32>,
+      sourceAlpha: f32,
+      sourceMode: f32,
       color: vec4<f32>,
     };
 
@@ -41,16 +42,33 @@ class _WebGpuGlowFilterProgram {
     @fragment
     fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
       let radius = glow.radius;
-      var alpha = 0.0;
-      alpha += textureSample(stageTexture, stageSampler, input.uv - radius * 1.2).a * 0.00443;
-      alpha += textureSample(stageTexture, stageSampler, input.uv - radius * 0.8).a * 0.05399;
-      alpha += textureSample(stageTexture, stageSampler, input.uv - radius * 0.4).a * 0.24197;
-      alpha += textureSample(stageTexture, stageSampler, input.uv).a * 0.39894;
-      alpha += textureSample(stageTexture, stageSampler, input.uv + radius * 0.4).a * 0.24197;
-      alpha += textureSample(stageTexture, stageSampler, input.uv + radius * 0.8).a * 0.05399;
-      alpha += textureSample(stageTexture, stageSampler, input.uv + radius * 1.2).a * 0.00443;
+      let sideWeight = 0.300474132757172;
+      let centerWeight = 0.399051734485656;
+      var alpha = textureSample(stageTexture, stageSampler, input.uv - radius).a * sideWeight * sideWeight;
+      alpha += textureSample(stageTexture, stageSampler, input.uv + vec2<f32>(0.0, -radius.y)).a
+          * centerWeight * sideWeight;
+      alpha += textureSample(stageTexture, stageSampler, input.uv + vec2<f32>(radius.x, -radius.y)).a
+          * sideWeight * sideWeight;
+      alpha += textureSample(stageTexture, stageSampler, input.uv + vec2<f32>(-radius.x, 0.0)).a
+          * sideWeight * centerWeight;
+      alpha += textureSample(stageTexture, stageSampler, input.uv).a * centerWeight * centerWeight;
+      alpha += textureSample(stageTexture, stageSampler, input.uv + vec2<f32>(radius.x, 0.0)).a
+          * sideWeight * centerWeight;
+      alpha += textureSample(stageTexture, stageSampler, input.uv + vec2<f32>(-radius.x, radius.y)).a
+          * sideWeight * sideWeight;
+      alpha += textureSample(stageTexture, stageSampler, input.uv + vec2<f32>(0.0, radius.y)).a
+          * centerWeight * sideWeight;
+      alpha += textureSample(stageTexture, stageSampler, input.uv + radius).a * sideWeight * sideWeight;
       alpha *= glow.color.a;
-      return vec4<f32>(glow.color.rgb * alpha, alpha);
+      var effect = vec4<f32>(glow.color.rgb * alpha, alpha);
+      let source = textureSample(stageTexture, stageSampler, input.uv);
+      if (glow.sourceMode > 1.5) {
+        effect *= 1.0 - source.a;
+      } else if (glow.sourceMode > 0.5) {
+        let sourceScaled = source * glow.sourceAlpha;
+        effect = sourceScaled + effect * (1.0 - sourceScaled.a);
+      }
+      return effect;
     }
   ''';
 }

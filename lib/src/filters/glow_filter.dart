@@ -10,6 +10,12 @@ import '../internal/filter_helpers.dart';
 import '../internal/tools.dart';
 
 class GlowFilter extends BitmapFilter {
+  static const _singlePassSources = [0];
+  static const _singlePassTargets = [1];
+
+  // Collapses each half of the seven-tap kernel while preserving its total weight and variance.
+  static const _singlePassOffset = 0.5149258588391167;
+
   static final _programs = RenderProgramSet<GlowFilter>(
     webGL: RenderProgramWebGL.callback(_renderWebGL),
     webGPU: RenderProgramWebGPU.callback(_renderWebGPU),
@@ -56,6 +62,14 @@ class GlowFilter extends BitmapFilter {
 
   @override
   List<int> get renderPassTargets => _renderPassTargets;
+
+  @override
+  List<int> renderPassSourcesFor(RenderEngine renderEngine) =>
+      renderEngine == .WebGPU || renderEngine == .WebGL2 ? _singlePassSources : renderPassSources;
+
+  @override
+  List<int> renderPassTargetsFor(RenderEngine renderEngine) =>
+      renderEngine == .WebGPU || renderEngine == .WebGL2 ? _singlePassTargets : renderPassTargets;
 
   //---------------------------------------------------------------------------
 
@@ -154,6 +168,15 @@ class GlowFilter extends BitmapFilter {
     GlowFilter filter,
   ) {
     final renderTexture = context.renderTextureQuad.renderTexture;
+    if (context.renderContext.renderEngine == .WebGPU || context.renderContext.renderEngine == .WebGL2) {
+      final pixelRatio = sqrt(context.renderState.globalMatrix.det.abs());
+      final qualityScale = sqrt((1.0 - pow(0.25, filter.quality)) / 0.75);
+      return (
+        passCount: 1,
+        radiusX: pixelRatio * filter.blurX / renderTexture.width * _singlePassOffset * qualityScale,
+        radiusY: pixelRatio * filter.blurY / renderTexture.height * _singlePassOffset * qualityScale,
+      );
+    }
     final passCount = filter._renderPassSources.length;
     final passScale = pow(0.5, context.pass >> 1);
     final pixelRatio = sqrt(context.renderState.globalMatrix.det.abs());
@@ -168,6 +191,18 @@ class GlowFilter extends BitmapFilter {
   static void _renderWebGPU(RenderFilterContext context, GlowFilter filter) {
       final renderContext = context.renderContext as RenderContextWebGPU;
       final parameters = _parameters(context, filter);
+      if (parameters.passCount == 1) {
+        renderContext.filterSystem.renderGlowFilterQuad(
+          context.renderState,
+          context.renderTextureQuad,
+          filter.color,
+          context.renderState.globalAlpha,
+          parameters.radiusX,
+          parameters.radiusY,
+          sourceMode: filter.knockout ? 2 : filter.hideObject ? 0 : 1,
+        );
+        return;
+      }
       if (context.pass == parameters.passCount - 1) {
         if (!filter.knockout && !filter.hideObject) {
           renderContext.renderTextureQuad(context.renderState, context.renderTextureQuad);
@@ -187,6 +222,23 @@ class GlowFilter extends BitmapFilter {
   static void _renderWebGL(RenderFilterContext context, GlowFilter filter) {
     final renderContext = context.renderContext as RenderContextWebGL;
     final parameters = _parameters(context, filter);
+    if (parameters.passCount == 1) {
+      final renderTexture = context.renderTextureQuad.renderTexture;
+      final renderProgram = renderContext.getRenderProgram(
+          r'$GlowFilterProgramWebGL', GlowFilterProgramWebGL.new);
+      renderContext.activateRenderProgram(renderProgram);
+      renderContext.activateRenderTexture(renderTexture);
+      renderProgram.configure(
+        filter.color,
+        context.renderState.globalAlpha,
+        parameters.radiusX,
+        parameters.radiusY,
+        sourceMode: filter.knockout ? 2 : filter.hideObject ? 0 : 1,
+      );
+      renderProgram.renderTextureQuad(context.renderState, context.renderTextureQuad);
+      renderProgram.flush();
+      return;
+    }
     if (context.pass == parameters.passCount - 1) {
       if (!filter.knockout && !filter.hideObject) {
         renderContext.renderTextureQuad(context.renderState, context.renderTextureQuad);
@@ -223,16 +275,10 @@ class GlowFilterProgramWebGL extends RenderProgramSimpleWebGL<GlowFilter> {
     in vec2 aVertexPosition;
     in vec2 aVertexTextCoord;
 
-    out vec2 vBlurCoords[7];
+    out vec2 vTextCoord;
 
     void main() {
-      vBlurCoords[0] = aVertexTextCoord - uRadius * 1.2;
-      vBlurCoords[1] = aVertexTextCoord - uRadius * 0.8;
-      vBlurCoords[2] = aVertexTextCoord - uRadius * 0.4;
-      vBlurCoords[3] = aVertexTextCoord;
-      vBlurCoords[4] = aVertexTextCoord + uRadius * 0.4;
-      vBlurCoords[5] = aVertexTextCoord + uRadius * 0.8;
-      vBlurCoords[6] = aVertexTextCoord + uRadius * 1.2;
+      vTextCoord = aVertexTextCoord;
       gl_Position = vec4(aVertexPosition, 0.0, 1.0) * uProjectionMatrix;
     }
     ''' : '''
@@ -265,22 +311,36 @@ class GlowFilterProgramWebGL extends RenderProgramSimpleWebGL<GlowFilter> {
 
     uniform sampler2D uSampler;
     uniform vec4 uColor;
+    uniform vec2 uRadius;
+    uniform float uSourceAlpha;
+    uniform int uSourceMode;
 
-    in vec2 vBlurCoords[7];
+    in vec2 vTextCoord;
     
     out vec4 fragColor;
 
     void main() {
-      float alpha = 0.0;
-      alpha += texture(uSampler, vBlurCoords[0]).a * 0.00443;
-      alpha += texture(uSampler, vBlurCoords[1]).a * 0.05399;
-      alpha += texture(uSampler, vBlurCoords[2]).a * 0.24197;
-      alpha += texture(uSampler, vBlurCoords[3]).a * 0.39894;
-      alpha += texture(uSampler, vBlurCoords[4]).a * 0.24197;
-      alpha += texture(uSampler, vBlurCoords[5]).a * 0.05399;
-      alpha += texture(uSampler, vBlurCoords[6]).a * 0.00443;
+      const float sideWeight = 0.300474132757172;
+      const float centerWeight = 0.399051734485656;
+      float alpha = texture(uSampler, vTextCoord - uRadius).a * sideWeight * sideWeight;
+      alpha += texture(uSampler, vTextCoord + vec2(0.0, -uRadius.y)).a * centerWeight * sideWeight;
+      alpha += texture(uSampler, vTextCoord + vec2(uRadius.x, -uRadius.y)).a * sideWeight * sideWeight;
+      alpha += texture(uSampler, vTextCoord + vec2(-uRadius.x, 0.0)).a * sideWeight * centerWeight;
+      alpha += texture(uSampler, vTextCoord).a * centerWeight * centerWeight;
+      alpha += texture(uSampler, vTextCoord + vec2(uRadius.x, 0.0)).a * sideWeight * centerWeight;
+      alpha += texture(uSampler, vTextCoord + vec2(-uRadius.x, uRadius.y)).a * sideWeight * sideWeight;
+      alpha += texture(uSampler, vTextCoord + vec2(0.0, uRadius.y)).a * centerWeight * sideWeight;
+      alpha += texture(uSampler, vTextCoord + uRadius).a * sideWeight * sideWeight;
       alpha *= uColor.a;
-      fragColor = vec4(uColor.rgb * alpha, alpha);
+      vec4 effect = vec4(uColor.rgb * alpha, alpha);
+      vec4 source = texture(uSampler, vTextCoord);
+      if (uSourceMode == 2) {
+        effect *= 1.0 - source.a;
+      } else if (uSourceMode == 1) {
+        source *= uSourceAlpha;
+        effect = source + effect * (1.0 - source.a);
+      }
+      fragColor = effect;
     }
     ''' : '''
 
@@ -307,7 +367,13 @@ class GlowFilterProgramWebGL extends RenderProgramSimpleWebGL<GlowFilter> {
 
   //---------------------------------------------------------------------------
 
-  void configure(int color, num alpha, num radiusX, num radiusY) {
+  void configure(
+    int color,
+    num alpha,
+    num radiusX,
+    num radiusY, {
+    int sourceMode = 0,
+  }) {
     final num r = colorGetR(color) / 255.0;
     final num g = colorGetG(color) / 255.0;
     final num b = colorGetB(color) / 255.0;
@@ -315,5 +381,9 @@ class GlowFilterProgramWebGL extends RenderProgramSimpleWebGL<GlowFilter> {
 
     renderingContext.uniform2f(uniforms['uRadius'], radiusX, radiusY);
     renderingContext.uniform4f(uniforms['uColor'], r, g, b, a);
+    if (isWebGL2) {
+      renderingContext.uniform1f(uniforms['uSourceAlpha'], alpha);
+      renderingContext.uniform1i(uniforms['uSourceMode'], sourceMode);
+    }
   }
 }

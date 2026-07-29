@@ -9,6 +9,12 @@ import '../geom.dart';
 import '../internal/filter_helpers.dart';
 
 class BlurFilter extends BitmapFilter {
+  static const _singlePassSources = [0];
+  static const _singlePassTargets = [1];
+
+  // Collapses each half of the seven-tap kernel while preserving its total weight and variance.
+  static const _singlePassOffset = 0.5149258588391167;
+
   static final _programs = RenderProgramSet<BlurFilter>(
     webGL: RenderProgramWebGL.callback(_renderWebGL),
     webGPU: RenderProgramWebGPU.callback(_renderWebGPU),
@@ -49,6 +55,14 @@ class BlurFilter extends BitmapFilter {
 
   @override
   List<int> get renderPassTargets => _renderPassTargets;
+
+  @override
+  List<int> renderPassSourcesFor(RenderEngine renderEngine) =>
+      renderEngine == .WebGPU || renderEngine == .WebGL2 ? _singlePassSources : renderPassSources;
+
+  @override
+  List<int> renderPassTargetsFor(RenderEngine renderEngine) =>
+      renderEngine == .WebGPU || renderEngine == .WebGL2 ? _singlePassTargets : renderPassTargets;
 
   //---------------------------------------------------------------------------
 
@@ -137,6 +151,15 @@ class BlurFilter extends BitmapFilter {
 
   static ({num alpha, num radiusX, num radiusY}) _parameters(RenderFilterContext context, BlurFilter filter) {
     final renderTexture = context.renderTextureQuad.renderTexture;
+    if (context.renderContext.renderEngine == .WebGPU || context.renderContext.renderEngine == .WebGL2) {
+      final pixelRatio = sqrt(context.renderState.globalMatrix.det.abs());
+      final qualityScale = sqrt((1.0 - pow(0.25, filter.quality)) / 0.75);
+      return (
+        alpha: context.renderState.globalAlpha,
+        radiusX: pixelRatio * filter.blurX / renderTexture.width * _singlePassOffset * qualityScale,
+        radiusY: pixelRatio * filter.blurY / renderTexture.height * _singlePassOffset * qualityScale,
+      );
+    }
     final passCount = filter._renderPassSources.length;
     final passScale = pow(0.5, context.pass >> 1);
     final pixelRatio = sqrt(context.renderState.globalMatrix.det.abs());
@@ -189,16 +212,10 @@ class BlurFilterProgramWebGL extends RenderProgramSimpleWebGL<BlurFilter> {
     in vec2 aVertexPosition;
     in vec2 aVertexTextCoord;
 
-    out vec2 vBlurCoords[7];
+    out vec2 vTextCoord;
 
     void main() {
-      vBlurCoords[0] = aVertexTextCoord - uRadius * 1.2;
-      vBlurCoords[1] = aVertexTextCoord - uRadius * 0.8;
-      vBlurCoords[2] = aVertexTextCoord - uRadius * 0.4;
-      vBlurCoords[3] = aVertexTextCoord;
-      vBlurCoords[4] = aVertexTextCoord + uRadius * 0.4;
-      vBlurCoords[5] = aVertexTextCoord + uRadius * 0.8;
-      vBlurCoords[6] = aVertexTextCoord + uRadius * 1.2;
+      vTextCoord = aVertexTextCoord;
       gl_Position = vec4(aVertexPosition, 0.0, 1.0) * uProjectionMatrix;
     }
     ''' : '''
@@ -232,18 +249,23 @@ class BlurFilterProgramWebGL extends RenderProgramSimpleWebGL<BlurFilter> {
     uniform sampler2D uSampler;
     uniform float uAlpha;
 
-    in vec2 vBlurCoords[7];
+    uniform vec2 uRadius;
+
+    in vec2 vTextCoord;
     out vec4 fragColor;
 
     void main() {
-      vec4 sum = vec4(0.0);
-      sum += texture(uSampler, vBlurCoords[0]) * 0.00443;
-      sum += texture(uSampler, vBlurCoords[1]) * 0.05399;
-      sum += texture(uSampler, vBlurCoords[2]) * 0.24197;
-      sum += texture(uSampler, vBlurCoords[3]) * 0.39894;
-      sum += texture(uSampler, vBlurCoords[4]) * 0.24197;
-      sum += texture(uSampler, vBlurCoords[5]) * 0.05399;
-      sum += texture(uSampler, vBlurCoords[6]) * 0.00443;
+      const float sideWeight = 0.300474132757172;
+      const float centerWeight = 0.399051734485656;
+      vec4 sum = texture(uSampler, vTextCoord - uRadius) * sideWeight * sideWeight;
+      sum += texture(uSampler, vTextCoord + vec2(0.0, -uRadius.y)) * centerWeight * sideWeight;
+      sum += texture(uSampler, vTextCoord + vec2(uRadius.x, -uRadius.y)) * sideWeight * sideWeight;
+      sum += texture(uSampler, vTextCoord + vec2(-uRadius.x, 0.0)) * sideWeight * centerWeight;
+      sum += texture(uSampler, vTextCoord) * centerWeight * centerWeight;
+      sum += texture(uSampler, vTextCoord + vec2(uRadius.x, 0.0)) * sideWeight * centerWeight;
+      sum += texture(uSampler, vTextCoord + vec2(-uRadius.x, uRadius.y)) * sideWeight * sideWeight;
+      sum += texture(uSampler, vTextCoord + vec2(0.0, uRadius.y)) * centerWeight * sideWeight;
+      sum += texture(uSampler, vTextCoord + uRadius) * sideWeight * sideWeight;
       fragColor = sum * uAlpha;
     }
     ''' : '''

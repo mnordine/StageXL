@@ -414,8 +414,8 @@ class WebGpuFilterSystem {
     num pixelRatio,
     bool renderToFinalTarget,
   ) {
-    final renderPassSources = filter.renderPassSources;
-    final renderPassTargets = filter.renderPassTargets;
+    final renderPassSources = filter.renderPassSourcesFor(.WebGPU);
+    final renderPassTargets = filter.renderPassTargetsFor(.WebGPU);
 
     for (var pass = 0; pass < renderPassSources.length; pass++) {
       final source = renderTextures[renderPassSources[pass]];
@@ -584,13 +584,15 @@ class WebGpuFilterSystem {
     int color,
     num alpha,
     num radiusX,
-    num radiusY,
+    num radiusY, {
+    int sourceMode = 0,
+  }
   ) {
     final uniformData = _createFloat32DataFromList([
       radiusX.toDouble(),
       radiusY.toDouble(),
-      0,
-      0,
+      alpha.toDouble(),
+      sourceMode.toDouble(),
       colorGetR(color) / 255.0,
       colorGetG(color) / 255.0,
       colorGetB(color) / 255.0,
@@ -607,7 +609,9 @@ class WebGpuFilterSystem {
     num shiftX,
     num shiftY,
     num radiusX,
-    num radiusY,
+    num radiusY, {
+    int sourceMode = 0,
+  }
   ) {
     final uniformData = _createFloat32DataFromList([
       shiftX.toDouble(),
@@ -618,6 +622,10 @@ class WebGpuFilterSystem {
       colorGetG(color) / 255.0,
       colorGetB(color) / 255.0,
       colorGetA(color) / 255.0 * alpha.toDouble(),
+      alpha.toDouble(),
+      sourceMode.toDouble(),
+      0,
+      0,
     ]);
     _renderTextureQuadWithDropShadowUniform(renderState, renderTextureQuad, uniformData);
   }

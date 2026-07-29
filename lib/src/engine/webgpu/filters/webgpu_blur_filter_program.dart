@@ -41,14 +41,23 @@ class _WebGpuBlurFilterProgram {
     @fragment
     fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
       let radius = blur.radius;
-      var sum = vec4<f32>(0.0);
-      sum += textureSample(stageTexture, stageSampler, input.uv - radius * 1.2) * 0.00443;
-      sum += textureSample(stageTexture, stageSampler, input.uv - radius * 0.8) * 0.05399;
-      sum += textureSample(stageTexture, stageSampler, input.uv - radius * 0.4) * 0.24197;
-      sum += textureSample(stageTexture, stageSampler, input.uv) * 0.39894;
-      sum += textureSample(stageTexture, stageSampler, input.uv + radius * 0.4) * 0.24197;
-      sum += textureSample(stageTexture, stageSampler, input.uv + radius * 0.8) * 0.05399;
-      sum += textureSample(stageTexture, stageSampler, input.uv + radius * 1.2) * 0.00443;
+      let sideWeight = 0.300474132757172;
+      let centerWeight = 0.399051734485656;
+      var sum = textureSample(stageTexture, stageSampler, input.uv - radius) * sideWeight * sideWeight;
+      sum += textureSample(stageTexture, stageSampler, input.uv + vec2<f32>(0.0, -radius.y))
+          * centerWeight * sideWeight;
+      sum += textureSample(stageTexture, stageSampler, input.uv + vec2<f32>(radius.x, -radius.y))
+          * sideWeight * sideWeight;
+      sum += textureSample(stageTexture, stageSampler, input.uv + vec2<f32>(-radius.x, 0.0))
+          * sideWeight * centerWeight;
+      sum += textureSample(stageTexture, stageSampler, input.uv) * centerWeight * centerWeight;
+      sum += textureSample(stageTexture, stageSampler, input.uv + vec2<f32>(radius.x, 0.0))
+          * sideWeight * centerWeight;
+      sum += textureSample(stageTexture, stageSampler, input.uv + vec2<f32>(-radius.x, radius.y))
+          * sideWeight * sideWeight;
+      sum += textureSample(stageTexture, stageSampler, input.uv + vec2<f32>(0.0, radius.y))
+          * centerWeight * sideWeight;
+      sum += textureSample(stageTexture, stageSampler, input.uv + radius) * sideWeight * sideWeight;
       return sum * blur.alpha;
     }
   ''';
