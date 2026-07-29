@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>StageXL Render Layers Example</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <link rel="stylesheet" href="index.css">
+    <script defer src="render_layers.dart.js"></script>
+</head>
+
+<body class="stage-full-window render-layers-page">
+    <canvas id="stage" class="stage-full-window"></canvas>
+    <aside class="render-layers-controls">
+        <div class="control-eyebrow">LIVE COMPARISON</div>
+        <h2 id="layerMode">Loading render layer…</h2>
+        <p>
+            Toggle the layer while the pilots cross the foreground gate. Their status cards keep the same logical
+            parents and transforms.
+        </p>
+        <button id="layerToggle" class="layer-toggle" type="button">Loading…</button>
+        <pre id="layerContract"></pre>
+        <div class="engine-links">
+            Renderer:
+            <a href="?engine=webgl2">WebGL2</a>
+            <a href="?engine=webgl1">WebGL1</a>
+            <a href="?engine=webgpu">WebGPU</a>
+            <a href="?engine=canvas">Canvas2D</a>
+        </div>
+    </aside>
+</body>
+</html>
