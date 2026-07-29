@@ -241,6 +241,25 @@ class RenderState {
     if (maskBefore) renderContext._endRenderMask(this, mask);
   }
 
+  /// Renders [object] at its draw-order proxy while retaining its logical
+  /// transformation, alpha, and blend-mode ancestry.
+  ///
+  /// This is used by render layers. Effects on [ancestors] are intentionally
+  /// not replayed because they belong to the ancestor's original render
+  /// position.
+  void renderObjectWithAncestors(RenderObject object, Iterable<RenderObject> ancestors) {
+    final previousContextState = _currentContextState;
+    _currentContextState = _firstContextState;
+    try {
+      for (final ancestor in ancestors) {
+        push(ancestor.transformationMatrix, ancestor.alpha, ancestor.blendMode);
+      }
+      renderObject(object);
+    } finally {
+      _currentContextState = previousContextState;
+    }
+  }
+
   void _addRenderable(RenderObject renderObject) => _renderContext.renderPipes.addRenderable(renderObject, buildContext);
 
   //---------------------------------------------------------------------------

@@ -54,6 +54,7 @@ part 'display/display_object_parent.dart';
 part 'display/interactive_object.dart';
 part 'display/mask.dart';
 part 'display/render_loop.dart';
+part 'display/render_layer.dart';
 part 'display/shape.dart';
 part 'display/simple_button.dart';
 part 'display/sprite.dart';
