@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>StageXL + Three.js Shared Context</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <link rel="stylesheet" href="index.css">
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js",
+        "three/webgpu": "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.webgpu.js"
+      }
+    }
+    </script>
+    <script type="module" src="mixing_three.js"></script>
+    <script defer src="mixing_three.dart.js"></script>
+</head>
+
+<body class="stage-full-window mixing-three-page">
+    <canvas id="stage" class="stage-full-window" aria-label="Interactive StageXL and Three.js shared context example">
+    </canvas>
+    <div id="loading" class="mixing-three-loading">Loading Three.js shared context…</div>
+</body>
+</html>
