@@ -89,7 +89,9 @@ class WebAudioApiSoundChannel extends SoundChannel {
       _position = position;
       _paused = true;
       _sourceNodeEndedSubscription?.cancel();
+      _sourceNodeEndedSubscription = null;
       _sourceNode.stop(0);
+      _sourceNode.disconnect();
     } else if (_loop) {
       _paused = false;
       _sourceNode = WebAudioApiMixer.audioContext.createBufferSource();
@@ -128,21 +130,35 @@ class WebAudioApiSoundChannel extends SoundChannel {
 
   @override
   void stop() {
-    if (_stopped == false) {
-      _sourceNode.stop(0);
-      _sourceNodeEndedSubscription?.cancel();
-      _onEnded(null);
-    }
+    if (_stopped) return;
+
+    _position = position;
+    if (!_paused) _sourceNode.stop(0);
+    _complete();
   }
 
   //---------------------------------------------------------------------------
 
   void _onEnded(html.Event? _) {
-    if (_paused == false && _stopped == false && _loop == false) {
-      _position = position;
-      _stopped = true;
-      _paused = true;
-      dispatchEvent(Event(Event.COMPLETE));
-    }
+    if (_paused || _stopped || _loop) return;
+
+    _position = position;
+    _complete();
+  }
+
+  void _complete() {
+    if (_stopped) return;
+
+    _stopped = true;
+    _paused = true;
+
+    _sourceNodeEndedSubscription?.cancel();
+    _sourceNodeEndedSubscription = null;
+
+    _sourceNode.disconnect();
+    _analyserNode.disconnect();
+    _mixer.inputNode.disconnect();
+
+    dispatchEvent(Event(Event.COMPLETE));
   }
 }
