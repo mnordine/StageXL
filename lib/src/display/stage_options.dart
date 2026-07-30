@@ -18,6 +18,30 @@ class StageOptions {
 
   RenderEngine renderEngine = .WebGL2;
 
+  /// An existing WebGL context to share with another renderer.
+  ///
+  /// The context must belong to the canvas passed to [Stage]. When set,
+  /// [renderEngine] must be [RenderEngine.WebGL] or [RenderEngine.WebGL2].
+  /// Context creation options such as [transparent] and [antialias] are
+  /// controlled by the application that created the context.
+
+  GLContext? sharedWebGLContext;
+
+  /// An existing WebGPU device and canvas context to share with another renderer.
+  ///
+  /// When set, [renderEngine] must be [RenderEngine.WebGPU]. StageXL creates
+  /// and disposes only its own GPU resources; the device, canvas context, and
+  /// canvas configuration remain owned by the application.
+
+  SharedWebGPUContext? sharedWebGPUContext;
+
+  /// Whether StageXL clears the color buffer before rendering a frame.
+  ///
+  /// Set this to `false` when StageXL renders over content produced by another
+  /// renderer on a shared context. The stencil buffer is still cleared.
+
+  var clearBeforeRender = true;
+
   /// The [InputEventMode] used for input events on the [Stage].
   ///
   /// You can opt-in for touch events if you set the `TouchOnly` or
@@ -160,6 +184,9 @@ class StageOptions {
   StageOptions clone() {
     final options = StageOptions();
     options.renderEngine = renderEngine;
+    options.sharedWebGLContext = sharedWebGLContext;
+    options.sharedWebGPUContext = sharedWebGPUContext;
+    options.clearBeforeRender = clearBeforeRender;
     options.inputEventMode = inputEventMode;
     options.stageRenderMode = stageRenderMode;
     options.stageScaleMode = stageScaleMode;

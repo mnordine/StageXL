@@ -78,6 +78,7 @@ class RenderContextWebGL extends RenderContext {
     bool alpha = false,
     bool antialias = false,
     bool forceWebGL1 = false,
+    GLContext? sharedContext,
     this._resetScissorTest = true,
     this._resetStencilTest = true,
     this._resetColor = true,
@@ -90,9 +91,9 @@ class RenderContextWebGL extends RenderContext {
     _canvasElement.addEventListener('webglcontextlost', _contextLostListener);
     _canvasElement.addEventListener('webglcontextrestored', _contextRestoredListener);
 
-    WebGLRenderingContext? renderingContext;
+    var renderingContext = sharedContext;
 
-    if (!forceWebGL1) {
+    if (renderingContext == null && !forceWebGL1) {
       // Try WebGL 2 first
       renderingContext = _canvasElement.getContext('webgl2', {
         'alpha': alpha,
@@ -103,7 +104,7 @@ class RenderContextWebGL extends RenderContext {
       }.jsify()) as WebGL?;
     }
 
-    _isWebGL2 = renderingContext != null;
+    _isWebGL2 = renderingContext != null && renderingContext.isA<WebGL2RenderingContext>();
 
     // Fall back to WebGL 1 if WebGL 2 is not available
     renderingContext ??= _canvasElement.getContext('webgl', {
@@ -131,6 +132,33 @@ class RenderContextWebGL extends RenderContext {
 
     reset();
   }
+
+  factory RenderContextWebGL.shared(
+    RenderSurface canvas,
+    GLContext sharedContext, {
+    required PowerPreference powerPreference,
+    bool alpha = false,
+    bool antialias = false,
+    bool forceWebGL1 = false,
+    bool resetScissorTest = true,
+    bool resetStencilTest = true,
+    bool resetColor = true,
+    bool dualSourceBlending = false,
+    bool clearBeforeRender = true,
+  }) =>
+      _SharedRenderContextWebGL(
+        canvas,
+        sharedContext,
+        powerPreference: powerPreference,
+        alpha: alpha,
+        antialias: antialias,
+        forceWebGL1: forceWebGL1,
+        resetScissorTest: resetScissorTest,
+        resetStencilTest: resetStencilTest,
+        resetColor: resetColor,
+        dualSourceBlending: dualSourceBlending,
+        clearBeforeRender: clearBeforeRender,
+      );
 
   void _initializeAfterContextChange() {
     _renderProgramResources.clear();
@@ -160,7 +188,10 @@ class RenderContextWebGL extends RenderContext {
     _renderingContext.disable(WebGL.STENCIL_TEST);
     _renderingContext.disable(WebGL.DEPTH_TEST);
     _renderingContext.disable(WebGL.CULL_FACE);
+    _renderingContext.colorMask(true, true, true, true);
     _renderingContext.pixelStorei(WebGL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
+    _renderingContext.pixelStorei(WebGL.UNPACK_FLIP_Y_WEBGL, 0);
+    _renderingContext.pixelStorei(WebGL.UNPACK_ALIGNMENT, 4);
     _renderingContext.blendFunc(WebGL.ONE, WebGL.ONE_MINUS_SRC_ALPHA);
     _renderingContext.blendEquation(WebGL.FUNC_ADD);
   }
@@ -401,6 +432,31 @@ class RenderContextWebGL extends RenderContext {
 
   int? _viewportWidth;
   int? _viewportHeight; 
+
+  @override
+  void resetState() {
+    if (!_contextValid) return;
+
+    _restoreStageXLState();
+    reset();
+  }
+
+  void _restoreStageXLState() {
+    _invalidateCachedState();
+    _renderingContext.bindFramebuffer(WebGL.FRAMEBUFFER, null);
+    _configureRenderingContext();
+
+    if (!isWebGL2 && _vaoExtension == null) {
+      final maxAttributes =
+          (_renderingContext.getParameter(WebGL.MAX_VERTEX_ATTRIBS) as JSNumber?)?.toDartInt ?? 0;
+      for (var i = 0; i < maxAttributes; i++) {
+        _renderingContext.disableVertexAttribArray(i);
+      }
+    }
+
+    _activeRenderProgram.activate(this);
+    _activeRenderProgram.projectionMatrix = _projectionMatrix;
+  }
 
   @override
   void reset() {
@@ -1146,5 +1202,47 @@ class RenderContextWebGL extends RenderContext {
     _clearContextResources();
     _contextValid = false;
     super.dispose();
+  }
+}
+
+final class _SharedRenderContextWebGL extends RenderContextWebGL {
+  _SharedRenderContextWebGL(
+    super.canvas,
+    GLContext sharedContext, {
+    required super.powerPreference,
+    required this._clearBeforeRender,
+    super.alpha = false,
+    super.antialias = false,
+    super.forceWebGL1 = false,
+    super.resetScissorTest = true,
+    super.resetStencilTest = true,
+    super.resetColor = true,
+    super.dualSourceBlending = false,
+  }) : super(
+         sharedContext: sharedContext,
+       );
+
+  final bool _clearBeforeRender;
+
+  @override
+  void reset() {
+    _restoreStageXLState();
+    super.reset();
+  }
+
+  @override
+  void resetState() => reset();
+
+  @override
+  void clear(int color) {
+    if (_clearBeforeRender) {
+      super.clear(color);
+      return;
+    }
+
+    _getMaskStates().clear();
+    if (_resetScissorTest) _updateScissorTest(null);
+    if (_resetStencilTest) _updateStencilTest(0);
+    _renderingContext.clear(WebGL.STENCIL_BUFFER_BIT);
   }
 }

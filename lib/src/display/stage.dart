@@ -539,14 +539,39 @@ class Stage extends DisplayObjectContainer {
   static Future<RenderContext> _createRenderContextAsync(
       RenderSurface canvas, StageOptions options) async {
     if (options.renderEngine == .WebGPU) {
-      final webgpuContext = await RenderContextWebGPU.create(
-        canvas,
-        alpha: options.transparent,
-        antialias: options.antialias,
-        powerPreference: options.powerPreference,
-        renderBundles: options.renderBundles,
-        dualSourceBlending: options.dualSourceBlending,
-      );
+      if (options.sharedWebGLContext != null) {
+        throw ArgumentError.value(
+          options.sharedWebGLContext,
+          'options.sharedWebGLContext',
+          'A WebGL context cannot be used by the WebGPU render engine.',
+        );
+      }
+      final sharedContext = options.sharedWebGPUContext;
+      if (sharedContext != null && !options.clearBeforeRender && options.antialias) {
+        throw ArgumentError.value(
+          options.antialias,
+          'options.antialias',
+          'WebGPU antialiasing must be disabled when preserving another renderer output.',
+        );
+      }
+      final webgpuContext = sharedContext == null
+          ? await RenderContextWebGPU.create(
+              canvas,
+              alpha: options.transparent,
+              antialias: options.antialias,
+              powerPreference: options.powerPreference,
+              renderBundles: options.renderBundles,
+              dualSourceBlending: options.dualSourceBlending,
+            )
+          : RenderContextWebGPU.shared(
+              canvas,
+              sharedContext,
+              alpha: options.transparent,
+              antialias: options.antialias,
+              renderBundles: options.renderBundles,
+              dualSourceBlending: options.dualSourceBlending,
+              clearBeforeRender: options.clearBeforeRender,
+            );
       if (webgpuContext != null) return webgpuContext;
     }
 
@@ -559,20 +584,42 @@ class Stage extends DisplayObjectContainer {
       RenderSurface canvas, StageOptions options) {
     switch (options.renderEngine) {
       case .WebGL || .WebGL2:
+        if (options.sharedWebGPUContext != null) {
+          throw ArgumentError.value(
+            options.sharedWebGPUContext,
+            'options.sharedWebGPUContext',
+            'A WebGPU context cannot be used by a WebGL render engine.',
+          );
+        }
         final RenderContextWebGL context;
 
         try {
-          context = RenderContextWebGL(
-            canvas,
-            alpha: options.transparent, 
-            antialias: options.antialias, 
-            forceWebGL1: options.renderEngine == .WebGL,
-            powerPreference: options.powerPreference,
-            resetScissorTest: options.resetScissorTestOnRenderStart,
-            resetStencilTest: options.resetScissorTestOnRenderStart,
-            resetColor: options.resetColorOnRenderStart,
-            dualSourceBlending: options.dualSourceBlending,
-          );
+          final sharedContext = options.sharedWebGLContext;
+          context = sharedContext == null
+              ? RenderContextWebGL(
+                  canvas,
+                  alpha: options.transparent,
+                  antialias: options.antialias,
+                  forceWebGL1: options.renderEngine == .WebGL,
+                  powerPreference: options.powerPreference,
+                  resetScissorTest: options.resetScissorTestOnRenderStart,
+                  resetStencilTest: options.resetStencilTestOnRenderStart,
+                  resetColor: options.resetColorOnRenderStart,
+                  dualSourceBlending: options.dualSourceBlending,
+                )
+              : RenderContextWebGL.shared(
+                  canvas,
+                  sharedContext,
+                  alpha: options.transparent,
+                  antialias: options.antialias,
+                  forceWebGL1: options.renderEngine == .WebGL,
+                  powerPreference: options.powerPreference,
+                  resetScissorTest: options.resetScissorTestOnRenderStart,
+                  resetStencilTest: options.resetStencilTestOnRenderStart,
+                  resetColor: options.resetColorOnRenderStart,
+                  dualSourceBlending: options.dualSourceBlending,
+                  clearBeforeRender: options.clearBeforeRender,
+                );
         } on StateError catch (e) { // ignore: avoid_catching_errors
           if (e.message == 'Failed to get WebGL context.') {
             return RenderContextCanvas(canvas);
@@ -595,6 +642,13 @@ class Stage extends DisplayObjectContainer {
         return context;
 
       case .Canvas2D:
+        if (options.sharedWebGLContext != null || options.sharedWebGPUContext != null) {
+          throw ArgumentError.value(
+            options.sharedWebGLContext ?? options.sharedWebGPUContext,
+            'options',
+            'Shared GPU contexts cannot be used by the Canvas2D render engine.',
+          );
+        }
         return RenderContextCanvas(canvas);
 
       case .WebGPU:

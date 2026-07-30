@@ -33,6 +33,49 @@ void main() {
     expect(options.clone().dualSourceBlending, isTrue);
   });
 
+  test('WebGPU can share an externally owned device and canvas context when available', () async {
+    final canvas = HTMLCanvasElement()
+      ..width = 64
+      ..height = 64;
+    final owner = await Stage.create(
+      canvas,
+      width: 64,
+      height: 64,
+      options: StageOptions()
+        ..renderEngine = .WebGPU
+        ..stageRenderMode = .AUTO
+        ..maxPixelRatio = 1,
+    );
+    if (owner.renderEngine != .WebGPU) return;
+
+    final ownerContext = owner.renderContext as RenderContextWebGPU;
+    final sharedContext = SharedWebGPUContext(
+      device: ownerContext.device,
+      canvasContext: ownerContext.canvasContext,
+      textureFormat: ownerContext.preferredTextureFormat,
+    );
+    final overlayOptions = StageOptions()
+      ..renderEngine = .WebGPU
+      ..sharedWebGPUContext = sharedContext
+      ..clearBeforeRender = false
+      ..stageRenderMode = .ONCE
+      ..maxPixelRatio = 1;
+    final overlay = await Stage.create(canvas, width: 64, height: 64, options: overlayOptions);
+    final overlayContext = overlay.renderContext as RenderContextWebGPU;
+
+    expect(overlayContext.device, same(ownerContext.device));
+    expect(overlayContext.canvasContext, same(ownerContext.canvasContext));
+    expect(overlayOptions.clone().sharedWebGPUContext, same(sharedContext));
+
+    overlay
+      ..addChild(Bitmap(BitmapData(16, 16, Color.Red)))
+      ..materialize(0, 16)
+      ..dispose();
+
+    expect(() => owner.materialize(16, 16), returnsNormally);
+    owner.dispose();
+  });
+
   test('WebGPU renders non-scissor masks through stencil pass when available', () async {
     final options = StageOptions()
       ..renderEngine = .WebGPU

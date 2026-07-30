@@ -1,5 +1,18 @@
 part of '../engine.dart';
 
+/// Externally owned WebGPU objects used to render into a shared canvas.
+class SharedWebGPUContext {
+  final GPUDevice device;
+  final GPUCanvasContext canvasContext;
+  final GPUTextureFormat textureFormat;
+
+  const SharedWebGPUContext({
+    required this.device,
+    required this.canvasContext,
+    required this.textureFormat,
+  });
+}
+
 class RenderContextWebGPU extends RenderContext {
   final RenderSurface _canvasElement;
   final WebGpuDeviceSystem deviceSystem;
@@ -68,6 +81,33 @@ class RenderContextWebGPU extends RenderContext {
       dualSourceBlendingRequested: dualSourceBlending,
       dualSourceBlending: dualSourceBlending && deviceSystem.enabledFeatures.contains('dual-source-blending'),
       primaryRenderTargetIsOpaque: !alpha,
+    );
+  }
+
+  factory RenderContextWebGPU.shared(
+    RenderSurface canvas,
+    SharedWebGPUContext sharedContext, {
+    bool alpha = false,
+    bool antialias = false,
+    bool renderBundles = false,
+    bool dualSourceBlending = false,
+    bool clearBeforeRender = true,
+  }) {
+    final deviceSystem = WebGpuDeviceSystem.shared(
+      canvas,
+      device: sharedContext.device,
+      canvasContext: sharedContext.canvasContext,
+      preferredTextureFormat: sharedContext.textureFormat,
+      antialias: antialias,
+    );
+    return _SharedRenderContextWebGPU(
+      canvas,
+      deviceSystem,
+      renderBundles: renderBundles,
+      dualSourceBlendingRequested: dualSourceBlending,
+      dualSourceBlending: dualSourceBlending && deviceSystem.enabledFeatures.contains('dual-source-blending'),
+      primaryRenderTargetIsOpaque: !alpha,
+      clearBeforeRender: clearBeforeRender,
     );
   }
 
@@ -402,5 +442,33 @@ class RenderContextWebGPU extends RenderContext {
     _activeRenderTexture = null;
     _clearColor = null;
     deviceSystem.dispose();
+  }
+}
+
+final class _SharedRenderContextWebGPU extends RenderContextWebGPU {
+  final bool _clearBeforeRender;
+
+  _SharedRenderContextWebGPU(
+    super.canvas,
+    super.deviceSystem, {
+    required super.renderBundles,
+    required super.dualSourceBlendingRequested,
+    required super.dualSourceBlending,
+    required super.primaryRenderTargetIsOpaque,
+    required this._clearBeforeRender,
+  }) : super._();
+
+  @override
+  void clear(int color) {
+    if (_clearBeforeRender) {
+      super.clear(color);
+      return;
+    }
+
+    commandSystem.beginFrame();
+    _maskSystem.resetFrame();
+    final pass = commandSystem.beginStencilClearPass();
+    pass.end();
+    commandSystem.submit();
   }
 }

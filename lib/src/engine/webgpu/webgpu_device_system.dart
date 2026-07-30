@@ -16,6 +16,7 @@ class WebGpuDeviceSystem {
   final Set<String> enabledFeatures;
   final bool antialias;
   final int maxBatchTextures;
+  final bool _ownsDevice;
 
   WebGpuDeviceSystem._({
     required this.canvas,
@@ -25,6 +26,7 @@ class WebGpuDeviceSystem {
     required this.enabledFeatures,
     required this.antialias,
     required this.maxBatchTextures,
+    required this._ownsDevice,
   });
 
   static Future<WebGpuDeviceSystem?> create(
@@ -90,19 +92,51 @@ class WebGpuDeviceSystem {
       enabledFeatures: enabledFeatures,
       antialias: antialias,
       maxBatchTextures: maxBatchTextures,
+      ownsDevice: true,
+    );
+  }
+
+  factory WebGpuDeviceSystem.shared(
+    RenderSurface canvas, {
+    required GPUDevice device,
+    required GPUCanvasContext canvasContext,
+    required GPUTextureFormat preferredTextureFormat,
+    required bool antialias,
+  }) {
+    final supportedFeatures = device.features as _StageXLGpuSupportedFeatures;
+    final enabledFeatures = <String>{
+      for (final feature in [
+        'texture-compression-astc',
+        'texture-compression-bc',
+        'texture-compression-etc2',
+        'dual-source-blending',
+      ])
+        if (supportedFeatures.has(feature)) feature,
+    };
+    return WebGpuDeviceSystem._(
+      canvas: canvas,
+      device: device,
+      canvasContext: canvasContext,
+      preferredTextureFormat: preferredTextureFormat,
+      enabledFeatures: enabledFeatures,
+      antialias: antialias,
+      maxBatchTextures: _resolveMaxBatchTexturesFromLimits(device.limits),
+      ownsDevice: false,
     );
   }
 
   int? get maxTextureSize => device.limits.maxTextureDimension2D;
 
   void dispose() {
+    if (!_ownsDevice) return;
     canvasContext.unconfigure();
     device.destroy();
   }
 
-  static int _resolveMaxBatchTextures(GPUAdapter adapter) {
+  static int _resolveMaxBatchTextures(GPUAdapter adapter) => _resolveMaxBatchTexturesFromLimits(adapter.limits);
+
+  static int _resolveMaxBatchTexturesFromLimits(GPUSupportedLimits limits) {
     try {
-      final limits = adapter.limits;
       if (limits.maxSampledTexturesPerShaderStage >= 16 && limits.maxSamplersPerShaderStage >= 16) {
         return 16;
       }

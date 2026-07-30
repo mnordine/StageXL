@@ -41,6 +41,13 @@ abstract class RenderContext {
 
   void activateProjectionMatrix(Matrix3D matrix) {}
 
+  /// Invalidates backend state cached by this renderer.
+  ///
+  /// Call this before rendering after another engine has used the same
+  /// graphics context. Renderers that do not cache shared state treat this
+  /// the same as [reset].
+  void resetState() => reset();
+
   void reset();
   void clear(int color);
   void flush();
