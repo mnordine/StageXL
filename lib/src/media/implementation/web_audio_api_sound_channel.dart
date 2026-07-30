@@ -90,7 +90,7 @@ class WebAudioApiSoundChannel extends SoundChannel {
       _paused = true;
       _sourceNodeEndedSubscription?.cancel();
       _sourceNodeEndedSubscription = null;
-      _sourceNode.stop(0);
+      _stopSourceNode();
       _sourceNode.disconnect();
     } else if (_loop) {
       _paused = false;
@@ -133,8 +133,16 @@ class WebAudioApiSoundChannel extends SoundChannel {
     if (_stopped) return;
 
     _position = position;
-    if (!_paused) _sourceNode.stop(0);
+    if (!_paused) _stopSourceNode();
     _complete();
+  }
+
+  void _stopSourceNode() {
+    try {
+      _sourceNode.stop(0);
+    } catch (_) {
+      // The source may have finished before its ended event was delivered.
+    }
   }
 
   //---------------------------------------------------------------------------
