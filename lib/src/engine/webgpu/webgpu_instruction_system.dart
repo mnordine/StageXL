@@ -2,7 +2,7 @@ part of '../../engine.dart';
 
 class _WebGpuInstructionSystem {
   final RenderContextWebGPU renderContext;
-  final _renderGroups = Expando<InstructionSet>('StageXL WebGPU render groups');
+  final _instructionSets = Expando<InstructionSet>('StageXL WebGPU render groups');
   final _collectionStates = <_WebGpuCollectionState>[];
   final _groupStack = <RenderObject>[];
   final _shaderMaskStack = <({RenderMask mask, Rectangle<num>? previousScissor, bool batched})>[];
@@ -45,7 +45,7 @@ class _WebGpuInstructionSystem {
 
   void collect(RenderState renderState, RenderObject renderObject) {
     _rootRenderObject = renderObject;
-    instructionSet = _renderGroups[renderObject] ??= InstructionSet();
+    instructionSet = _instructionSets[renderObject] ??= InstructionSet();
     _shaderMaskStack.clear();
     _shaderScissorTransform.identity();
     _activeShaderScissor = null;
@@ -65,11 +65,11 @@ class _WebGpuInstructionSystem {
 
   void release(RenderObject renderObject) {
     if (_isCollecting) throw StateError('Cannot release a retained render plan during collection.');
-    final instructions = _renderGroups[renderObject];
+    final instructions = _instructionSets[renderObject];
     if (instructions == null) return;
     _disposeInstructionSet(instructions);
     _clearInstructionSet(instructions);
-    _renderGroups[renderObject] = null;
+    _instructionSets[renderObject] = null;
     if (identical(instructionSet, instructions)) instructionSet = InstructionSet();
     if (identical(_rootRenderObject, renderObject)) _rootRenderObject = null;
   }
@@ -163,7 +163,7 @@ class _WebGpuInstructionSystem {
   void _beginRenderGroup(RenderObject renderable, Matrix groupMatrix) {
     flushBatch();
     final old = _instructionAtCursor;
-    final groupInstructions = _renderGroups[renderable] ??= InstructionSet();
+    final groupInstructions = _instructionSets[renderable] ??= InstructionSet();
     final reusable = old is _WebGpuRenderGroupInstruction && identical(old.renderable, renderable);
     final instruction = reusable ? old : _WebGpuRenderGroupInstruction(renderable, groupInstructions);
     if (!reusable) _replaceInstruction(instruction);
@@ -632,7 +632,7 @@ class _WebGpuRenderGroupPipe implements InstructionPipe<_WebGpuRenderGroupInstru
   void dispose(_WebGpuRenderGroupInstruction instruction) {
     instructionSystem._disposeInstructionSet(instruction.instructions);
     instructionSystem._clearInstructionSet(instruction.instructions);
-    instructionSystem._renderGroups[instruction.renderable] = null;
+    instructionSystem._instructionSets[instruction.renderable] = null;
   }
 }
 
