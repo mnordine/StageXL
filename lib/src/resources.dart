@@ -24,6 +24,7 @@ import 'internal/image_bitmap_loader.dart';
 import 'internal/image_loader.dart';
 import 'internal/tools.dart';
 import 'media.dart';
+import 'resource_diagnostics.dart';
 
 part 'resources/asset_manifest.dart';
 part 'resources/resource_manager.dart';

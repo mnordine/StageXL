@@ -37,6 +37,7 @@ import 'internal/audio_loader.dart';
 import 'internal/environment.dart' as env;
 import 'internal/video_loader.dart';
 import 'resources.dart';
+import 'resource_diagnostics.dart';
 
 part 'media/implementation/audio_element_mixer.dart';
 part 'media/implementation/audio_element_sound.dart';

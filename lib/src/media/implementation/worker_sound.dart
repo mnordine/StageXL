@@ -66,7 +66,7 @@ class WorkerSound extends Sound {
 
   @override
   SoundChannel play([bool loop = false, SoundTransform? soundTransform]) =>
-      WorkerSoundChannel(this, 0, length, loop, soundTransform);
+      _trackChannel(WorkerSoundChannel(this, 0, length, loop, soundTransform));
 
   @override
   SoundChannel playSegment(
@@ -74,5 +74,5 @@ class WorkerSound extends Sound {
     num duration, [
     bool loop = false,
     SoundTransform? soundTransform,
-  ]) => WorkerSoundChannel(this, startTime, duration, loop, soundTransform);
+  ]) => _trackChannel(WorkerSoundChannel(this, startTime, duration, loop, soundTransform));
 }

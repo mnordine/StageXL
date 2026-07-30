@@ -33,6 +33,7 @@ class WorkerSoundChannel extends SoundChannel {
     _completeSubscription = adapter.onChannelComplete
         .where((channelId) => channelId == _channelId)
         .listen((_) => _complete());
+    ResourceDiagnostics.register(.soundChannel);
   }
 
   @override
@@ -107,6 +108,7 @@ class WorkerSoundChannel extends SoundChannel {
     _stopwatch.stop();
     _soundAnalyzer?.dispose();
     unawaited(_completeSubscription.cancel());
+    ResourceDiagnostics.unregister(.soundChannel);
     dispatchEvent(Event(Event.COMPLETE));
   }
 }

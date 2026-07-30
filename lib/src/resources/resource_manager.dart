@@ -102,7 +102,8 @@ class ResourceManager {
   void addVideo(String name, String url, [VideoLoadOptions? options]) =>
     videos.add(name, url, options);
 
-  void removeVideo(String name) => videos.remove(name);
+  void removeVideo(String name, {bool dispose = true}) =>
+    videos.remove(name, dispose: dispose);
 
   Video getVideo(String name) => videos.get(name);
 
@@ -116,7 +117,8 @@ class ResourceManager {
   void addSound(String name, String url, [SoundLoadOptions? options]) =>
     sounds.add(name, url, options);
 
-  void removeSound(String name) => sounds.remove(name);
+  void removeSound(String name, {bool dispose = true}) =>
+    sounds.remove(name, dispose: dispose);
 
   Sound getSound(String name) => sounds.get(name);
 
@@ -130,7 +132,8 @@ class ResourceManager {
   void addSoundSprite(String name, String url, [SoundLoadOptions? options]) =>
     soundSprites.add(name, url, options);
 
-  void removeSoundSprite(String name) => soundSprites.remove(name);
+  void removeSoundSprite(String name, {bool dispose = true}) =>
+    soundSprites.remove(name, dispose: dispose);
 
   SoundSprite getSoundSprite(String name) => soundSprites.get(name);
 
@@ -193,7 +196,13 @@ class ResourceManager {
 
   ResourceManagerResource? _removeResource(String kind, String name) {
     final key = '$kind.$name';
-    return _resourceMap.remove(key);
+    final resource = _resourceMap.remove(key);
+    if (resource != null) {
+      ResourceDiagnostics.unregister(.resourceManagerEntry);
+      final type = _diagnosticType(kind);
+      if (type != null) ResourceDiagnostics.unregister(type);
+    }
+    return resource;
   }
 
   void _addResource(String kind, String name, String url, Future<Object?> loader) {
@@ -205,6 +214,9 @@ class ResourceManager {
           "ResourceManager already contains a resource called '$name'");
     } else {
       _resourceMap[key] = resource;
+      ResourceDiagnostics.register(.resourceManagerEntry);
+      final type = _diagnosticType(kind);
+      if (type != null) ResourceDiagnostics.register(type);
     }
 
     resource.complete.then((_) {
@@ -213,6 +225,15 @@ class ResourceManager {
       _progressEvent.add(progress);
     });
   }
+
+  StageXLResourceType? _diagnosticType(String kind) => switch (kind) {
+    'BitmapData' => .bitmapData,
+    'TextureAtlas' => .textureAtlas,
+    'Video' => .video,
+    'Sound' => .sound,
+    'SoundSprite' => .soundSprite,
+    _ => null,
+  };
 
   Object? _getResourceValue(String kind, String name) {
     final key = '$kind.$name';

@@ -1,7 +1,7 @@
 part of '../../media.dart';
 
 class WebAudioApiSound extends Sound {
-  final AudioBuffer _audioBuffer;
+  AudioBuffer? _audioBuffer;
 
   static final _loaders = <String, Future<void>>{};
 
@@ -98,14 +98,19 @@ class WebAudioApiSound extends Sound {
   SoundEngine get engine => .WebAudioApi;
 
   @override
-  num get length => _audioBuffer.duration;
+  num get length => _audioBuffer!.duration;
 
   @override
   SoundChannel play([bool loop = false, SoundTransform? soundTransform]) =>
-      WebAudioApiSoundChannel(this, 0, length, loop, soundTransform);
+      _trackChannel(WebAudioApiSoundChannel(this, 0, length, loop, soundTransform));
 
   @override
   SoundChannel playSegment(num startTime, num duration,
           [bool loop = false, SoundTransform? soundTransform]) =>
-      WebAudioApiSoundChannel(this, startTime, duration, loop, soundTransform);
+      _trackChannel(WebAudioApiSoundChannel(this, startTime, duration, loop, soundTransform));
+
+  @override
+  void _disposeSource() {
+    _audioBuffer = null;
+  }
 }

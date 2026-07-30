@@ -15,6 +15,7 @@ class MockSoundChannel extends SoundChannel {
 
     _soundTransform = soundTransform;
     _loop = loop;
+    ResourceDiagnostics.register(.soundChannel);
   }
 
   //---------------------------------------------------------------------------
@@ -60,6 +61,7 @@ class MockSoundChannel extends SoundChannel {
     if (_stopped == false) {
       _stopped = true;
       _paused = true;
+      ResourceDiagnostics.unregister(.soundChannel);
       dispatchEvent(Event(Event.COMPLETE));
     }
   }

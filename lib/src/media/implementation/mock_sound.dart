@@ -24,10 +24,10 @@ class MockSound extends Sound {
 
   @override
   SoundChannel play([bool loop = false, SoundTransform? soundTransform]) =>
-      MockSoundChannel(this, loop, soundTransform);
+      _trackChannel(MockSoundChannel(this, loop, soundTransform));
 
   @override
   SoundChannel playSegment(num startTime, num duration,
           [bool loop = false, SoundTransform? soundTransform]) =>
-      MockSoundChannel(this, loop, soundTransform);
+      _trackChannel(MockSoundChannel(this, loop, soundTransform));
 }

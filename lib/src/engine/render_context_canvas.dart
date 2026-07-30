@@ -14,6 +14,7 @@ class RenderContextCanvas extends RenderContext {
   RenderContextCanvas(this._canvasElement)
       : _renderingContext = _canvasElement.getContext('2d') as CanvasRenderingContext2D {
     reset();
+    _registerDiagnostics();
   }
 
   //---------------------------------------------------------------------------

@@ -29,4 +29,9 @@ class WebAudioApiMixer {
   }
 
   AudioNode get inputNode => _volumeNode;
+
+  void dispose() {
+    _volumeNode.disconnect();
+    _inputNode = null;
+  }
 }

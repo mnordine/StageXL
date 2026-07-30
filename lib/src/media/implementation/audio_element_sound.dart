@@ -62,14 +62,14 @@ class AudioElementSound extends Sound {
     const startTime = 0.0;
     var duration = _audioElement.duration;
     if (duration.isInfinite) duration = 3600.0;
-    return AudioElementSoundChannel(
-        this, startTime, duration, loop, soundTransform);
+    return _trackChannel(AudioElementSoundChannel(
+        this, startTime, duration, loop, soundTransform));
   }
 
   @override
   SoundChannel playSegment(num startTime, num duration,
           [bool loop = false, SoundTransform? soundTransform]) =>
-      AudioElementSoundChannel(this, startTime, duration, loop, soundTransform);
+      _trackChannel(AudioElementSoundChannel(this, startTime, duration, loop, soundTransform));
 
   //---------------------------------------------------------------------------
 
@@ -100,5 +100,16 @@ class AudioElementSound extends Sound {
     if (!audioElement.isA<HTMLAudioElement>()) return;
 
     _soundChannels[audioElement]?._onAudioEnded();
+  }
+
+  @override
+  void _disposeSource() {
+    for (final audioElement in _soundChannels.keys) {
+      audioElement
+        ..pause()
+        ..removeAttribute('src')
+        ..load();
+    }
+    _soundChannels.clear();
   }
 }

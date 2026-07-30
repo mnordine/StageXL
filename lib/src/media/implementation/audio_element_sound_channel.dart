@@ -22,6 +22,7 @@ class AudioElementSoundChannel extends SoundChannel {
     _startTime = startTime.toDouble();
     _duration = duration.toDouble();
     _loop = loop;
+    ResourceDiagnostics.register(.soundChannel);
 
     audioElementSound._requestAudioElement(this).then(_onAudioElement);
   }
@@ -124,6 +125,7 @@ class AudioElementSoundChannel extends SoundChannel {
       _stopped = true;
       _paused = true;
       _stopCompleteTimer();
+      ResourceDiagnostics.unregister(.soundChannel);
       dispatchEvent(Event(Event.COMPLETE));
     }
   }

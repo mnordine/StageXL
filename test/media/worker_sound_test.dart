@@ -35,6 +35,7 @@ void main() {
   });
 
   test('forwards channel controls and completion', () async {
+    final baseline = ResourceDiagnostics.snapshot();
     final sound = await Sound.load('/audio/test.opus', SoundLoadOptions()..opus = true);
     final channel = sound.playSegment(0.5, 2, true, SoundTransform(0.75, -0.25));
     final channelId = adapter.lastChannelId;
@@ -60,11 +61,27 @@ void main() {
     adapter.complete(channelId);
     await completed;
     expect(channel.stopped, isTrue);
+    expect(ResourceDiagnostics.snapshot().growthSince(baseline), isEmpty);
   });
 
   test('forwards the global mixer transform', () {
     SoundMixer.soundTransform = SoundTransform(0.3, -0.1);
     expect(adapter.mixerTransform, (volume: 0.3, pan: -0.1));
+  });
+
+  test('resource manager disposal stops active sound channels', () async {
+    final baseline = ResourceDiagnostics.snapshot();
+    final resources = ResourceManager()
+      ..addSound('/audio/test.opus', '/audio/test.opus', SoundLoadOptions()..opus = true);
+    await resources.load();
+    final channel = resources.getSound('/audio/test.opus').play(true);
+
+    expect(channel.stopped, isFalse);
+
+    resources.dispose();
+
+    expect(channel.stopped, isTrue);
+    expect(ResourceDiagnostics.snapshot().growthSince(baseline), isEmpty);
   });
 
   test('uses a backpressured scalar request for frequency ranges', () async {

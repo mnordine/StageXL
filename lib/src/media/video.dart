@@ -40,6 +40,8 @@ part of '../media.dart';
 class Video {
   final HTMLVideoElement videoElement;
   var loop = false;
+  late final List<StreamSubscription<html.Event>> _subscriptions;
+  var _disposed = false;
 
   final _endedEvent = StreamController<Video>.broadcast();
   final _pauseEvent = StreamController<Video>.broadcast();
@@ -47,10 +49,12 @@ class Video {
   final _playEvent = StreamController<Video>.broadcast();
 
   Video._(this.videoElement) {
-    videoElement.onEnded.listen(_onEnded);
-    videoElement.onPause.listen(_onPause);
-    videoElement.onError.listen(_onError);
-    videoElement.onPlay.listen(_onPlay);
+    _subscriptions = [
+      videoElement.onEnded.listen(_onEnded),
+      videoElement.onPause.listen(_onPause),
+      videoElement.onError.listen(_onError),
+      videoElement.onPlay.listen(_onPlay),
+    ];
   }
 
   Stream<Video> get onEnded => _endedEvent.stream;
@@ -173,6 +177,23 @@ class Video {
   }
 
   //---------------------------------------------------------------------------
+
+  /// Stops playback and releases the media element and event streams.
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    videoElement
+      ..pause()
+      ..removeAttribute('src')
+      ..load();
+    for (final subscription in _subscriptions) {
+      unawaited(subscription.cancel());
+    }
+    unawaited(_endedEvent.close());
+    unawaited(_pauseEvent.close());
+    unawaited(_errorEvent.close());
+    unawaited(_playEvent.close());
+  }
 
   void _onEnded(html.Event event) {
     _endedEvent.add(this);

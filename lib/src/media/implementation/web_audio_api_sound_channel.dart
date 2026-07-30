@@ -17,6 +17,7 @@ class WebAudioApiSoundChannel extends SoundChannel {
   num _duration = 0.0;
   num _position = 0.0;
   num _timeOffset = 0.0;
+  var _graphDisposed = false;
 
   WebAudioApiSoundChannel(
       WebAudioApiSound webAudioApiSound, num startTime, num duration, bool loop,
@@ -31,6 +32,8 @@ class WebAudioApiSoundChannel extends SoundChannel {
     _analyserNode.connect(_mixer.inputNode);
     _soundAnalyzer = WebAudioApiSoundAnalyzer(_analyserNode);
     _mixer.applySoundTransform(_soundTransform);
+    ResourceDiagnostics.register(.soundChannel);
+    ResourceDiagnostics.register(.webAudioGraph);
 
     paused = false;
   }
@@ -88,8 +91,10 @@ class WebAudioApiSoundChannel extends SoundChannel {
     } else if (value) {
       _position = position;
       _paused = true;
-      _sourceNodeEndedSubscription?.cancel();
+      unawaited(_sourceNodeEndedSubscription?.cancel());
+      _sourceNodeEndedSubscription = null;
       _sourceNode.stop(0);
+      _sourceNode.disconnect();
     } else if (_loop) {
       _paused = false;
       _sourceNode = WebAudioApiMixer.audioContext.createBufferSource();
@@ -128,11 +133,10 @@ class WebAudioApiSoundChannel extends SoundChannel {
 
   @override
   void stop() {
-    if (_stopped == false) {
-      _sourceNode.stop(0);
-      _sourceNodeEndedSubscription?.cancel();
-      _onEnded(null);
-    }
+    if (_stopped) return;
+    _position = position;
+    _sourceNode.stop(0);
+    _complete();
   }
 
   //---------------------------------------------------------------------------
@@ -140,9 +144,26 @@ class WebAudioApiSoundChannel extends SoundChannel {
   void _onEnded(html.Event? _) {
     if (_paused == false && _stopped == false && _loop == false) {
       _position = position;
-      _stopped = true;
-      _paused = true;
-      dispatchEvent(Event(Event.COMPLETE));
+      _complete();
     }
+  }
+
+  void _complete() {
+    if (_stopped) return;
+    _stopped = true;
+    _paused = true;
+    unawaited(_sourceNodeEndedSubscription?.cancel());
+    _sourceNodeEndedSubscription = null;
+    _sourceNode.disconnect();
+
+    if (!_graphDisposed) {
+      _graphDisposed = true;
+      _analyserNode.disconnect();
+      _mixer.dispose();
+      ResourceDiagnostics.unregister(.webAudioGraph);
+    }
+
+    ResourceDiagnostics.unregister(.soundChannel);
+    dispatchEvent(Event(Event.COMPLETE));
   }
 }

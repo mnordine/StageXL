@@ -19,6 +19,13 @@ abstract class RenderContext {
   final renderStatistics = RenderStatistics();
   final renderPipes = RenderPipeRegistry();
   var _disposed = false;
+  var _diagnosticsRegistered = false;
+
+  void _registerDiagnostics() {
+    if (_diagnosticsRegistered) return;
+    _diagnosticsRegistered = true;
+    ResourceDiagnostics.register(.renderContext);
+  }
 
   final _contextLostEvent = StreamController<RenderContextEvent>.broadcast();
   final _contextRestoredEvent =
@@ -83,6 +90,7 @@ abstract class RenderContext {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
+    if (_diagnosticsRegistered) ResourceDiagnostics.unregister(.renderContext);
     unawaited(_contextLostEvent.close());
     unawaited(_contextRestoredEvent.close());
   }

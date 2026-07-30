@@ -17,6 +17,8 @@ class RenderTexture {
   WebGL? _renderingContext;
   WebGLTexture? _texture;
   var _webGpuVersion = 0;
+  var _disposed = false;
+  var _webglTextureAllocated = false;
 
   int _pixelFormat = WebGL.RGBA;
   int _pixelType = WebGL.UNSIGNED_BYTE;
@@ -26,6 +28,7 @@ class RenderTexture {
   RenderTexture(int width, int height, int fillColor) {
     if (width <= 0) throw ArgumentError('width');
     if (height <= 0) throw ArgumentError('height');
+    ResourceDiagnostics.register(.renderTexture);
 
     _width = width;
     _height = height;
@@ -39,18 +42,21 @@ class RenderTexture {
   }
 
   RenderTexture.fromImageElement(HTMLImageElement imageElement) {
+    ResourceDiagnostics.register(.renderTexture);
     _width = imageElement.width;
     _height = imageElement.height;
     _source = imageElement;
   }
 
   RenderTexture.fromImageBitmap(ImageBitmap image) {
+    ResourceDiagnostics.register(.renderTexture);
     _width = image.width;
     _height = image.height;
     _source = image;
   }
 
   RenderTexture.fromCanvasElement(HTMLCanvasElement canvasElement) {
+    ResourceDiagnostics.register(.renderTexture);
     _width = canvasElement.width;
     _height = canvasElement.height;
     _source = canvasElement;
@@ -58,6 +64,7 @@ class RenderTexture {
   }
 
   RenderTexture.fromOffscreenCanvas(OffscreenCanvas canvas) {
+    ResourceDiagnostics.register(.renderTexture);
     _width = canvas.width;
     _height = canvas.height;
     _source = canvas;
@@ -65,6 +72,7 @@ class RenderTexture {
   }
 
   RenderTexture.fromRenderSurface(RenderSurface surface) {
+    ResourceDiagnostics.register(.renderTexture);
     _width = surface.width;
     _height = surface.height;
     _source = surface;
@@ -73,6 +81,7 @@ class RenderTexture {
 
   RenderTexture.fromVideoElement(HTMLVideoElement videoElement) {
     if (videoElement.readyState < 3) throw ArgumentError('videoElement');
+    ResourceDiagnostics.register(.renderTexture);
     _width = videoElement.videoWidth;
     _height = videoElement.videoHeight;
     _source = videoElement;
@@ -81,9 +90,12 @@ class RenderTexture {
 
   RenderTexture.rawWebGL(int width, int height)
       : _width = width,
-        _height = height;
+        _height = height {
+    ResourceDiagnostics.register(.renderTexture);
+  }
 
   RenderTexture.fromCompressedTexture(CompressedTexture texture) {
+    ResourceDiagnostics.register(.renderTexture);
     _width = texture.width;
     _height = texture.height;
 
@@ -227,9 +239,9 @@ class RenderTexture {
   /// Call the dispose method to release memory allocated by WebGL.
 
   void dispose() {
-    if (_texture != null) {
-      _renderingContext?.deleteTexture(_texture);
-    }
+    if (_disposed) return;
+    _disposed = true;
+    _releaseWebGLTexture(delete: true);
 
     _webGpuVersion++;
     if (_source.isA<ImageBitmap>()) {
@@ -247,6 +259,22 @@ class RenderTexture {
     _renderingContext = null;
     _contextIdentifier = -1;
     _globalFrameListeners.remove(_onGlobalFrame);
+    ResourceDiagnostics.unregister(.renderTexture);
+  }
+
+  void _releaseWebGLTexture({required bool delete}) {
+    if (delete && _texture != null) {
+      _renderingContext?.deleteTexture(_texture);
+    }
+    if (_webglTextureAllocated) {
+      ResourceDiagnostics.unregister(.webglTexture);
+      _webglTextureAllocated = false;
+    }
+    _renderContext?._renderTextures.remove(this);
+    _renderContext = null;
+    _texture = null;
+    _renderingContext = null;
+    _contextIdentifier = -1;
   }
 
   //-----------------------------------------------------------------------------------------------
@@ -366,10 +394,18 @@ class RenderTexture {
 
     final needsInitialization = contextIdentifier != renderContext.contextIdentifier;
     if (needsInitialization) {
+      if (_renderContext != null && !identical(_renderContext, renderContext)) {
+        _releaseWebGLTexture(delete: true);
+      }
       // Store context info and create WebGL texture object ONLY once per context
       _renderContext = renderContext;
+      renderContext._renderTextures.add(this);
       _contextIdentifier = renderContext.contextIdentifier;
       _texture = renderingContext.createTexture();
+      if (_texture != null) {
+        ResourceDiagnostics.register(.webglTexture);
+        _webglTextureAllocated = true;
+      }
     }
 
     const target = WebGL.TEXTURE_2D;

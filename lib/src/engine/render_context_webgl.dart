@@ -44,6 +44,7 @@ class RenderContextWebGL extends RenderContext {
   WebGLBuffer? _maskIndexBuffer;
 
   WebGLVertexArrayObjectOES? _maskQuadVAOWebGL1;
+  var _maskResourcesAllocated = false;
 
   //---------------------------------------------------------------------------
 
@@ -61,6 +62,7 @@ class RenderContextWebGL extends RenderContext {
   final _renderFrameBufferPool = <RenderFrameBuffer>[];
   final _renderPrograms = <String, RenderProgramWebGL<Object?>>{};
   final _renderProgramResources = <RenderProgramWebGL<Object?>, _Resources>{};
+  final _renderTextures = Set<RenderTexture>.identity();
   RenderTexture? _solidFillTexture;
 
   final bool _resetScissorTest;
@@ -131,6 +133,7 @@ class RenderContextWebGL extends RenderContext {
     _initializeAfterContextChange();
 
     reset();
+    _registerDiagnostics();
   }
 
   factory RenderContextWebGL.shared(
@@ -161,6 +164,9 @@ class RenderContextWebGL extends RenderContext {
       );
 
   void _initializeAfterContextChange() {
+    for (final resources in _renderProgramResources.values) {
+      resources.release(delete: false);
+    }
     _renderProgramResources.clear();
     _configureRenderingContext();
     _invalidateCachedState();
@@ -267,6 +273,7 @@ class RenderContextWebGL extends RenderContext {
 
     // Restore previous program
     _renderingContext.useProgram(currentProgram);
+    _registerMaskResources();
   }
 
   void _setupWebGL2Features() {
@@ -307,6 +314,16 @@ class RenderContextWebGL extends RenderContext {
     RenderProgramWebGL.currentVao = null;
 
     gl2.useProgram(currentProgram);
+    _registerMaskResources();
+  }
+
+  void _registerMaskResources() {
+    if (_maskResourcesAllocated) return;
+    _maskResourcesAllocated = true;
+    ResourceDiagnostics.register(.webglProgram);
+    ResourceDiagnostics.register(.webglVertexArray);
+    ResourceDiagnostics.register(.webglBuffer);
+    ResourceDiagnostics.register(.webglBuffer);
   }
 
   // Create a minimal shader program for mask operations.
@@ -1127,6 +1144,24 @@ class RenderContextWebGL extends RenderContext {
     if (isDisposed) return;
     contextEvent.preventDefault();
     _contextValid = false;
+    for (final renderTexture in _renderTextures.toList(growable: false)) {
+      renderTexture._releaseWebGLTexture(delete: false);
+    }
+    renderBufferIndex._releaseWebGLBuffer(delete: false);
+    renderBufferVertex._releaseWebGLBuffer(delete: false);
+    for (final resources in _renderProgramResources.values) {
+      resources.release(delete: false);
+    }
+    _renderProgramResources.clear();
+    final frameBuffers = {
+      ..._renderFrameBufferPool,
+      ?_activeRenderFrameBuffer,
+    };
+    for (final frameBuffer in frameBuffers) {
+      frameBuffer._releaseWebGLFramebuffer(delete: false);
+      frameBuffer.renderTexture?._releaseWebGLTexture(delete: false);
+      frameBuffer.renderStencilBuffer?._releaseWebGLRenderbuffer(delete: false);
+    }
     _invalidateCachedState();
     _clearContextResources();
 
@@ -1134,6 +1169,13 @@ class RenderContextWebGL extends RenderContext {
   }
 
   void _clearContextResources() {
+    if (_maskResourcesAllocated) {
+      _maskResourcesAllocated = false;
+      ResourceDiagnostics.unregister(.webglProgram);
+      ResourceDiagnostics.unregister(.webglVertexArray);
+      ResourceDiagnostics.unregister(.webglBuffer);
+      ResourceDiagnostics.unregister(.webglBuffer);
+    }
     _maskQuadVao = null;
     _maskQuadVAOWebGL1 = null;
     _maskProgram = null;
@@ -1171,6 +1213,9 @@ class RenderContextWebGL extends RenderContext {
       ..removeEventListener('webglcontextrestored', _contextRestoredListener);
 
     if (_contextValid) {
+      for (final renderTexture in _renderTextures.toList(growable: false)) {
+        renderTexture._releaseWebGLTexture(delete: true);
+      }
       for (final resources in _renderProgramResources.values) {
         resources.dispose();
       }

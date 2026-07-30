@@ -59,6 +59,8 @@ abstract class RenderProgramWebGL<TParameters> extends RenderProgram<RenderConte
       _bindVAO();
 
       _resources.program = _createProgram(renderingContext);
+      _resources.programAllocated = true;
+      ResourceDiagnostics.register(.webglProgram);
       _updateAttributes(renderingContext, program);
       _updateUniforms(renderingContext, program);
 
@@ -85,6 +87,10 @@ abstract class RenderProgramWebGL<TParameters> extends RenderProgram<RenderConte
 
   void _createVao() {
     _resources.driver.createVao();
+    if (_resources.driver.vao != null) {
+      _resources.vertexArrayAllocated = true;
+      ResourceDiagnostics.register(.webglVertexArray);
+    }
   }
 
   void _bindVAO() => _resources.driver.bindVao();
@@ -328,6 +334,8 @@ final class _Resources {
   final uniforms = <String, WebGLUniformLocation>{};
   WebGLProgram? program;
   var initialized = false;
+  var programAllocated = false;
+  var vertexArrayAllocated = false;
 
   _Resources(this.renderContext)
       : renderingContext = renderContext.rawContext,
@@ -336,10 +344,26 @@ final class _Resources {
             : _WebGL1Driver(renderContext.rawContext, renderContext.vaoExtension);
 
   void dispose() {
-    driver.dispose();
-    final program = this.program;
-    if (program != null) renderingContext.deleteProgram(program);
-    this.program = null;
+    release(delete: true);
+  }
+
+  void release({required bool delete}) {
+    if (delete) {
+      driver.dispose();
+      final program = this.program;
+      if (program != null) renderingContext.deleteProgram(program);
+    } else {
+      driver.vao = null;
+    }
+    if (vertexArrayAllocated) {
+      ResourceDiagnostics.unregister(.webglVertexArray);
+      vertexArrayAllocated = false;
+    }
+    if (programAllocated) {
+      ResourceDiagnostics.unregister(.webglProgram);
+      programAllocated = false;
+    }
+    program = null;
     initialized = false;
   }
 }

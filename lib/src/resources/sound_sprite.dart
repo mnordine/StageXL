@@ -69,4 +69,10 @@ class SoundSprite {
   SoundChannel play(String name,
           [bool? loop, SoundTransform? soundTransform]) =>
       getSegment(name).play(loop, soundTransform);
+
+  /// Stops active channels and releases the backing sound.
+  void dispose() {
+    _sound.dispose();
+    _segments.clear();
+  }
 }

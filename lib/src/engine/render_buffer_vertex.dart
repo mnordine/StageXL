@@ -11,24 +11,39 @@ class RenderBufferVertex {
   WebGLBuffer? _buffer;
   WebGL? _renderingContext;
   late RenderStatistics _renderStatistics;
+  var _disposed = false;
+  var _bufferAllocated = false;
 
   //---------------------------------------------------------------------------
 
   RenderBufferVertex(int length)
       : data = Float32List(length),
-        usage = WebGL.DYNAMIC_DRAW;
+        usage = WebGL.DYNAMIC_DRAW {
+    ResourceDiagnostics.register(.renderBuffer);
+  }
 
   //---------------------------------------------------------------------------
 
   int get contextIdentifier => _contextIdentifier;
 
   void dispose() {
-    if (_buffer != null && _renderingContext != null) {
+    if (_disposed) return;
+    _disposed = true;
+    _releaseWebGLBuffer(delete: true);
+    ResourceDiagnostics.unregister(.renderBuffer);
+  }
+
+  void _releaseWebGLBuffer({required bool delete}) {
+    if (delete && _buffer != null && _renderingContext != null) {
       _renderingContext!.deleteBuffer(_buffer);
-      _renderingContext = null;
-      _buffer = null;
-      _contextIdentifier = -1;
     }
+    if (_bufferAllocated) {
+      ResourceDiagnostics.unregister(.webglBuffer);
+      _bufferAllocated = false;
+    }
+    _renderingContext = null;
+    _buffer = null;
+    _contextIdentifier = -1;
   }
 
   void activate(RenderContextWebGL renderContext) {
@@ -37,6 +52,10 @@ class RenderBufferVertex {
       _renderStatistics = renderContext.renderStatistics;
       _renderingContext = renderContext.rawContext;
       _buffer = _renderingContext!.createBuffer();
+      if (_buffer != null) {
+        ResourceDiagnostics.register(.webglBuffer);
+        _bufferAllocated = true;
+      }
       _renderingContext!.bindBuffer(WebGL.ARRAY_BUFFER, _buffer);
       _renderingContext!.bufferData(WebGL.ARRAY_BUFFER, data.toJS, usage);
     } else {

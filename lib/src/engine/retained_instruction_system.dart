@@ -616,11 +616,8 @@ final class _RetainedWebGLUpload {
 
   (bool, bool) _ensureGpuBuffers() {
     if (_contextIdentifier != renderContext.contextIdentifier) {
+      _releaseBuffers(delete: false);
       _contextIdentifier = renderContext.contextIdentifier;
-      _vertexBuffer = null;
-      _indexBuffer = null;
-      _vertexCapacity = 0;
-      _indexCapacity = 0;
     }
 
     final gl = renderContext.rawContext;
@@ -629,19 +626,27 @@ final class _RetainedWebGLUpload {
     final vertexBytes = _vertexLength * 4;
     final indexBytes = _indexLength * 2;
     if (_vertexBuffer == null || vertexBytes > _vertexCapacity) {
-      gl.deleteBuffer(_vertexBuffer);
+      if (_vertexBuffer != null) {
+        gl.deleteBuffer(_vertexBuffer);
+        ResourceDiagnostics.unregister(.webglBuffer);
+      }
       _vertexCapacity = math.max(vertexBytes * 2, _bytesPerVertex * 4);
       _vertexBuffer = gl.createBuffer();
       if (_vertexBuffer == null) {
         throw StateError(gl.isContextLost() ? 'ContextLost' : 'Failed to create WebGL buffer.');
       }
+      ResourceDiagnostics.register(.webglBuffer);
       vertexRebuilt = true;
     }
     if (_indexBuffer == null || indexBytes > _indexCapacity) {
-      gl.deleteBuffer(_indexBuffer);
+      if (_indexBuffer != null) {
+        gl.deleteBuffer(_indexBuffer);
+        ResourceDiagnostics.unregister(.webglBuffer);
+      }
       _indexCapacity = math.max(indexBytes * 2, _bytesPerIndex * 12);
       _indexBuffer = gl.createBuffer();
       if (_indexBuffer == null) throw StateError(gl.isContextLost() ? 'ContextLost' : 'Failed to create WebGL buffer.');
+      ResourceDiagnostics.register(.webglBuffer);
       indexRebuilt = true;
     }
     return (vertexRebuilt, indexRebuilt);
@@ -682,12 +687,22 @@ final class _RetainedWebGLUpload {
 
   void dispose() {
     invalidate();
+    _releaseBuffers(delete: true);
+  }
+
+  void _releaseBuffers({required bool delete}) {
     final gl = renderContext.rawContext;
-    gl
-      ..deleteBuffer(_vertexBuffer)
-      ..deleteBuffer(_indexBuffer);
+    if (_vertexBuffer != null) {
+      if (delete) gl.deleteBuffer(_vertexBuffer);
+      ResourceDiagnostics.unregister(.webglBuffer);
+    }
+    if (_indexBuffer != null) {
+      if (delete) gl.deleteBuffer(_indexBuffer);
+      ResourceDiagnostics.unregister(.webglBuffer);
+    }
     _vertexBuffer = null;
     _indexBuffer = null;
+    _contextIdentifier = -1;
     _vertexCapacity = 0;
     _indexCapacity = 0;
   }

@@ -10,6 +10,7 @@ class RenderFrameBuffer {
   WebGL? _renderingContext;
 
   final _maskStates = <_MaskState>[];
+  var _framebufferAllocated = false;
 
   RenderFrameBuffer.rawWebGL(int width, int height) {
     _renderTexture = .rawWebGL(width, height);
@@ -35,12 +36,20 @@ class RenderFrameBuffer {
   void dispose() {
     _renderTexture?.dispose();
     _renderStencilBuffer?.dispose();
-    if (_framebuffer != null) {
-      _renderingContext?.deleteFramebuffer(_framebuffer);
-    }
-    _contextIdentifier = -1;
+    _releaseWebGLFramebuffer(delete: true);
     _renderTexture = null;
     _renderStencilBuffer = null;
+  }
+
+  void _releaseWebGLFramebuffer({required bool delete}) {
+    if (delete && _framebuffer != null) {
+      _renderingContext?.deleteFramebuffer(_framebuffer);
+    }
+    if (_framebufferAllocated) {
+      ResourceDiagnostics.unregister(.webglFramebuffer);
+      _framebufferAllocated = false;
+    }
+    _contextIdentifier = -1;
     _framebuffer = null;
   }
 
@@ -52,6 +61,10 @@ class RenderFrameBuffer {
       _contextIdentifier = renderContext.contextIdentifier;
       _renderingContext = renderContext.rawContext;
       _framebuffer = renderContext.rawContext.createFramebuffer();
+      if (_framebuffer != null) {
+        ResourceDiagnostics.register(.webglFramebuffer);
+        _framebufferAllocated = true;
+      }
 
       if (_renderTexture != null) {
         _renderContext.activateRenderTexture(_renderTexture!);

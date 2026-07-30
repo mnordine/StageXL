@@ -56,6 +56,7 @@ class RenderContextWebGPU extends RenderContext {
     _updateStageProjection();
     unawaited(device.lost.toDart.then(_onDeviceLost));
     _contextRestoredEvent.add(const RenderContextEvent());
+    _registerDiagnostics();
   }
 
   static Future<RenderContextWebGPU?> create(

@@ -9,6 +9,7 @@ class RenderStencilBuffer {
   var _contextIdentifier = -1;
   WebGL? _renderingContext;
   WebGLRenderbuffer? _renderbuffer;
+  var _renderbufferAllocated = false;
 
   RenderStencilBuffer.rawWebGL(int width, int height)
       : _width = width,
@@ -27,12 +28,22 @@ class RenderStencilBuffer {
   /// Call the dispose method to release memory allocated by WebGL.
 
   void dispose() {
-    if (_renderbuffer != null) {
+    _releaseWebGLRenderbuffer(delete: true);
+  }
+
+  void _releaseWebGLRenderbuffer({required bool delete}) {
+    if (delete && _renderbuffer != null) {
       _renderingContext!.deleteRenderbuffer(_renderbuffer);
+    }
+    if (_renderbufferAllocated) {
+      ResourceDiagnostics.unregister(.webglRenderbuffer);
+      _renderbufferAllocated = false;
     }
 
     _contextIdentifier = -1;
     _renderbuffer = null;
+    _renderingContext = null;
+    _renderContext = null;
   }
 
   //-----------------------------------------------------------------------------------------------
@@ -59,6 +70,10 @@ class RenderStencilBuffer {
       _contextIdentifier = renderContext.contextIdentifier;
       _renderingContext = renderContext.rawContext;
       _renderbuffer = _renderingContext!.createRenderbuffer();
+      if (_renderbuffer != null) {
+        ResourceDiagnostics.register(.webglRenderbuffer);
+        _renderbufferAllocated = true;
+      }
       _renderingContext!.bindRenderbuffer(WebGL.RENDERBUFFER, _renderbuffer);
       _renderingContext!.renderbufferStorage(
           WebGL.RENDERBUFFER, WebGL.DEPTH_STENCIL, _width, _height);

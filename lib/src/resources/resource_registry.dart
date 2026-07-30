@@ -93,6 +93,14 @@ class VideoResourceRegistry extends ResourceRegistry<Video> {
     final loader = Video.load(url, options, resources.manifest);
     resources.addResource(kind, name, url, loader);
   }
+
+  @override
+  ResourceManagerResource? remove(String name, {bool dispose = false}) {
+    final resourceManagerResource = super.remove(name);
+    final video = resourceManagerResource?.value;
+    if (video is Video && dispose) video.dispose();
+    return resourceManagerResource;
+  }
 }
 
 class SoundResourceRegistry extends ResourceRegistry<Sound> {
@@ -121,6 +129,8 @@ class SoundResourceRegistry extends ResourceRegistry<Sound> {
   @override
   ResourceManagerResource? remove(String name, {bool dispose = false}) {
     final resourceManagerResource = super.remove(name);
+    final sound = resourceManagerResource?.value;
+    if (sound is Sound && dispose) sound.dispose();
 
     if (!_soundDatas.containsKey(name)) return resourceManagerResource;
 
@@ -144,6 +154,14 @@ class SoundSpriteResourceRegistry extends ResourceRegistry<SoundSprite> {
   void add(String name, String url, [SoundLoadOptions? options]) {
     final loader = SoundSprite.load(resources.manifest.mapUrl(url), options);
     resources.addResource(kind, name, url, loader);
+  }
+
+  @override
+  ResourceManagerResource? remove(String name, {bool dispose = false}) {
+    final resourceManagerResource = super.remove(name);
+    final soundSprite = resourceManagerResource?.value;
+    if (soundSprite is SoundSprite && dispose) soundSprite.dispose();
+    return resourceManagerResource;
   }
 }
 

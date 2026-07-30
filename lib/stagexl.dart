@@ -32,6 +32,7 @@ export 'src/geom.dart';
 export 'src/shared/power_prefs.dart';
 export 'src/media.dart';
 export 'src/resources.dart';
+export 'src/resource_diagnostics.dart';
 export 'src/text.dart';
 export 'src/ui.dart';
 

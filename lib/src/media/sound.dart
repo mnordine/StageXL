@@ -1,6 +1,9 @@
 part of '../media.dart';
 
 abstract class Sound {
+  final _channels = Set<SoundChannel>.identity();
+  var _disposed = false;
+
   Sound() {
     SoundMixer._initEngine();
   }
@@ -66,4 +69,27 @@ abstract class Sound {
 
   SoundChannel playSegment(num startTime, num duration,
       [bool loop = false, SoundTransform? soundTransform]);
+
+  T _trackChannel<T extends SoundChannel>(T channel) {
+    if (_disposed) {
+      channel.stop();
+      throw StateError('Cannot play a disposed Sound.');
+    }
+    _channels.add(channel);
+    channel.onComplete.first.then((_) => _channels.remove(channel));
+    return channel;
+  }
+
+  /// Stops active channels and releases resources owned by this sound.
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    for (final channel in _channels.toList(growable: false)) {
+      channel.stop();
+    }
+    _channels.clear();
+    _disposeSource();
+  }
+
+  void _disposeSource() {}
 }
