@@ -93,7 +93,7 @@ class WebAudioApiSoundChannel extends SoundChannel {
       _paused = true;
       unawaited(_sourceNodeEndedSubscription?.cancel());
       _sourceNodeEndedSubscription = null;
-      _sourceNode.stop(0);
+      _stopSourceNode();
       _sourceNode.disconnect();
     } else if (_loop) {
       _paused = false;
@@ -135,7 +135,7 @@ class WebAudioApiSoundChannel extends SoundChannel {
   void stop() {
     if (_stopped) return;
     _position = position;
-    _sourceNode.stop(0);
+    _stopSourceNode();
     _complete();
   }
 
@@ -165,5 +165,13 @@ class WebAudioApiSoundChannel extends SoundChannel {
 
     ResourceDiagnostics.unregister(.soundChannel);
     dispatchEvent(Event(Event.COMPLETE));
+  }
+
+  void _stopSourceNode() {
+    try {
+      _sourceNode.stop(0);
+    } catch (_) {
+      // The source may have finished before its ended event was delivered.
+    }
   }
 }
