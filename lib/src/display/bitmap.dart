@@ -29,7 +29,7 @@ class Bitmap extends DisplayObject {
   set bitmapData(BitmapData? value) {
     if (identical(_bitmapData, value)) return;
     _bitmapData = value;
-    invalidateRenderStructure(RenderDirtyFlags.texture);
+    invalidateRenderStructure(.texture);
   }
 
   //---------------------------------------------------------------------------

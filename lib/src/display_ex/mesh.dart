@@ -36,7 +36,7 @@ class Mesh extends DisplayObject {
   set bitmapData(BitmapData value) {
     if (identical(_bitmapData, value)) return;
     _bitmapData = value;
-    invalidateRenderStructure(RenderDirtyFlags.texture);
+    invalidateRenderStructure(.texture);
   }
 
   final int indexCount;
@@ -104,7 +104,7 @@ class Mesh extends DisplayObject {
     vxList[offset + 1] = y.toDouble();
     vxList[offset + 2] = u.toDouble();
     vxList[offset + 3] = v.toDouble();
-    invalidateRenderData(RenderDirtyFlags.geometry);
+    invalidateRenderData(.geometry);
   }
 
   /// Set the XY values of a vertex.
@@ -116,7 +116,7 @@ class Mesh extends DisplayObject {
     final offset = vertex << 2;
     vxList[offset + 0] = x.toDouble();
     vxList[offset + 1] = y.toDouble();
-    invalidateRenderData(RenderDirtyFlags.geometry);
+    invalidateRenderData(.geometry);
   }
 
   /// Set the UV values of a vertex.
@@ -128,14 +128,14 @@ class Mesh extends DisplayObject {
     final offset = vertex << 2;
     vxList[offset + 2] = u.toDouble();
     vxList[offset + 3] = v.toDouble();
-    invalidateRenderData(RenderDirtyFlags.geometry);
+    invalidateRenderData(.geometry);
   }
 
   /// Set the corresponding vertex for an index.
 
   void setIndex(int index, int vertex) {
     ixList[index] = vertex;
-    invalidateRenderData(RenderDirtyFlags.geometry);
+    invalidateRenderData(.geometry);
   }
 
   /// Set the corresponding vertices for the triangle indices.
@@ -145,7 +145,7 @@ class Mesh extends DisplayObject {
     ixList[offset + 0] = v1;
     ixList[offset + 1] = v2;
     ixList[offset + 2] = v3;
-    invalidateRenderData(RenderDirtyFlags.geometry);
+    invalidateRenderData(.geometry);
   }
 
   //---------------------------------------------------------------------------

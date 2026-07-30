@@ -802,15 +802,15 @@ final class _WebGpuSceneRenderable extends RetainedSlot {
     final nextDirtyState = renderable.renderDirtyState;
     var changes = RenderDirtyFlags.none;
     if (nextDirtyState == null || !identical(dirtyState, nextDirtyState)) {
-      changes = dataVersion == renderable.renderDataVersion ? RenderDirtyFlags.none : RenderDirtyFlags.allData;
+      changes = dataVersion == renderable.renderDataVersion ? .none : .allData;
     } else {
-      if (transformVersion != nextDirtyState.transformVersion) changes |= RenderDirtyFlags.transform;
-      if (colorVersion != nextDirtyState.colorVersion) changes |= RenderDirtyFlags.color;
-      if (geometryVersion != nextDirtyState.geometryVersion) changes |= RenderDirtyFlags.geometry;
-      if (textureVersion != nextDirtyState.textureVersion) changes |= RenderDirtyFlags.texture;
-      if (blendVersion != nextDirtyState.blendVersion) changes |= RenderDirtyFlags.blend;
-      if (maskVersion != nextDirtyState.maskVersion) changes |= RenderDirtyFlags.mask;
-      if (filterVersion != nextDirtyState.filterVersion) changes |= RenderDirtyFlags.filter;
+      if (transformVersion != nextDirtyState.transformVersion) changes |= .transform;
+      if (colorVersion != nextDirtyState.colorVersion) changes |= .color;
+      if (geometryVersion != nextDirtyState.geometryVersion) changes |= .geometry;
+      if (textureVersion != nextDirtyState.textureVersion) changes |= .texture;
+      if (blendVersion != nextDirtyState.blendVersion) changes |= .blend;
+      if (maskVersion != nextDirtyState.maskVersion) changes |= .mask;
+      if (filterVersion != nextDirtyState.filterVersion) changes |= .filter;
     }
     dirtyFlags = changes;
     pipeId = renderable.renderPipeId;

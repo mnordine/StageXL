@@ -33,7 +33,7 @@ class Scale9Bitmap extends Bitmap {
   set width(num value) {
     if (_width == value) return;
     _width = value;
-    invalidateRenderData(RenderDirtyFlags.geometry);
+    invalidateRenderData(.geometry);
   }
 
   /// Gets and sets the height of this Scale9Bitmap. In contrast to other
@@ -46,7 +46,7 @@ class Scale9Bitmap extends Bitmap {
   set height(num value) {
     if (_height == value) return;
     _height = value;
-    invalidateRenderData(RenderDirtyFlags.geometry);
+    invalidateRenderData(.geometry);
   }
 
   /// Gets and sets the grid rectangle within the BitmapData to be scaled.
@@ -56,7 +56,7 @@ class Scale9Bitmap extends Bitmap {
   set grid(Rectangle<num> value) {
     _grid = value;
     _updateRenderTextureQuads();
-    invalidateRenderData(RenderDirtyFlags.geometry | RenderDirtyFlags.texture);
+    invalidateRenderData(RenderDirtyFlags.geometry | .texture);
   }
 
   /// Gets and sets the BitmapData of this Scale9Bitmap.
