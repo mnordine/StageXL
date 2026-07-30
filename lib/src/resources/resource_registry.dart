@@ -76,9 +76,7 @@ class TextureAtlasResourceRegistry extends ResourceRegistry<TextureAtlas> {
     }
 
     if (textureAtlas is TextureAtlas && dispose) {
-      for (final textureAtlasFrame in textureAtlas.frames.values) {
-        textureAtlasFrame.bitmapData.renderTexture.dispose();
-      }
+      textureAtlas.dispose();
     }
 
     return resourceManagerResource;

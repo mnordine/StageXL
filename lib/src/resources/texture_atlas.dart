@@ -71,4 +71,15 @@ class TextureAtlas {
   }
 
   BitmapData? tryGetBitmapData(String name) => frames[name]?.bitmapData;
+
+  /// Releases the backing render textures and removes all frames.
+  void dispose() {
+    final renderTextures = Set<RenderTexture>.identity()
+      ..addAll(frames.values.map((frame) => frame.bitmapData.renderTexture));
+    frames.clear();
+
+    for (final renderTexture in renderTextures) {
+      renderTexture.dispose();
+    }
+  }
 }
