@@ -116,6 +116,44 @@ void main() {
     expect(stage.renderContext.renderStatistics.webgpuTextureUploadCount, greaterThanOrEqualTo(1));
   });
 
+  test('WebGPU evicts disposed render textures when available', () async {
+    final canvas = HTMLCanvasElement()
+      ..width = 32
+      ..height = 32;
+    final stage = await Stage.create(
+      canvas,
+      width: 32,
+      height: 32,
+      options: StageOptions()
+        ..renderEngine = .WebGPU
+        ..stageRenderMode = .ONCE,
+    );
+
+    if (stage.renderEngine != .WebGPU) {
+      stage.dispose();
+      return;
+    }
+
+    final baseline = ResourceDiagnostics.snapshot();
+    final renderTexture = RenderTexture(16, 16, Color.Red);
+    stage.addChild(Bitmap(BitmapData.fromRenderTextureQuad(renderTexture.quad)));
+    stage.materialize(0, 16);
+
+    expect(
+      ResourceDiagnostics.snapshot()[StageXLResourceType.webgpuTexture],
+      baseline[StageXLResourceType.webgpuTexture] + 1,
+    );
+
+    renderTexture.dispose();
+
+    expect(
+      ResourceDiagnostics.snapshot()[StageXLResourceType.webgpuTexture],
+      baseline[StageXLResourceType.webgpuTexture],
+    );
+
+    stage.dispose();
+  });
+
   test('WebGPU reuses instructions and only uploads dirty batch data when available', () async {
     final options = StageOptions()
       ..renderEngine = .WebGPU

@@ -132,6 +132,25 @@ class WebGpuTextureSystem {
     _bindGroupGeneration++;
   }
 
+  GPUTexture _createTexture(GPUTextureDescriptor descriptor) {
+    final texture = renderContext.device.createTexture(descriptor);
+    ResourceDiagnostics.register(.webgpuTexture);
+    return texture;
+  }
+
+  void _cacheEntry(RenderTexture renderTexture, _WebGpuTextureEntry entry) {
+    _textures[renderTexture] = entry;
+    renderTexture._webGpuTextureSystems.add(this);
+  }
+
+  void _disposeEntry(RenderTexture renderTexture) {
+    final entry = _textures.remove(renderTexture);
+    if (entry == null) return;
+    renderTexture._webGpuTextureSystems.remove(this);
+    entry.texture.destroy();
+    ResourceDiagnostics.unregister(.webgpuTexture);
+  }
+
   GPUTextureView getTextureView(RenderTexture renderTexture) {
     final entry = _getEntry(renderTexture);
     return entry.view ??= entry.texture.createView();
@@ -221,10 +240,10 @@ class WebGpuTextureSystem {
       return cached;
     }
 
-    _textures.remove(renderTexture)?.texture.destroy();
+    _disposeEntry(renderTexture);
     _clearBindGroups();
 
-    final texture = renderContext.device.createTexture(GPUTextureDescriptor(
+    final texture = _createTexture(GPUTextureDescriptor(
       size: GPUExtent3DDict(width: 1, height: 1, depthOrArrayLayers: 1),
       format: renderContext.preferredTextureFormat,
       usage: $GPUTextureUsage.COPY_DST | $GPUTextureUsage.TEXTURE_BINDING,
@@ -243,7 +262,7 @@ class WebGpuTextureSystem {
       height: renderTexture.height,
       version: renderTexture._webGpuVersion,
     );
-    _textures[renderTexture] = entry;
+    _cacheEntry(renderTexture, entry);
     return entry;
   }
 
@@ -254,7 +273,7 @@ class WebGpuTextureSystem {
     int version,
     CompressedTexture? compressedTexture,
   ) {
-    _textures.remove(renderTexture)?.texture.destroy();
+    _disposeEntry(renderTexture);
     final textureFormat = compressedTexture?.webGpuTextureFormat ?? renderContext.preferredTextureFormat;
     final textureWidth = compressedTexture?.webGpuWidth ?? width;
     final textureHeight = compressedTexture?.webGpuHeight ?? height;
@@ -263,7 +282,7 @@ class WebGpuTextureSystem {
         ? $GPUTextureUsage.COPY_DST | $GPUTextureUsage.TEXTURE_BINDING | $GPUTextureUsage.RENDER_ATTACHMENT
         : $GPUTextureUsage.COPY_DST | $GPUTextureUsage.TEXTURE_BINDING;
 
-    final texture = renderContext.device.createTexture(GPUTextureDescriptor(
+    final texture = _createTexture(GPUTextureDescriptor(
       size: GPUExtent3DDict(width: textureWidth, height: textureHeight, depthOrArrayLayers: 1),
       format: textureFormat,
       mipLevelCount: compressedTexture?.mipLevelCount ?? 1,
@@ -275,7 +294,7 @@ class WebGpuTextureSystem {
       height: height,
       version: version - 1,
     );
-    _textures[renderTexture] = entry;
+    _cacheEntry(renderTexture, entry);
     return entry;
   }
 
@@ -314,14 +333,15 @@ class WebGpuTextureSystem {
   }
 
   void disposeTexture(RenderTexture renderTexture) {
-    final entry = _textures.remove(renderTexture);
-    entry?.texture.destroy();
+    _disposeEntry(renderTexture);
     _clearBindGroups();
   }
 
   void dispose() {
-    for (final entry in _textures.values) {
+    for (final MapEntry(key: renderTexture, value: entry) in _textures.entries) {
+      renderTexture._webGpuTextureSystems.remove(this);
       entry.texture.destroy();
+      ResourceDiagnostics.unregister(.webgpuTexture);
     }
     _textures.clear();
     _samplers.clear();

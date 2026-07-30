@@ -16,6 +16,7 @@ class RenderTexture {
   CompressedTexture? _compressedTexture;
   WebGL? _renderingContext;
   WebGLTexture? _texture;
+  final _webGpuTextureSystems = <WebGpuTextureSystem>{};
   var _webGpuVersion = 0;
   var _disposed = false;
   var _webglTextureAllocated = false;
@@ -236,12 +237,15 @@ class RenderTexture {
 
   //-----------------------------------------------------------------------------------------------
 
-  /// Call the dispose method to release memory allocated by WebGL.
+  /// Call the dispose method to release memory allocated by the active render backends.
 
   void dispose() {
     if (_disposed) return;
     _disposed = true;
     _releaseWebGLTexture(delete: true);
+    for (final textureSystem in _webGpuTextureSystems.toList()) {
+      textureSystem.disposeTexture(this);
+    }
 
     _webGpuVersion++;
     if (_source.isA<ImageBitmap>()) {
