@@ -11,6 +11,7 @@ enum StageXLResourceType {
   renderContext,
   renderTexture,
   webglTexture,
+  webgpuTexture,
   renderBuffer,
   webglBuffer,
   webglFramebuffer,
