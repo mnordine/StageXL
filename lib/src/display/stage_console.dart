@@ -56,6 +56,8 @@ class StageConsole extends DisplayObject {
     print('UPLOAD BYTES${stats.webgpuInstructionUploadBytes.toString().padLeft(4)}');
     print('RENDERABLES${stats.webgpuRenderableCount.toString().padLeft(5)}');
     print('PASSES${stats.webgpuRenderPassCount.toString().padLeft(10)}');
+    print('BUNDLE WAIT${stats.webgpuRenderBundleDeferredCount.toString().padLeft(5)}');
+    print('BUNDLE BACK${stats.webgpuRenderBundleBackoffCount.toString().padLeft(5)}');
     print('BUNDLE BUILD${stats.webgpuRenderBundleBuildCount.toString().padLeft(4)}');
     print('BUNDLE HIT${stats.webgpuRenderBundleCacheHitCount.toString().padLeft(6)}');
     print('BUFFER MS${_formatMicroseconds(stats.webgpuBufferUploadMicroseconds).padLeft(6)}');

@@ -22,8 +22,10 @@ class RenderStatistics {
   var webgpuPassEncodeMicroseconds = 0;
   var webgpuFallbackCount = 0;
   var webgpuPipelineCreateCount = 0;
+  var webgpuRenderBundleBackoffCount = 0;
   var webgpuRenderBundleBuildCount = 0;
   var webgpuRenderBundleCacheHitCount = 0;
+  var webgpuRenderBundleDeferredCount = 0;
   var webgpuRenderPassCount = 0;
   var webgpuSubmitMicroseconds = 0;
   var webgpuTextureUploadCount = 0;
@@ -59,8 +61,10 @@ class RenderStatistics {
     webgpuPassEncodeMicroseconds = 0;
     webgpuFallbackCount = 0;
     webgpuPipelineCreateCount = 0;
+    webgpuRenderBundleBackoffCount = 0;
     webgpuRenderBundleBuildCount = 0;
     webgpuRenderBundleCacheHitCount = 0;
+    webgpuRenderBundleDeferredCount = 0;
     webgpuRenderPassCount = 0;
     webgpuSubmitMicroseconds = 0;
     webgpuTextureUploadCount = 0;

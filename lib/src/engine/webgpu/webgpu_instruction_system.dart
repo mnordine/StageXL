@@ -844,6 +844,9 @@ class _WebGpuScenePipe implements RetainedSlotPipe<_WebGpuSceneRenderable> {
 
 class _WebGpuBatchInstruction implements RenderInstruction {
   static const pipeId = InstructionPipeId<_WebGpuBatchInstruction>('webgpu.batch');
+  static const _initialBundleStabilityObservations = 30;
+  static const _maximumBundleStabilityObservations = 480;
+  static const _minimumUsefulBundleCacheHits = 30;
 
   final RenderContextWebGPU renderContext;
   final bool shaderScissor;
@@ -868,6 +871,8 @@ class _WebGpuBatchInstruction implements RenderInstruction {
   final bundlePipelines = <GPURenderPipeline>[];
   final bundleBindGroups = <GPUBindGroup>[];
   var bundleObservationCount = 0;
+  var bundleRequiredObservationCount = _initialBundleStabilityObservations;
+  var bundleCacheHitCount = 0;
   var bundleSampleCount = 0;
   var bundleStencilTest = false;
 
@@ -970,11 +975,23 @@ class _WebGpuBatchInstruction implements RenderInstruction {
     structuralDirty = false;
   }
 
-  void invalidateBundle() {
+  void invalidateBundle({bool adaptStability = true}) {
+    if (adaptStability && renderBundle != null) {
+      if (bundleCacheHitCount < _minimumUsefulBundleCacheHits) {
+        bundleRequiredObservationCount = math.min(
+          bundleRequiredObservationCount * 2,
+          _maximumBundleStabilityObservations,
+        );
+        renderContext.renderStatistics.webgpuRenderBundleBackoffCount++;
+      } else {
+        bundleRequiredObservationCount = _initialBundleStabilityObservations;
+      }
+    }
     renderBundle = null;
     bundlePipelines.clear();
     bundleBindGroups.clear();
     bundleObservationCount = 0;
+    bundleCacheHitCount = 0;
   }
 
   void dispose() {
@@ -988,7 +1005,7 @@ class _WebGpuBatchInstruction implements RenderInstruction {
     vertexCapacity = 0;
     metadataCapacity = 0;
     indexCapacity = 0;
-    invalidateBundle();
+    invalidateBundle(adaptStability: false);
   }
 }
 
@@ -1441,11 +1458,15 @@ class _WebGpuBatchPipe
 
     final cached = instruction.renderBundle;
     if (cached != null) {
+      instruction.bundleCacheHitCount++;
       renderContext.renderStatistics.webgpuRenderBundleCacheHitCount++;
       return cached;
     }
     instruction.bundleObservationCount++;
-    if (instruction.bundleObservationCount < 2) return null;
+    if (instruction.bundleObservationCount < instruction.bundleRequiredObservationCount) {
+      renderContext.renderStatistics.webgpuRenderBundleDeferredCount++;
+      return null;
+    }
 
     final encoder = renderContext.device.createRenderBundleEncoder(GPURenderBundleEncoderDescriptor(
       colorFormats: [renderContext.preferredTextureFormat.toJS].toJS,

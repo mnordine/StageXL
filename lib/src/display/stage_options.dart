@@ -147,6 +147,9 @@ class StageOptions {
   PowerPreference powerPreference = .normal;
 
   /// Enable WebGPU render bundle caching for stable batches.
+  ///
+  /// Bundle creation is deferred and automatically backed off when a batch changes too frequently to
+  /// benefit from caching.
   var renderBundles = false;
 
   /// Allow supported GPU renderers to batch NORMAL, ADD, SCREEN, and MULTIPLY draws together.

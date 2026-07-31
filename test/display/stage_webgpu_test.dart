@@ -914,10 +914,77 @@ void main() {
         ..x = 32
         ..y = 32);
 
-    expect(() => stage.materialize(0, 16), returnsNormally);
-    expect(() => stage.materialize(16, 16), returnsNormally);
-    expect(() => stage.materialize(32, 16), returnsNormally);
+    for (var frame = 0; frame < 31; frame++) {
+      expect(() => stage.materialize(frame * 16, 16), returnsNormally);
+    }
     expect(stage.renderContext.renderStatistics.webgpuRenderBundleCacheHitCount, greaterThanOrEqualTo(1));
+  });
+
+  test('WebGPU defers render bundles for structurally unstable batches', () async {
+    final options = StageOptions()
+      ..renderEngine = .WebGPU
+      ..backgroundColor = Color.Transparent
+      ..stageRenderMode = .AUTO
+      ..renderBundles = true;
+    final canvas = HTMLCanvasElement()
+      ..width = 64
+      ..height = 64;
+    final stage = await Stage.create(canvas, width: 64, height: 64, options: options);
+
+    if (stage.renderEngine != RenderEngine.WebGPU) return;
+
+    final texture = BitmapData(24, 24, Color.Red);
+    final changingBitmap = Bitmap(texture)..x = 32;
+    stage
+      ..addChild(Bitmap(texture))
+      ..addChild(changingBitmap);
+
+    var buildCount = 0;
+    for (var frame = 0; frame < 120; frame++) {
+      if (frame % 10 == 0) changingBitmap.visible = !changingBitmap.visible;
+      stage.materialize(frame * 16, 16);
+      buildCount += stage.renderContext.renderStatistics.webgpuRenderBundleBuildCount;
+    }
+
+    expect(buildCount, 0);
+  });
+
+  test('WebGPU backs off after a short-lived render bundle', () async {
+    final options = StageOptions()
+      ..renderEngine = .WebGPU
+      ..backgroundColor = Color.Transparent
+      ..stageRenderMode = .AUTO
+      ..renderBundles = true;
+    final canvas = HTMLCanvasElement()
+      ..width = 64
+      ..height = 64;
+    final stage = await Stage.create(canvas, width: 64, height: 64, options: options);
+
+    if (stage.renderEngine != RenderEngine.WebGPU) return;
+
+    final texture = BitmapData(24, 24, Color.Red);
+    final changingBitmap = Bitmap(texture)..x = 32;
+    stage
+      ..addChild(Bitmap(texture))
+      ..addChild(changingBitmap);
+
+    var buildCount = 0;
+    for (var frame = 0; frame < 30; frame++) {
+      stage.materialize(frame * 16, 16);
+      buildCount += stage.renderContext.renderStatistics.webgpuRenderBundleBuildCount;
+    }
+    expect(buildCount, 1);
+
+    changingBitmap.visible = false;
+    stage.materialize(30 * 16, 16);
+    buildCount += stage.renderContext.renderStatistics.webgpuRenderBundleBuildCount;
+    expect(stage.renderContext.renderStatistics.webgpuRenderBundleBackoffCount, 1);
+
+    for (var frame = 31; frame < 61; frame++) {
+      stage.materialize(frame * 16, 16);
+      buildCount += stage.renderContext.renderStatistics.webgpuRenderBundleBuildCount;
+    }
+    expect(buildCount, 1);
   });
 }
 
