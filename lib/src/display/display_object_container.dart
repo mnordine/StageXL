@@ -409,9 +409,17 @@ abstract class DisplayObjectContainer extends InteractiveObject
   void render(RenderState renderState) {
     for (var i = 0; i < _children.length; i++) {
       final child = _children[i];
-      if (child.visible && child.off == false) {
+      if (child.visible && child.off == false && child._parentRenderLayer == null) {
         renderState.renderObject(child);
       }
+    }
+  }
+
+  @override
+  void _detachFromRenderLayersRecursively() {
+    super._detachFromRenderLayersRecursively();
+    for (final child in _children) {
+      child._detachFromRenderLayersRecursively();
     }
   }
 
@@ -456,6 +464,7 @@ abstract class DisplayObjectContainer extends InteractiveObject
   }
 
   void _clearChildParent(DisplayObject child) {
+    child._detachFromRenderLayersRecursively();
     child.dispatchEvent(Event(Event.REMOVED, true));
     if (stage != null) _dispatchStageEvents(child, Event.REMOVED_FROM_STAGE);
     child._parent = null;

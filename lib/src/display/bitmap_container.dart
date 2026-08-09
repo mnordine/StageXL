@@ -75,6 +75,7 @@ class BitmapContainer extends DisplayObject
       throw ArgumentError('The supplied Bitmap must be a child of the caller.');
     } else {
       final index = _children.indexOf(child);
+      child._detachFromRenderLayersRecursively();
       child._parent = null;
       _children.removeAt(index);
     }
@@ -86,6 +87,7 @@ class BitmapContainer extends DisplayObject
       throw ArgumentError('The supplied index is out of bounds.');
     } else {
       final child = _children[index];
+      child._detachFromRenderLayersRecursively();
       child._parent = null;
       _children.removeAt(index);
     }
@@ -118,6 +120,7 @@ class BitmapContainer extends DisplayObject
       final oldChild = _children[index];
       final newChild = child;
       newChild.removeFromParent();
+      oldChild._detachFromRenderLayersRecursively();
       oldChild._parent = null;
       newChild._parent = this;
       _children[index] = newChild;
@@ -177,7 +180,7 @@ class BitmapContainer extends DisplayObject
 
     for (var i = 0; i < _children.length; i++) {
       final bitmap = _children[i];
-      if (bitmap.visible) {
+      if (bitmap.visible && bitmap._parentRenderLayer == null) {
         final bitmapData = bitmap.bitmapData;
         if (bitmapData != null) {
           localState.bitmap = bitmap;
@@ -189,12 +192,20 @@ class BitmapContainer extends DisplayObject
     context.activateProjectionMatrix(_tmpMatrix1);
   }
 
+  @override
+  void _detachFromRenderLayersRecursively() {
+    super._detachFromRenderLayersRecursively();
+    for (final child in _children) {
+      child._detachFromRenderLayersRecursively();
+    }
+  }
+
   void _renderCanvas2D(RenderState renderState) {
     final context = renderState.renderContext as RenderContextCanvas;
 
     for (var i = 0; i < _children.length; i++) {
       final bitmap = _children[i];
-      if (bitmap.visible) {
+      if (bitmap.visible && bitmap._parentRenderLayer == null) {
         final bitmapData = bitmap.bitmapData;
         if (bitmapData != null) {
           final matrix = bitmap.transformationMatrix;

@@ -71,6 +71,12 @@ abstract class DisplayObject extends EventDispatcher
   /// object container by calling [DisplayObjectContainer.getChildByName].
   var name = '';
 
+  /// The order of this object relative to other objects in a [RenderLayer].
+  ///
+  /// Higher values render later. Set [RenderLayer.sortableChildren] to true
+  /// for automatic sorting, or call [RenderLayer.sortRenderLayerChildren].
+  var zIndex = 0;
+  RenderLayer? _parentRenderLayer;
   DisplayObjectParent? _parent;
 
   final _transformationMatrix = Matrix.fromIdentity();
@@ -386,6 +392,13 @@ abstract class DisplayObject extends EventDispatcher
   /// are above the current display object in the display list hierarchy.
 
   DisplayObjectParent? get parent => _parent;
+
+  /// The render layer that controls this object's draw order, if any.
+  ///
+  /// Assigning a render layer does not change [parent] or the object's
+  /// transformation hierarchy. Use [RenderLayer.attach] and
+  /// [RenderLayer.detach] to change this value.
+  RenderLayer? get parentRenderLayer => _parentRenderLayer;
 
   //----------------------------------------------------------------------------
 
@@ -706,6 +719,10 @@ abstract class DisplayObject extends EventDispatcher
 
   void removeFromParent() {
     parent?.removeChild(this);
+  }
+
+  void _detachFromRenderLayersRecursively() {
+    _parentRenderLayer?._detachChild(this);
   }
 
   //----------------------------------------------------------------------------
