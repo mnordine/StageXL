@@ -9,12 +9,15 @@ extension type _StageXLNavigator(JSObject _) implements JSObject {
 }
 
 class WebGpuDeviceSystem {
+  static const _hdrCanvasFormat = 'rgba16float';
+
   final RenderSurface canvas;
   final GPUDevice device;
   final GPUCanvasContext canvasContext;
   final GPUTextureFormat preferredTextureFormat;
   final Set<String> enabledFeatures;
   final bool antialias;
+  final bool hdr;
   final int maxBatchTextures;
   final bool _ownsDevice;
 
@@ -25,6 +28,7 @@ class WebGpuDeviceSystem {
     required this.preferredTextureFormat,
     required this.enabledFeatures,
     required this.antialias,
+    required this.hdr,
     required this.maxBatchTextures,
     required this._ownsDevice,
   });
@@ -35,6 +39,7 @@ class WebGpuDeviceSystem {
     required bool alpha,
     required bool antialias,
     required bool dualSourceBlending,
+    bool hdr = false,
   }) async {
     final navigator = _globalScope.getProperty<JSObject>('navigator'.toJS);
     final gpu = _StageXLNavigator(navigator).gpu;
@@ -78,19 +83,23 @@ class WebGpuDeviceSystem {
     if (canvasContext == null) return null;
 
     final preferredTextureFormat = gpu.getPreferredCanvasFormat();
-    canvasContext.configure(GPUCanvasConfiguration(
-      device: device,
-      format: preferredTextureFormat,
-      alphaMode: alpha ? 'premultiplied' : 'opaque',
-    ));
+    final hdrEnabled = hdr && _configureHdrCanvasContext(canvasContext, device, alpha: alpha);
+    if (!hdrEnabled) {
+      canvasContext.configure(GPUCanvasConfiguration(
+        device: device,
+        format: preferredTextureFormat,
+        alphaMode: alpha ? 'premultiplied' : 'opaque',
+      ));
+    }
 
     return WebGpuDeviceSystem._(
       canvas: canvas,
       device: device,
       canvasContext: canvasContext,
-      preferredTextureFormat: preferredTextureFormat,
+      preferredTextureFormat: hdrEnabled ? _hdrCanvasFormat : preferredTextureFormat,
       enabledFeatures: enabledFeatures,
       antialias: antialias,
+      hdr: hdrEnabled,
       maxBatchTextures: maxBatchTextures,
       ownsDevice: true,
     );
@@ -120,6 +129,7 @@ class WebGpuDeviceSystem {
       preferredTextureFormat: preferredTextureFormat,
       enabledFeatures: enabledFeatures,
       antialias: antialias,
+      hdr: preferredTextureFormat == _hdrCanvasFormat,
       maxBatchTextures: _resolveMaxBatchTexturesFromLimits(device.limits),
       ownsDevice: false,
     );
@@ -131,6 +141,27 @@ class WebGpuDeviceSystem {
     if (!_ownsDevice) return;
     canvasContext.unconfigure();
     device.destroy();
+  }
+
+  /// Configures the canvas for HDR output and returns whether the browser
+  /// accepted the HDR configuration.
+  ///
+  /// HDR canvases use a floating point color format so colors beyond standard
+  /// dynamic range are preserved, and an extended tone mapping mode so the
+  /// browser maps those colors onto the headroom of HDR capable displays.
+  /// Browsers that support neither reject the configuration.
+  static bool _configureHdrCanvasContext(GPUCanvasContext canvasContext, GPUDevice device, {required bool alpha}) {
+    try {
+      canvasContext.configure(GPUCanvasConfiguration(
+        device: device,
+        format: _hdrCanvasFormat,
+        alphaMode: alpha ? 'premultiplied' : 'opaque',
+        toneMapping: GPUCanvasToneMapping(mode: 'extended'),
+      ));
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   static int _resolveMaxBatchTextures(GPUAdapter adapter) => _resolveMaxBatchTexturesFromLimits(adapter.limits);

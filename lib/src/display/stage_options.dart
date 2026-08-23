@@ -159,6 +159,15 @@ class StageOptions {
   /// single-source fast path. Leave this disabled unless blend-mode breaks are a measured bottleneck.
   var dualSourceBlending = false;
 
+  /// Enable high dynamic range output for the WebGPU render engine.
+  ///
+  /// The WebGPU canvas is configured with a 16-bit floating point color format and an extended
+  /// tone mapping mode so colors brighter than standard dynamic range (for instance additive
+  /// glow) can be displayed on HDR capable displays. Browsers or displays without HDR support
+  /// fall back to standard dynamic range rendering. The other render engines ignore this option.
+
+  var hdr = false;
+
   var _shaderPrecision = 'mediump';
 
   ShaderPrecision get shaderPrecision => switch (_shaderPrecision) {
@@ -206,6 +215,7 @@ class StageOptions {
     options.powerPreference = powerPreference;
     options.renderBundles = renderBundles;
     options.dualSourceBlending = dualSourceBlending;
+    options.hdr = hdr;
     options.renderPipes.copyFrom(renderPipes);
     options.resetColorOnRenderStart = resetColorOnRenderStart;
     options.resetStencilTestOnRenderStart = resetStencilTestOnRenderStart;

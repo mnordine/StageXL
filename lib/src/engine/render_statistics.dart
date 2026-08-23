@@ -3,6 +3,8 @@ part of '../engine.dart';
 class RenderStatistics {
   var dualSourceBlendingRequested = false;
   var dualSourceBlendingEnabled = false;
+  var hdrRequested = false;
+  var hdrEnabled = false;
   var drawCount = 0;
   var frameTimeMicroseconds = 0;
   var renderObjectMicroseconds = 0;

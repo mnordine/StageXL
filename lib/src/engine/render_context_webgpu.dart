@@ -19,6 +19,8 @@ class RenderContextWebGPU extends RenderContext {
   final bool renderBundles;
   final bool dualSourceBlendingRequested;
   final bool dualSourceBlending;
+  final bool hdrRequested;
+  final bool hdr;
   late final WebGpuCommandSystem commandSystem;
   late final WebGpuTextureSystem textureSystem;
   late final WebGpuPipelineSystem pipelineSystem;
@@ -44,6 +46,8 @@ class RenderContextWebGPU extends RenderContext {
     required this.renderBundles,
     required this.dualSourceBlendingRequested,
     required this.dualSourceBlending,
+    required this.hdrRequested,
+    required this.hdr,
     required this._primaryRenderTargetIsOpaque,
   }) {
     commandSystem = WebGpuCommandSystem(this);
@@ -55,7 +59,9 @@ class RenderContextWebGPU extends RenderContext {
     filterSystem = WebGpuFilterSystem(this);
     renderStatistics
       ..dualSourceBlendingRequested = dualSourceBlendingRequested
-      ..dualSourceBlendingEnabled = dualSourceBlending;
+      ..dualSourceBlendingEnabled = dualSourceBlending
+      ..hdrRequested = hdrRequested
+      ..hdrEnabled = hdr;
     _updateStageProjection();
     unawaited(device.lost.toDart.then(_onDeviceLost));
     _contextRestoredEvent.add(const RenderContextEvent());
@@ -69,6 +75,7 @@ class RenderContextWebGPU extends RenderContext {
     bool antialias = false,
     bool renderBundles = false,
     bool dualSourceBlending = false,
+    bool hdr = false,
   }) async {
     final deviceSystem = await WebGpuDeviceSystem.create(
       canvas,
@@ -76,6 +83,7 @@ class RenderContextWebGPU extends RenderContext {
       antialias: antialias,
       powerPreference: powerPreference,
       dualSourceBlending: dualSourceBlending,
+      hdr: hdr,
     );
     if (deviceSystem == null) return null;
     return RenderContextWebGPU._(
@@ -84,6 +92,8 @@ class RenderContextWebGPU extends RenderContext {
       renderBundles: renderBundles,
       dualSourceBlendingRequested: dualSourceBlending,
       dualSourceBlending: dualSourceBlending && deviceSystem.enabledFeatures.contains('dual-source-blending'),
+      hdrRequested: hdr,
+      hdr: deviceSystem.hdr,
       primaryRenderTargetIsOpaque: !alpha,
     );
   }
@@ -95,6 +105,7 @@ class RenderContextWebGPU extends RenderContext {
     bool antialias = false,
     bool renderBundles = false,
     bool dualSourceBlending = false,
+    bool hdr = false,
     bool clearBeforeRender = true,
   }) {
     final deviceSystem = WebGpuDeviceSystem.shared(
@@ -110,6 +121,8 @@ class RenderContextWebGPU extends RenderContext {
       renderBundles: renderBundles,
       dualSourceBlendingRequested: dualSourceBlending,
       dualSourceBlending: dualSourceBlending && deviceSystem.enabledFeatures.contains('dual-source-blending'),
+      hdrRequested: hdr,
+      hdr: deviceSystem.hdr,
       primaryRenderTargetIsOpaque: !alpha,
       clearBeforeRender: clearBeforeRender,
     );
@@ -462,6 +475,8 @@ final class _SharedRenderContextWebGPU extends RenderContextWebGPU {
     required super.renderBundles,
     required super.dualSourceBlendingRequested,
     required super.dualSourceBlending,
+    required super.hdrRequested,
+    required super.hdr,
     required super.primaryRenderTargetIsOpaque,
     required this._clearBeforeRender,
   }) : super._();

@@ -33,6 +33,57 @@ void main() {
     expect(options.clone().dualSourceBlending, isTrue);
   });
 
+  test('StageOptions clone preserves HDR option', () {
+    expect(StageOptions().clone().hdr, isFalse);
+    expect((StageOptions()..hdr = true).clone().hdr, isTrue);
+  });
+
+  test('WebGPU renders into an HDR canvas when available', () async {
+    final options = StageOptions()
+      ..renderEngine = .WebGPU
+      ..backgroundColor = Color.Transparent
+      ..hdr = true
+      ..stageRenderMode = .ONCE;
+    final canvas = HTMLCanvasElement()
+      ..width = 32
+      ..height = 32;
+    final stage = await Stage.create(canvas, width: 32, height: 32, options: options);
+
+    if (stage.renderEngine != .WebGPU) return;
+
+    stage.addChild(Bitmap(BitmapData(16, 16, Color.Red)));
+    expect(() => stage.materialize(0, 16), returnsNormally);
+
+    final renderContext = stage.renderContext as RenderContextWebGPU;
+    expect(renderContext.hdrRequested, isTrue);
+    expect(renderContext.renderStatistics.hdrRequested, isTrue);
+    if (renderContext.hdr) {
+      expect(renderContext.preferredTextureFormat, 'rgba16float');
+      expect(renderContext.renderStatistics.hdrEnabled, isTrue);
+    }
+  });
+
+  test('WebGPU keeps standard dynamic range without the HDR option', () async {
+    final options = StageOptions()
+      ..renderEngine = .WebGPU
+      ..backgroundColor = Color.Transparent
+      ..stageRenderMode = .ONCE;
+    final canvas = HTMLCanvasElement()
+      ..width = 32
+      ..height = 32;
+    final stage = await Stage.create(canvas, width: 32, height: 32, options: options);
+
+    if (stage.renderEngine != .WebGPU) return;
+
+    stage.addChild(Bitmap(BitmapData(16, 16, Color.Red)));
+    expect(() => stage.materialize(0, 16), returnsNormally);
+
+    final renderContext = stage.renderContext as RenderContextWebGPU;
+    expect(renderContext.hdrRequested, isFalse);
+    expect(renderContext.hdr, isFalse);
+    expect(renderContext.preferredTextureFormat, isNot('rgba16float'));
+  });
+
   test('WebGPU can share an externally owned device and canvas context when available', () async {
     final canvas = HTMLCanvasElement()
       ..width = 64

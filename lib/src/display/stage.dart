@@ -562,6 +562,7 @@ class Stage extends DisplayObjectContainer {
               powerPreference: options.powerPreference,
               renderBundles: options.renderBundles,
               dualSourceBlending: options.dualSourceBlending,
+              hdr: options.hdr,
             )
           : RenderContextWebGPU.shared(
               canvas,
@@ -570,6 +571,7 @@ class Stage extends DisplayObjectContainer {
               antialias: options.antialias,
               renderBundles: options.renderBundles,
               dualSourceBlending: options.dualSourceBlending,
+              hdr: options.hdr,
               clearBeforeRender: options.clearBeforeRender,
             );
       if (webgpuContext != null) return webgpuContext;

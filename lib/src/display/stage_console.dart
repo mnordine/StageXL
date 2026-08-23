@@ -46,6 +46,9 @@ class StageConsole extends DisplayObject {
     if (stats.dualSourceBlendingRequested) {
       print('DUAL SRC ${stats.dualSourceBlendingEnabled ? 'ON' : 'UNSUPPORTED'}');
     }
+    if (stats.hdrRequested) {
+      print('HDR ${stats.hdrEnabled ? 'ON' : 'UNSUPPORTED'}');
+    }
     print('TEX BREAK${stats.webgpuBatchTextureBreakCount.toString().padLeft(7)}');
     print('BINDGROUPS${stats.webgpuBindGroupCreateCount.toString().padLeft(6)}');
     print('PIPELINES${stats.webgpuPipelineCreateCount.toString().padLeft(7)}');
