@@ -28,6 +28,7 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
   final AssetManifest _manifest;
 
   BaseImageLoader? _imageLoader;
+  Completer<void>? _cancelCompleter;
   var _cancelled = false;
 
   static const compressedTextureFormats = {'.pvr', '.pvr.gz', '.ktx'};
@@ -42,8 +43,20 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
 
   @override
   Future<String> getSource() async {
-    final response = await http.get(.parse(_manifest.mapUrl(_loadInfo.loaderUrl)));
-    return response.body;
+    final cancelCompleter = _cancelCompleter = Completer<void>();
+    final client = http.Client();
+    try {
+      final request = http.AbortableRequest(
+        'GET',
+        .parse(_manifest.mapUrl(_loadInfo.loaderUrl)),
+        abortTrigger: cancelCompleter.future,
+      );
+      final response = await client.send(request);
+      return await response.stream.bytesToString();
+    } finally {
+      client.close();
+      _cancelCompleter = null;
+    }
   }
 
   @override
@@ -51,6 +64,7 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
     print('aborting request for ${_loadInfo.loaderUrl}');
 
     _cancelled = true;
+    if (_cancelCompleter case final completer? when !completer.isCompleted) completer.complete();
 
     _imageLoader?.cancel();
     _imageLoader = null;
@@ -58,6 +72,8 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
 
   @override
   Future<RenderTextureQuad> getRenderTextureQuad(String filename) async {
+    if (_cancelled) throw LoadError('texture atlas load cancelled');
+
     final loaderUrl = _loadInfo.loaderUrl;
     final pixelRatio = _loadInfo.pixelRatio;
 
