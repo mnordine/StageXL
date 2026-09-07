@@ -86,6 +86,10 @@ class _WebGpuMaskSystem {
       _activeScissor = _activeScissor == null ? rectangle : _activeScissor!.intersection(rectangle);
       _scissorStack.add(_activeScissor!);
       _maskStates.add(_WebGpuMaskState(0));
+      if (debug_draw.stagexlDebugDraw && debug_draw.debugDraw.masks &&
+          debug_draw.debugDraw.maskDrawOrder == debug_draw.MaskDrawOrder.back) {
+        renderContext._debugDraw.drawMask();
+      }
       return;
     }
 
@@ -103,10 +107,18 @@ class _WebGpuMaskSystem {
     final stencilVertices = _bakeStencilVertices(_maskVertices);
     _renderStencilMask(stencilValue, stencilVertices);
     _maskStates.add(_WebGpuMaskState(stencilValue, stencilVertices));
+    if (debug_draw.stagexlDebugDraw && debug_draw.debugDraw.masks &&
+        debug_draw.debugDraw.maskDrawOrder == debug_draw.MaskDrawOrder.back) {
+      renderContext._debugDraw.drawMask();
+    }
   }
 
   void endMask(RenderState renderState, RenderMask mask) {
     if (_maskStates.isEmpty) return;
+    if (debug_draw.stagexlDebugDraw && debug_draw.debugDraw.masks &&
+        debug_draw.debugDraw.maskDrawOrder == debug_draw.MaskDrawOrder.front) {
+      renderContext._debugDraw.drawMask();
+    }
     final state = _maskStates.removeLast();
     if (state.stencilValue > 0) {
       _restoreStencil(activeStencilValue);

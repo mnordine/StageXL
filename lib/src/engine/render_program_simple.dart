@@ -1,6 +1,9 @@
 part of '../engine.dart';
 
 abstract class RenderProgramSimpleWebGL<TParameters> extends RenderProgramWebGL<TParameters> {
+  @override
+  int get _vertexStride => 5;
+
   // aVertexPosition:   Float32(x), Float32(y)
   // aVertexTextCoord:  Float32(u), Float32(v)
   // aVertexAlpha:      Float32(alpha)

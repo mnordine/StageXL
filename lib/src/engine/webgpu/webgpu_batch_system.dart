@@ -324,7 +324,12 @@ class _WebGpuBatchSystem {
       pass.setStencilReference(stencilValue);
     }
 
-    final bundleKey = _tryCreateBundleKey(vertexBytes, indexBytes, stencilValue > 0);
+    _WebGpuDebugEdges? debugEdges;
+    if (debug_draw.stagexlDebugDraw && debug_draw.debugDraw.wireframes) {
+      debugEdges = renderContext._debugDraw.prepareImmediate(_indices, _indexPosition);
+    }
+    final bundleKey = debug_draw.stagexlDebugDraw && debug_draw.debugDraw.wireframes
+        ? null : _tryCreateBundleKey(vertexBytes, indexBytes, stencilValue > 0);
     final bundle = bundleKey == null ? null : _getRenderBundle(bundleKey);
     if (bundle != null) {
       pass.executeBundles([bundle].toJS);
@@ -344,6 +349,13 @@ class _WebGpuBatchSystem {
         pass
           ..setBindGroup(0, renderContext.textureSystem.getBatchBindGroup(run.textures))
           ..drawIndexed(run.indexCount, 1, run.firstIndex, 0, 0);
+        if (debug_draw.stagexlDebugDraw && debugEdges != null) {
+          renderContext._debugDraw.drawWireframe(pass, _vertexBuffer, debugEdges, run.firstIndex, run.indexCount);
+          // Restore the source pipeline and bindings before the next run.
+          pass
+            ..setPipeline(pipeline)
+            ..setIndexBuffer(_indexBuffer, 'uint32', 0, indexBytes);
+        }
       }
     }
 

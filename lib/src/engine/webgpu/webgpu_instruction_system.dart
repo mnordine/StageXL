@@ -102,7 +102,8 @@ class _WebGpuInstructionSystem {
     for (var i = 0; i < instructions.instructionCount; i++) {
       final instruction = instructions.instructionAt(i);
       final sharesColorPass = instruction is _WebGpuBatchInstruction ||
-          instruction is _WebGpuMaskInstruction && instruction.mask is ScissorRenderMask;
+          instruction is _WebGpuMaskInstruction && instruction.mask is ScissorRenderMask &&
+              !(debug_draw.stagexlDebugDraw && debug_draw.debugDraw.masks);
       if (!sharesColorPass) _batchPipe.endPass();
       _instructionPipes.execute(instruction);
     }
@@ -411,6 +412,7 @@ class _WebGpuInstructionSystem {
   }
 
   Rectangle<num>? _captureShaderScissor(RenderState state, RenderMask mask) {
+    if (debug_draw.stagexlDebugDraw && debug_draw.debugDraw.masks) return null;
     if (mask is! ShaderScissorRenderMask) return null;
     final scissor = mask.getScissorRectangle(state);
     if (scissor == null) return null;
@@ -860,6 +862,7 @@ class _WebGpuBatchInstruction implements RenderInstruction {
   GPUBuffer? metadataBuffer;
   GPUBuffer? indexBuffer;
   GPUBindGroup? metadataBindGroup;
+  _WebGpuDebugEdges? debugEdges;
   var renderableSize = 0;
   var vertexCount = 0;
   var indexCount = 0;
@@ -995,6 +998,10 @@ class _WebGpuBatchInstruction implements RenderInstruction {
   }
 
   void dispose() {
+    if (debug_draw.stagexlDebugDraw) {
+      debugEdges?.dispose();
+      debugEdges = null;
+    }
     vertexBuffer?.destroy();
     metadataBuffer?.destroy();
     indexBuffer?.destroy();
@@ -1067,6 +1074,10 @@ class _WebGpuBatchPipe
     uploadAllMetadata = uploadAllMetadata || metadataBufferRebuilt;
     uploadAllIndices = uploadAllIndices || indexBufferRebuilt;
 
+    if (debug_draw.stagexlDebugDraw && instruction.debugEdges != null &&
+        (uploadAllIndices || instruction.renderables.any((renderable) => renderable.indexDirty))) {
+      instruction.debugEdges!.dirty = true;
+    }
     final stopwatch = Stopwatch()..start();
     var uploaded = false;
     for (final renderable in instruction.renderables) {
@@ -1362,7 +1373,13 @@ class _WebGpuBatchPipe
     final pass = _activePass ?? _beginPass(clearColor, stencilValue);
     renderContext._maskSystem.applyScissor(pass);
 
-    final bundle = _getRenderBundle(instruction, stencilValue > 0);
+    _WebGpuDebugEdges? debugEdges;
+    if (debug_draw.stagexlDebugDraw && debug_draw.debugDraw.wireframes) {
+      debugEdges = instruction.debugEdges ??= _WebGpuDebugEdges(renderContext.device);
+      debugEdges.update(instruction.indexData!, instruction.indexCount);
+    }
+    final bundle = debug_draw.stagexlDebugDraw && debug_draw.debugDraw.wireframes
+        ? null : _getRenderBundle(instruction, stencilValue > 0);
     if (bundle != null) {
       pass.executeBundles([bundle].toJS);
     } else {
@@ -1386,6 +1403,14 @@ class _WebGpuBatchPipe
         pass
           ..setBindGroup(0, instruction.bindGroups[i])
           ..drawIndexed(run.indexCount, 1, run.firstIndex, 0, 0);
+        if (debug_draw.stagexlDebugDraw && debugEdges != null) {
+          renderContext._debugDraw.drawWireframe(pass, instruction.vertexBuffer!, debugEdges,
+              run.firstIndex, run.indexCount, metadata: instruction.metadataBindGroup,
+              shaderScissor: instruction.shaderScissor);
+          pass
+            ..setPipeline(pipeline)
+            ..setIndexBuffer(instruction.indexBuffer!, 'uint32', 0, instruction.indexCount * _bytesPerIndex);
+        }
       }
     }
     final statistics = renderContext.renderStatistics;
@@ -1587,7 +1612,9 @@ class _WebGpuMaskPipe implements InstructionPipe<_WebGpuMaskInstruction> {
 
   @override
   void execute(_WebGpuMaskInstruction instruction) {
-    if (instruction.mask is! ScissorRenderMask) ensureClear();
+    if (instruction.mask is! ScissorRenderMask || (debug_draw.stagexlDebugDraw && debug_draw.debugDraw.masks)) {
+      ensureClear();
+    }
     if (instruction.begin) {
       renderContext._maskSystem.beginMask(
         instruction.state,

@@ -40,6 +40,7 @@ class RenderContextWebGL extends RenderContext {
   // WebGL 2 specific properties
   WebGLVertexArrayObject? _maskQuadVao;
   WebGLProgram? _maskProgram;
+  WebGLUniformLocation? _maskUniformColor;
   WebGLBuffer? _maskVertexBuffer;
   WebGLBuffer? _maskIndexBuffer;
 
@@ -54,6 +55,9 @@ class RenderContextWebGL extends RenderContext {
   final _renderProgramBatchDualSource = RenderProgramBatchWebGL.dualSource();
   final _renderProgramBatchShaderScissor = RenderProgramBatchWebGL.shaderScissor();
   final _renderProgramBatchDualSourceShaderScissor = RenderProgramBatchWebGL.dualSourceShaderScissor();
+
+  RenderProgramWireframe? _renderProgramWireframe;
+  RenderProgramWireframe get _wireframe => _renderProgramWireframe ??= RenderProgramWireframe(this);
 
   final renderBufferIndex = RenderBufferIndex(16384 * 2);
   final renderBufferVertex = RenderBufferVertex(32768 * 2);
@@ -247,6 +251,9 @@ class RenderContextWebGL extends RenderContext {
       _renderingContext.deleteProgram(maskProgram);
       return;
     }
+    if (debug_draw.stagexlDebugDraw) {
+      _maskUniformColor = _renderingContext.getUniformLocation(maskProgram, 'uColor');
+    }
     _maskProgram = maskProgram;
     _maskQuadVAOWebGL1 = maskQuadVao;
     _vaoExtension!.bindVertexArrayOES(_maskQuadVAOWebGL1);
@@ -288,6 +295,9 @@ class RenderContextWebGL extends RenderContext {
     if (maskQuadVao == null) {
       gl2.deleteProgram(maskProgram);
       return;
+    }
+    if (debug_draw.stagexlDebugDraw) {
+      _maskUniformColor = _renderingContext.getUniformLocation(maskProgram, 'uColor');
     }
     _maskProgram = maskProgram;
     _maskQuadVao = maskQuadVao;
@@ -371,16 +381,18 @@ class RenderContextWebGL extends RenderContext {
       gl.shaderSource(fragShader, '''
         #version 300 es
         precision mediump float;
+        ${debug_draw.stagexlDebugDraw ? 'uniform vec4 uColor;' : ''}
         out vec4 fragColor;
         void main() {
-          fragColor = vec4(0.0);
+          fragColor = ${debug_draw.stagexlDebugDraw ? 'uColor' : 'vec4(0.0)'};
         }
       ''');
     } else {
       gl.shaderSource(fragShader, '''
         precision mediump float;
+        ${debug_draw.stagexlDebugDraw ? 'uniform vec4 uColor;' : ''}
         void main() {
-          gl_FragColor = vec4(0.0);
+          gl_FragColor = ${debug_draw.stagexlDebugDraw ? 'uColor' : 'vec4(0.0)'};
         }
       ''');
     }
@@ -540,6 +552,10 @@ class RenderContextWebGL extends RenderContext {
         final next = last == null ? scissor : scissor.intersection(last);
         _getMaskStates().add(_ScissorMaskState(mask, next));
         _updateScissorTest(next);
+        if (debug_draw.stagexlDebugDraw && debug_draw.debugDraw.masks &&
+            debug_draw.debugDraw.maskDrawOrder == debug_draw.MaskDrawOrder.back) {
+          _drawMaskDebugOverlay(null);
+        }
         return;
       }
     }
@@ -569,6 +585,10 @@ class RenderContextWebGL extends RenderContext {
     _renderingContext.stencilOp(WebGL.KEEP, WebGL.KEEP, WebGL.KEEP);
     _renderingContext.colorMask(true, true, true, true);
 
+    if (debug_draw.stagexlDebugDraw && debug_draw.debugDraw.masks &&
+        debug_draw.debugDraw.maskDrawOrder == debug_draw.MaskDrawOrder.back) {
+      _drawMaskDebugOverlay(stencil);
+    }
     _getMaskStates().add(_StencilMaskState(mask, stencil));
   }
 
@@ -578,8 +598,16 @@ class RenderContextWebGL extends RenderContext {
 
     final maskState = _getMaskStates().removeLast();
     if (maskState is _ScissorMaskState) {
+      if (debug_draw.stagexlDebugDraw && debug_draw.debugDraw.masks &&
+          debug_draw.debugDraw.maskDrawOrder == debug_draw.MaskDrawOrder.front) {
+        _drawMaskDebugOverlay(null);
+      }
       _updateScissorTest(_getLastScissorValue());
     } else if (maskState is _StencilMaskState) {
+      if (debug_draw.stagexlDebugDraw && debug_draw.debugDraw.masks &&
+          debug_draw.debugDraw.maskDrawOrder == debug_draw.MaskDrawOrder.front) {
+        _drawMaskDebugOverlay(maskState.value);
+      }
       // Restore previous stencil state instead of re-rendering the mask
       final previousStencilValue = _getLastStencilValue();
 
@@ -593,6 +621,56 @@ class RenderContextWebGL extends RenderContext {
       _renderingContext.colorMask(true, true, true, true);
       _updateStencilTest(previousStencilValue);
     }
+  }
+
+  void _drawMaskDebugOverlay(int? stencilValue) {
+    final gl = _renderingContext;
+    final color = debug_draw.debugDraw.maskColor;
+    const colorScale = 1 / 255.0;
+    final uniformColor = _maskUniformColor;
+    final program = _maskProgram;
+    if (program == null || uniformColor == null) return;
+
+    final previousVao = RenderProgramWebGL.currentVao;
+    final previousVaoOes = RenderProgramWebGL.currentVaoOes;
+    final srcRgb = (gl.getParameter(WebGL.BLEND_SRC_RGB) as JSNumber).toDartInt;
+    final dstRgb = (gl.getParameter(WebGL.BLEND_DST_RGB) as JSNumber).toDartInt;
+    final srcAlpha = (gl.getParameter(WebGL.BLEND_SRC_ALPHA) as JSNumber).toDartInt;
+    final dstAlpha = (gl.getParameter(WebGL.BLEND_DST_ALPHA) as JSNumber).toDartInt;
+    gl.colorMask(true, true, true, true);
+    gl.blendFunc(WebGL.ONE, WebGL.ONE_MINUS_SRC_ALPHA);
+    if (stencilValue != null) {
+      gl.enable(WebGL.STENCIL_TEST);
+      gl.stencilFunc(WebGL.EQUAL, stencilValue, 0xFF);
+      gl.stencilOp(WebGL.KEEP, WebGL.KEEP, WebGL.KEEP);
+    }
+    gl.useProgram(program);
+    final alpha = colorGetA(color) * colorScale;
+    gl.uniform4f(
+      uniformColor,
+      colorGetR(color) * colorScale * alpha,
+      colorGetG(color) * colorScale * alpha,
+      colorGetB(color) * colorScale * alpha,
+      alpha,
+    );
+
+    if (isWebGL2) {
+      final gl2 = gl as WebGL2RenderingContext;
+      gl2.bindVertexArray(_maskQuadVao);
+      RenderProgramWebGL.currentVao = _maskQuadVao;
+      gl2.drawElements(WebGL.TRIANGLES, 6, WebGL.UNSIGNED_SHORT, 0);
+      gl2.bindVertexArray(previousVao);
+      RenderProgramWebGL.currentVao = previousVao;
+    } else if (_vaoExtension != null && _maskQuadVAOWebGL1 != null) {
+      _vaoExtension!.bindVertexArrayOES(_maskQuadVAOWebGL1);
+      RenderProgramWebGL.currentVaoOes = _maskQuadVAOWebGL1;
+      gl.drawElements(WebGL.TRIANGLES, 6, WebGL.UNSIGNED_SHORT, 0);
+      _vaoExtension!.bindVertexArrayOES(previousVaoOes);
+      RenderProgramWebGL.currentVaoOes = previousVaoOes;
+    }
+
+    gl.useProgram(_activeRenderProgram.program);
+    gl.blendFuncSeparate(srcRgb, dstRgb, srcAlpha, dstAlpha);
   }
 
   // WebGL 1 version of full-screen quad rendering
@@ -1169,6 +1247,11 @@ class RenderContextWebGL extends RenderContext {
   }
 
   void _clearContextResources() {
+    if (debug_draw.stagexlDebugDraw) {
+      _renderProgramWireframe?.dispose();
+      _renderProgramWireframe = null;
+      _maskUniformColor = null;
+    }
     if (_maskResourcesAllocated) {
       _maskResourcesAllocated = false;
       ResourceDiagnostics.unregister(.webglProgram);

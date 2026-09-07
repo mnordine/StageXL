@@ -214,7 +214,8 @@ final class _RetainedInstructionSystem {
     _cursor++;
   }
 
-  bool get _supportsShaderScissor => renderContext is RenderContextWebGL;
+  bool get _supportsShaderScissor => renderContext is RenderContextWebGL &&
+      !(debug_draw.stagexlDebugDraw && debug_draw.debugDraw.masks);
 
   void _updateWebGlShaderScissor(_RetainedWebGLBatchCommand command) =>
       command.webGlShaderScissor = _activeShaderScissor;

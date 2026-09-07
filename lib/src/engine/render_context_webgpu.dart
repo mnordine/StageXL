@@ -26,6 +26,9 @@ class RenderContextWebGPU extends RenderContext {
   late final _WebGpuInstructionSystem _instructionSystem;
   late final _WebGpuMaskSystem _maskSystem;
   late final WebGpuFilterSystem filterSystem;
+  _WebGpuDebugDraw? _debugDrawSystem;
+  _WebGpuDebugDraw get _debugDraw => _debugDrawSystem ??= _WebGpuDebugDraw(this);
+
   final _projectionMatrix = Matrix3D.fromIdentity();
   final _solidFillIndexList = Int16List.fromList([0, 1, 2]);
   final _solidFillVertexList = Float32List(6);
@@ -431,6 +434,10 @@ class RenderContextWebGPU extends RenderContext {
   void dispose() {
     if (isDisposed) return;
     super.dispose();
+    if (debug_draw.stagexlDebugDraw) {
+      _debugDrawSystem?.dispose();
+      _debugDrawSystem = null;
+    }
     _instructionSystem.dispose();
     _batchSystem.dispose();
     _maskSystem.dispose();

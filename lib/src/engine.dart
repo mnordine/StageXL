@@ -25,6 +25,7 @@ import 'dart:typed_data';
 import 'package:byte_array/byte_array.dart';
 import 'package:webgpu_interop/generated.dart';
 
+import 'debug/debug_draw.dart' as debug_draw;
 import 'errors.dart';
 import 'geom/matrix.dart';
 import 'geom/matrix_3d.dart';
@@ -53,6 +54,8 @@ part 'engine/render_program_batch.dart';
 part 'engine/render_program_simple.dart';
 part 'engine/render_program_tinted.dart';
 part 'engine/render_program_triangle.dart';
+part 'engine/render_program_wireframe.dart';
+part 'engine/webgpu/webgpu_debug_draw.dart';
 part 'engine/render_state.dart';
 part 'engine/render_statistics.dart';
 part 'engine/render_stencil_buffer.dart';

@@ -1,6 +1,9 @@
 part of '../engine.dart';
 
 class RenderProgramTintedWebGL extends RenderProgramWebGL<void> {
+  @override
+  int get _vertexStride => 8;
+
   // aVertexPosition:   Float32(x), Float32(y)
   // aVertexTextCoord:  Float32(u), Float32(v)
   // aVertextColor:     Float32(r), Float32(g), Float32(b), Float32(a)

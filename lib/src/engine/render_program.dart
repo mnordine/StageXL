@@ -121,8 +121,13 @@ abstract class RenderProgramWebGL<TParameters> extends RenderProgram<RenderConte
       renderingContext.drawElements(
           WebGL.TRIANGLES, count, WebGL.UNSIGNED_SHORT, 0);
       renderStatistics.drawCount += 1;
+      if (debug_draw.stagexlDebugDraw && debug_draw.debugDraw.wireframes && _vertexStride > 0) {
+        _activeRenderContext!._wireframe.draw(this, 0, count, _vertexStride);
+      }
     }
   }
+
+  int get _vertexStride => 0;
 
   //---------------------------------------------------------------------------
   //---------------------------------------------------------------------------

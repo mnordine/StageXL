@@ -91,8 +91,8 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
       vTexIndex = encodedTextureIndex - blendMode * $_maxTextures;
       vBlendMode = blendMode;'''
             : '''
-      float blendMode = floor(aVertexTexIndex / ${_maxTextures.toDouble()} + 0.1);
-      vTexIndex = aVertexTexIndex - blendMode * ${_maxTextures.toDouble()};
+      float blendMode = floor(aVertexTexIndex / ${_maxTextures.toStringAsFixed(1)} + 0.1);
+      vTexIndex = aVertexTexIndex - blendMode * ${_maxTextures.toStringAsFixed(1)};
       vBlendMode = blendMode;'''
         : isWebGL2
             ? '''
@@ -101,7 +101,7 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
       vAlphaMultiplier = 1.0 - float(additive);'''
             : '''
       float additive = step(${_maxTextures - 0.5}, aVertexTexIndex);
-      vTexIndex = aVertexTexIndex - additive * ${_maxTextures.toDouble()};
+      vTexIndex = aVertexTexIndex - additive * ${_maxTextures.toStringAsFixed(1)};
       vAlphaMultiplier = 1.0 - additive;''';
 
     return isWebGL2 ? '''
@@ -474,6 +474,9 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
       // 3. Issue the grouped draw call.
       gl.drawElements(WebGL.TRIANGLES, groupCount, WebGL.UNSIGNED_SHORT, groupOffset * 2);
       renderStatistics.drawCount += 1;
+      if (debug_draw.stagexlDebugDraw && debug_draw.debugDraw.wireframes) {
+        renderContext._wireframe.draw(activeShader, groupOffset, groupCount, 9);
+      }
 
       // Advance to the next command after the group.
       cmdIndex = lookahead;
@@ -532,6 +535,11 @@ class RenderProgramBatchWebGL extends RenderProgramWebGL<void> {
         renderContext.activateRenderTextureAt(run.textures[i], i, flush: false);
       }
       gl.drawElements(WebGL.TRIANGLES, run.indexCount, WebGL.UNSIGNED_SHORT, run.indexOffset * 2);
+      if (debug_draw.stagexlDebugDraw && debug_draw.debugDraw.wireframes) {
+        renderContext._wireframe.draw(shader, run.indexOffset, run.indexCount, slice.vertexFloatStride,
+            vertices: vertexBuffer, elements: indexBuffer, indices: slice.upload._indexData,
+            vertexByteOffset: vertexByteOffset, shaderScissor: slice.shaderScissor);
+      }
       renderStatistics.drawCount++;
       renderStatistics.vertexCount += run.vertexCount;
       renderStatistics.indexCount += run.indexCount;

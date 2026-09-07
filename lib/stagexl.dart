@@ -21,6 +21,7 @@ import 'src/internal/environment.dart' as env;
 import 'src/media.dart';
 
 export 'src/animation.dart';
+export 'src/debug/debug_draw.dart';
 export 'src/display.dart';
 export 'src/display_ex.dart';
 export 'src/drawing.dart';

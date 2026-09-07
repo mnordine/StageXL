@@ -1,6 +1,9 @@
 part of '../engine.dart';
 
 class RenderProgramTriangleWebGL extends RenderProgramWebGL<void> {
+  @override
+  int get _vertexStride => 6;
+
   // aVertexPosition:   Float32(x), Float32(y)
   // aVertexAlpha:      Float32(r), Float32(g), Float32(b), Float32(a)
 
