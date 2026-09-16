@@ -15,6 +15,7 @@ class WebAudioApiSound extends Sound {
   final AudioBuffer _audioBuffer;
   late final _loopAudioBuffers = <num, AudioBuffer>{};
 
+  static final _needsLoopGuard = needsWebAudioLoopGuard(window.navigator.userAgent);
   static final _loaders = <String, _LoadTask>{};
 
   WebAudioApiSound._(this._audioBuffer);
@@ -139,7 +140,7 @@ class WebAudioApiSound extends Sound {
   // points so playback wraps without changing the sound's duration or samples.
   // Repeat the first sample in the guard for interpolation at fractional ends.
   AudioBuffer _getLoopAudioBuffer(num startTime, num duration) {
-    if (startTime + duration < length) return _audioBuffer;
+    if (!_needsLoopGuard || startTime + duration < length) return _audioBuffer;
     return _loopAudioBuffers.putIfAbsent(startTime, () => _createLoopAudioBuffer(startTime));
   }
 
