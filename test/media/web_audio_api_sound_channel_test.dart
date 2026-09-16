@@ -7,6 +7,7 @@ import 'dart:js_interop_unsafe';
 import 'dart:typed_data';
 
 import 'package:stagexl/stagexl.dart';
+import 'package:stagexl/src/internal/web_audio_quirks.dart';
 import 'package:web/web.dart' as web;
 import 'package:test/test.dart';
 
@@ -76,8 +77,12 @@ void main() {
 
     expect(once.loop, isFalse);
     expect(sound.length, once.buffer!.duration);
-    expect(loop.buffer, isNot(same(once.buffer)));
-    expect(loop.buffer!.length, once.buffer!.length + 1);
+    if (needsWebAudioLoopGuard(web.window.navigator.userAgent)) {
+      expect(loop.buffer, isNot(same(once.buffer)));
+      expect(loop.buffer!.length, once.buffer!.length + 1);
+    } else {
+      expect(loop.buffer, same(once.buffer), reason: 'unaffected browsers must not copy audio buffers');
+    }
     for (var channel = 0; channel < once.buffer!.numberOfChannels; channel++) {
       expect(loop.buffer!.getChannelData(channel).toDart.take(once.buffer!.length),
           orderedEquals(once.buffer!.getChannelData(channel).toDart));
