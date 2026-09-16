@@ -95,7 +95,7 @@ class WebAudioApiSoundChannel extends SoundChannel {
     } else if (_loop) {
       _paused = false;
       _sourceNode = WebAudioApiMixer.audioContext.createBufferSource();
-      _sourceNode.buffer = _webAudioApiSound._audioBuffer;
+      _sourceNode.buffer = _webAudioApiSound._getLoopAudioBuffer(_startTime, _duration);
       _sourceNode.loop = true;
       _sourceNode.loopStart = _startTime;
       _sourceNode.loopEnd = _startTime + _duration;
