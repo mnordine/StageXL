@@ -4,8 +4,8 @@ class WebAudioApiSoundChannel extends SoundChannel {
   final WebAudioApiSound _webAudioApiSound;
   late SoundTransform _soundTransform;
   late final WebAudioApiMixer _mixer;
-  final _analyserNode = WebAudioApiMixer.audioContext.createAnalyser();
-  late final WebAudioApiSoundAnalyzer _soundAnalyzer;
+  AnalyserNode? _analyserNode;
+  WebAudioApiSoundAnalyzer? _soundAnalyzer;
 
   late AudioBufferSourceNode _sourceNode;
   StreamSubscription<html.Event>? _sourceNodeEndedSubscription;
@@ -28,8 +28,6 @@ class WebAudioApiSoundChannel extends SoundChannel {
     _loop = loop;
 
     _mixer = WebAudioApiMixer(SoundMixer._webAudioApiMixer!.inputNode);
-    _analyserNode.connect(_mixer.inputNode);
-    _soundAnalyzer = WebAudioApiSoundAnalyzer(_analyserNode);
     _mixer.applySoundTransform(_soundTransform);
 
     paused = false;
@@ -99,7 +97,7 @@ class WebAudioApiSoundChannel extends SoundChannel {
       _sourceNode.loop = true;
       _sourceNode.loopStart = _startTime;
       _sourceNode.loopEnd = _startTime + _duration;
-      _sourceNode.connect(_analyserNode);
+      _sourceNode.connect(_analyserNode ?? _mixer.inputNode);
       _sourceNode.start(0, _startTime + _position);
       _timeOffset = WebAudioApiMixer.audioContext.currentTime - _position;
     } else {
@@ -107,7 +105,7 @@ class WebAudioApiSoundChannel extends SoundChannel {
       _sourceNode = WebAudioApiMixer.audioContext.createBufferSource();
       _sourceNode.buffer = _webAudioApiSound._audioBuffer;
       _sourceNode.loop = false;
-      _sourceNode.connect(_analyserNode);
+      _sourceNode.connect(_analyserNode ?? _mixer.inputNode);
       _sourceNode.start(0, _startTime + _position, _duration - _position);
       _sourceNodeEndedSubscription = _sourceNode.onEnded.listen(_onEnded);
       _timeOffset = WebAudioApiMixer.audioContext.currentTime - _position;
@@ -124,7 +122,25 @@ class WebAudioApiSoundChannel extends SoundChannel {
   }
 
   @override
-  SoundAnalyzer get soundAnalyzer => _soundAnalyzer;
+  SoundAnalyzer? get soundAnalyzer => _soundAnalyzer;
+
+  @override
+  SoundAnalyzer? createSoundAnalyzer() {
+    if (_stopped) return null;
+    if (_soundAnalyzer != null) return _soundAnalyzer;
+
+    // Allocate before changing the playback graph so allocation failure leaves audio playing.
+    final analyserNode = WebAudioApiMixer.audioContext.createAnalyser();
+    analyserNode.connect(_mixer.inputNode);
+
+    if (!_paused) {
+      _sourceNode.disconnect();
+      _sourceNode.connect(analyserNode);
+    }
+
+    _analyserNode = analyserNode;
+    return _soundAnalyzer = WebAudioApiSoundAnalyzer(analyserNode);
+  }
 
   //---------------------------------------------------------------------------
 
@@ -164,7 +180,12 @@ class WebAudioApiSoundChannel extends SoundChannel {
     _sourceNodeEndedSubscription = null;
 
     _sourceNode.disconnect();
-    _analyserNode.disconnect();
+
+    _analyserNode?.disconnect();
+    _analyserNode = null;
+
+    _soundAnalyzer = null;
+
     _mixer.inputNode.disconnect();
 
     dispatchEvent(Event(Event.COMPLETE));
