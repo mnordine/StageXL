@@ -19,6 +19,9 @@ class VideoLoader {
   final _urls = <String>[];
   var _loadData = false;
   String? _activeObjectUrl;
+  final _abortController = AbortController();
+  var _cancelled = false;
+  var _references = 1;
 
   VideoLoader(List<String> urls, bool loadData, bool corsEnabled) {
     if (corsEnabled) video.crossOrigin = 'anonymous';
@@ -32,6 +35,27 @@ class VideoLoader {
   }
 
   Future<HTMLVideoElement> get done => _completer.future;
+
+  bool get cancelled => _cancelled;
+
+  void retain() => _references++;
+
+  void release() {
+    if (--_references == 0) cancel();
+  }
+
+  void cancel() {
+    if (_cancelled) return;
+    _cancelled = true;
+    _abortController.abort();
+    _onCanPlaySubscription.cancel();
+    _onErrorSubscription.cancel();
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+    _revokeActiveObjectUrl();
+    if (!_completer.isCompleted) _completer.completeError(LoadError('Video load cancelled.'));
+  }
 
   //---------------------------------------------------------------------------
 
@@ -49,6 +73,8 @@ class VideoLoader {
   }
 
   void _loadNextUrl() {
+    if (_cancelled) return;
+    _revokeActiveObjectUrl();
     if (_urls.isEmpty) {
       _loadFailed();
     } else if (_loadData) {
@@ -71,16 +97,19 @@ class VideoLoader {
 
   Future<void> _loadVideoData(String url) async {
     try {
-      final response = await window.fetch(url.toJS).toDart;
+      final response = await window.fetch(url.toJS, RequestInit(signal: _abortController.signal)).toDart;
+      if (_cancelled) return;
 
       if (!response.ok) {
         throw LoadError('Failed to load $url. (${response.status} ${response.statusText})');
       }
 
       final blob = await response.blob().toDart;
+      if (_cancelled) return;
       final objectUrl = URL.createObjectURL(blob);
       _setVideoSource(objectUrl);
     } catch (error) {
+      if (_cancelled) return;
       final loadError = error is LoadError
           ? error
           : LoadError('Failed to load $url.', error);

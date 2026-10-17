@@ -62,7 +62,10 @@ class TextureAtlasResourceRegistry extends ResourceRegistry<TextureAtlas> {
     resources.addResource(kind, name, url, tuple.atlasFuture);
 
     _loaders[name] = tuple._loader;
-    tuple.atlasFuture.then((_) => _loaders.remove(name)).catchError((_) => _loaders.remove(name));
+    void removeLoader() {
+      if (identical(_loaders[name], tuple._loader)) _loaders.remove(name);
+    }
+    tuple.atlasFuture.then((_) => removeLoader(), onError: (Object _) => removeLoader());
   }
 
   @override
@@ -89,11 +92,34 @@ class VideoResourceRegistry extends ResourceRegistry<Video> {
   @override
   final kind = 'Video';
 
+  final _loaders = <String, Future<Video>>{};
+
   VideoResourceRegistry(super.resources);
 
   void add(String name, String url, [VideoLoadOptions? options]) {
     final loader = Video.load(url, options, resources.manifest);
     resources.addResource(kind, name, url, loader);
+    _loaders[name] = loader;
+    final resource = resources.manager._resourceMap['$kind.$name'];
+    unawaited(loader.then<void>((video) {
+      if (!identical(resources.manager._resourceMap['$kind.$name'], resource)) video.dispose();
+      if (identical(_loaders[name], loader)) _loaders.remove(name);
+    }, onError: (Object _) {
+      if (identical(_loaders[name], loader)) _loaders.remove(name);
+    }));
+  }
+
+  @override
+  ResourceManagerResource? remove(String name, {bool dispose = false}) {
+    final resource = super.remove(name);
+    if (resource == null) return null;
+    if (resource.value case final Video video) {
+      if (dispose) video.dispose();
+    } else {
+      final loader = _loaders.remove(name);
+      if (loader != null) Video.cancel(loader);
+    }
+    return resource;
   }
 }
 
@@ -107,17 +133,17 @@ class SoundResourceRegistry extends ResourceRegistry<Sound> {
   SoundResourceRegistry(super.resources);
 
   void add(String name, String url, [SoundLoadOptions? options]) {
-    final loader = Sound.load(url, options, resources.manifest) as Future<Sound?>;
-    loader.catchError((_) {
-      _soundDatas.remove(name);
-      return null;
-    });
-
-    resources.addResource(kind, name, url, loader);
-
-    _soundDatas[name] = _SoundData()
+    final data = _SoundData()
       ..url = url
       ..engine = options?.engine ?? Sound.defaultLoadOptions.engine ?? SoundMixer.engine;
+    final loader = data.loader = Sound.load(url, options, resources.manifest);
+    _soundDatas[name] = data;
+    unawaited(loader.then<void>((sound) {
+      if (sound is AudioElementSound && !identical(_soundDatas[name], data)) sound.dispose();
+    }, onError: (Object _) {
+      if (identical(_soundDatas[name], data)) _soundDatas.remove(name);
+    }));
+    resources.addResource(kind, name, url, loader);
   }
 
   @override
@@ -126,10 +152,13 @@ class SoundResourceRegistry extends ResourceRegistry<Sound> {
 
     if (!_soundDatas.containsKey(name)) return resourceManagerResource;
 
-    // TODO: Just Web Audio API for now, add support for Audio Element (IE 11)
     final data = _soundDatas[name]!;
     if (data.engine == .WebAudioApi) {
-      WebAudioApiSound.cancel(data.url);
+      WebAudioApiSound.cancelLoad(data.loader);
+    } else if (data.engine == .AudioElement) {
+      AudioElementSound.cancel(data.loader);
+      final sound = resourceManagerResource?.value;
+      if (dispose && sound is AudioElementSound) sound.dispose();
     }
 
     _soundDatas.remove(name);
