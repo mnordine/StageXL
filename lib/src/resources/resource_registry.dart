@@ -197,9 +197,7 @@ class TextFileResourceRegistry extends ResourceRegistry<String> {
 
   void add(String name, String url) {
     final mappedUrl = resources.manifest.mapUrl(url);
-    final loader = http.get(.parse(mappedUrl)).then((text) => text.body, onError: (error) {
-      throw StateError('Failed to load text file.');
-    });
+    final loader = _loadResourceText(mappedUrl);
     resources.addResource(kind, name, url, loader);
   }
 }
@@ -212,11 +210,9 @@ class AssetManifestResourceRegistry extends ResourceRegistry<AssetManifest> {
 
   void add(String name, String url, [String storagePrefix = '/']) {
     final mappedUrl = resources.manifest.mapUrl(url);
-    final loader = http.get(.parse(mappedUrl)).then((resp) {
-      final parsed = json.decode(resp.body) as Map<String, dynamic>;
+    final loader = _loadResourceText(mappedUrl).then((text) {
+      final parsed = json.decode(text) as Map<String, dynamic>;
       return AssetManifest(parsed.cast<String, String>(), storagePrefix);
-    }, onError: (error) {
-      throw StateError('Failed to load asset manifest.');
     });
 
     resources.addResource(kind, name, url, loader);
@@ -232,4 +228,12 @@ class CustomObjectResourceRegistry extends ResourceRegistry<dynamic> {
   void add(String name, Future loader) {
     resources.addResource(kind, name, '', loader);
   }
+}
+
+Future<String> _loadResourceText(String url) async {
+  final response = await window.fetch(url.toJS).toDart;
+  if (!response.ok) {
+    throw LoadError('Failed to load $url. (${response.status} ${response.statusText})');
+  }
+  return (await response.text().toDart).toDart;
 }
