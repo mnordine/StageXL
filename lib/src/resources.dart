@@ -12,7 +12,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:js_interop';
 import 'dart:typed_data';
-import 'package:http/http.dart' as http;
 import 'package:meta/meta.dart';
 import 'package:xml/xml.dart';
 import 'package:web/web.dart' hide Float32List, WebGL;
