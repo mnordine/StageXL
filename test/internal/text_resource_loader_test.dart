@@ -1,6 +1,7 @@
 @TestOn('browser')
 library;
 
+import 'dart:async';
 import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
 
@@ -12,6 +13,36 @@ void main() {
   late JSFunction fetch;
   setUp(() => fetch = globalContext.getProperty<JSFunction>('fetch'.toJS));
   tearDown(() => globalContext.setProperty('fetch'.toJS, fetch));
+
+  for (final isManifest in [false, true]) {
+    test('disposing ${isManifest ? 'manifest' : 'text'} resources aborts a pending body', () async {
+      final body = Completer<JSString>();
+      final reading = Completer<void>();
+      late web.AbortSignal signal;
+      _setFetch((_, init) async {
+        signal = init!.signal!;
+        return (JSObject()
+          ..setProperty('ok'.toJS, true.toJS)
+          ..setProperty('text'.toJS, (() {
+            reading.complete();
+            return body.future.toJS;
+          }).toJS)) as web.Response;
+      });
+      final manager = ResourceManager();
+      if (isManifest) {
+        manager.assetManifests.add('resource', '/manifest.json');
+      } else {
+        manager.addTextFile('resource', '/text.txt');
+      }
+      final resource = manager.resources.single;
+      await reading.future;
+      manager.dispose();
+      await resource.complete;
+      expect(signal.aborted, isTrue);
+      expect(resource.error, isA<LoadCancelledError>());
+      body.complete('{}'.toJS);
+    });
+  }
 
   test('text resources and manifests use native text responses', () async {
     final urls = <String>[];
