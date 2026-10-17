@@ -7,6 +7,10 @@ class _LoadTask {
   final Completer<Sound> completer;
 }
 
+class _SoundLoadCancelled extends LoadError {
+  _SoundLoadCancelled(String url) : super('Sound load cancelled: $url');
+}
+
 class WebAudioApiSound extends Sound {
   final AudioBuffer _audioBuffer;
 
@@ -27,6 +31,7 @@ class WebAudioApiSound extends Sound {
         final sound = await _tryAudioUrl(url, audioUrl);
         return sound;
       } catch (e) {
+        if (e is _SoundLoadCancelled) rethrow;
         final loadError = LoadError('Failed to load $audioUrl', e);
         aggregateError.errors.add(loadError);
       }
@@ -40,6 +45,7 @@ class WebAudioApiSound extends Sound {
   }
 
   static Future<Sound> _tryAudioUrl(String key, String audioUrl) {
+    cancel(key);
     final completer = Completer<Sound>();
     final controller = AbortController();
     final task = _LoadTask(controller, completer);
@@ -58,15 +64,16 @@ class WebAudioApiSound extends Sound {
           throw LoadError('Failed to load $audioUrl. (${response.status} ${response.statusText})');
         }
 
-        final audioData = (await response.arrayBuffer().toDart).toDart;
+        final audioData = await response.arrayBuffer().toDart;
 
         if (!identical(_loaders[key], task)) {
           return;
         }
 
         final audioContext = WebAudioApiMixer.audioContext;
-        final audioBuffer = await audioContext.decodeAudioData(audioData.toJS).toDart;
+        final audioBuffer = await audioContext.decodeAudioData(audioData).toDart;
 
+        if (!identical(_loaders[key], task)) return;
         final currentTask = _loaders.remove(key);
         if (currentTask == null || currentTask.completer.isCompleted) {
           return;
@@ -74,6 +81,7 @@ class WebAudioApiSound extends Sound {
 
         currentTask.completer.complete(WebAudioApiSound._(audioBuffer));
       } catch (error, stackTrace) {
+        if (!identical(_loaders[key], task)) return;
         final currentTask = _loaders.remove(key);
         if (currentTask == null || currentTask.completer.isCompleted) {
           return;
@@ -99,7 +107,7 @@ class WebAudioApiSound extends Sound {
 
     task.controller.abort();
     if (!task.completer.isCompleted) {
-      task.completer.completeError('sound already cancelled');
+      task.completer.completeError(_SoundLoadCancelled(key));
     }
   }
 

@@ -40,6 +40,7 @@ class ImageBitmapLoader implements BaseImageLoader<ImageBitmap> {
       final imageBitmap = await window.createImageBitmap(blob).toDart;
 
       if (_cancelled) {
+        imageBitmap.close();
         _completeCancelled();
         return;
       }
@@ -66,6 +67,7 @@ class ImageBitmapLoader implements BaseImageLoader<ImageBitmap> {
 
     _cancelled = true;
     _abortController.abort();
+    _completeCancelled();
   }
 
   void _completeSuccess(ImageBitmap bitmap) {
