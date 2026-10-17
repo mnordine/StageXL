@@ -28,6 +28,7 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
   final AssetManifest _manifest;
 
   BaseImageLoader? _imageLoader;
+  RenderTexture? _renderTexture;
   final _fetchControllers = <AbortController>[];
   var _cancelled = false;
 
@@ -43,6 +44,7 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
 
   @override
   Future<String> getSource() async {
+    if (_cancelled) throw LoadError('texture atlas load cancelled');
     final controller = AbortController();
     _fetchControllers.add(controller);
 
@@ -92,10 +94,13 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
 
     _imageLoader?.cancel();
     _imageLoader = null;
+    _renderTexture?.dispose();
+    _renderTexture = null;
   }
 
   @override
   Future<RenderTextureQuad> getRenderTextureQuad(String filename) async {
+    if (_cancelled) throw LoadError('texture atlas load cancelled');
     final loaderUrl = _loadInfo.loaderUrl;
     final pixelRatio = _loadInfo.pixelRatio;
 
@@ -115,6 +120,7 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
         }
       }
 
+      if (_cancelled) throw LoadError('texture atlas load cancelled');
       final imageUrl = _manifest.mapUrl(replaceFilename(loaderUrl, filename));
       if (env.isImageBitmapSupported) {
         final loader = _imageLoader = ImageBitmapLoader(imageUrl);
@@ -128,10 +134,16 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
       }
     }
 
+    if (_cancelled) {
+      renderTexture.dispose();
+      throw LoadError('texture atlas load cancelled');
+    }
+    _renderTexture = renderTexture;
     return renderTexture.quad.withPixelRatio(pixelRatio);
   }
 
   Future<RenderTexture> _loadCompressedTexture(String filename) async {
+    if (_cancelled) throw LoadError('compressed texture load cancelled');
     final filenameParts = filename.split('.');
     var ext = filenameParts.last;
 
