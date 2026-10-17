@@ -142,6 +142,54 @@ void main() {
     });
   }
 
+  for (final kind in ['bitmap', 'atlas', 'sound', 'video', 'text', 'manifest']) {
+    test('duplicate $kind names are ignored without starting another download', () async {
+      final response = Completer<web.Response>();
+      final urls = <String>[];
+      _setFetch((url, _) {
+        urls.add(url);
+        return response.future;
+      });
+      final manager = ResourceManager();
+      void add() {
+        switch (kind) {
+          case 'bitmap': manager.addBitmapData('same', '/same.png');
+          case 'atlas': manager.addTextureAtlas('same', '/same.json');
+          case 'sound': manager.addSound('same', '/same.wav', _options());
+          case 'video': manager.addVideo('same', '/same.webm', VideoLoadOptions()..loadData = true);
+          case 'text': manager.addTextFile('same', '/same.txt');
+          case 'manifest': manager.assetManifests.add('same', '/same.json');
+        }
+      }
+      add();
+      final resource = manager.resources.single;
+      expect(add, returnsNormally);
+      expect(manager.resources.single, same(resource));
+      await _drain();
+      expect(urls, hasLength(1));
+      response.completeError(StateError('End duplicate download verification.'));
+      await resource.complete;
+      manager.dispose();
+      await _drain();
+    });
+  }
+
+  test('duplicate completed resources keep their original values', () async {
+    final manager = ResourceManager();
+    manager.texts.add('same', 'first');
+    manager.customObjects.add('same', Future.value(1));
+    await manager.load();
+
+    manager.texts.add('same', 'second');
+    manager.customObjects.add('same', Future.value(2));
+    await manager.load();
+
+    expect(manager.resources, hasLength(2));
+    expect(manager.texts.get('same'), 'first');
+    expect(manager.customObjects.get('same'), 1);
+    manager.dispose();
+  });
+
   test('disposing an atlas aborts a compressed texture body', () async {
     final textureBody = Completer<JSArrayBuffer>();
     final reading = Completer<void>();

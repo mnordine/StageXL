@@ -30,6 +30,7 @@ class BitmapDataResourceRegistry extends ResourceRegistry<BitmapData> {
   BitmapDataResourceRegistry(super.resources);
 
   void add(String name, String url, [BitmapDataLoadOptions? options]) {
+    if (contains(name)) return;
     final loader = BitmapData.load(url, options, resources.manifest);
     resources.addResource(kind, name, url, loader);
   }
@@ -56,6 +57,7 @@ class TextureAtlasResourceRegistry extends ResourceRegistry<TextureAtlas> {
   TextureAtlasResourceRegistry(super.resources);
 
   void add(String name, String url, [TextureAtlasFormat? textureAtlasFormat, BitmapDataLoadOptions? options]) {
+    if (contains(name)) return;
     textureAtlasFormat ??= .jsonArray;
 
     final tuple = TextureAtlas.load(url, textureAtlasFormat, options, resources.manifest);
@@ -92,6 +94,7 @@ class VideoResourceRegistry extends ResourceRegistry<Video> {
   VideoResourceRegistry(super.resources);
 
   void add(String name, String url, [VideoLoadOptions? options]) {
+    if (contains(name)) return;
     final loader = Video.load(url, options, resources.manifest);
     resources.addResource(kind, name, url, loader);
   }
@@ -107,6 +110,7 @@ class SoundResourceRegistry extends ResourceRegistry<Sound> {
   SoundResourceRegistry(super.resources);
 
   void add(String name, String url, [SoundLoadOptions? options]) {
+    if (contains(name)) return;
     final loader = Sound.load(url, options, resources.manifest) as Future<Sound?>;
     loader.catchError((_) {
       _soundDatas.remove(name);
@@ -144,6 +148,7 @@ class SoundSpriteResourceRegistry extends ResourceRegistry<SoundSprite> {
   SoundSpriteResourceRegistry(super.resources);
 
   void add(String name, String url, [SoundLoadOptions? options]) {
+    if (contains(name)) return;
     final loader = SoundSprite.load(resources.manifest.mapUrl(url), options);
     resources.addResource(kind, name, url, loader);
   }
@@ -156,6 +161,7 @@ class TextResourceRegistry extends ResourceRegistry<String> {
   TextResourceRegistry(super.resources);
 
   void add(String name, String text) {
+    if (contains(name)) return;
     resources.addResource(kind, name, '', Future.value(text));
   }
 }
@@ -167,6 +173,7 @@ class TextFileResourceRegistry extends ResourceRegistry<String> {
   TextFileResourceRegistry(super.resources);
 
   void add(String name, String url) {
+    if (contains(name)) return;
     final mappedUrl = resources.manifest.mapUrl(url);
     final loader = _loadResourceText(mappedUrl);
     resources.addResource(kind, name, url, loader);
@@ -180,6 +187,7 @@ class AssetManifestResourceRegistry extends ResourceRegistry<AssetManifest> {
   AssetManifestResourceRegistry(super.resources);
 
   void add(String name, String url, [String storagePrefix = '/']) {
+    if (contains(name)) return;
     final mappedUrl = resources.manifest.mapUrl(url);
     final loader = _loadResourceText(mappedUrl).then((text) {
       final parsed = json.decode(text) as Map<String, dynamic>;
@@ -197,6 +205,7 @@ class CustomObjectResourceRegistry extends ResourceRegistry<dynamic> {
   CustomObjectResourceRegistry(super.resources);
 
   void add(String name, Future loader) {
+    if (contains(name)) return;
     resources.addResource(kind, name, '', loader);
   }
 }
