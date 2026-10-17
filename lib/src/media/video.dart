@@ -39,6 +39,10 @@ part of '../media.dart';
 
 class Video {
   final HTMLVideoElement videoElement;
+  final VideoLoader _loader;
+  static final _loaders = <Future<Video>, VideoLoader>{};
+  final _subscriptions = <StreamSubscription<html.Event>>[];
+  var _disposed = false;
   var loop = false;
 
   final _endedEvent = StreamController<Video>.broadcast();
@@ -46,11 +50,29 @@ class Video {
   final _errorEvent = StreamController<Video>.broadcast();
   final _playEvent = StreamController<Video>.broadcast();
 
-  Video._(this.videoElement) {
-    videoElement.onEnded.listen(_onEnded);
-    videoElement.onPause.listen(_onPause);
-    videoElement.onError.listen(_onError);
-    videoElement.onPlay.listen(_onPlay);
+  Video._(this.videoElement, this._loader) {
+    _subscriptions.add(videoElement.onEnded.listen(_onEnded));
+    _subscriptions.add(videoElement.onPause.listen(_onPause));
+    _subscriptions.add(videoElement.onError.listen(_onError));
+    _subscriptions.add(videoElement.onPlay.listen(_onPlay));
+  }
+
+  static void cancel(Future<Video> future) => _loaders.remove(future)?.cancel();
+
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    for (final subscription in _subscriptions) {
+      subscription.cancel();
+    }
+    videoElement.pause();
+    videoElement.removeAttribute('src');
+    videoElement.load();
+    _loader.release();
+    _endedEvent.close();
+    _pauseEvent.close();
+    _errorEvent.close();
+    _playEvent.close();
   }
 
   Stream<Video> get onEnded => _endedEvent.stream;
@@ -75,27 +97,40 @@ class Video {
   /// for the ResourceManager.addVideo method.
 
   static Future<Video> load(String url,
-      [VideoLoadOptions? videoLoadOptions, AssetManifest? manifest]) async {
+      [VideoLoadOptions? videoLoadOptions, AssetManifest? manifest]) {
     final options = videoLoadOptions ?? Video.defaultLoadOptions;
     final loadData = options.loadData;
     final corsEnabled = options.corsEnabled;
     final videoUrls = options.getOptimalVideoUrls(url, manifest);
     final videoLoader = VideoLoader(videoUrls, loadData, corsEnabled);
-    final videoElement = await videoLoader.done;
-    return Video._(videoElement);
+    late final Future<Video> future;
+    Future<Video> complete() async {
+      try {
+        final element = await videoLoader.done;
+        if (videoLoader.cancelled) throw LoadError('Video load cancelled: $url');
+        return Video._(element, videoLoader);
+      } finally {
+        _loaders.remove(future);
+      }
+    }
+    future = complete();
+    _loaders[future] = videoLoader;
+    return future;
   }
 
   /// Clone this video instance and the underlying HTML VideoElement to play
   /// the video independantly from this video.
 
   Future<Video> clone() {
+    if (_disposed) throw StateError('Cannot clone a disposed video.');
+    _loader.retain();
     final videoElement = this.videoElement.cloneNode(true) as HTMLVideoElement;
     final completer = Completer<Video>();
     late StreamSubscription<html.Event> onCanPlaySubscription;
     late StreamSubscription<html.Event> onErrorSubscription;
 
     void onCanPlay(html.Event e) {
-      final video = Video._(videoElement);
+      final video = Video._(videoElement, _loader);
       video.volume = volume;
       video.muted = muted;
       onCanPlaySubscription.cancel();
@@ -104,6 +139,7 @@ class Video {
     }
 
     void onError(html.Event e) {
+      _loader.release();
       onCanPlaySubscription.cancel();
       onErrorSubscription.cancel();
       final error = videoElement.error;
@@ -113,6 +149,7 @@ class Video {
 
     onCanPlaySubscription = videoElement.onCanPlay.listen(onCanPlay);
     onErrorSubscription = videoElement.onError.listen(onError);
+    videoElement.load();
     return completer.future;
   }
 
