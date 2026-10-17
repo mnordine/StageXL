@@ -7,6 +7,9 @@ class _SoundData {
 }
 
 class ResourceManager {
+  // Called for conflicting registrations; exact duplicates are silent. The existing resource is retained.
+  static void Function(String message)? onResourceConflict;
+
   final _resourceMap = <String, ResourceManagerResource>{};
   final _registries = <String, ResourceRegistry<dynamic>>{};
 
