@@ -18,45 +18,9 @@ abstract class ResourceRegistry<T> {
 
   bool contains(String name) => resources.containsResource(kind, name);
 
-  ResourceManagerResource? remove(String name, {bool dispose = false}) {
-    _definitions.remove(name);
-    return resources.manager._removeResource(kind, name);
-  }
+  ResourceManagerResource? remove(String name, {bool dispose = false}) => resources.manager._removeResource(kind, name);
 
   T get(String name) => resources.getResourceValue(kind, name) as T;
-
-  final _definitions = <String, (String, Object?)>{};
-
-  bool _ignoreDuplicate(String name, String url, [Object? options]) {
-    final definition = (url, options);
-    if (!contains(name)) {
-      _definitions[name] = definition;
-      return false;
-    }
-    if (_definitions[name] != definition) {
-      final existing = resources.manager._resourceMap['$kind.$name']!;
-      final message = 'Conflicting $kind resource "$name" (existing URL: "${existing.url}", attempted URL: "$url"); '
-          'keeping the first definition. Remove it before replacing.';
-      assert(() {
-        print('StageXL: $message');
-        return true;
-      }(), message);
-      ResourceManager.onResourceConflict?.call(message);
-    }
-    return true;
-  }
-
-  String _bitmapOptions(String url, BitmapDataLoadOptions? options) {
-    final value = options ?? BitmapData.defaultLoadOptions;
-    return json.encode([resources.manifest.mapUrl(url), value.png, value.jpg, value.webp,
-      value.avif, value.pixelRatios, value.corsEnabled]);
-  }
-
-  String _soundOptions(String url, SoundLoadOptions? options) {
-    final value = options ?? Sound.defaultLoadOptions;
-    return json.encode([resources.manifest.mapUrl(url), value.mp3, value.mp4, value.ogg, value.opus, value.ac3,
-      value.wav, value.alternativeUrls, value.ignoreErrors, value.corsEnabled, (value.engine ?? SoundMixer.engine).name]);
-  }
 }
 
 class BitmapDataResourceRegistry extends ResourceRegistry<BitmapData> {
@@ -66,7 +30,7 @@ class BitmapDataResourceRegistry extends ResourceRegistry<BitmapData> {
   BitmapDataResourceRegistry(super.resources);
 
   void add(String name, String url, [BitmapDataLoadOptions? options]) {
-    if (_ignoreDuplicate(name, url, _bitmapOptions(url, options))) return;
+    if (contains(name)) return;
     final loader = BitmapData.load(url, options, resources.manifest);
     resources.addResource(kind, name, url, loader);
   }
@@ -93,9 +57,8 @@ class TextureAtlasResourceRegistry extends ResourceRegistry<TextureAtlas> {
   TextureAtlasResourceRegistry(super.resources);
 
   void add(String name, String url, [TextureAtlasFormat? textureAtlasFormat, BitmapDataLoadOptions? options]) {
+    if (contains(name)) return;
     textureAtlasFormat ??= .jsonArray;
-    final format = textureAtlasFormat is _TextureAtlasFormatJson ? _TextureAtlasFormatJson : textureAtlasFormat;
-    if (_ignoreDuplicate(name, url, (format, _bitmapOptions(url, options)))) return;
 
     final tuple = TextureAtlas.load(url, textureAtlasFormat, options, resources.manifest);
     resources.addResource(kind, name, url, tuple.atlasFuture);
@@ -136,10 +99,7 @@ class VideoResourceRegistry extends ResourceRegistry<Video> {
   VideoResourceRegistry(super.resources);
 
   void add(String name, String url, [VideoLoadOptions? options]) {
-    final value = options ?? Video.defaultLoadOptions;
-    final definition = json.encode([resources.manifest.mapUrl(url), value.mp4, value.webm, value.ogg,
-      value.alternativeUrls, value.loadData, value.corsEnabled]);
-    if (_ignoreDuplicate(name, url, definition)) return;
+    if (contains(name)) return;
     final loader = Video.load(url, options, resources.manifest);
     resources.addResource(kind, name, url, loader);
     _loaders[name] = loader;
@@ -176,7 +136,7 @@ class SoundResourceRegistry extends ResourceRegistry<Sound> {
   SoundResourceRegistry(super.resources);
 
   void add(String name, String url, [SoundLoadOptions? options]) {
-    if (_ignoreDuplicate(name, url, _soundOptions(url, options))) return;
+    if (contains(name)) return;
     final data = _SoundData()
       ..url = url
       ..engine = options?.engine ?? Sound.defaultLoadOptions.engine ?? SoundMixer.engine;
@@ -217,7 +177,7 @@ class SoundSpriteResourceRegistry extends ResourceRegistry<SoundSprite> {
   SoundSpriteResourceRegistry(super.resources);
 
   void add(String name, String url, [SoundLoadOptions? options]) {
-    if (_ignoreDuplicate(name, url, _soundOptions(url, options))) return;
+    if (contains(name)) return;
     final loader = SoundSprite.load(resources.manifest.mapUrl(url), options);
     resources.addResource(kind, name, url, loader);
   }
@@ -230,7 +190,7 @@ class TextResourceRegistry extends ResourceRegistry<String> {
   TextResourceRegistry(super.resources);
 
   void add(String name, String text) {
-    if (_ignoreDuplicate(name, '', text)) return;
+    if (contains(name)) return;
     resources.addResource(kind, name, '', Future.value(text));
   }
 }
@@ -242,8 +202,8 @@ class TextFileResourceRegistry extends ResourceRegistry<String> {
   TextFileResourceRegistry(super.resources);
 
   void add(String name, String url) {
+    if (contains(name)) return;
     final mappedUrl = resources.manifest.mapUrl(url);
-    if (_ignoreDuplicate(name, url, mappedUrl)) return;
     final loader = _loadResourceText(mappedUrl);
     resources.addResource(kind, name, url, loader);
   }
@@ -256,8 +216,8 @@ class AssetManifestResourceRegistry extends ResourceRegistry<AssetManifest> {
   AssetManifestResourceRegistry(super.resources);
 
   void add(String name, String url, [String storagePrefix = '/']) {
+    if (contains(name)) return;
     final mappedUrl = resources.manifest.mapUrl(url);
-    if (_ignoreDuplicate(name, url, (mappedUrl, storagePrefix))) return;
     final loader = _loadResourceText(mappedUrl).then((text) {
       final parsed = json.decode(text) as Map<String, dynamic>;
       return AssetManifest(parsed.cast<String, String>(), storagePrefix);
@@ -274,7 +234,7 @@ class CustomObjectResourceRegistry extends ResourceRegistry<dynamic> {
   CustomObjectResourceRegistry(super.resources);
 
   void add(String name, Future loader) {
-    if (_ignoreDuplicate(name, '', loader)) return;
+    if (contains(name)) return;
     resources.addResource(kind, name, '', loader);
   }
 }
