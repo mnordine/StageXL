@@ -28,3 +28,8 @@ class LoadError extends Error {
     return result;
   }
 }
+
+/// Loading stopped because the owner of the resource was disposed.
+class LoadCancelledError extends LoadError {
+  LoadCancelledError() : super('Resource load cancelled.');
+}
