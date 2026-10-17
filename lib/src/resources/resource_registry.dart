@@ -54,17 +54,29 @@ class BitmapDataResourceRegistry extends ResourceRegistry<BitmapData> {
   @override
   final kind = 'BitmapData';
 
+  final _loads = <String, Future<BitmapData>>{};
+
   BitmapDataResourceRegistry(super.resources);
 
   void add(String name, String url, [BitmapDataLoadOptions? options]) {
     final loader = BitmapData.load(url, options, resources.manifest);
+    _loads[name] = loader;
     resources.addResource(kind, name, url, loader);
+    final resource = resources.manager._resourceMap['$kind.$name'];
+    unawaited(loader.then<void>((bitmap) {
+      if (!identical(resources.manager._resourceMap['$kind.$name'], resource)) bitmap.renderTexture.dispose();
+      if (identical(_loads[name], loader)) _loads.remove(name);
+    }, onError: (Object _) {
+      if (identical(_loads[name], loader)) _loads.remove(name);
+    }));
   }
 
   @override
   ResourceManagerResource? remove(String name, {bool dispose = false}) {
     final resourceManagerResource = super.remove(name);
 
+    final loader = _loads.remove(name);
+    if (loader != null) BitmapData.cancelLoad(loader);
     final bitmapData = resourceManagerResource?.value;
     if (bitmapData is BitmapData && dispose) {
       bitmapData.renderTexture.dispose();

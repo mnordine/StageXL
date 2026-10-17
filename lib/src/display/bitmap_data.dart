@@ -17,6 +17,8 @@ part of '../display.dart';
 /// performance.
 
 class BitmapData implements BitmapDrawable {
+  static final _loads = <Future<BitmapData>, _BitmapDataLoadTask>{};
+
   final num width;
   final num height;
   final RenderTextureQuad renderTextureQuad;
@@ -68,8 +70,33 @@ class BitmapData implements BitmapDrawable {
   /// Loads a BitmapData from the given url.
 
   static Future<BitmapData> load(String url,
-      [BitmapDataLoadOptions? options, AssetManifest? manifest]) async {
-    options = options ?? BitmapData.defaultLoadOptions;
+      [BitmapDataLoadOptions? options, AssetManifest? manifest]) {
+    final task = _BitmapDataLoadTask();
+    final future = task.completer.future;
+    _loads[future] = task;
+    Future<void> load() async {
+      try {
+        final bitmap = await _loadBitmap(url, options ?? BitmapData.defaultLoadOptions, manifest, task);
+        if (task.cancelled) {
+          bitmap.renderTexture.dispose();
+        } else {
+          task.completer.complete(bitmap);
+        }
+      } catch (error, stackTrace) {
+        if (!task.completer.isCompleted) task.completer.completeError(error, stackTrace);
+      } finally {
+        _loads.remove(future);
+      }
+    }
+    unawaited(load());
+    return future;
+  }
+
+  /// Cancels one pending load without affecting other loads of the same URL.
+  static void cancelLoad(Future<BitmapData> future) => _loads.remove(future)?.cancel();
+
+  static Future<BitmapData> _loadBitmap(String url, BitmapDataLoadOptions options,
+      AssetManifest? manifest, _BitmapDataLoadTask task) async {
     final bitmapDataFileInfo = BitmapDataLoadInfo(url, options.pixelRatios);
     final String loaderUrl;
 
@@ -80,18 +107,27 @@ class BitmapData implements BitmapDrawable {
     } else {
       loaderUrl = bitmapDataFileInfo.loaderUrl;
     }
+    if (task.cancelled) throw LoadCancelledError();
 
     final targetUrl = manifest?.mapUrl(loaderUrl) ?? url;
     final pixelRatio = bitmapDataFileInfo.pixelRatio;
 
     if (env.isImageBitmapSupported) {
       final loader = ImageBitmapLoader(targetUrl);
+      task.loader = loader;
       final imageBitmap = await loader.done;
+      if (task.cancelled) {
+        imageBitmap.close();
+        throw LoadCancelledError();
+      }
       return .fromImageBitmap(imageBitmap, pixelRatio);
     }
 
     final loader = ImageLoader(targetUrl, options.corsEnabled);
-    return loader.done.then((i) => .fromImageElement(i, pixelRatio));
+    task.loader = loader;
+    final image = await loader.done;
+    if (task.cancelled) throw LoadCancelledError();
+    return .fromImageElement(image, pixelRatio);
   }
 
   //----------------------------------------------------------------------------
@@ -261,5 +297,18 @@ class BitmapData implements BitmapDrawable {
   @override
   void render(RenderState renderState) {
     renderState.renderTextureQuad(renderTextureQuad);
+  }
+}
+
+class _BitmapDataLoadTask {
+  final completer = Completer<BitmapData>();
+  BaseImageLoader? loader;
+  var cancelled = false;
+
+  void cancel() {
+    if (cancelled || completer.isCompleted) return;
+    cancelled = true;
+    loader?.cancel();
+    completer.completeError(LoadCancelledError());
   }
 }
