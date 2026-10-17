@@ -18,9 +18,36 @@ abstract class ResourceRegistry<T> {
 
   bool contains(String name) => resources.containsResource(kind, name);
 
-  ResourceManagerResource? remove(String name, {bool dispose = false}) => resources.manager._removeResource(kind, name);
+  ResourceManagerResource? remove(String name, {bool dispose = false}) {
+    _textLoads.remove(name)?.call();
+    return resources.manager._removeResource(kind, name);
+  }
 
   T get(String name) => resources.getResourceValue(kind, name) as T;
+
+  final _textLoads = <String, void Function()>{};
+
+  Future<String> _loadText(String name, String url) {
+    final controller = AbortController();
+    final completer = Completer<String>();
+    void cancel() {
+      controller.abort();
+      if (!completer.isCompleted) completer.completeError(LoadCancelledError());
+    }
+    _textLoads[name] = cancel;
+    Future<void> load() async {
+      try {
+        final text = await _loadResourceText(url, controller.signal);
+        if (!completer.isCompleted) completer.complete(text);
+      } catch (error, stackTrace) {
+        if (!completer.isCompleted) completer.completeError(error, stackTrace);
+      } finally {
+        if (identical(_textLoads[name], cancel)) _textLoads.remove(name);
+      }
+    }
+    unawaited(load());
+    return completer.future;
+  }
 }
 
 class BitmapDataResourceRegistry extends ResourceRegistry<BitmapData> {
@@ -204,7 +231,7 @@ class TextFileResourceRegistry extends ResourceRegistry<String> {
   void add(String name, String url) {
     if (contains(name)) return;
     final mappedUrl = resources.manifest.mapUrl(url);
-    final loader = _loadResourceText(mappedUrl);
+    final loader = _loadText(name, mappedUrl);
     resources.addResource(kind, name, url, loader);
   }
 }
@@ -218,7 +245,7 @@ class AssetManifestResourceRegistry extends ResourceRegistry<AssetManifest> {
   void add(String name, String url, [String storagePrefix = '/']) {
     if (contains(name)) return;
     final mappedUrl = resources.manifest.mapUrl(url);
-    final loader = _loadResourceText(mappedUrl).then((text) {
+    final loader = _loadText(name, mappedUrl).then((text) {
       final parsed = json.decode(text) as Map<String, dynamic>;
       return AssetManifest(parsed.cast<String, String>(), storagePrefix);
     });
@@ -239,8 +266,8 @@ class CustomObjectResourceRegistry extends ResourceRegistry<dynamic> {
   }
 }
 
-Future<String> _loadResourceText(String url) async {
-  final response = await window.fetch(url.toJS).toDart;
+Future<String> _loadResourceText(String url, AbortSignal signal) async {
+  final response = await window.fetch(url.toJS, RequestInit(signal: signal)).toDart;
   if (!response.ok) {
     throw LoadError('Failed to load $url. (${response.status} ${response.statusText})');
   }
