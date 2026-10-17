@@ -25,6 +25,10 @@ abstract class ResourceRegistry<T> {
 
   T get(String name) => resources.getResourceValue(kind, name) as T;
 
+  void _checkName(String name) {
+    if (contains(name)) throw StateError("ResourceManager already contains a resource called '$name'");
+  }
+
   final _textLoads = <String, void Function()>{};
 
   Future<String> _loadText(String name, String url) {
@@ -59,6 +63,7 @@ class BitmapDataResourceRegistry extends ResourceRegistry<BitmapData> {
   BitmapDataResourceRegistry(super.resources);
 
   void add(String name, String url, [BitmapDataLoadOptions? options]) {
+    _checkName(name);
     final loader = BitmapData.load(url, options, resources.manifest);
     _loads[name] = loader;
     resources.addResource(kind, name, url, loader);
@@ -95,6 +100,7 @@ class TextureAtlasResourceRegistry extends ResourceRegistry<TextureAtlas> {
   TextureAtlasResourceRegistry(super.resources);
 
   void add(String name, String url, [TextureAtlasFormat? textureAtlasFormat, BitmapDataLoadOptions? options]) {
+    _checkName(name);
     textureAtlasFormat ??= .jsonArray;
 
     final tuple = TextureAtlas.load(url, textureAtlasFormat, options, resources.manifest);
@@ -136,6 +142,7 @@ class VideoResourceRegistry extends ResourceRegistry<Video> {
   VideoResourceRegistry(super.resources);
 
   void add(String name, String url, [VideoLoadOptions? options]) {
+    _checkName(name);
     final loader = Video.load(url, options, resources.manifest);
     resources.addResource(kind, name, url, loader);
     _loaders[name] = loader;
@@ -172,6 +179,7 @@ class SoundResourceRegistry extends ResourceRegistry<Sound> {
   SoundResourceRegistry(super.resources);
 
   void add(String name, String url, [SoundLoadOptions? options]) {
+    _checkName(name);
     final data = _SoundData()
       ..url = url
       ..engine = options?.engine ?? Sound.defaultLoadOptions.engine ?? SoundMixer.engine;
@@ -212,6 +220,7 @@ class SoundSpriteResourceRegistry extends ResourceRegistry<SoundSprite> {
   SoundSpriteResourceRegistry(super.resources);
 
   void add(String name, String url, [SoundLoadOptions? options]) {
+    _checkName(name);
     final loader = SoundSprite.load(resources.manifest.mapUrl(url), options);
     resources.addResource(kind, name, url, loader);
   }
@@ -224,6 +233,7 @@ class TextResourceRegistry extends ResourceRegistry<String> {
   TextResourceRegistry(super.resources);
 
   void add(String name, String text) {
+    _checkName(name);
     resources.addResource(kind, name, '', Future.value(text));
   }
 }
@@ -235,6 +245,7 @@ class TextFileResourceRegistry extends ResourceRegistry<String> {
   TextFileResourceRegistry(super.resources);
 
   void add(String name, String url) {
+    _checkName(name);
     final mappedUrl = resources.manifest.mapUrl(url);
     final loader = _loadText(name, mappedUrl);
     resources.addResource(kind, name, url, loader);
@@ -248,6 +259,7 @@ class AssetManifestResourceRegistry extends ResourceRegistry<AssetManifest> {
   AssetManifestResourceRegistry(super.resources);
 
   void add(String name, String url, [String storagePrefix = '/']) {
+    _checkName(name);
     final mappedUrl = resources.manifest.mapUrl(url);
     final loader = _loadText(name, mappedUrl).then((text) {
       final parsed = json.decode(text) as Map<String, dynamic>;
@@ -265,6 +277,7 @@ class CustomObjectResourceRegistry extends ResourceRegistry<dynamic> {
   CustomObjectResourceRegistry(super.resources);
 
   void add(String name, Future loader) {
+    _checkName(name);
     resources.addResource(kind, name, '', loader);
   }
 }
