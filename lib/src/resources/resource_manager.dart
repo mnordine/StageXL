@@ -3,6 +3,7 @@ part of '../resources.dart';
 class _SoundData {
   late final String url;
   late final SoundEngine engine;
+  late final Future<Sound> loader;
 }
 
 class ResourceManager {

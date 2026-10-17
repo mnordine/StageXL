@@ -264,6 +264,41 @@ void main() {
       expect(requests, 1);
     });
 
+    test('disposing one manager cannot cancel another load of the same URL', () async {
+      final decodes = <Completer<web.AudioBuffer>>[];
+      final signals = <web.AbortSignal>[];
+      _setFetch((_, init) async {
+        signals.add(init!.signal!);
+        return _arrayBufferResponse(() async => JSArrayBuffer(8));
+      });
+      context.setProperty('decodeAudioData'.toJS, ((JSArrayBuffer _) {
+        final result = Completer<web.AudioBuffer>();
+        decodes.add(result);
+        return result.future.toJS;
+      }).toJS);
+      final first = ResourceManager()..addSound('sound', '/shared.wav', _options());
+      final firstResource = first.resources.single;
+      final second = ResourceManager()..addSound('sound', '/shared.wav', _options());
+      final secondResource = second.resources.single;
+      final firstLoaded = first.load();
+      final secondLoaded = second.load();
+      await _drain();
+      expect(decodes, hasLength(2));
+
+      first.dispose();
+      await firstLoaded;
+      expect(firstResource.error, isA<LoadError>());
+      expect(signals.first.aborted, isTrue);
+      expect(signals.last.aborted, isFalse);
+      decodes.first.complete(context.createBuffer(1, 16, 8000));
+      await _drain();
+      expect(secondResource.value, isNull);
+      decodes.last.complete(context.createBuffer(1, 32, 8000));
+      await secondLoaded;
+      expect(second.getSound('sound').length, 32 / 8000);
+      second.dispose();
+    });
+
     for (final failOldDecode in [false, true]) {
       test('a cancelled decode cannot ${failOldDecode ? 'fail' : 'complete'} a replacement load', () async {
         final decodes = <Completer<web.AudioBuffer>>[];
@@ -277,7 +312,7 @@ void main() {
         final cancelled = expectLater(first, throwsA(isA<LoadError>()));
         await _drain();
         expect(decodes, hasLength(1));
-        // Starting the replacement must settle the old request too.
+        WebAudioApiSound.cancel('/replace.wav');
         final second = Sound.load('/replace.wav', _options());
         var completed = false;
         unawaited(second.then((_) => completed = true));
