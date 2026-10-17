@@ -190,6 +190,65 @@ void main() {
     manager.dispose();
   });
 
+  test('bitmap cancellation during format detection does not start a download', () async {
+    var requests = 0;
+    _setFetch((_, _) async {
+      requests++;
+      return web.Response();
+    });
+    final bitmap = BitmapData.load('/cancel.png', BitmapDataLoadOptions()..avif = true);
+    final failed = expectLater(bitmap, throwsA(isA<LoadCancelledError>()));
+    BitmapData.cancelLoad(bitmap);
+    await failed;
+    await _drain();
+    expect(requests, 0);
+  });
+
+  test('disposing one bitmap manager leaves another load of the same URL active', () async {
+    final responses = <Completer<web.Response>>[];
+    final signals = <web.AbortSignal>[];
+    _setFetch((_, init) {
+      signals.add(init!.signal!);
+      final response = Completer<web.Response>();
+      responses.add(response);
+      return response.future;
+    });
+    final first = ResourceManager()..addBitmapData('image', '/shared.png');
+    final resource = first.resources.single;
+    final second = ResourceManager()..addBitmapData('image', '/shared.png');
+    first.dispose();
+    await resource.complete;
+    expect(resource.error, isA<LoadCancelledError>());
+    expect(signals.first.aborted, isTrue);
+    expect(signals.last.aborted, isFalse);
+    second.dispose();
+    for (final response in responses) {
+      response.complete(web.Response());
+    }
+    await _drain();
+  });
+
+  test('cancelled bitmap loads close an image created after cancellation', () async {
+    final original = globalContext.getProperty<JSFunction>('createImageBitmap'.toJS);
+    addTearDown(() => globalContext.setProperty('createImageBitmap'.toJS, original));
+    final creating = Completer<void>();
+    final image = Completer<web.ImageBitmap>();
+    globalContext.setProperty('createImageBitmap'.toJS, ((JSAny? _) {
+      creating.complete();
+      return image.future.toJS;
+    }).toJS);
+    _setFetch((_, _) async => web.Response(web.Blob()));
+    final bitmap = BitmapData.load('/late.png');
+    final failed = expectLater(bitmap, throwsA(isA<LoadCancelledError>()));
+    await creating.future;
+    BitmapData.cancelLoad(bitmap);
+    await failed;
+    var closed = 0;
+    image.complete((JSObject()..setProperty('close'.toJS, (() => closed++).toJS)) as web.ImageBitmap);
+    await _drain();
+    expect(closed, 1);
+  });
+
   test('disposing an atlas aborts a compressed texture body', () async {
     final textureBody = Completer<JSArrayBuffer>();
     final reading = Completer<void>();
