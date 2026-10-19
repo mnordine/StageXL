@@ -125,15 +125,19 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
       if (env.isImageBitmapSupported) {
         final loader = _imageLoader = ImageBitmapLoader(imageUrl);
         final imageLoader = await loader.done;
-        renderTexture = .fromImageBitmap(imageLoader);
+        renderTexture = .fromImageBitmap(imageLoader,
+            sourceUrl: _loadOptions.releaseImageSources && !_loadOptions.readable ? imageUrl : null);
       } else {
         final corsEnabled = _loadOptions.corsEnabled;
         final imageLoader = _imageLoader = ImageLoader(imageUrl, corsEnabled);
         final imageElement = await imageLoader.done;
-        renderTexture = .fromImageElement(imageElement);
+        renderTexture = .fromImageElement(imageElement,
+            sourceUrl: _loadOptions.releaseImageSources && !_loadOptions.readable ? imageUrl : null,
+            corsEnabled: corsEnabled);
       }
     }
 
+    _imageLoader = null;
     if (_cancelled) {
       renderTexture.dispose();
       throw LoadError('texture atlas load cancelled');

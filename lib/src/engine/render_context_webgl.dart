@@ -1043,7 +1043,7 @@ class RenderContextWebGL extends RenderContext {
       if (!controller.signal.aborted && identifier == _contextIdentifier) {
         controller.abort();
         _invalidateCachedState();
-        _contextRestoreErrorEvent.add(LoadError('Failed to restore compressed textures.', error));
+        _contextRestoreErrorEvent.add(LoadError('Failed to restore textures.', error));
       }
     } finally {
       if (identical(_textureRestoreController, controller)) _textureRestoreController = null;
