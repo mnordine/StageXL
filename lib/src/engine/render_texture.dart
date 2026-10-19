@@ -1,5 +1,8 @@
 part of '../engine.dart';
 
+/// Signals that a frame must wait for texture data to become ready.
+class RenderTexturePendingException implements Exception {}
+
 class RenderTexture {
   var _width = 0;
   var _height = 0;
@@ -14,6 +17,9 @@ class RenderTexture {
   var _contextIdentifier = -1;
 
   CompressedTexture? _compressedTexture;
+  WeakReference<RenderTexture>? _reloadableReference;
+  AbortController? _restoreController;
+  var _disposed = false;
   WebGL? _renderingContext;
   WebGLTexture? _texture;
 
@@ -69,7 +75,8 @@ class RenderTexture {
       : _width = width,
         _height = height;
 
-  RenderTexture.fromCompressedTexture(CompressedTexture texture) {
+  RenderTexture.fromCompressedTexture(CompressedTexture texture, {String? sourceUrl}) {
+    texture._sourceUrl = CompressedTextureLoader.supportsBufferRelease ? sourceUrl : null;
     _width = texture.width;
     _height = texture.height;
 
@@ -187,6 +194,10 @@ class RenderTexture {
   /// Call the dispose method to release memory allocated by WebGL.
 
   void dispose() {
+    _disposed = true;
+    _restoreController?.abort();
+    _renderContext?._reloadableTextures.remove(_reloadableReference);
+    _reloadableReference = null;
     if (_texture != null) {
       _renderingContext?.deleteTexture(_texture);
     }
@@ -309,7 +320,13 @@ class RenderTexture {
       renderingContext.texImage2D(target, 0, pixelFormat, pixelFormat.toJS, pixelType.toJS, _source!);
     } else if (_compressedTexture != null) {
       final tex = _compressedTexture!;
+      if (!tex.hasBackingBuffer) return;
       renderingContext.compressedTexImage2D(target, 0, tex.format, tex.width, tex.height, 0, tex.textureData.toJS);
+      if (tex._sourceUrl != null) {
+        _reloadableReference ??= WeakReference(this);
+        renderContext._reloadableTextures.add(_reloadableReference!);
+        if (!renderingContext.isContextLost()) tex._releaseBuffer();
+      }
     } else {
       // ignore: avoid_redundant_argument_values
       renderingContext.texImage2D(target, 0, pixelFormat, width.toJS, height.toJS, 0.toJS, pixelFormat, pixelType, null);
@@ -319,6 +336,16 @@ class RenderTexture {
   //-----------------------------------------------------------------------------------------------
 
   void activate(RenderContextWebGL renderContext, int textureSlot) {
+    if (_disposed) return;
+    final compressed = _compressedTexture;
+    if (contextIdentifier != renderContext.contextIdentifier && compressed != null && !compressed.hasBackingBuffer) {
+      _renderContext?._reloadableTextures.remove(_reloadableReference);
+      _renderContext = renderContext;
+      _reloadableReference ??= WeakReference(this);
+      renderContext._reloadableTextures.add(_reloadableReference!);
+      renderContext._beginTextureRestore();
+      throw RenderTexturePendingException();
+    }
     final renderingContext = _renderingContext = renderContext.rawContext;
 
     final needsInitialization = contextIdentifier != renderContext.contextIdentifier;
@@ -350,6 +377,27 @@ class RenderTexture {
           WebGL.TEXTURE_2D, WebGL.TEXTURE_MIN_FILTER, _filtering.value);
       renderingContext.texParameteri(
           WebGL.TEXTURE_2D, WebGL.TEXTURE_MAG_FILTER, _filtering.value);
+    }
+  }
+
+  Future<void> _restoreForContext(RenderContextWebGL context, AbortSignal signal) async {
+    final compressed = _compressedTexture;
+    if (_disposed || compressed == null || !identical(_renderContext, context) ||
+        contextIdentifier == context.contextIdentifier) {
+      return;
+    }
+    final controller = _restoreController = AbortController();
+    if (signal.aborted) controller.abort();
+    final subscription = const EventStreamProvider<Event>('abort').forTarget(signal).listen((_) => controller.abort());
+    try {
+      await compressed._restore(controller.signal);
+      if (_disposed || controller.signal.aborted || !identical(_renderContext, context)) return;
+      activate(context, WebGL.TEXTURE0);
+    } catch (_) {
+      if (!_disposed && !controller.signal.aborted) rethrow;
+    } finally {
+      await subscription.cancel();
+      if (identical(_restoreController, controller)) _restoreController = null;
     }
   }
 

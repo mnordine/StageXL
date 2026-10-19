@@ -161,23 +161,14 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
     _fetchControllers.add(controller);
 
     try {
-      final response = await window.fetch(filename.toJS, RequestInit(signal: controller.signal)).toDart;
-
-      if (_cancelled) {
-        throw LoadError('compressed texture load cancelled');
-      }
-
-      if (!response.ok) {
-        throw LoadError('failed to fetch $filename: ${response.status} ${response.statusText}');
-      }
-
-      final buffer = (await response.arrayBuffer().toDart).toDart;
-
-      if (_cancelled) {
-        throw LoadError('compressed texture load cancelled');
-      }
-
-      return _decodeCompressedTexture(buffer, type);
+      final buffer = await CompressedTextureLoader.load(filename, signal: controller.signal);
+      if (_cancelled) throw LoadError('compressed texture load cancelled');
+      final texture = switch (type) {
+        .pvr => PvrTexture(buffer),
+        .ktx => KtxTexture(buffer),
+      };
+      return RenderTexture.fromCompressedTexture(texture,
+          sourceUrl: _loadOptions.releaseCompressedTextureBuffers ? filename : null);
     } catch (error, stackTrace) {
       if (_cancelled) {
         Error.throwWithStackTrace(
@@ -193,21 +184,6 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
     } finally {
       _fetchControllers.remove(controller);
     }
-  }
-
-  RenderTexture _decodeCompressedTexture(ByteBuffer buffer, CompressedTextureFileTypes type) => switch (type) {
-    .pvr => _decodePvr(buffer),
-    .ktx => _decodeKtx(buffer),
-  };
-
-  RenderTexture _decodePvr(ByteBuffer buffer) {
-    final tex = PvrTexture(buffer);
-    return .fromCompressedTexture(tex);
-  }
-
-  RenderTexture _decodeKtx(ByteBuffer buffer) {
-    final tex = KtxTexture(buffer);
-    return .fromCompressedTexture(tex);
   }
 
   bool _isCompressedTexture(String filename) => compressedTextureFormats.any((format) => filename.endsWith(format));

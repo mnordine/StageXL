@@ -19,6 +19,11 @@ abstract class RenderContext {
   final _contextRestoredEvent =
       StreamController<RenderContextEvent>.broadcast();
 
+  final _contextRestoreErrorEvent = StreamController<LoadError>.broadcast();
+
+  /// Failures that prevent rendering from resuming after a context restoration.
+  Stream<LoadError> get onContextRestoreError => _contextRestoreErrorEvent.stream;
+
   Stream<RenderContextEvent> get onContextLost => _contextLostEvent.stream;
   Stream<RenderContextEvent> get onContextRestored =>
       _contextRestoredEvent.stream;

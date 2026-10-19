@@ -18,10 +18,25 @@ class CompressedExtensions {
 abstract class CompressedTexture {
   late final int width;
   late final int height;
-  final ByteBuffer _buffer;
+  ByteBuffer? _buffer;
+  String? _sourceUrl;
   static CompressedExtensions? extensions;
 
   CompressedTexture(this._buffer);
+
+  /// Whether texture bytes are currently retained in application memory.
+  bool get hasBackingBuffer => _buffer != null;
+
+  Future<void> _restore(AbortSignal signal) async {
+    if (_buffer != null) return;
+    final buffer = await CompressedTextureLoader.load(_sourceUrl!, signal: signal);
+    if (signal.aborted) return;
+    _buffer = buffer;
+  }
+
+  void _releaseBuffer() {
+    if (_sourceUrl != null) _buffer = null;
+  }
 
   static WebGLCompressedTextureS3tc? dxtExtension(WebGL context) =>
       (context.getExtension('WEBGL_compressed_texture_s3tc') ??

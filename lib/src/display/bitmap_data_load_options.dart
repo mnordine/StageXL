@@ -82,6 +82,11 @@ class BitmapDataLoadOptions {
 
   var corsEnabled = false;
 
+  /// Whether to release compressed texture buffers after GPU upload and refetch them on context restoration.
+  ///
+  /// Restoration uses the normal HTTP cache and may need the network. Requires immutable asset URLs and native WeakRef.
+  var releaseCompressedTextureBuffers = false;
+
   //---------------------------------------------------------------------------
 
   /// Create a deep clone of this [BitmapDataLoadOptions].
@@ -94,6 +99,7 @@ class BitmapDataLoadOptions {
     options.avif = avif;
     options.pixelRatios = .from(pixelRatios);
     options.corsEnabled = corsEnabled;
+    options.releaseCompressedTextureBuffers = releaseCompressedTextureBuffers;
     return options;
   }
 }
