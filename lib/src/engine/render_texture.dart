@@ -23,6 +23,8 @@ class RenderTexture {
   WeakReference<RenderTexture>? _reloadableReference;
   AbortController? _restoreController;
   var _disposed = false;
+  var _sourceUploaded = false;
+  var _readable = false;
   WebGL? _renderingContext;
   WebGLTexture? _texture;
 
@@ -46,29 +48,35 @@ class RenderTexture {
       context.fillStyle = color2rgba(fillColor).toJS;
       context.fillRect(0, 0, _width, _height);
     }
+    _sampleMemory('texture.source.loaded');
   }
 
   RenderTexture.fromImageElement(HTMLImageElement imageElement,
-      {String? sourceUrl, bool corsEnabled = false}) {
+      {String? sourceUrl, bool corsEnabled = false, bool readable = false}) {
+    _readable = readable;
     _imageSourceUrl = CompressedTextureLoader.supportsBufferRelease ? sourceUrl : null;
     _imageCorsEnabled = corsEnabled;
     _width = imageElement.width;
     _height = imageElement.height;
     _source = imageElement;
+    _sampleMemory('texture.source.loaded');
   }
 
-  RenderTexture.fromImageBitmap(ImageBitmap image, {String? sourceUrl}) {
+  RenderTexture.fromImageBitmap(ImageBitmap image, {String? sourceUrl, bool readable = false}) {
+    _readable = readable;
     _imageSourceUrl = CompressedTextureLoader.supportsBufferRelease ? sourceUrl : null;
     _imageUsesBitmap = true;
     _width = image.width;
     _height = image.height;
     _source = image;
+    _sampleMemory('texture.source.loaded');
   }
 
   RenderTexture.fromCanvasElement(HTMLCanvasElement canvasElement) {
     _width = canvasElement.width;
     _height = canvasElement.height;
     _source = _canvas = canvasElement;
+    _sampleMemory('texture.source.loaded');
   }
 
   RenderTexture.fromVideoElement(HTMLVideoElement videoElement) {
@@ -89,9 +97,25 @@ class RenderTexture {
     _height = texture.height;
 
     _compressedTexture = texture;
+    _sampleMemory('texture.source.loaded');
   }
 
   //-----------------------------------------------------------------------------------------------
+
+  void _sampleMemory(String phase) {
+    if (MemoryDiagnostics.onSample == null) return;
+    MemoryDiagnostics.sample(phase, details: {
+      'textureId': identityHashCode(this),
+      'width': _width,
+      'height': _height,
+      'uploaded': _sourceUploaded && _contextIdentifier == _renderContext?.contextIdentifier &&
+          _renderingContext?.isContextLost() == false,
+      'readable': _readable || _canvas != null,
+      'compressedSourceBytes': _compressedTexture?._buffer?.lengthInBytes ?? 0,
+      // Decoded images may have browser-specific storage or be shared. This is RGBA pixel accounting only.
+      'decodedSourceBytesEstimate': _source != null && !_source.isA<HTMLVideoElement>() ? _width * _height * 4 : 0,
+    });
+  }
 
   int get width => _width;
   int get height => _height;
@@ -146,6 +170,10 @@ class RenderTexture {
   }
 
   void _retainImageSource() {
+    if (!_readable) {
+      _readable = true;
+      _sampleMemory('texture.source.readable');
+    }
     if (_imageSourceUrl == null) return;
     _imageSourceUrl = null;
     _restoreController?.abort();
@@ -225,6 +253,7 @@ class RenderTexture {
 
   void dispose() {
     _disposed = true;
+    _sourceUploaded = false;
     _restoreController?.abort();
     _renderContext?._reloadableTextures.remove(_reloadableReference);
     _reloadableReference = null;
@@ -248,6 +277,7 @@ class RenderTexture {
     _renderingContext = null;
     _contextIdentifier = -1;
     _globalFrameListeners.remove(_onGlobalFrame);
+    _sampleMemory('texture.disposed');
   }
 
   //-----------------------------------------------------------------------------------------------
@@ -411,7 +441,11 @@ class RenderTexture {
       final scissors = renderingContext.isEnabled(WebGL.SCISSOR_TEST);
       if (scissors) renderingContext.disable(WebGL.SCISSOR_TEST);
 
+      _sourceUploaded = false;
+      _sampleMemory('texture.upload.before');
       _updateTexture(renderContext);
+      _sourceUploaded = !renderingContext.isContextLost();
+      _sampleMemory('texture.upload.after');
 
       if (scissors) renderingContext.enable(WebGL.SCISSOR_TEST);
 

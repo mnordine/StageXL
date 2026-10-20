@@ -26,9 +26,11 @@ class ResourceManager {
   //----------------------------------------------------------------------------
 
   Future<ResourceManager> load() async {
+    _sampleMemory('resources.load.start');
     final futures = pendingResources.map((r) => r.complete);
     await Future.wait(futures);
     final errors = failedResources.length;
+    _sampleMemory(errors == 0 ? 'resources.load.complete' : 'resources.load.failed');
     if (errors > 0) {
       throw StateError('Failed to load $errors resource(s).');
     } else {
@@ -45,6 +47,20 @@ class ResourceManager {
         _removeResource(resource.kind, resource.name);
       }
     }
+    _sampleMemory('resources.disposed');
+  }
+
+  void _sampleMemory(String phase, [ResourceManagerResource? resource]) {
+    if (MemoryDiagnostics.onSample == null) return;
+    MemoryDiagnostics.sample(phase, details: {
+      'managerId': identityHashCode(this),
+      'resourceCount': _resourceMap.length,
+      if (resource != null) ...{
+        'kind': resource.kind,
+        'name': resource.name,
+        'failed': resource.error != null,
+      },
+    });
   }
 
   //----------------------------------------------------------------------------
@@ -208,7 +224,10 @@ class ResourceManager {
       _resourceMap[key] = resource;
     }
 
+    _sampleMemory('resource.load.start', resource);
+
     resource.complete.then((_) {
+      _sampleMemory('resource.load.complete', resource);
       final finished = finishedResources.length;
       final progress = finished / _resourceMap.length;
       _progressEvent.add(progress);

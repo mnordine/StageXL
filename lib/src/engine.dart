@@ -50,6 +50,7 @@ part 'engine/render_program_tinted.dart';
 part 'engine/render_program_triangle.dart';
 part 'engine/render_state.dart';
 part 'engine/render_statistics.dart';
+part 'engine/memory_diagnostics.dart';
 part 'engine/render_stencil_buffer.dart';
 part 'engine/render_texture.dart';
 part 'engine/render_texture_filtering.dart';

@@ -121,7 +121,7 @@ class BitmapData implements BitmapDrawable {
         throw LoadCancelledError();
       }
       final texture = RenderTexture.fromImageBitmap(imageBitmap,
-          sourceUrl: options.releaseImageSources && !options.readable ? targetUrl : null);
+          sourceUrl: options.releaseImageSources && !options.readable ? targetUrl : null, readable: options.readable);
       return .fromRenderTextureQuad(texture.quad.withPixelRatio(pixelRatio));
     }
 
@@ -131,7 +131,7 @@ class BitmapData implements BitmapDrawable {
     if (task.cancelled) throw LoadCancelledError();
     final texture = RenderTexture.fromImageElement(image,
         sourceUrl: options.releaseImageSources && !options.readable ? targetUrl : null,
-        corsEnabled: options.corsEnabled);
+        corsEnabled: options.corsEnabled, readable: options.readable);
     return .fromRenderTextureQuad(texture.quad.withPixelRatio(pixelRatio));
   }
 

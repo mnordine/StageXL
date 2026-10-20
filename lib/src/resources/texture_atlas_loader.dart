@@ -126,14 +126,15 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
         final loader = _imageLoader = ImageBitmapLoader(imageUrl);
         final imageLoader = await loader.done;
         renderTexture = .fromImageBitmap(imageLoader,
-            sourceUrl: _loadOptions.releaseImageSources && !_loadOptions.readable ? imageUrl : null);
+            sourceUrl: _loadOptions.releaseImageSources && !_loadOptions.readable ? imageUrl : null,
+            readable: _loadOptions.readable);
       } else {
         final corsEnabled = _loadOptions.corsEnabled;
         final imageLoader = _imageLoader = ImageLoader(imageUrl, corsEnabled);
         final imageElement = await imageLoader.done;
         renderTexture = .fromImageElement(imageElement,
             sourceUrl: _loadOptions.releaseImageSources && !_loadOptions.readable ? imageUrl : null,
-            corsEnabled: corsEnabled);
+            corsEnabled: corsEnabled, readable: _loadOptions.readable);
       }
     }
 
