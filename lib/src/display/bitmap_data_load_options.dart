@@ -84,7 +84,8 @@ class BitmapDataLoadOptions {
 
   /// Whether to release compressed texture buffers after GPU upload and refetch them on context restoration.
   ///
-  /// Restoration uses the normal HTTP cache and may need the network. Requires immutable asset URLs and native WeakRef.
+  /// Restoration refetches the original URL using the normal HTTP cache or the network. Requires native WeakRef.
+  /// Replacing an atlas with a different layout at that URL can cause incorrect rendering after restoration.
   var releaseCompressedTextureBuffers = false;
 
   /// Whether to release decoded URL-loaded images after GPU upload and reload them on context restoration.
@@ -92,7 +93,8 @@ class BitmapDataLoadOptions {
   /// Images loaded with [readable] retain their decoded source for CPU access.
   /// Canvas2D access before upload also retains the source.
   /// Generated canvases, videos and images supplied by callers are unaffected.
-  /// Requires immutable asset URLs and native WeakRef. Restoration uses the normal HTTP cache or the network.
+  /// Restoration refetches the original URL using the normal HTTP cache or the network. Requires native WeakRef.
+  /// Replacing an atlas with a different layout at that URL can cause incorrect rendering after restoration.
   var releaseImageSources = false;
 
   /// Whether to retain decoded image pixels for CPU operations such as cloning, editing and export.
