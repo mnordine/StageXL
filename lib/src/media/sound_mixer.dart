@@ -45,25 +45,29 @@ class SoundMixer {
   /// A helper method to unlock audio on mobile devices.
   ///
   /// Some mobile devices (like iOS) do not allow audio playback by default.
-  /// Call this method in the first onTouchBegin event to unlock the website
-  /// for audio playback.
+  /// Call this method from a click or touch-end event to unlock the website for
+  /// audio playback.
   ///
-  ///     stage.onTouchBegin.first.then((e) {
+  ///     stage.onMouseClick.first.then((e) {
   ///       SoundMixer.unlockMobileAudio();
   ///     });
 
-  static void unlockMobileAudio() {
-    if (engine == .WebAudioApi) {
-      try {
-        final context = WebAudioApiMixer.audioContext;
-        final source = context.createBufferSource();
-        source.buffer = context.createBuffer(1, 1, 22050);
-        source.connect(context.destination);
-        source.start(0);
-      } catch (e) {
-        // There is nothing we can do :(
-      }
-    }
+  static void unlockMobileAudio() => unlockMobileAudioAsync().ignore();
+
+  /// Unlocks Web Audio during a user interaction.
+  ///
+  /// Completes after the audio context resumes. Does nothing for other sound engines.
+  /// Unlike [unlockMobileAudio], errors are returned to the caller.
+  static Future<void> unlockMobileAudioAsync() async {
+    if (engine != .WebAudioApi) return;
+
+    final context = WebAudioApiMixer.audioContext;
+    final resumeFuture = context.resume().toDart;
+    final source = context.createBufferSource();
+    source.buffer = context.createBuffer(1, 1, 22050);
+    source.connect(context.destination);
+    source.start(0);
+    await resumeFuture;
   }
 
   //---------------------------------------------------------------------------
