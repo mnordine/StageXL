@@ -1,0 +1,6 @@
+override_platforms:
+  chrome:
+    settings:
+      # Request Chrome headless directly so package:test does not add --disable-gpu.
+      headless: false
+      arguments: --headless
