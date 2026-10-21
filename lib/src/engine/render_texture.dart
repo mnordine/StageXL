@@ -1,11 +1,17 @@
 part of '../engine.dart';
 
+/// Signals that a frame must wait for texture data to become ready.
+class RenderTexturePendingException implements Exception {}
+
 class RenderTexture {
   var _width = 0;
   var _height = 0;
 
   CanvasImageSource? _source;
   HTMLCanvasElement? _canvas;
+  String? _imageSourceUrl;
+  var _imageUsesBitmap = false;
+  var _imageCorsEnabled = false;
   RenderTextureFiltering _filtering = .LINEAR;
   RenderTextureWrapping _wrappingX = .CLAMP;
   RenderTextureWrapping _wrappingY = .CLAMP;
@@ -14,6 +20,9 @@ class RenderTexture {
   var _contextIdentifier = -1;
 
   CompressedTexture? _compressedTexture;
+  WeakReference<RenderTexture>? _reloadableReference;
+  AbortController? _restoreController;
+  var _disposed = false;
   WebGL? _renderingContext;
   WebGLTexture? _texture;
 
@@ -39,13 +48,18 @@ class RenderTexture {
     }
   }
 
-  RenderTexture.fromImageElement(HTMLImageElement imageElement) {
+  RenderTexture.fromImageElement(HTMLImageElement imageElement,
+      {String? sourceUrl, bool corsEnabled = false}) {
+    _imageSourceUrl = TextureSourceLoader.supportsSourceRelease ? sourceUrl : null;
+    _imageCorsEnabled = corsEnabled;
     _width = imageElement.width;
     _height = imageElement.height;
     _source = imageElement;
   }
 
-  RenderTexture.fromImageBitmap(ImageBitmap image) {
+  RenderTexture.fromImageBitmap(ImageBitmap image, {String? sourceUrl}) {
+    _imageSourceUrl = TextureSourceLoader.supportsSourceRelease ? sourceUrl : null;
+    _imageUsesBitmap = true;
     _width = image.width;
     _height = image.height;
     _source = image;
@@ -69,7 +83,8 @@ class RenderTexture {
       : _width = width,
         _height = height;
 
-  RenderTexture.fromCompressedTexture(CompressedTexture texture) {
+  RenderTexture.fromCompressedTexture(CompressedTexture texture, {String? sourceUrl}) {
+    texture._sourceUrl = TextureSourceLoader.supportsSourceRelease ? sourceUrl : null;
     _width = texture.width;
     _height = texture.height;
 
@@ -81,9 +96,19 @@ class RenderTexture {
   int get width => _width;
   int get height => _height;
 
-  CanvasImageSource? get source => _source;
+  CanvasImageSource? get source {
+    if (_imageSourceUrl != null) {
+      if (_source == null) return canvas;
+      _retainImageSource();
+    }
+    return _source;
+  }
 
-  ImageBitmap? get imageBitmap => _source.isA<ImageBitmap>() ? _source as ImageBitmap : null;
+  ImageBitmap? get imageBitmap {
+    if (!_source.isA<ImageBitmap>()) return null;
+    _retainImageSource();
+    return _source as ImageBitmap;
+  }
 
   RenderTextureQuad get quad => .new(
       this,
@@ -93,6 +118,10 @@ class RenderTexture {
       1.0);
 
   HTMLCanvasElement get canvas {
+    if (_source == null && _imageSourceUrl != null) {
+      throw StateError('Image source was released. Enable readable when loading images that need CPU access.');
+    }
+    _retainImageSource();
     if (_source.isA<HTMLCanvasElement>()) {
       return _source as HTMLCanvasElement;
     } else if (_source.isA<HTMLImageElement>()) {
@@ -114,6 +143,14 @@ class RenderTexture {
     } else {
       throw StateError('RenderTexture is read only.');
     }
+  }
+
+  void _retainImageSource() {
+    if (_imageSourceUrl == null) return;
+    _imageSourceUrl = null;
+    _restoreController?.abort();
+    _renderContext?._reloadableTextures.remove(_reloadableReference);
+    _reloadableReference = null;
   }
 
   WebGLTexture? get texture => _texture;
@@ -187,6 +224,10 @@ class RenderTexture {
   /// Call the dispose method to release memory allocated by WebGL.
 
   void dispose() {
+    _disposed = true;
+    _restoreController?.abort();
+    _renderContext?._reloadableTextures.remove(_reloadableReference);
+    _reloadableReference = null;
     if (_texture != null) {
       _renderingContext?.deleteTexture(_texture);
     }
@@ -201,6 +242,7 @@ class RenderTexture {
 
     _texture = null;
     _compressedTexture = null;
+    _imageSourceUrl = null;
     _source = null;
     _canvas = null;
     _renderingContext = null;
@@ -216,7 +258,7 @@ class RenderTexture {
     } else if (_width == width && _height == height) {
       // there is no need to resize the texture
 
-    } else if (_source == null) {
+    } else if (_source == null && _imageSourceUrl == null) {
       _width = width;
       _height = height;
 
@@ -226,6 +268,7 @@ class RenderTexture {
       _renderContext!.activateRenderTexture(this);
       _updateTexture(_renderContext!);
     } else {
+      _retainImageSource();
       _width = width;
       _height = height;
       _source = _canvas = HTMLCanvasElement()
@@ -307,9 +350,27 @@ class RenderTexture {
 
     if (_source != null) {
       renderingContext.texImage2D(target, 0, pixelFormat, pixelFormat.toJS, pixelType.toJS, _source!);
+      if (_imageSourceUrl != null) {
+        _reloadableReference ??= WeakReference(this);
+        renderContext._reloadableTextures.add(_reloadableReference!);
+        if (!renderingContext.isContextLost()) {
+          if (_source.isA<ImageBitmap>()) (_source as ImageBitmap).close();
+          if (_source.isA<HTMLImageElement>()) (_source as HTMLImageElement).removeAttribute('src');
+          _source = null;
+        }
+      }
+    } else if (_imageSourceUrl != null) {
+      // The existing GPU texture remains valid after releasing its decoded source.
+      return;
     } else if (_compressedTexture != null) {
       final tex = _compressedTexture!;
+      if (!tex.hasBackingBuffer) return;
       renderingContext.compressedTexImage2D(target, 0, tex.format, tex.width, tex.height, 0, tex.textureData.toJS);
+      if (tex._sourceUrl != null) {
+        _reloadableReference ??= WeakReference(this);
+        renderContext._reloadableTextures.add(_reloadableReference!);
+        if (!renderingContext.isContextLost()) tex._releaseBuffer();
+      }
     } else {
       // ignore: avoid_redundant_argument_values
       renderingContext.texImage2D(target, 0, pixelFormat, width.toJS, height.toJS, 0.toJS, pixelFormat, pixelType, null);
@@ -319,6 +380,18 @@ class RenderTexture {
   //-----------------------------------------------------------------------------------------------
 
   void activate(RenderContextWebGL renderContext, int textureSlot) {
+    if (_disposed) return;
+    final compressed = _compressedTexture;
+    final needsReload = (compressed != null && !compressed.hasBackingBuffer) ||
+        (_imageSourceUrl != null && _source == null);
+    if (contextIdentifier != renderContext.contextIdentifier && needsReload) {
+      _renderContext?._reloadableTextures.remove(_reloadableReference);
+      _renderContext = renderContext;
+      _reloadableReference ??= WeakReference(this);
+      renderContext._reloadableTextures.add(_reloadableReference!);
+      renderContext._beginTextureRestore();
+      throw RenderTexturePendingException();
+    }
     final renderingContext = _renderingContext = renderContext.rawContext;
 
     final needsInitialization = contextIdentifier != renderContext.contextIdentifier;
@@ -350,6 +423,54 @@ class RenderTexture {
           WebGL.TEXTURE_2D, WebGL.TEXTURE_MIN_FILTER, _filtering.value);
       renderingContext.texParameteri(
           WebGL.TEXTURE_2D, WebGL.TEXTURE_MAG_FILTER, _filtering.value);
+    }
+  }
+
+  Future<JSObject> _loadImageSource(String url, AbortSignal signal) async {
+    if (_imageUsesBitmap) return TextureSourceLoader.loadImageBitmap(url, signal: signal);
+    final loader = ImageLoader(url, _imageCorsEnabled);
+    final cancelled = Completer<JSObject>();
+    void cancel() {
+      loader.cancel();
+      if (!cancelled.isCompleted) cancelled.completeError(LoadError('Texture load cancelled.'));
+    }
+    final subscription = const EventStreamProvider<Event>('abort').forTarget(signal).listen((_) => cancel());
+    if (signal.aborted) cancel();
+    try {
+      return await Future.any<JSObject>([loader.done, cancelled.future]);
+    } finally {
+      await subscription.cancel();
+    }
+  }
+
+  Future<void> _restoreForContext(RenderContextWebGL context, AbortSignal signal) async {
+    final compressed = _compressedTexture;
+    if (_disposed || (compressed == null && _imageSourceUrl == null) || !identical(_renderContext, context) ||
+        contextIdentifier == context.contextIdentifier) {
+      return;
+    }
+    final controller = _restoreController = AbortController();
+    if (signal.aborted) controller.abort();
+    final subscription = const EventStreamProvider<Event>('abort').forTarget(signal).listen((_) => controller.abort());
+    try {
+      if (compressed != null) {
+        await compressed._restore(controller.signal);
+      } else if (_source == null && !controller.signal.aborted) {
+        final url = _imageSourceUrl!;
+        final image = await _loadImageSource(url, controller.signal);
+        if (_disposed || controller.signal.aborted || !identical(_renderContext, context)) {
+          if (image.isA<ImageBitmap>()) (image as ImageBitmap).close();
+          return;
+        }
+        _source = image;
+      }
+      if (_disposed || controller.signal.aborted || !identical(_renderContext, context)) return;
+      activate(context, WebGL.TEXTURE0);
+    } catch (_) {
+      if (!_disposed && !controller.signal.aborted) rethrow;
+    } finally {
+      await subscription.cancel();
+      if (identical(_restoreController, controller)) _restoreController = null;
     }
   }
 

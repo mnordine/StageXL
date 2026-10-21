@@ -81,15 +81,19 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
       if (env.isImageBitmapSupported) {
         final loader = _imageLoader = ImageBitmapLoader(imageUrl);
         final imageLoader = await loader.done;
-        renderTexture = .fromImageBitmap(imageLoader);
+        renderTexture = .fromImageBitmap(imageLoader,
+            sourceUrl: _loadOptions.releaseImageSources && !_loadOptions.readable ? imageUrl : null);
       } else {
         final corsEnabled = _loadOptions.corsEnabled;
         final imageLoader = _imageLoader = ImageLoader(imageUrl, corsEnabled);
         final imageElement = await imageLoader.done;
-        renderTexture = .fromImageElement(imageElement);
+        renderTexture = .fromImageElement(imageElement,
+            sourceUrl: _loadOptions.releaseImageSources && !_loadOptions.readable ? imageUrl : null,
+            corsEnabled: corsEnabled);
       }
     }
 
+    _imageLoader = null;
     return renderTexture.quad.withPixelRatio(pixelRatio);
   }
 
@@ -114,7 +118,7 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
         }
         if (response.statusCode == 200) {
           final buffer = response.bodyBytes.buffer;
-          final texture = _decodeCompressedTexture(buffer, type);
+          final texture = _decodeCompressedTexture(buffer, type, filename);
 
           return texture;
         } else {
@@ -123,19 +127,12 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
       });
   }
 
-  RenderTexture _decodeCompressedTexture(ByteBuffer buffer, CompressedTextureFileTypes type) => switch (type) {
-    .pvr => _decodePvr(buffer),
-    .ktx => _decodeKtx(buffer),
-  };
-
-  RenderTexture _decodePvr(ByteBuffer buffer) {
-    final tex = PvrTexture(buffer);
-    return .fromCompressedTexture(tex);
-  }
-
-  RenderTexture _decodeKtx(ByteBuffer buffer) {
-    final tex = KtxTexture(buffer);
-    return .fromCompressedTexture(tex);
+  RenderTexture _decodeCompressedTexture(ByteBuffer buffer, CompressedTextureFileTypes type, String url) {
+    final texture = switch (type) {
+      .pvr => PvrTexture(buffer),
+      .ktx => KtxTexture(buffer),
+    };
+    return .fromCompressedTexture(texture, sourceUrl: _loadOptions.releaseCompressedTextureBuffers ? url : null);
   }
 
   bool _isCompressedTexture(String filename) => compressedTextureFormats.any((format) => filename.endsWith(format));

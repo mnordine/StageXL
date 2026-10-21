@@ -50,7 +50,7 @@ class PvrTexture extends CompressedTexture {
   }
 
   void _parseHeader() {
-    final bytes = ByteArray.fromBuffer(_buffer);
+    final bytes = ByteArray.fromBuffer(_buffer!);
 
     final magic = bytes.readUnsignedInt();
     if (magic != 0x03525650) {
@@ -114,5 +114,5 @@ class PvrTexture extends CompressedTexture {
   }
 
   @override
-  ByteData get textureData => _buffer.asByteData(_texDataOffset);
+  ByteData get textureData => _buffer!.asByteData(_texDataOffset);
 }

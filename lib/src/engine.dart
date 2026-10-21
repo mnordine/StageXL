@@ -26,6 +26,8 @@ import 'geom/matrix.dart';
 import 'geom/matrix_3d.dart';
 import 'geom/rectangle.dart';
 import 'internal/tools.dart';
+import 'internal/texture_source_loader.dart';
+import 'internal/image_loader.dart';
 import 'internal/webgl_extensions.dart';
 import 'shared/power_prefs.dart';
 

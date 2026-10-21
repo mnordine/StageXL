@@ -406,7 +406,8 @@ class Stage extends DisplayObjectContainer {
   /// on your own and therefore get full control of the rendering of this Stage.
 
   void materialize(num currentTime, num deltaTime) {
-    if (_renderContextLost) return;
+    final context = _renderContext;
+    if (_renderContextLost || context is RenderContextWebGL && !context.contextValid) return;
     if (renderMode == .STOP) {
       _renderAfterContextRestore = false;
       return;
@@ -428,8 +429,13 @@ class Stage extends DisplayObjectContainer {
       _renderState.reset(_stageTransformation);
       _renderState.currentTime = currentTime;
       _renderState.deltaTime = deltaTime;
-      _renderState.renderObject(this);
-      _renderState.flush();
+      try {
+        _renderState.renderObject(this);
+        _renderState.flush();
+      } on RenderTexturePendingException {
+        _renderAfterContextRestore = true;
+        return;
+      }
       _renderAfterContextRestore = false;
       _invalid = false;
 

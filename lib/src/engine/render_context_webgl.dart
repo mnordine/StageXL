@@ -13,6 +13,9 @@ class RenderContextWebGL extends RenderContext {
   RenderStencilBuffer? _activeRenderStencilBuffer;
   BlendMode? _activeBlendMode;
 
+  final _reloadableTextures = <WeakReference<RenderTexture>>{};
+  AbortController? _textureRestoreController;
+
   var _contextValid = true;
   var _contextIdentifier = 0;
   late final bool _isWebGL2;
@@ -967,6 +970,10 @@ class RenderContextWebGL extends RenderContext {
 
   void _onContextLost(WebGLContextEvent contextEvent) {
     contextEvent.preventDefault();
+
+    _textureRestoreController?.abort();
+    _textureRestoreController = null;
+
     _contextValid = false;
     _invalidateCachedState();
     _clearContextResources();
@@ -983,7 +990,7 @@ class RenderContextWebGL extends RenderContext {
   }
 
   void _onContextRestored(WebGLContextEvent contextEvent) {
-    _contextValid = true;
+    _contextValid = false;
     _contextIdentifier = ++_globalContextIdentifier;
 
     try {
@@ -997,6 +1004,59 @@ class RenderContextWebGL extends RenderContext {
       return;
     }
 
-    _contextRestoredEvent.add(RenderContextEvent());
+    _beginTextureRestore();
+  }
+
+  void _beginTextureRestore() {
+    if (_textureRestoreController != null) return;
+
+    _reloadableTextures.removeWhere((reference) => reference.target == null);
+    final textures = _reloadableTextures.toList();
+    if (textures.isEmpty) {
+      _contextValid = true;
+      _contextRestoredEvent.add(RenderContextEvent());
+      return;
+    }
+
+    final controller = _textureRestoreController = AbortController();
+    final identifier = _contextIdentifier;
+    final wasValid = _contextValid;
+    _contextValid = false;
+    if (wasValid) _contextLostEvent.add(RenderContextEvent());
+    _invalidateCachedState();
+    unawaited(_restoreTextures(textures, controller, identifier));
+  }
+
+  Future<void> _restoreTextures(List<WeakReference<RenderTexture>> textures,
+      AbortController controller, int identifier) async {
+    // Both async workers share this queue on the same event loop. Each claims a texture before awaiting it.
+    var next = 0;
+    Future<void> worker() async {
+      while (!controller.signal.aborted && next < textures.length) {
+        final texture = textures[next++].target;
+        if (texture != null) await texture._restoreForContext(this, controller.signal);
+      }
+    }
+
+    try {
+      // Restore at most two textures concurrently to limit temporary CPU backing data while overlapping loads.
+      // Two is a speed/memory tradeoff: restoring everything at once could cause another memory spike.
+      // Resume rendering only after both workers finish; on the first error, abort remaining work in catch below.
+      await Future.wait([worker(), worker()], eagerError: true);
+      if (controller.signal.aborted || identifier != _contextIdentifier) return;
+
+      _invalidateCachedState();
+      reset();
+      _contextValid = true;
+      _contextRestoredEvent.add(RenderContextEvent());
+    } catch (error) {
+      if (!controller.signal.aborted && identifier == _contextIdentifier) {
+        controller.abort();
+        _invalidateCachedState();
+        _contextRestoreErrorEvent.add(LoadError('Failed to restore textures.', error));
+      }
+    } finally {
+      if (identical(_textureRestoreController, controller)) _textureRestoreController = null;
+    }
   }
 }

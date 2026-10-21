@@ -17,7 +17,7 @@ class KtxTexture extends CompressedTexture {
   }
 
   void _parseHeader() {
-    final bytes = ByteArray.fromBuffer(_buffer);
+    final bytes = ByteArray.fromBuffer(_buffer!);
     final magic = List.generate(12, (_) => bytes.readUnsignedByte());
 
     for (final entry in magic.asMap().entries) {
@@ -66,5 +66,5 @@ class KtxTexture extends CompressedTexture {
   int get format => _glInternalFormat;
 
   @override
-  ByteData get textureData => _buffer.asByteData(_texDataOffset, _imageSize);
+  ByteData get textureData => _buffer!.asByteData(_texDataOffset, _imageSize);
 }

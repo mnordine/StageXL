@@ -87,11 +87,17 @@ class BitmapData implements BitmapDrawable {
     if (env.isImageBitmapSupported) {
       final loader = ImageBitmapLoader(targetUrl);
       final imageBitmap = await loader.done;
-      return .fromImageBitmap(imageBitmap, pixelRatio);
+      final texture = RenderTexture.fromImageBitmap(imageBitmap,
+          sourceUrl: options.releaseImageSources && !options.readable ? targetUrl : null);
+      return .fromRenderTextureQuad(texture.quad.withPixelRatio(pixelRatio));
     }
 
     final loader = ImageLoader(targetUrl, options.corsEnabled);
-    return loader.done.then((i) => .fromImageElement(i, pixelRatio));
+    final image = await loader.done;
+    final texture = RenderTexture.fromImageElement(image,
+        sourceUrl: options.releaseImageSources && !options.readable ? targetUrl : null,
+        corsEnabled: options.corsEnabled);
+    return .fromRenderTextureQuad(texture.quad.withPixelRatio(pixelRatio));
   }
 
   //----------------------------------------------------------------------------
