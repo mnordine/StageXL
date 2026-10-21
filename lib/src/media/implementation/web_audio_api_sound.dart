@@ -2,7 +2,9 @@ part of '../../media.dart';
 
 class WebAudioApiSound extends Sound {
   final AudioBuffer _audioBuffer;
+  late final _loopAudioBuffers = <num, AudioBuffer>{};
 
+  static final _needsLoopGuard = needsWebAudioLoopGuard(window.navigator.userAgent);
   static final _loaders = <String, Future<void>>{};
 
   WebAudioApiSound._(this._audioBuffer);
@@ -90,6 +92,32 @@ class WebAudioApiSound extends Sound {
         throw LoadError('Failed to load sound.', e);
       }
     }
+  }
+
+  // Chromium 152 can repeat its last render quantum when a loop reaches the
+  // end of the backing buffer. Keep a guard frame outside the original loop
+  // points so playback wraps without changing the sound's duration or samples.
+  // Repeat the first sample in the guard for interpolation at fractional ends.
+  AudioBuffer _getLoopAudioBuffer(num startTime, num duration) {
+    if (!_needsLoopGuard || startTime + duration < length) return _audioBuffer;
+    return _loopAudioBuffers.putIfAbsent(startTime, () => _createLoopAudioBuffer(startTime));
+  }
+
+  AudioBuffer _createLoopAudioBuffer(num startTime) {
+    final source = _audioBuffer;
+    final buffer = WebAudioApiMixer.audioContext.createBuffer(
+        source.numberOfChannels, source.length + 1, source.sampleRate);
+    final startFrame = (startTime * source.sampleRate).clamp(0, source.length - 1);
+    final first = startFrame.floor();
+    final fraction = startFrame - first;
+    for (var channel = 0; channel < source.numberOfChannels; channel++) {
+      final samples = source.getChannelData(channel);
+      final values = samples.toDart;
+      buffer.copyToChannel(samples, channel);
+      buffer.getChannelData(channel).toDart[source.length] =
+          values[first] * (1 - fraction) + values[(first + 1) % source.length] * fraction;
+    }
+    return buffer;
   }
 
   //---------------------------------------------------------------------------
