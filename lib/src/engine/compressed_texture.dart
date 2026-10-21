@@ -29,7 +29,11 @@ abstract class CompressedTexture {
 
   Future<void> _restore(AbortSignal signal) async {
     if (_buffer != null) return;
-    final buffer = await TextureSourceLoader.loadBuffer(_sourceUrl!, signal: signal);
+    final sourceUrl = _sourceUrl;
+    if (sourceUrl == null) {
+      throw LoadError('Cannot restore compressed texture without a backing buffer or source URL.');
+    }
+    final buffer = await TextureSourceLoader.loadBuffer(sourceUrl, signal: signal);
     if (signal.aborted) return;
     _buffer = buffer;
   }

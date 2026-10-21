@@ -110,6 +110,47 @@ void main() {
     expect(requests, 2);
   });
 
+  for (final replacementUrl in [null, '/replacement.pvr']) {
+    test('rewrapping a released texture preserves its original URL with replacement $replacementUrl', () async {
+      final (stage, context) = _stage();
+      final compressed = PvrTexture(_bytes().buffer);
+      final original = RenderTexture.fromCompressedTexture(compressed, sourceUrl: '/original.pvr');
+      original.activate(context, web.WebGLRenderingContext.TEXTURE0);
+      expect(compressed.hasBackingBuffer, isFalse);
+      original.dispose();
+
+      final urls = <String>[];
+      _setFetch((url, _) async {
+        urls.add(url);
+        return web.Response(_bytes().toJS);
+      });
+      final replacement = RenderTexture.fromCompressedTexture(compressed, sourceUrl: replacementUrl);
+      addTearDown(replacement.dispose);
+      stage.addChild(Bitmap(BitmapData.fromRenderTextureQuad(replacement.quad)));
+      final restored = context.onContextRestored.first;
+      stage.materialize(0, 0);
+      await restored.timeout(const Duration(seconds: 5));
+      stage.materialize(1, 0);
+      expect(urls, ['/original.pvr']);
+      expect(_pixel(context), [255, 0, 0, 255]);
+      expect(compressed.hasBackingBuffer, isFalse);
+    });
+  }
+
+  test('missing backing data and restoration URL report a descriptive load error', () async {
+    final (_, context) = _stage();
+    final texture = RenderTexture.fromCompressedTexture(_MissingSourceTexture());
+    addTearDown(texture.dispose);
+    final failed = context.onContextRestoreError.first;
+    expect(() => texture.activate(context, web.WebGLRenderingContext.TEXTURE0),
+        throwsA(isA<RenderTexturePendingException>()));
+    final error = await failed.timeout(const Duration(seconds: 5));
+    expect(error.error, isA<LoadError>().having((error) => error.message, 'message',
+        'Cannot restore compressed texture without a backing buffer or source URL.'));
+    expect(context.contextValid, isFalse);
+    expect(requests, 0);
+  });
+
   test('a second context loss cancels the old restore and allows a fresh restore', () async {
     final (stage, context) = _stage();
     final buffer = await TextureSourceLoader.loadBuffer('/repeated.pvr', signal: web.AbortController().signal);
@@ -273,3 +314,16 @@ Uint8List _bytes() {
 void _setFetch(Future<web.Response> Function(String, web.RequestInit?) fetch) =>
     globalContext.setProperty('fetch'.toJS, ((JSString url, [JSAny? init]) =>
         fetch(url.toDart, init as web.RequestInit?).toJS).toJS);
+
+class _MissingSourceTexture extends CompressedTexture {
+  _MissingSourceTexture() : super(null) {
+    width = 4;
+    height = 4;
+  }
+
+  @override
+  int get format => 0x83F1;
+
+  @override
+  ByteData get textureData => throw StateError('Missing backing data must not be uploaded.');
+}

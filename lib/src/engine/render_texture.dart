@@ -84,7 +84,7 @@ class RenderTexture {
         _height = height;
 
   RenderTexture.fromCompressedTexture(CompressedTexture texture, {String? sourceUrl}) {
-    texture._sourceUrl = TextureSourceLoader.supportsSourceRelease ? sourceUrl : null;
+    texture._sourceUrl ??= TextureSourceLoader.supportsSourceRelease ? sourceUrl : null;
     _width = texture.width;
     _height = texture.height;
 
