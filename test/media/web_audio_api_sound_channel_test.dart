@@ -18,6 +18,21 @@ external JSFunction get _createAnalyser;
 external set _createAnalyser(JSFunction value);
 
 void main() {
+  test('fetches a WAV and decodes it with the native browser audio decoder', () async {
+    final response = await web.window.fetch(_createSilentWavDataUrl().toJS).toDart;
+    final blob = await response.blob().toDart;
+    final url = web.URL.createObjectURL(blob);
+    addTearDown(() => web.URL.revokeObjectURL(url));
+
+    final sound = await Sound.load('$url#sound.wav', SoundLoadOptions()
+      ..engine = .WebAudioApi
+      ..ignoreErrors = false
+      ..alternativeUrls = []);
+
+    expect(sound.engine, SoundEngine.WebAudioApi);
+    expect(sound.length, closeTo(0.1, 0.0001));
+  });
+
   for (final sampleRate in [44100, 48000]) {
     test('loops a $sampleRate Hz WAV without buzzing', () async {
       final sound = await _loadWaveform(sampleRate);

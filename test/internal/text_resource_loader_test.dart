@@ -44,6 +44,18 @@ void main() {
     });
   }
 
+  test('the browser fetches text and manifest data without a fetch stub', () async {
+    final manager = ResourceManager()
+      ..addTextFile('text', Uri.dataFromString('native browser text').toString());
+    addTearDown(manager.dispose);
+    manager.assetManifests.add('manifest', Uri.dataFromString('{"asset.png":"hash.png"}',
+        mimeType: 'application/json').toString());
+
+    await manager.load();
+    expect(manager.getTextFile('text'), 'native browser text');
+    expect(manager.assetManifests.get('manifest').mapUrl('/asset.png'), '/hash.png');
+  });
+
   test('text resources and manifests use native text responses', () async {
     final urls = <String>[];
     _setFetch((url, _) async {

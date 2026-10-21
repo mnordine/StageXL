@@ -142,6 +142,43 @@ void main() {
     });
   }
 
+  for (final kind in ['bitmap', 'atlas', 'sound', 'video', 'text', 'manifest', 'sound sprite']) {
+    test('$kind HTTP failures settle the resource without parsing an error body', () async {
+      var requests = 0;
+      var bodyReads = 0;
+      _setFetch((_, _) async {
+        requests++;
+        final response = web.Response(null, web.ResponseInit(status: 404, statusText: 'Not Found'));
+        final readBody = (() {
+          bodyReads++;
+          return Future<JSAny?>.error(StateError('An error response body must not be parsed.')).toJS;
+        }).toJS;
+        for (final method in ['text', 'blob', 'arrayBuffer']) {
+          response.setProperty(method.toJS, readBody);
+        }
+        return response;
+      });
+      final manager = ResourceManager();
+      addTearDown(manager.dispose);
+      switch (kind) {
+        case 'bitmap': manager.addBitmapData('missing', '/missing.png');
+        case 'atlas': manager.addTextureAtlas('missing', '/missing.json');
+        case 'sound': manager.addSound('missing', '/missing.wav', _options());
+        case 'video': manager.addVideo('missing', '/missing.webm', VideoLoadOptions()
+          ..loadData = true
+          ..alternativeUrls = []);
+        case 'text': manager.addTextFile('missing', '/missing.txt');
+        case 'manifest': manager.assetManifests.add('missing', '/missing.json');
+        case 'sound sprite': manager.addSoundSprite('missing', '/missing.json', _options());
+      }
+
+      await expectLater(manager.load(), throwsStateError);
+      expect(manager.failedResources, hasLength(1));
+      expect(requests, 1);
+      expect(bodyReads, 0);
+    });
+  }
+
   for (final kind in ['bitmap', 'atlas', 'sound', 'video', 'text', 'manifest']) {
     test('duplicate $kind names are ignored without starting another download', () async {
       final response = Completer<web.Response>();
