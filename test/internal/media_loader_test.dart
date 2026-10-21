@@ -11,6 +11,13 @@ import 'package:stagexl/src/internal/video_loader.dart';
 import 'package:test/test.dart';
 import 'package:web/web.dart' as web;
 
+@JS('Object.getOwnPropertyDescriptor')
+external JSObject? _getOwnPropertyDescriptor(JSObject object, JSString property);
+@JS('Object.defineProperty')
+external JSObject _defineProperty(JSObject object, JSString property, JSObject descriptor);
+@JS('Reflect.deleteProperty')
+external bool _deleteProperty(JSObject object, JSString property);
+
 @JS('HTMLMediaElement.prototype.load')
 external JSFunction get _load;
 @JS('HTMLMediaElement.prototype.load')
@@ -193,6 +200,44 @@ void main() {
     });
   }
 
+  test('disposing audio stops a channel whose cloned element is still loading', () async {
+    final engine = SoundMixer.engine;
+    SoundMixer.engine = .AudioElement;
+    addTearDown(() => SoundMixer.engine = engine);
+    final audioCount = web.document.querySelectorAll('audio').length;
+    final manager = ResourceManager()
+      ..addSound('sound', '/cloning.wav', SoundLoadOptions()..engine = .AudioElement);
+    addTearDown(manager.dispose);
+    await manager.load();
+    final sound = manager.getSound('sound');
+    final original = web.document.querySelectorAll('audio').item(audioCount) as web.HTMLAudioElement;
+    final clone = web.HTMLAudioElement()..src = original.src;
+    addTearDown(() {
+      clone.pause();
+      clone.removeAttribute('src');
+      clone.load();
+    });
+    _overrideProperty(original, 'duration', 1.toJS);
+    _overrideProperty(original, 'cloneNode', ((JSBoolean _) => clone).toJS);
+    _overrideProperty(clone, 'readyState', 0.toJS);
+    _overrideProperty(original, 'play', (() => Future<void>.value().toJS).toJS);
+    _overrideProperty(clone, 'play', (() => Future<void>.value().toJS).toJS);
+
+    final first = sound.play(true);
+    final second = sound.play(true);
+    addTearDown(first.stop);
+    addTearDown(second.stop);
+    manager.dispose();
+    clone.dispatchEvent(web.Event('canplay'));
+    await Future<void>.delayed(Duration.zero);
+
+    expect(first.stopped, isTrue);
+    expect(second.stopped, isTrue);
+    expect(clone.hasAttribute('src'), isFalse);
+    expect(sound.play, throwsStateError);
+    expect(() => sound.playSegment(0, 1), throwsStateError);
+  });
+
   test('disposing loaded resources releases media sources', () async {
     _setFetch((_, _) async => web.Response(web.Blob()));
     final audioCount = web.document.querySelectorAll('audio').length;
@@ -240,3 +285,18 @@ void main() {
 void _setFetch(Future<web.Response> Function(String, web.RequestInit?) fetch) =>
     globalContext.setProperty('fetch'.toJS, ((JSString url, [JSAny? init]) =>
         fetch(url.toDart, init as web.RequestInit?).toJS).toJS);
+
+void _overrideProperty(JSObject object, String property, JSAny value) {
+  final key = property.toJS;
+  final original = _getOwnPropertyDescriptor(object, key);
+  addTearDown(() {
+    if (original == null) {
+      _deleteProperty(object, key);
+    } else {
+      _defineProperty(object, key, original);
+    }
+  });
+  _defineProperty(object, key, JSObject()
+    ..setProperty('configurable'.toJS, true.toJS)
+    ..setProperty('value'.toJS, value));
+}

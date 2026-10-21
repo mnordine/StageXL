@@ -5,6 +5,11 @@ class AudioElementSound extends Sound {
   final AudioLoader _loader;
   static final _loaders = <Future<Sound>, AudioLoader>{};
   final Map<HTMLAudioElement, AudioElementSoundChannel?> _soundChannels = {};
+  final _pendingElements = <HTMLAudioElement, ({
+    Completer<HTMLAudioElement> completer,
+    StreamSubscription<html.Event> subscription,
+  })>{};
+  var _disposed = false;
 
   AudioElementSound._(HTMLAudioElement audioElement, this._loader)
       : _audioElement = audioElement {
@@ -41,6 +46,8 @@ class AudioElementSound extends Sound {
   static void cancel(Future<Sound> future) => _loaders.remove(future)?.cancel();
 
   void dispose() {
+    if (_disposed) return;
+    _disposed = true;
     for (final channel in _soundChannels.values.toList()) {
       channel?.stop();
     }
@@ -51,6 +58,11 @@ class AudioElementSound extends Sound {
       element.remove();
     }
     _soundChannels.clear();
+    for (final entry in _pendingElements.entries) {
+      entry.value.subscription.cancel();
+      entry.value.completer.complete(entry.key);
+    }
+    _pendingElements.clear();
     _loader.cancel();
   }
 
@@ -81,6 +93,7 @@ class AudioElementSound extends Sound {
 
   @override
   SoundChannel play([bool loop = false, SoundTransform? soundTransform]) {
+    if (_disposed) throw StateError('Cannot play a disposed sound.');
     const startTime = 0.0;
     var duration = _audioElement.duration;
     if (duration.isInfinite) duration = 3600.0;
@@ -90,8 +103,10 @@ class AudioElementSound extends Sound {
 
   @override
   SoundChannel playSegment(num startTime, num duration,
-          [bool loop = false, SoundTransform? soundTransform]) =>
-      AudioElementSoundChannel(this, startTime, duration, loop, soundTransform);
+          [bool loop = false, SoundTransform? soundTransform]) {
+    if (_disposed) throw StateError('Cannot play a disposed sound.');
+    return AudioElementSoundChannel(this, startTime, duration, loop, soundTransform);
+  }
 
   //---------------------------------------------------------------------------
 
@@ -105,16 +120,23 @@ class AudioElementSound extends Sound {
     }
 
     final audioElement = _audioElement.cloneNode(true) as HTMLAudioElement;
-    final audioCanPlay = audioElement.onCanPlay.first;
-    if (audioElement.readyState == 0) await audioCanPlay;
-    audioElement.onEnded.listen(_onAudioEnded);
-
     _soundChannels[audioElement] = soundChannel;
-    return audioElement;
+    audioElement.onEnded.listen(_onAudioEnded);
+    if (audioElement.readyState != 0) return audioElement;
+
+    final completer = Completer<HTMLAudioElement>();
+    late final StreamSubscription<html.Event> subscription;
+    subscription = audioElement.onCanPlay.listen((_) {
+      subscription.cancel();
+      _pendingElements.remove(audioElement);
+      completer.complete(audioElement);
+    });
+    _pendingElements[audioElement] = (completer: completer, subscription: subscription);
+    return completer.future;
   }
 
   void _releaseAudioElement(HTMLAudioElement audioElement) {
-    _soundChannels[audioElement] = null;
+    if (!_disposed) _soundChannels[audioElement] = null;
   }
 
   void _onAudioEnded(html.Event event) {
