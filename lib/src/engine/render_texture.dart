@@ -50,7 +50,7 @@ class RenderTexture {
 
   RenderTexture.fromImageElement(HTMLImageElement imageElement,
       {String? sourceUrl, bool corsEnabled = false}) {
-    _imageSourceUrl = TextureSourceLoader.supportsSourceRelease ? sourceUrl : null;
+    _imageSourceUrl = sourceUrl;
     _imageCorsEnabled = corsEnabled;
     _width = imageElement.width;
     _height = imageElement.height;
@@ -58,7 +58,7 @@ class RenderTexture {
   }
 
   RenderTexture.fromImageBitmap(ImageBitmap image, {String? sourceUrl}) {
-    _imageSourceUrl = TextureSourceLoader.supportsSourceRelease ? sourceUrl : null;
+    _imageSourceUrl = sourceUrl;
     _imageUsesBitmap = true;
     _width = image.width;
     _height = image.height;
@@ -84,7 +84,7 @@ class RenderTexture {
         _height = height;
 
   RenderTexture.fromCompressedTexture(CompressedTexture texture, {String? sourceUrl}) {
-    texture._sourceUrl ??= TextureSourceLoader.supportsSourceRelease ? sourceUrl : null;
+    texture._sourceUrl ??= sourceUrl;
     _width = texture.width;
     _height = texture.height;
 

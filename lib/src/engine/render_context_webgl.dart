@@ -13,6 +13,11 @@ class RenderContextWebGL extends RenderContext {
   RenderStencilBuffer? _activeRenderStencilBuffer;
   BlendMode? _activeBlendMode;
 
+  // Track textures for context restoration without owning them when native WeakRef is available.
+  // On older browsers, dart2js falls back to strong references; source release still works, but owners must call
+  // RenderTexture.dispose() to unregister textures. Native WeakRef starts at Chrome/Edge 84, Firefox 79,
+  // Safari 14.1, and iOS/iPadOS 14.5. See:
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakRef#browser_compatibility
   final _reloadableTextures = <WeakReference<RenderTexture>>{};
   AbortController? _textureRestoreController;
 

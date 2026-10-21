@@ -8,12 +8,7 @@ import 'package:web/web.dart';
 
 import '../errors.dart';
 
-@JS('WeakRef')
-external JSFunction? get _weakRef;
-
 class TextureSourceLoader {
-  static bool get supportsSourceRelease => _weakRef != null;
-
   static Future<ByteBuffer> loadBuffer(String url, {required AbortSignal signal}) async {
     _checkActive(signal);
     final response = await _wait(window.fetch(url.toJS, RequestInit(signal: signal)).toDart, signal);

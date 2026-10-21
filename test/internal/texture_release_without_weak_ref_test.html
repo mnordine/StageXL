@@ -1,0 +1,11 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Texture release without native WeakRef</title>
+    <!-- Disable native support before Dart initializes its WeakReference fallback. -->
+    <script>globalThis.WeakRef = undefined;</script>
+    <link rel="x-dart-test" href="texture_release_without_weak_ref_test.dart">
+    <script src="packages/test/dart.js"></script>
+  </head>
+  <body></body>
+</html>

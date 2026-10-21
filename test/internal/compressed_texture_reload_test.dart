@@ -89,6 +89,23 @@ void main() {
     expect(_pixel(context), [255, 0, 0, 255]);
   });
 
+  test('disposal deletes an uploaded texture and excludes it from restoration', () async {
+    final (_, context) = _stage();
+    final compressed = PvrTexture(_bytes().buffer);
+    final texture = RenderTexture.fromCompressedTexture(compressed, sourceUrl: '/disposed-before-restore.pvr');
+    addTearDown(texture.dispose);
+    texture.activate(context, web.WebGLRenderingContext.TEXTURE0);
+    final handle = texture.texture!;
+    expect(context.rawContext.isTexture(handle), isTrue);
+    expect(compressed.hasBackingBuffer, isFalse);
+    texture.dispose();
+    expect(context.rawContext.isTexture(handle), isFalse);
+    expect(texture.texture, isNull);
+    await _restore(context);
+    expect(context.contextValid, isTrue);
+    expect(requests, 0);
+  });
+
   test('moving a released texture to another stage waits for reload and renders correctly', () async {
     final (firstStage, _) = _stage();
     final (secondStage, secondContext) = _stage();
