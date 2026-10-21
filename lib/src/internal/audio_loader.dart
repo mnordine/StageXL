@@ -1,8 +1,9 @@
 library;
 
 import 'dart:async';
+import 'dart:js_interop';
+
 import 'package:web/web.dart';
-import 'package:http/http.dart' as http;
 
 import '../errors.dart';
 
@@ -17,6 +18,9 @@ class AudioLoader {
   late StreamSubscription<Event> _onErrorSubscription;
   final _urls = <String>[];
   var _loadData = false;
+  var _cancelled = false;
+  final _abortController = AbortController();
+  String? _activeObjectUrl;
 
   AudioLoader(List<String> urls, bool loadData, bool corsEnabled) {
     // we have to add the AudioElement to the document,
@@ -35,6 +39,22 @@ class AudioLoader {
 
   Future<HTMLAudioElement> get done => _completer.future;
 
+  bool get cancelled => _cancelled;
+
+  void cancel() {
+    if (_cancelled) return;
+    _cancelled = true;
+    _abortController.abort();
+    _onCanPlaySubscription.cancel();
+    _onErrorSubscription.cancel();
+    audio.pause();
+    audio.removeAttribute('src');
+    audio.load();
+    audio.remove();
+    _revokeActiveObjectUrl();
+    if (!_completer.isCompleted) _completer.completeError(LoadError('Sound load cancelled.'));
+  }
+
   //---------------------------------------------------------------------------
 
   void _onAudioCanPlay(Event event) {
@@ -51,6 +71,8 @@ class AudioLoader {
   }
 
   void _loadNextUrl() {
+    if (_cancelled) return;
+    _revokeActiveObjectUrl();
     if (_urls.isEmpty) {
       _loadFailed();
     } else if (_loadData) {
@@ -67,18 +89,40 @@ class AudioLoader {
       final loadError = LoadError('No configured audio type is supported.');
       aggregateError.errors.add(loadError);
     }
+    audio.remove();
+    _revokeActiveObjectUrl();
     _completer.completeError(aggregateError);
   }
 
-  void _loadAudioData(String url) {
-    http.get(.parse(url)).then((request) {
-      final url = Uri.dataFromBytes(request.bodyBytes);
-      _loadAudioSource(url.toString());
-    }).catchError((Object error) {
-      final loadError = LoadError('Failed to load $url.', error);
+  Future<void> _loadAudioData(String url) async {
+    try {
+      final response = await window.fetch(url.toJS, RequestInit(signal: _abortController.signal)).toDart;
+      if (_cancelled) return;
+
+      if (!response.ok) {
+        throw LoadError('Failed to load $url. (${response.status} ${response.statusText})');
+      }
+
+      final blob = await response.blob().toDart;
+      if (_cancelled) return;
+      _revokeActiveObjectUrl();
+      _activeObjectUrl = URL.createObjectURL(blob);
+      _loadAudioSource(_activeObjectUrl!);
+    } catch (error) {
+      if (_cancelled) return;
+      final loadError = error is LoadError
+          ? error
+          : LoadError('Failed to load $url.', error);
       aggregateError.errors.add(loadError);
       _loadNextUrl();
-    });
+    }
+  }
+
+  void _revokeActiveObjectUrl() {
+    final url = _activeObjectUrl;
+    if (url == null) return;
+    URL.revokeObjectURL(url);
+    _activeObjectUrl = null;
   }
 
   void _loadAudioSource(String url) {

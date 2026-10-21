@@ -28,7 +28,7 @@ class VideoLoadOptions {
   List<String>? alternativeUrls;
 
   /// Do not stream the video but download the video file as a whole.
-  /// A DataUrl string will be used for the VideoElement source.
+  /// A blob URL will be used for the VideoElement source.
 
   var loadData = false;
 

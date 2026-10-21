@@ -18,26 +18,66 @@ abstract class ResourceRegistry<T> {
 
   bool contains(String name) => resources.containsResource(kind, name);
 
-  ResourceManagerResource? remove(String name, {bool dispose = false}) => resources.manager._removeResource(kind, name);
+  ResourceManagerResource? remove(String name, {bool dispose = false}) {
+    _textLoads.remove(name)?.call();
+    return resources.manager._removeResource(kind, name);
+  }
 
   T get(String name) => resources.getResourceValue(kind, name) as T;
+
+  final _textLoads = <String, void Function()>{};
+
+  Future<String> _loadText(String name, String url) {
+    final controller = AbortController();
+    final completer = Completer<String>();
+    void cancel() {
+      controller.abort();
+      if (!completer.isCompleted) completer.completeError(LoadCancelledError());
+    }
+    _textLoads[name] = cancel;
+    Future<void> load() async {
+      try {
+        final text = await _loadResourceText(url, controller.signal);
+        if (!completer.isCompleted) completer.complete(text);
+      } catch (error, stackTrace) {
+        if (!completer.isCompleted) completer.completeError(error, stackTrace);
+      } finally {
+        if (identical(_textLoads[name], cancel)) _textLoads.remove(name);
+      }
+    }
+    unawaited(load());
+    return completer.future;
+  }
 }
 
 class BitmapDataResourceRegistry extends ResourceRegistry<BitmapData> {
   @override
   final kind = 'BitmapData';
 
+  final _loads = <String, Future<BitmapData>>{};
+
   BitmapDataResourceRegistry(super.resources);
 
   void add(String name, String url, [BitmapDataLoadOptions? options]) {
+    if (contains(name)) return;
     final loader = BitmapData.load(url, options, resources.manifest);
+    _loads[name] = loader;
     resources.addResource(kind, name, url, loader);
+    final resource = resources.manager._resourceMap['$kind.$name'];
+    unawaited(loader.then<void>((bitmap) {
+      if (!identical(resources.manager._resourceMap['$kind.$name'], resource)) bitmap.renderTexture.dispose();
+      if (identical(_loads[name], loader)) _loads.remove(name);
+    }, onError: (Object _) {
+      if (identical(_loads[name], loader)) _loads.remove(name);
+    }));
   }
 
   @override
   ResourceManagerResource? remove(String name, {bool dispose = false}) {
     final resourceManagerResource = super.remove(name);
 
+    final loader = _loads.remove(name);
+    if (loader != null) BitmapData.cancelLoad(loader);
     final bitmapData = resourceManagerResource?.value;
     if (bitmapData is BitmapData && dispose) {
       bitmapData.renderTexture.dispose();
@@ -56,13 +96,17 @@ class TextureAtlasResourceRegistry extends ResourceRegistry<TextureAtlas> {
   TextureAtlasResourceRegistry(super.resources);
 
   void add(String name, String url, [TextureAtlasFormat? textureAtlasFormat, BitmapDataLoadOptions? options]) {
+    if (contains(name)) return;
     textureAtlasFormat ??= .jsonArray;
 
     final tuple = TextureAtlas.load(url, textureAtlasFormat, options, resources.manifest);
     resources.addResource(kind, name, url, tuple.atlasFuture);
 
     _loaders[name] = tuple._loader;
-    tuple.atlasFuture.then((_) => _loaders.remove(name)).catchError((_) => _loaders.remove(name));
+    void removeLoader() {
+      if (identical(_loaders[name], tuple._loader)) _loaders.remove(name);
+    }
+    tuple.atlasFuture.then((_) => removeLoader(), onError: (Object _) => removeLoader());
   }
 
   @override
@@ -89,11 +133,35 @@ class VideoResourceRegistry extends ResourceRegistry<Video> {
   @override
   final kind = 'Video';
 
+  final _loaders = <String, Future<Video>>{};
+
   VideoResourceRegistry(super.resources);
 
   void add(String name, String url, [VideoLoadOptions? options]) {
+    if (contains(name)) return;
     final loader = Video.load(url, options, resources.manifest);
     resources.addResource(kind, name, url, loader);
+    _loaders[name] = loader;
+    final resource = resources.manager._resourceMap['$kind.$name'];
+    unawaited(loader.then<void>((video) {
+      if (!identical(resources.manager._resourceMap['$kind.$name'], resource)) video.dispose();
+      if (identical(_loaders[name], loader)) _loaders.remove(name);
+    }, onError: (Object _) {
+      if (identical(_loaders[name], loader)) _loaders.remove(name);
+    }));
+  }
+
+  @override
+  ResourceManagerResource? remove(String name, {bool dispose = false}) {
+    final resource = super.remove(name);
+    if (resource == null) return null;
+    if (resource.value case final Video video) {
+      if (dispose) video.dispose();
+    } else {
+      final loader = _loaders.remove(name);
+      if (loader != null) Video.cancel(loader);
+    }
+    return resource;
   }
 }
 
@@ -107,17 +175,18 @@ class SoundResourceRegistry extends ResourceRegistry<Sound> {
   SoundResourceRegistry(super.resources);
 
   void add(String name, String url, [SoundLoadOptions? options]) {
-    final loader = Sound.load(url, options, resources.manifest) as Future<Sound?>;
-    loader.catchError((_) {
-      _soundDatas.remove(name);
-      return null;
-    });
-
-    resources.addResource(kind, name, url, loader);
-
-    _soundDatas[name] = _SoundData()
+    if (contains(name)) return;
+    final data = _SoundData()
       ..url = url
       ..engine = options?.engine ?? Sound.defaultLoadOptions.engine ?? SoundMixer.engine;
+    final loader = data.loader = Sound.load(url, options, resources.manifest);
+    _soundDatas[name] = data;
+    unawaited(loader.then<void>((sound) {
+      if (sound is AudioElementSound && !identical(_soundDatas[name], data)) sound.dispose();
+    }, onError: (Object _) {
+      if (identical(_soundDatas[name], data)) _soundDatas.remove(name);
+    }));
+    resources.addResource(kind, name, url, loader);
   }
 
   @override
@@ -126,10 +195,13 @@ class SoundResourceRegistry extends ResourceRegistry<Sound> {
 
     if (!_soundDatas.containsKey(name)) return resourceManagerResource;
 
-    // TODO: Just Web Audio API for now, add support for Audio Element (IE 11)
     final data = _soundDatas[name]!;
     if (data.engine == .WebAudioApi) {
-      WebAudioApiSound.cancel(data.url);
+      WebAudioApiSound.cancelLoad(data.loader);
+    } else if (data.engine == .AudioElement) {
+      AudioElementSound.cancel(data.loader);
+      final sound = resourceManagerResource?.value;
+      if (dispose && sound is AudioElementSound) sound.dispose();
     }
 
     _soundDatas.remove(name);
@@ -144,6 +216,7 @@ class SoundSpriteResourceRegistry extends ResourceRegistry<SoundSprite> {
   SoundSpriteResourceRegistry(super.resources);
 
   void add(String name, String url, [SoundLoadOptions? options]) {
+    if (contains(name)) return;
     final loader = SoundSprite.load(resources.manifest.mapUrl(url), options);
     resources.addResource(kind, name, url, loader);
   }
@@ -156,6 +229,7 @@ class TextResourceRegistry extends ResourceRegistry<String> {
   TextResourceRegistry(super.resources);
 
   void add(String name, String text) {
+    if (contains(name)) return;
     resources.addResource(kind, name, '', Future.value(text));
   }
 }
@@ -167,10 +241,9 @@ class TextFileResourceRegistry extends ResourceRegistry<String> {
   TextFileResourceRegistry(super.resources);
 
   void add(String name, String url) {
+    if (contains(name)) return;
     final mappedUrl = resources.manifest.mapUrl(url);
-    final loader = http.get(.parse(mappedUrl)).then((text) => text.body, onError: (error) {
-      throw StateError('Failed to load text file.');
-    });
+    final loader = _loadText(name, mappedUrl);
     resources.addResource(kind, name, url, loader);
   }
 }
@@ -182,12 +255,11 @@ class AssetManifestResourceRegistry extends ResourceRegistry<AssetManifest> {
   AssetManifestResourceRegistry(super.resources);
 
   void add(String name, String url, [String storagePrefix = '/']) {
+    if (contains(name)) return;
     final mappedUrl = resources.manifest.mapUrl(url);
-    final loader = http.get(.parse(mappedUrl)).then((resp) {
-      final parsed = json.decode(resp.body) as Map<String, dynamic>;
+    final loader = _loadText(name, mappedUrl).then((text) {
+      final parsed = json.decode(text) as Map<String, dynamic>;
       return AssetManifest(parsed.cast<String, String>(), storagePrefix);
-    }, onError: (error) {
-      throw StateError('Failed to load asset manifest.');
     });
 
     resources.addResource(kind, name, url, loader);
@@ -201,6 +273,15 @@ class CustomObjectResourceRegistry extends ResourceRegistry<dynamic> {
   CustomObjectResourceRegistry(super.resources);
 
   void add(String name, Future loader) {
+    if (contains(name)) return;
     resources.addResource(kind, name, '', loader);
   }
+}
+
+Future<String> _loadResourceText(String url, AbortSignal signal) async {
+  final response = await window.fetch(url.toJS, RequestInit(signal: signal)).toDart;
+  if (!response.ok) {
+    throw LoadError('Failed to load $url. (${response.status} ${response.statusText})');
+  }
+  return (await response.text().toDart).toDart;
 }

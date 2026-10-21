@@ -1,8 +1,9 @@
 library;
 
 import 'dart:async';
+import 'dart:js_interop';
+
 import 'package:web/web.dart';
-import 'package:http/http.dart' as http;
 
 import '../errors.dart';
 
@@ -17,6 +18,10 @@ class VideoLoader {
   late StreamSubscription<Event> _onErrorSubscription;
   final _urls = <String>[];
   var _loadData = false;
+  String? _activeObjectUrl;
+  final _abortController = AbortController();
+  var _cancelled = false;
+  var _references = 1;
 
   VideoLoader(List<String> urls, bool loadData, bool corsEnabled) {
     if (corsEnabled) video.crossOrigin = 'anonymous';
@@ -30,6 +35,27 @@ class VideoLoader {
   }
 
   Future<HTMLVideoElement> get done => _completer.future;
+
+  bool get cancelled => _cancelled;
+
+  void retain() => _references++;
+
+  void release() {
+    if (--_references == 0) cancel();
+  }
+
+  void cancel() {
+    if (_cancelled) return;
+    _cancelled = true;
+    _abortController.abort();
+    _onCanPlaySubscription.cancel();
+    _onErrorSubscription.cancel();
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+    _revokeActiveObjectUrl();
+    if (!_completer.isCompleted) _completer.completeError(LoadError('Video load cancelled.'));
+  }
 
   //---------------------------------------------------------------------------
 
@@ -47,6 +73,8 @@ class VideoLoader {
   }
 
   void _loadNextUrl() {
+    if (_cancelled) return;
+    _revokeActiveObjectUrl();
     if (_urls.isEmpty) {
       _loadFailed();
     } else if (_loadData) {
@@ -59,6 +87,7 @@ class VideoLoader {
   void _loadFailed() {
     _onCanPlaySubscription.cancel();
     _onErrorSubscription.cancel();
+    _revokeActiveObjectUrl();
     if (aggregateError.errors.isEmpty) {
       final loadError = LoadError('No configured video type is supported.');
       aggregateError.errors.add(loadError);
@@ -66,20 +95,50 @@ class VideoLoader {
     _completer.completeError(aggregateError);
   }
 
-  void _loadVideoData(String url) {
-    http.get(.parse(url)).then((response) {
-      _loadVideoSource(Uri.dataFromBytes(response.bodyBytes).toString());
-    }).catchError((Object error) {
-      final loadError = LoadError('Failed to load $url.', error);
+  Future<void> _loadVideoData(String url) async {
+    try {
+      final response = await window.fetch(url.toJS, RequestInit(signal: _abortController.signal)).toDart;
+      if (_cancelled) return;
+
+      if (!response.ok) {
+        throw LoadError('Failed to load $url. (${response.status} ${response.statusText})');
+      }
+
+      final blob = await response.blob().toDart;
+      if (_cancelled) return;
+      final objectUrl = URL.createObjectURL(blob);
+      _setVideoSource(objectUrl);
+    } catch (error) {
+      if (_cancelled) return;
+      final loadError = error is LoadError
+          ? error
+          : LoadError('Failed to load $url.', error);
       aggregateError.errors.add(loadError);
       _loadNextUrl();
-    });
+    }
   }
 
   void _loadVideoSource(String url) {
+    _revokeActiveObjectUrl();
     video.preload = 'auto';
     video.src = url;
     video.load();
+  }
+
+  void _setVideoSource(String objectUrl) {
+    _revokeActiveObjectUrl();
+    _activeObjectUrl = objectUrl;
+    video.preload = 'auto';
+    video.src = objectUrl;
+    video.load();
+  }
+
+  void _revokeActiveObjectUrl() {
+    final url = _activeObjectUrl;
+    if (url != null) {
+      URL.revokeObjectURL(url);
+      _activeObjectUrl = null;
+    }
   }
 
   //---------------------------------------------------------------------------

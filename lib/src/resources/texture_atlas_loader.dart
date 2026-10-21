@@ -28,6 +28,8 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
   final AssetManifest _manifest;
 
   BaseImageLoader? _imageLoader;
+  RenderTexture? _renderTexture;
+  final _fetchControllers = <AbortController>[];
   var _cancelled = false;
 
   static const compressedTextureFormats = {'.pvr', '.pvr.gz', '.ktx'};
@@ -42,8 +44,39 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
 
   @override
   Future<String> getSource() async {
-    final response = await http.get(.parse(_manifest.mapUrl(_loadInfo.loaderUrl)));
-    return response.body;
+    if (_cancelled) throw LoadError('texture atlas load cancelled');
+    final controller = AbortController();
+    _fetchControllers.add(controller);
+
+    final url = _manifest.mapUrl(_loadInfo.loaderUrl);
+
+    try {
+      final response = await window.fetch(url.toJS, RequestInit(signal: controller.signal)).toDart;
+
+      if (_cancelled) {
+        throw LoadError('texture atlas load cancelled');
+      }
+
+      if (!response.ok) {
+        throw LoadError('failed to fetch $url: ${response.status} ${response.statusText}');
+      }
+
+      final text = (await response.text().toDart).toDart;
+
+      if (_cancelled) {
+        throw LoadError('texture atlas load cancelled');
+      }
+
+      return text;
+    } catch (error, stackTrace) {
+      if (_cancelled) {
+        Error.throwWithStackTrace(LoadError('texture atlas load cancelled'), stackTrace);
+      }
+
+      Error.throwWithStackTrace(LoadError('failed to fetch $url', error), stackTrace);
+    } finally {
+      _fetchControllers.remove(controller);
+    }
   }
 
   @override
@@ -52,12 +85,22 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
 
     _cancelled = true;
 
+    if (_fetchControllers.isNotEmpty) {
+      for (final controller in _fetchControllers) {
+        controller.abort();
+      }
+      _fetchControllers.clear();
+    }
+
     _imageLoader?.cancel();
     _imageLoader = null;
+    _renderTexture?.dispose();
+    _renderTexture = null;
   }
 
   @override
   Future<RenderTextureQuad> getRenderTextureQuad(String filename) async {
+    if (_cancelled) throw LoadError('texture atlas load cancelled');
     final loaderUrl = _loadInfo.loaderUrl;
     final pixelRatio = _loadInfo.pixelRatio;
 
@@ -77,6 +120,7 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
         }
       }
 
+      if (_cancelled) throw LoadError('texture atlas load cancelled');
       final imageUrl = _manifest.mapUrl(replaceFilename(loaderUrl, filename));
       if (env.isImageBitmapSupported) {
         final loader = _imageLoader = ImageBitmapLoader(imageUrl);
@@ -90,10 +134,16 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
       }
     }
 
+    if (_cancelled) {
+      renderTexture.dispose();
+      throw LoadError('texture atlas load cancelled');
+    }
+    _renderTexture = renderTexture;
     return renderTexture.quad.withPixelRatio(pixelRatio);
   }
 
-  Future<RenderTexture> _loadCompressedTexture(String filename) {
+  Future<RenderTexture> _loadCompressedTexture(String filename) async {
+    if (_cancelled) throw LoadError('compressed texture load cancelled');
     final filenameParts = filename.split('.');
     var ext = filenameParts.last;
 
@@ -107,20 +157,42 @@ class _TextureAtlasLoaderFile extends TextureAtlasLoader {
       _ => throw LoadError('unknown extension $ext'),
     };
 
-    return http.get(.parse(filename))
-      .then((response) {
-        if (_cancelled) {
-          throw LoadError('compressed texture load cancelled');
-        }
-        if (response.statusCode == 200) {
-          final buffer = response.bodyBytes.buffer;
-          final texture = _decodeCompressedTexture(buffer, type);
+    final controller = AbortController();
+    _fetchControllers.add(controller);
 
-          return texture;
-        } else {
-          throw LoadError('failed to GET $filename');
-        }
-      });
+    try {
+      final response = await window.fetch(filename.toJS, RequestInit(signal: controller.signal)).toDart;
+
+      if (_cancelled) {
+        throw LoadError('compressed texture load cancelled');
+      }
+
+      if (!response.ok) {
+        throw LoadError('failed to fetch $filename: ${response.status} ${response.statusText}');
+      }
+
+      final buffer = (await response.arrayBuffer().toDart).toDart;
+
+      if (_cancelled) {
+        throw LoadError('compressed texture load cancelled');
+      }
+
+      return _decodeCompressedTexture(buffer, type);
+    } catch (error, stackTrace) {
+      if (_cancelled) {
+        Error.throwWithStackTrace(
+          LoadError('compressed texture load cancelled'),
+          stackTrace,
+        );
+      }
+
+      Error.throwWithStackTrace(
+        LoadError('failed to fetch $filename', error),
+        stackTrace,
+      );
+    } finally {
+      _fetchControllers.remove(controller);
+    }
   }
 
   RenderTexture _decodeCompressedTexture(ByteBuffer buffer, CompressedTextureFileTypes type) => switch (type) {

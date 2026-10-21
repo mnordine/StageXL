@@ -30,7 +30,13 @@ class ImageLoader implements BaseImageLoader<HTMLImageElement> {
   }
 
   @override
-  void cancel() => image.src = '';
+  void cancel() {
+    if (_completer.isCompleted) return;
+    _onLoadSubscription.cancel();
+    _onErrorSubscription.cancel();
+    image.src = '';
+    _completer.completeError(LoadError('Image load cancelled: $_url'));
+  }
 
   //---------------------------------------------------------------------------
 
