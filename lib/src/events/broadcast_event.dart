@@ -72,6 +72,11 @@ final _renderSubscriptions = <EventStreamSubscription<RenderEvent>>[];
 
 void _dispatchBroadcastEvent<T extends BroadcastEvent>(
     T broadcastEvent, List<EventStreamSubscription<T>> subscriptions) {
+  // A broadcast with no recipients must release the previous frame's target.
+  // Reset before dispatch so callbacks and their immediate futures can still read this frame's target.
+  broadcastEvent._target = null;
+  broadcastEvent._currentTarget = null;
+
   // Dispatch event to current subscriptions.
   // Do not dispatch events to newly added subscriptions.
   // It is guaranteed that this function is not called recursively.
